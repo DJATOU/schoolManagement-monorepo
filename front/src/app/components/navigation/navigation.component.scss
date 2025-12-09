@@ -1,290 +1,285 @@
-.mat-toolbar {
+$app-primary: #0f4c5c;
+$app-secondary: #1b9aaa;
+$app-surface: #f8fbfd;
+$app-muted: #6b7a89;
+
+.app-toolbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: linear-gradient(to right, #2c3e50, #4ca1af); // Dégradé plus sombre et moderne
-  padding: 0 2rem;
+  background: linear-gradient(90deg, $app-primary 0%, #0f6c7f 45%, $app-secondary 100%);
+  padding: 0.35rem 1.5rem;
+  gap: 1rem;
+  color: #fff;
 
-  .spacer {
+  .toolbar-section {
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: 0.75rem;
 
-    button {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 0.5rem;
-      color: white;
-      background: transparent;
-      border: none;
-      cursor: pointer;
-      transition: transform 0.2s ease-in-out;
-
-      &:hover {
-        transform: scale(1.1);
-        filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.5)); // Légère ombre lumineuse
-      }
+    &.left {
+      flex: 1;
     }
 
-    .logo {
-      height: 3.75rem; // Ajustement de la taille du logo
-      max-width: 100%;
-      cursor: pointer;
+    &.center {
+      flex: 2;
+      justify-content: center;
+    }
+
+    &.right {
+      flex: 1;
+      justify-content: flex-end;
+      gap: 1rem;
     }
   }
 
-  .icone-search {
-    display: flex;
-    align-items: center;
-    gap: 1rem; // Ajustement de l'espacement entre les icônes
-    padding: 0.3rem 0.8rem; // Réduction du padding pour un design plus compact
-    border-radius: 50px;
-    background-color: rgba(0, 0, 0, 0.2);
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+  button[mat-icon-button] {
+    color: #fff;
+    transition: transform 0.2s ease, background-color 0.2s ease;
 
     &:hover {
-      background-color: rgba(0, 0, 0, 0.4);
-      box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
+      transform: scale(1.05);
+      background-color: rgba(255, 255, 255, 0.08);
+    }
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    cursor: pointer;
+
+    .brand-logo {
+      height: 40px;
+      width: 40px;
+      border-radius: 10px;
+      object-fit: contain;
+      background: #fff;
+      padding: 4px;
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
     }
 
+    .brand-text {
+      display: flex;
+      flex-direction: column;
+      line-height: 1.1;
+
+      .brand-title {
+        font-weight: 700;
+        font-size: 16px;
+      }
+
+      .brand-subtitle {
+        font-size: 12px;
+        color: rgba(255, 255, 255, 0.8);
+      }
+    }
+  }
+
+  .search-shell {
+    width: 100%;
+    max-width: 720px;
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 16px;
+    padding: 0.5rem 0.75rem;
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.12);
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+
+    &.hide-search {
+      display: none;
+    }
+
+    &:focus-within {
+      box-shadow: 0 14px 28px rgba(0, 0, 0, 0.16);
+      transform: translateY(-1px);
+    }
+  }
+
+  .search-switcher {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.35rem 0.55rem;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.12);
+
     mat-icon {
-      color: white;
-      font-size: 24px; // Ajustement de la taille de l'icône
-      transition: color 0.3s ease, transform 0.3s ease, filter 0.3s;
+      color: rgba(255, 255, 255, 0.85);
+      font-size: 22px;
       cursor: pointer;
+      transition: color 0.2s ease, transform 0.2s ease, background-color 0.2s ease;
+      padding: 6px;
+      border-radius: 10px;
 
       &:hover {
-        color: #1abc9c; // Changement de couleur au survol
-        transform: scale(1.2);
-        filter: drop-shadow(0 0 10px rgba(26, 188, 156, 0.5)); // Effet lumineux
+        color: #fff;
+        background: rgba(255, 255, 255, 0.16);
       }
 
       &.selected-icon {
-        color: #1abc9c;
-        transform: scale(1.2);
-        filter: drop-shadow(0 0 10px rgba(26, 188, 156, 0.5));
-        border-radius: 50%;
-        background: rgba(255, 255, 255, 0.1);
-        padding: 0.5rem;
+        color: $app-secondary;
+        background: #fff;
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.12);
       }
     }
   }
 
-  .search-container {
-    flex-grow: 1;
-    max-width: 50%; // Augmente la largeur pour un meilleur centrage
-    display: flex;
-    justify-content: center; // Centre la barre de recherche horizontalement
-    align-items: center;
-    padding: 0.5rem 1rem;
-    background-color: transparent; // Supprime tout fond supplémentaire
-    border-radius: 50px; // Forme arrondie, mais sans fond visible
-    margin: 0 2rem; // Centre la barre de recherche au sein de la toolbar
-    border: none; // Supprime toute bordure autour du conteneur
-  
-    mat-form-field {
-      width: 100%;
-      //max-height: 4rem;
-      margin-top: 2.5rem;
-      background-color: transparent; // Supprime tout fond à l'intérieur du champ de formulaire
-      border: none; // Supprime la bordure du champ de formulaire
-  
-      .mat-form-field-wrapper {
-        padding: 0;
-        background: none;
-        box-shadow: none;
-        border: none;
-      }
-  
-      .mat-form-field-underline {
-        display: none; // Supprime la ligne sous l'input
-      }
-  
-      .mat-form-field-flex {
-        background-color: transparent;
-        box-shadow: none;
-        border: none;
-      }
-  
-      .mat-icon {
-        font-size: 1.5rem;
-        margin-right: 8px; // Espacement entre l'icône et l'input
-        cursor: pointer;
-      }
-  
-      input {
-        padding-left: 0.5rem;
-        font-size: 16px;
-        color: #333;
-        //height: 2.5rem;
-        border: none; // Supprime toute bordure autour de l'input
-        box-shadow: none; // Supprime toute ombre
-        background-color: transparent; // Assure un fond transparent
-        outline: none; // Supprime l'effet de contour au focus
+  .search-field {
+    flex: 1;
+
+    .mat-form-field-wrapper {
+      margin: 0;
+    }
+
+    .mat-form-field-flex {
+      align-items: center;
+      background: #fff;
+      border-radius: 12px;
+    }
+
+    .mat-form-field-outline {
+      color: rgba(15, 76, 92, 0.22);
+    }
+
+    .mat-form-field-outline-thick {
+      color: $app-secondary;
+    }
+
+    input {
+      padding: 0.55rem 0.75rem;
+      font-size: 15px;
+      color: $app-primary;
+
+      &::placeholder {
+        color: $app-muted;
+        opacity: 0.85;
       }
     }
-  
+
     .search-icon {
-      color: #c79f81;
-      background-color: #fff;
-      border-radius: 50%;
-      padding: 0.5rem;
-      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+      color: $app-secondary;
       cursor: pointer;
-      transition: background-color 0.3s ease;
-  
-      &:hover {
-        background-color: #1abc9c;
-        color: #fff;
-      }
     }
-  
-    .mat-autocomplete-panel {
-      background-color: #ffffff;
-      border-radius: 10px;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+
+    .clear-icon {
+      color: $app-muted;
+
+      &:hover {
+        color: $app-secondary;
+      }
     }
   }
 
   .user-info {
     display: flex;
     align-items: center;
+    gap: 0.65rem;
+    padding: 0.35rem 0.65rem;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.12);
+    cursor: pointer;
+    transition: background-color 0.2s ease, box-shadow 0.2s ease;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.18);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+    }
 
     .user-photo {
-      width: 2rem; // Réduction de la taille de la photo utilisateur
-      height: 2rem;
+      width: 36px;
+      height: 36px;
       border-radius: 50%;
-      margin-right: 0.5rem;
-      cursor: pointer;
-      transition: box-shadow 0.3s ease, transform 0.3s ease;
-
-      &:hover {
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); // Légère ombre
-        transform: scale(1.1); // Agrandissement léger au survol
-      }
+      object-fit: cover;
+      border: 2px solid rgba(255, 255, 255, 0.35);
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.18);
     }
 
-    .user-name {
-      color: white;
-      font-weight: bold;
-      font-size: 14px; // Réduction de la taille de la police
-    }
-  }
-
-  button {
-    cursor: pointer;
-  }
-}
-
-
-
-@media (min-width: 600px) and (max-width: 1500px) {
-  .mat-toolbar {
-    padding: 0 1.5rem; /* Ajustement du padding latéral */
-
-    .spacer {
-      gap: 0.8rem; /* Réduction de l'espacement entre les éléments */
-
-      button {
-        padding: 0.4rem; /* Réduction du padding des boutons */
-      }
-
-      .logo {
-        height: 3.75rem; /* Réduction de la taille du logo */
-      }
-    }
-
-    .search-container {
-      max-width: 60%; /* Ajustement de la largeur maximale */
-      margin: 0 1.5rem; /* Ajustement des marges latérales */
-      padding: 0.4rem 0.8rem; /* Réduction du padding */
-
-      mat-form-field {
-        margin-top: 2.5rem; /* Réduction de la marge supérieure */
-      }
-    }
-
-    .icone-search {
-      gap: 0.8rem; /* Réduction de l'espacement entre les icônes */
-      padding: 0.2rem 0.6rem; /* Réduction du padding */
-    }
-
-    .user-info {
-      .user-photo {
-        width: 1.8rem; /* Réduction de la taille de la photo utilisateur */
-        height: 1.8rem;
-      }
+    .user-details {
+      display: flex;
+      flex-direction: column;
+      line-height: 1.1;
 
       .user-name {
-        font-size: 13px; /* Ajustement de la taille de la police */
+        font-weight: 700;
+      }
+
+      .user-role {
+        font-size: 12px;
+        color: rgba(255, 255, 255, 0.78);
       }
     }
 
-    .mat-icon {
-      font-size: 22px; /* Ajustement de la taille des icônes */
+    mat-icon {
+      color: rgba(255, 255, 255, 0.8);
     }
   }
 }
 
+@media (max-width: 1024px) {
+  .app-toolbar {
+    padding: 0.35rem 1rem;
 
-@media (max-width: 600px) {
-  .mat-toolbar {
-    flex-direction: column; /* Empile les éléments verticalement */
-    padding: 0 1rem; /* Réduction du padding latéral */
-
-    .spacer {
-      justify-content: center;
-      margin-bottom: 0.5rem;
-
-      button {
-        padding: 0.3rem;
-      }
-
-      .logo {
-        height: 3.75rem; /* Réduction de la taille du logo */
-      }
+    .toolbar-section.left {
+      flex: 1.2;
     }
 
-    .search-container {
+    .toolbar-section.center {
+      flex: 2.2;
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .app-toolbar {
+    flex-wrap: wrap;
+    gap: 0.65rem;
+
+    .toolbar-section {
+      width: 100%;
+      justify-content: space-between;
+    }
+
+    .toolbar-section.center {
+      order: 3;
+    }
+
+    .search-shell {
       max-width: 100%;
-      margin: 0;
-      padding: 0.3rem 0.5rem;
-      order: 2; /* Place la barre de recherche après la section icônes */
-
-      mat-form-field {
-        margin-top: 1rem;
-      }
-    }
-
-    .icone-search {
-      gap: 0.5rem;
-      padding: 0.2rem 0.4rem;
-      order: 1; /* Place les icônes en premier */
-
-      mat-icon {
-        font-size: 20px; /* Réduction de la taille des icônes */
-      }
     }
 
     .user-info {
-      justify-content: center;
-      margin-top: 0.5rem;
-      order: 3; /* Place les infos utilisateur en dernier */
+      width: 100%;
+      justify-content: space-between;
+    }
+  }
+}
 
-      .user-photo {
-        width: 1.5rem; /* Réduction de la taille de la photo utilisateur */
-        height: 1.5rem;
-      }
+@media (max-width: 520px) {
+  .app-toolbar {
+    padding: 0.35rem 0.75rem;
 
-      .user-name {
-        font-size: 12px; /* Réduction de la taille de la police */
-      }
+    .brand-text .brand-title {
+      font-size: 14px;
     }
 
-    .mat-icon {
-      font-size: 20px; /* Réduction de la taille des icônes */
+    .brand-text .brand-subtitle {
+      display: none;
+    }
+
+    .search-switcher mat-icon {
+      font-size: 20px;
+      padding: 5px;
+    }
+
+    .search-field input {
+      font-size: 14px;
+    }
+
+    .user-details {
+      display: none;
     }
   }
 }

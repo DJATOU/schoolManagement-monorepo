@@ -23,6 +23,9 @@ import { SubjectTableComponent } from './components/subject/subject-table/subjec
 import { GroupTypeTableComponent } from './components/groupType/group-type-table/group-type-table.component';
 import { PricingTableComponent } from './components/pricing/pricing-table/pricing-table.component';
 import { GroupProfileComponent } from './components/group/group-profile/group-profile.component';
+import { CatchUpListComponent } from './components/catch-up/catch-up-list/catch-up-list.component';
+import { DiscountListComponent } from './components/discount/discount-list/discount-list.component';
+import { TransferListComponent } from './components/transfer/transfer-list/transfer-list.component';
 
 export const routes: Routes = [
   { path: '', redirectTo: '/dashboard', pathMatch: 'full' },
@@ -51,6 +54,9 @@ export const routes: Routes = [
   { path: 'student/:id', component: StudentProfileComponent },
   { path: 'teacher/:id', component: TeacherProfileComponent},
   { path: 'group/:id', component: GroupProfileComponent},
+  { path: 'catch-ups', component: CatchUpListComponent },
+  { path: 'discounts', component: DiscountListComponent },
+  { path: 'transfers', component: TransferListComponent },
 ];
   
   @NgModule({
