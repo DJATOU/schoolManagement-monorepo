@@ -26,7 +26,7 @@ import { MatTooltip } from '@angular/material/tooltip';
 export class NavigationComponent implements OnInit {
   userPhoto: any;
   hideSearch: boolean = false;
-  selectedIcon: string = '';
+  selectedIcon: string = 'student';
   searchControl = new FormControl('');
   filteredSuggestions: Observable<string[]> | undefined;
   placeholder: string = 'Rechercher un élève...';
