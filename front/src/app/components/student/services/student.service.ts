@@ -1,6 +1,6 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable, tap } from 'rxjs';
+import { Observable } from 'rxjs';
 import { Student } from '../domain/student';
 import { API_BASE_URL } from '../../../app.config';
 import { Group } from '../../../models/group/group';
@@ -15,43 +15,15 @@ export class StudentService {
   constructor(private http: HttpClient) { }
 
   getStudents(): Observable<Student[]> {
-    return this.http.get<Student[]>(this.apiUrl).pipe(
-      tap(
-        students => {
-          console.log("Students fetched successfully getStudents:", students);
-        },
-        error => {
-          console.error("Error fetching students getStudents:", error);
-        }
-      )
-    );
+    return this.http.get<Student[]>(this.apiUrl);
   }
   
   getGroupsForStudent(id: number): Observable<Group[]> {
-    return this.http.get<Group[]>(`${this.apiUrl2}/${id}/groups`).pipe(
-      tap(
-        groups => {
-          console.log("Groups for student fetched successfully getGroupsForStudent:", groups);
-        },
-        error => {
-          console.error("Error fetching groups for student getGroupsForStudent:", error);
-        }
-      )
-    );
+    return this.http.get<Group[]>(`${this.apiUrl2}/${id}/groups`);
   }
   
   getStudentById(id: number): Observable<Student> {
-    return this.http.get<Student>(`${this.apiUrl}/id/${id}`).pipe(
-      tap(
-        student => {
-          console.log("Student data fetched successfully getStudentById:", student);
-          console.log("Student photo URL getStudentById:", student.photo); // Log the photo URL specifically
-        },
-        error => {
-          console.error("Error fetching student by ID getStudentById:", error);
-        }
-      )
-    );
+    return this.http.get<Student>(`${this.apiUrl}/id/${id}`);
   }
   
 
