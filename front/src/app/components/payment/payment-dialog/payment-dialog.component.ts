@@ -88,7 +88,13 @@ export class PaymentDialogComponent implements OnInit {
   }
 
   openConfirmationDialog(paymentData: Payment): void {
-    const sessionSeries = this.sessionSeries.find(series => series.id === paymentData.sessionSeriesId);
+    if (!paymentData.sessionSeriesId) {
+      this.snackBar.open('Veuillez sélectionner une série avant de poursuivre.', 'Fermer', { duration: 4000 });
+      return;
+    }
+
+    const sessionSeriesId = paymentData.sessionSeriesId;
+    const sessionSeries = this.sessionSeries.find(series => series.id === sessionSeriesId);
     const seriesName = sessionSeries?.name || 'Unknown Series';
   
     // Charger le groupe pour obtenir le priceId et récupérer les informations de tarification
@@ -104,7 +110,7 @@ export class PaymentDialogComponent implements OnInit {
           const totalCreatedSessionsCost = sessionSeries!.numberOfSessionsCreated * pricePerSession;
   
           // Récupérer le montant total déjà payé par l'étudiant pour cette série
-          this.paymentService.getPaymentHistoryForSeries(this.studentId, paymentData.sessionSeriesId).subscribe({
+          this.paymentService.getPaymentHistoryForSeries(this.studentId, sessionSeriesId).subscribe({
             next: (paymentHistory) => {
               const totalPaidPreviously = paymentHistory.reduce((acc, curr) => acc + curr.amountPaid, 0);
               const newTotalPaid = totalPaidPreviously + paymentData.amountPaid;
@@ -134,7 +140,7 @@ export class PaymentDialogComponent implements OnInit {
               const remainingAmount = groupPrice - newTotalPaid;
   
               // Récupérer les détails de paiement pour la série
-              this.paymentService.getPaymentDetailsForSeries(this.studentId, paymentData.sessionSeriesId).subscribe({
+              this.paymentService.getPaymentDetailsForSeries(this.studentId, sessionSeriesId).subscribe({
                 next: (paymentDetails) => {
                   // Ouvrir le dialogue de confirmation avec les données nécessaires
                   const dialogRef = this.dialog.open(PaymentConfirmationDialogComponent, {

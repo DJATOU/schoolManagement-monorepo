@@ -1,4 +1,12 @@
 <mat-nav-list class="sidenav">
+  <div class="sidenav-brand">
+    <mat-icon>auto_stories</mat-icon>
+    <div class="brand-text">
+      <span class="brand-title">School Manager</span>
+      <span class="brand-subtitle">Navigation principale</span>
+    </div>
+  </div>
+
   <mat-accordion multi="false" class="custom-accordion">
     <mat-expansion-panel>
       <mat-expansion-panel-header>
@@ -8,9 +16,18 @@
         </mat-panel-title>
       </mat-expansion-panel-header>
       <mat-action-list>
-        <mat-list-item [routerLink]="['/subscription']">Étudiants</mat-list-item>
-        <mat-list-item [routerLink]="['/teacher/new']">Enseignants</mat-list-item>
-        <mat-list-item [routerLink]="['/group/new']">Groupes</mat-list-item>
+        <mat-list-item class="nav-item" routerLinkActive="active-link" [routerLinkActiveOptions]="{ exact: true }" [routerLink]="['/subscription']">
+          <mat-icon class="item-icon">person_add</mat-icon>
+          <span>Étudiants</span>
+        </mat-list-item>
+        <mat-list-item class="nav-item" routerLinkActive="active-link" [routerLink]="['/teacher/new']">
+          <mat-icon class="item-icon">person</mat-icon>
+          <span>Enseignants</span>
+        </mat-list-item>
+        <mat-list-item class="nav-item" routerLinkActive="active-link" [routerLink]="['/group/new']">
+          <mat-icon class="item-icon">diversity_3</mat-icon>
+          <span>Groupes</span>
+        </mat-list-item>
       </mat-action-list>
     </mat-expansion-panel>
 
@@ -22,8 +39,18 @@
         </mat-panel-title>
       </mat-expansion-panel-header>
       <mat-action-list>
-        <mat-list-item>Paiements</mat-list-item>
-        <mat-list-item>Frais</mat-list-item>
+        <mat-list-item class="nav-item">
+          <mat-icon class="item-icon">payments</mat-icon>
+          <span>Paiements</span>
+        </mat-list-item>
+        <mat-list-item class="nav-item">
+          <mat-icon class="item-icon">receipt_long</mat-icon>
+          <span>Frais</span>
+        </mat-list-item>
+        <mat-list-item class="nav-item" routerLinkActive="active-link" [routerLink]="['/discounts']">
+          <mat-icon class="item-icon">local_offer</mat-icon>
+          <span>Réductions</span>
+        </mat-list-item>
       </mat-action-list>
     </mat-expansion-panel>
 
@@ -35,26 +62,61 @@
         </mat-panel-title>
       </mat-expansion-panel-header>
       <mat-action-list>
-        <mat-list-item>Présences</mat-list-item>
-        <mat-list-item [routerLink]="['/session/new']">Sessions</mat-list-item>
-        <mat-list-item [routerLink]="['/calendar/new']">Calendrier</mat-list-item>
-        <mat-list-item [routerLink]="['/serie/new']">Séries</mat-list-item>
+        <mat-list-item class="nav-item">
+          <mat-icon class="item-icon">task_alt</mat-icon>
+          <span>Présences</span>
+        </mat-list-item>
+        <mat-list-item class="nav-item" routerLinkActive="active-link" [routerLink]="['/session/new']">
+          <mat-icon class="item-icon">schedule</mat-icon>
+          <span>Sessions</span>
+        </mat-list-item>
+        <mat-list-item class="nav-item" routerLinkActive="active-link" [routerLink]="['/calendar/new']">
+          <mat-icon class="item-icon">event</mat-icon>
+          <span>Calendrier</span>
+        </mat-list-item>
+        <mat-list-item class="nav-item" routerLinkActive="active-link" [routerLink]="['/serie/new']">
+          <mat-icon class="item-icon">collections_bookmark</mat-icon>
+          <span>Séries</span>
+        </mat-list-item>
+        <mat-list-item class="nav-item" routerLinkActive="active-link" [routerLink]="['/catch-ups']">
+          <mat-icon class="item-icon">history_edu</mat-icon>
+          <span>Rattrapages</span>
+        </mat-list-item>
+        <mat-list-item class="nav-item" routerLinkActive="active-link" [routerLink]="['/transfers']">
+          <mat-icon class="item-icon">swap_horiz</mat-icon>
+          <span>Transferts</span>
+        </mat-list-item>
       </mat-action-list>
     </mat-expansion-panel>
 
     <mat-expansion-panel>
       <mat-expansion-panel-header>
         <mat-panel-title>
-          <mat-icon>more_horiz</mat-icon>
+          <mat-icon>library_books</mat-icon>
           Ressources Académiques
         </mat-panel-title>
       </mat-expansion-panel-header>
       <mat-action-list>
-        <mat-list-item [routerLink]="['/level/table']">Niveaux</mat-list-item>
-        <mat-list-item [routerLink]="['/room/table']">Salles</mat-list-item>
-        <mat-list-item [routerLink]="['/subject/table']">Matières</mat-list-item>
-        <mat-list-item [routerLink]="['groupType/table']">Types de Groupes</mat-list-item>
-        <mat-list-item [routerLink]="['/pricing/table']">Tarification</mat-list-item>
+        <mat-list-item class="nav-item" routerLinkActive="active-link" [routerLink]="['/level/table']">
+          <mat-icon class="item-icon">stairs</mat-icon>
+          <span>Niveaux</span>
+        </mat-list-item>
+        <mat-list-item class="nav-item" routerLinkActive="active-link" [routerLink]="['/room/table']">
+          <mat-icon class="item-icon">meeting_room</mat-icon>
+          <span>Salles</span>
+        </mat-list-item>
+        <mat-list-item class="nav-item" routerLinkActive="active-link" [routerLink]="['/subject/table']">
+          <mat-icon class="item-icon">menu_book</mat-icon>
+          <span>Matières</span>
+        </mat-list-item>
+        <mat-list-item class="nav-item" routerLinkActive="active-link" [routerLink]="['groupType/table']">
+          <mat-icon class="item-icon">category</mat-icon>
+          <span>Types de Groupes</span>
+        </mat-list-item>
+        <mat-list-item class="nav-item" routerLinkActive="active-link" [routerLink]="['/pricing/table']">
+          <mat-icon class="item-icon">price_change</mat-icon>
+          <span>Tarification</span>
+        </mat-list-item>
       </mat-action-list>
     </mat-expansion-panel>
   </mat-accordion>
