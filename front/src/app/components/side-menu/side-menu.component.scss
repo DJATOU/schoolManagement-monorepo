@@ -11,7 +11,6 @@ $accent: #1b9aaa;
   font-family: 'Roboto', sans-serif;
   box-shadow: 2px 0 14px rgba(0, 0, 0, 0.1);
   min-height: 100%;
-  width: 260px;
 }
 
 .sidenav-brand {
@@ -90,24 +89,19 @@ $accent: #1b9aaa;
   }
 
   .mat-action-list {
-    padding: 0.6rem 1.05rem 1rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.2rem;
-    margin-bottom: 0.35rem;
+    padding: 0.25rem 0.75rem 0.75rem;
 
     .nav-item {
       color: $text-color;
       border-radius: 10px;
       cursor: pointer;
       transition: background-color 0.2s ease, transform 0.2s ease;
-      padding: 0.65rem 0.85rem;
-      margin: 0.05rem 0;
+      padding: 0.5rem 0.75rem;
+      margin: 0.15rem 0;
       display: flex;
       align-items: center;
       gap: 0.75rem;
       font-weight: 500;
-      letter-spacing: 0.01em;
 
       &:hover {
         background-color: rgba(27, 154, 170, 0.08);
@@ -116,8 +110,6 @@ $accent: #1b9aaa;
 
       .item-icon {
         color: $muted;
-        min-width: 24px;
-        text-align: center;
       }
 
       &.active-link {
