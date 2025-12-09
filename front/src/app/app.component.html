@@ -1,0 +1,13 @@
+<div class="all-content" fxLayout="column">
+  <app-navigation (sidenavToggle)="toggleSidenav()"></app-navigation>
+  <div class="main-container" fxLayout="row" fxFlexFill>
+    <mat-sidenav-container class="sidenav-container" fxFlex>
+      <mat-sidenav #sidenav mode="side" [(opened)]="isSidenavOpen" class="sidenav">
+        <app-side-menu></app-side-menu>
+      </mat-sidenav>
+      <mat-sidenav-content class="content-area" fxLayout="column" fxFlex>
+        <app-shared-layout-container fxFlex></app-shared-layout-container>
+      </mat-sidenav-content>
+    </mat-sidenav-container>
+  </div>
+</div>

@@ -1,0 +1,24 @@
+# Configuration de la base de données pour Docker
+spring.datasource.url=jdbc:postgresql://db:5432/schoolManagement4
+spring.datasource.username=postgres
+spring.datasource.password=postgres
+
+# Propriétés Hibernate
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
+spring.jpa.hibernate.ddl-auto=update
+
+# Configuration de l'upload (adapter le chemin pour Docker)
+app.upload.dir=/app/uploads  # Ce chemin doit correspondre au volume monté dans docker-compose.yml
+spring.servlet.multipart.max-file-size=10MB
+spring.servlet.multipart.max-request-size=10MB
+
+# URL de base du serveur
+server.url=http://localhost:8080
+
+# Chemin des images (également adapté pour Docker)
+images.path=/app/images  # Correspondra au volume monté
+
+# Niveau de logging
+logging.level.root=DEBUG
+logging.level.org.springframework.web=DEBUG
+logging.level.com.school.management=DEBUG

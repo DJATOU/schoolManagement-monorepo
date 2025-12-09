@@ -1,0 +1,281 @@
+/* Variables de couleur */
+$primary-color: #3f51b5; // Indigo
+$accent-color: #e91e63; // Rose
+$edit-color: #4caf50; // Vert pour Modifier
+$disable-color: #f44336; // Rouge pour Désactiver
+$print-color: #ff9800; // Orange pour Imprimer
+$history-color: #9c27b0; // Violet pour Historique de Paiement
+
+/* Styles */
+.student-profile-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+  max-width: 1200px; // Limite la largeur totale de la carte
+  margin: 0 auto; // Centre la carte sur la page
+  zoom: 0.8;
+}
+
+.student-card {
+  width: 100%;
+  max-width: 1000px; // Augmente la largeur de la carte
+  margin-bottom: 20px;
+  border-radius: 15px;
+  overflow: hidden;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+
+  mat-card-header {
+    background: linear-gradient(to top, #c1dfc4 0%, #deecdd 100%);
+    color: #fff;
+    padding: 10px; // Uniformiser le padding
+
+    .header-container {
+      display: flex;
+      align-items: center;
+      width: 100%;
+
+      .student-info-header {
+        display: flex;
+        align-items: center;
+        flex-grow: 1; // Permet à cet élément de prendre l'espace disponible
+
+        .student-photo-container {
+          margin-right: 15px;
+
+          .student-photo {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid #fff;
+          }
+        }
+
+        .student-name-level {
+          mat-card-title {
+            font-size: 26px;
+            font-weight: 600;
+            margin: 0;
+          }
+          mat-card-subtitle {
+            font-size: 18px;
+            color: #e0e0e0;
+          }
+        }
+      }
+
+      .header-buttons {
+        display: flex;
+        gap: 10px;
+
+        button {
+          color: #fff;
+          transition: transform 0.2s;
+          background-color: transparent;
+
+          &:hover {
+            transform: scale(1.1);
+          }
+
+          mat-icon {
+            font-size: 28px;
+          }
+
+          /* Couleurs spécifiques pour chaque bouton */
+          &.edit-button {
+            background-color: $edit-color;
+            &:hover {
+              background-color: darken($edit-color, 10%);
+            }
+          }
+
+          &.disable-button {
+            background-color: $disable-color;
+            &:hover {
+              background-color: darken($disable-color, 10%);
+            }
+          }
+
+          &.full-history-button {
+            background-color: $print-color;
+            &:hover {
+              background-color: darken($print-color, 10%);
+            }
+          }
+
+          &.payment-history-button {
+            background-color: $history-color;
+            &:hover {
+              background-color: darken($history-color, 10%);
+            }
+          }
+
+          &.attendance-history-button {
+            background-color: lighten($history-color, 15%);
+            &:hover {
+              background-color: darken(lighten($history-color, 15%), 10%);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  mat-card-content {
+    padding: 30px;
+
+    .student-info-grid {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+
+      .info-section {
+        flex: 1 1 45%;
+        margin-bottom: 30px;
+
+        h3 {
+          font-size: 22px;
+          margin-bottom: 15px;
+          color: $primary-color;
+          border-bottom: 2px solid $primary-color;
+          padding-bottom: 5px;
+        }
+
+        p {
+          margin: 8px 0;
+          font-size: 16px;
+          color: #555;
+
+          strong {
+            color: #000;
+          }
+        }
+      }
+    }
+
+    .button-container {
+      display: flex;
+      justify-content: flex-end;
+
+      button {
+        margin-left: 15px;
+        padding: 10px 20px;
+        font-size: 16px;
+        text-transform: none;
+        transition: background-color 0.3s;
+
+        &:hover {
+          background-color: darken($primary-color, 10%);
+        }
+      }
+    }
+  }
+}
+
+/* Styles pour l'Accordéon des Groupes */
+.group-accordion {
+  width: 100%;
+  max-width: 1000px; // Augmente la largeur des groupes
+  margin: 0 auto; // Centre les groupes
+  .mat-expansion-panel {
+    background-color: #f9f9f9;
+    box-shadow: none;
+
+    .mat-expansion-panel-header {
+      background: linear-gradient(to top, #c1dfc4 0%, #deecdd 100%);
+      color: $primary-color;
+      font-weight: bold;
+
+      &:hover {
+        background-color: lighten($primary-color, 40%);
+      }
+    }
+
+    .group-cards-scroll {
+      max-height: 400px;
+      overflow-y: auto;
+      padding: 15px;
+
+      .group-cards {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+
+        app-group-card {
+          flex: 1 1 calc(33% - 15px);
+          max-width: calc(33% - 15px);
+        }
+      }
+    }
+  }
+}
+
+/* Styles pour le Spinner de Chargement */
+.loading-spinner {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 80vh;
+
+  mat-progress-spinner {
+    width: 80px !important;
+    height: 80px !important;
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .student-profile-container {
+    zoom: 0.8;
+  }
+
+  .student-card mat-card-content .student-info-grid .info-section {
+    flex: 1 1 100%;
+  }
+
+  .group-cards-scroll .group-cards app-group-card {
+    flex: 1 1 calc(50% - 15px);
+    max-width: calc(50% - 15px);
+  }
+}
+
+@media (max-width: 600px) {
+  .student-card mat-card-header .header-container {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+
+    .student-info-header {
+      flex-direction: column;
+
+      .student-photo-container {
+        margin-right: 0;
+        margin-bottom: 10px;
+      }
+    }
+
+    .header-buttons {
+      margin-top: 10px;
+    }
+  }
+
+  .student-card mat-card-content .student-info-grid .info-section {
+    flex: 1 1 100%;
+  }
+
+  .button-container {
+    flex-direction: column;
+    align-items: stretch;
+
+    button {
+      margin: 10px 0;
+      width: 100%;
+    }
+  }
+
+  .group-cards-scroll .group-cards app-group-card {
+    flex: 1 1 100%;
+    max-width: 100%;
+  }
+}

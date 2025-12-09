@@ -1,0 +1,495 @@
+/* Import other style files */
+@import 'styles/variables';
+@import 'styles/mixins';
+@import 'styles/base';
+@import 'styles/layout';
+@import 'styles/buttons';
+@import 'styles/forms';
+
+html, body {
+  height: 100%;
+}
+
+body {
+  max-width: 95rem;
+  margin: 0 auto;
+  font-family: Roboto, "Helvetica Neue", sans-serif;
+  background: linear-gradient(to top, #accbee 0%, #e7f0fd 100%);
+  overflow-y: auto;
+}
+
+
+/* Adjust the calendar size */
+.fc {
+  max-width: 900px;
+  margin: 0 auto;
+  font-size: 16px; /* Adjust font size as needed */
+}
+
+/* Event styling for contrast against the cell background */
+.fc-event {
+  background: linear-gradient(180.5deg, rgb(0, 128, 128) 8.5%, rgb(174, 206, 100) 118.2%);
+  color: white; /* White text for readability */
+  border: none; /* No border for a cleaner look */
+  border-radius: 4px; /* Rounded corners */
+  cursor: pointer;
+  overflow: hidden; /* Prevent text from spilling out */
+  text-overflow: ellipsis; /* End with ellipsis if text is too long */
+  white-space: nowrap; /* Keep text in a single line */
+  position: relative; /* Position relative for the tooltip */
+}
+
+/* Tooltip styling */
+.fc-event:hover::after {
+  content: attr(data-tooltip); /* Use a custom attribute for tooltip text */
+  position: absolute;
+  width: max-content;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.7);
+  color: #81cbd8;
+  text-align: center;
+  border-radius: 4px;
+  padding: 5px 10px;
+  font-size: 14px;
+  z-index: 100;
+  white-space: nowrap;
+  display: block;
+}
+
+/* Ensuring the background gradient changes on hover */
+.fc-event:hover {
+  background: linear-gradient(180.5deg, rgb(0, 128, 128) 0%, rgb(174, 206, 100) 80%);
+  color: white; /* Ensure text remains readable */
+}
+
+/* Style for finished events */
+.fc-event.is-finished {
+  background: linear-gradient(98.3deg, rgb(0, 0, 0) 10.6%, rgb(255, 0, 0) 97.7%);
+  color: white; /* Ensure text remains readable */
+}
+
+/* Override FullCalendar list view event hover for finished events */
+.fc-event.is-finished:hover td,
+.fc-event.is-finished:hover {
+  background: linear-gradient(98.3deg, rgb(0, 0, 0) 10.6%, rgb(255, 0, 0) 97.7%) !important;
+  color: white !important;
+}
+
+/* Override FullCalendar list view event hover for not finished events */
+.fc-event:not(.is-finished):hover td,
+.fc-event:not(.is-finished):hover {
+  background: linear-gradient(180.5deg, rgb(0, 128, 128) 0%, rgb(174, 206, 100) 80%) !important;
+  color: white !important;
+}
+
+/* Calendar adjustments */
+.fc-daygrid-day-events {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.fc-daygrid-day-top {
+  position: relative;
+}
+
+.fc-daygrid-day {
+  height: 120px; /* Fixed height for days to accommodate more events */
+}
+
+.fc .fc-daygrid-day {
+  border-color: #e0e0e0; /* Lighter borders for the grid */
+  background-color: #f9f9f9; /* Light gray background for cells */
+  border: 1px solid #e0e0e0; /* Slight border for definition */
+}
+
+/* Calendar header */
+.fc-header-toolbar {
+  background-color: #f5f5f5; /* Light grey background */
+  color: #333; /* Dark text for contrast */
+  padding: 10px; /* Padding for better spacing */
+  border-bottom: 2px solid #ddd; /* Subtle separation from the calendar */
+}
+
+/* Style for today's date for emphasis */
+.fc .fc-daygrid-day.fc-day-today {
+  background-color: #e8f0fe; /* Light blue for today's date */
+  border-color: #c6d2f5; /* Matching border color */
+}
+
+/* Ensure global styles don't interfere */
+.fc-event-title, .fc-event-title-container {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Ensure event titles within buttons are also truncated */
+.fc-event .fc-event-title {
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Specific event styling by adding custom classes in your event data */
+.green-event {
+  color: white;
+  cursor: pointer;
+}
+
+.amber-event {
+  background-color: #FFC107;
+  color: #212121;
+}
+
+/* MatDialog content styles */
+mat-dialog-content p {
+  margin: 5px 0;
+  font-size: 0.95rem;
+}
+
+mat-dialog-content p strong {
+  font-weight: bold;
+}
+
+/* Modal content styles */
+.modal-content {
+  .session-card, .students-card {
+    margin-bottom: 1rem;
+  }
+
+  .student-list-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.5rem;
+  }
+
+  .student-checkbox {
+    flex: 1;
+    display: flex;
+    align-items: center;
+  }
+
+  .description-input {
+    flex: 2;
+    margin-left: 1rem;
+    min-width: 200px;
+  }
+
+  .check-all {
+    margin-bottom: 1rem;
+  }
+}
+
+mat-card-header {
+  background-color: #e1f5fe;
+}
+
+mat-card-title {
+  color: #0d47a1;
+}
+
+/* Additional styles for modal */
+.modal-header {
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin-bottom: 1rem;
+}
+
+.modal-subheader {
+  font-size: 1.2rem;
+  margin-bottom: 0.5rem;
+}
+
+.modal-note {
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  color: #757575;
+}
+
+.checkbox-disabled {
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+/* shared-layout-container styles */
+.shared-layout-container {
+  background-color: red; /* couleur de fond souhaitée */
+  /* autres styles si nécessaire */
+}
+
+/* Conteneur principal pour la mise en page */
+.main-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* Contenu principal */
+.main-content {
+  flex-grow: 1;
+  padding: 20px;
+}
+
+/* Footer */
+.footer {
+  background: #f5f5f5;
+  padding: 10px;
+  text-align: center;
+  border-top: 2px solid #ddd;
+}
+
+/* styles.scss ou global.scss */
+.snack-bar-success {
+  background-color: #4caf50; /* Couleur verte pour succès */
+  color: #fff; /* Texte blanc */
+}
+
+.snack-bar-error {
+  background-color: #f44336; /* Couleur rouge pour erreur */
+  color: #fff; /* Texte blanc */
+}
+
+
+/* Ensure the Angular Material overlay container has a high z-index */
+.cdk-overlay-container {
+  z-index: 1000 !important; /* Adjust as necessary */
+}
+
+/* Ensure the ngx-material-timepicker has an even higher z-index */
+.ngx-material-timepicker-container {
+  z-index: 1050 !important; /* Adjust as necessary */
+}
+
+
+
+
+
+@media (max-width: 600px) {
+  /* Ajustements pour le body */
+  body {
+    max-width: 100%;
+    margin: 0;
+    padding: 0 1rem; /* Ajouter un padding latéral */
+    font-size: 0.9rem; /* Réduire légèrement la taille de la police */
+  }
+
+  /* Ajustements pour le calendrier (.fc) */
+  .fc {
+    max-width: 100%;
+    font-size: 14px; /* Réduire la taille de la police */
+    margin: 0 0.5rem; /* Marges latérales */
+  }
+
+  /* Ajustements pour les événements du calendrier (.fc-event) */
+  .fc-event {
+    font-size: 12px; /* Réduire la taille de la police */
+    padding: 0.25rem; /* Réduire le padding */
+  }
+
+  /* Assurer que le texte des événements ne déborde pas */
+  .fc-event-title,
+  .fc-event-title-container {
+    white-space: normal; /* Permettre au texte de passer à la ligne */
+  }
+
+  /* Ajustements pour les cellules du calendrier */
+  .fc-daygrid-day {
+    height: auto; /* Laisser la hauteur s'adapter au contenu */
+  }
+
+  .fc-daygrid-day-events {
+    flex-wrap: nowrap; /* Éviter que les événements ne se superposent verticalement */
+    overflow-x: auto; /* Permettre le défilement horizontal si nécessaire */
+  }
+
+  /* Ajustements pour les modals et dialogues */
+  .modal-header {
+    font-size: 1.2rem; /* Réduire la taille de la police */
+    text-align: center; /* Centrer le texte */
+  }
+
+  .modal-content {
+    padding: 0.5rem; /* Réduire le padding */
+  }
+
+  .student-list-item {
+    flex-direction: column; /* Empiler verticalement */
+    align-items: flex-start;
+  }
+
+  .description-input {
+    margin-left: 0;
+    width: 100%; /* Occuper toute la largeur */
+  }
+
+  /* Ajustements pour le contenu principal */
+  .main-content {
+    padding: 1rem; /* Réduire le padding */
+  }
+
+  /* Ajustements pour le footer */
+  .footer {
+    padding: 0.5rem;
+    font-size: 0.875rem; /* Réduire la taille de la police */
+  }
+
+  /* Boutons et formulaires */
+  button,
+  input,
+  select,
+  textarea {
+    width: 100%; /* Occuper toute la largeur disponible */
+    font-size: 1rem; /* Taille de police adaptée */
+  }
+
+  .form-group {
+    margin-bottom: 1rem;
+  }
+
+  /* Ajustements pour les images et médias */
+  img,
+  video {
+    max-width: 100%;
+    height: auto;
+  }
+
+  /* Éviter les débordements horizontaux */
+  body {
+    overflow-x: hidden;
+  }
+
+  /* Autres ajustements spécifiques si nécessaire */
+  /* ... */
+}
+
+
+@media (min-width: 600px) and (max-width: 1500px) {
+  /* Ajustements pour le body */
+  body {
+    max-width: 100%;
+    margin: 0 auto;
+    padding: 0 2rem; /* Ajouter un padding latéral */
+    font-size: 1rem; /* Taille de police normale */
+  }
+
+  /* Ajustements pour le calendrier (.fc) */
+  .fc {
+    max-width: 100%;
+    font-size: 15px; /* Taille de police légèrement réduite */
+    margin: 0 auto; /* Centrer le calendrier */
+  }
+
+  /* Ajustements pour les événements du calendrier (.fc-event) */
+  .fc-event {
+    font-size: 14px; /* Taille de police adaptée */
+    padding: 0.5rem; /* Padding modéré */
+  }
+
+  /* Ajustements pour le texte des événements */
+  .fc-event-title,
+  .fc-event-title-container {
+    white-space: nowrap; /* Empêcher le passage à la ligne */
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Ajustements pour les cellules du calendrier */
+  .fc-daygrid-day {
+    height: 100px; /* Hauteur adaptée pour les écrans moyens */
+  }
+
+  .fc-daygrid-day-events {
+    flex-wrap: wrap; /* Permettre le retour à la ligne des événements */
+    overflow: visible;
+  }
+
+  /* Ajustements pour les modals et dialogues */
+  .modal-header {
+    font-size: 1.4rem; /* Taille de police légèrement réduite */
+    text-align: left; /* Alignement à gauche */
+  }
+
+  .modal-content {
+    padding: 1rem; /* Padding modéré */
+  }
+
+  .student-list-item {
+    flex-direction: row; /* Disposition en ligne */
+    align-items: center;
+  }
+
+  .description-input {
+    margin-left: 0.5rem;
+    width: auto; /* Largeur adaptée au contenu */
+  }
+
+  /* Ajustements pour le contenu principal */
+  .main-content {
+    padding: 1.5rem; /* Padding adapté */
+  }
+
+  /* Ajustements pour le footer */
+  .footer {
+    padding: 0.75rem;
+    font-size: 0.95rem; /* Taille de police adaptée */
+  }
+
+  /* Boutons et formulaires */
+  button,
+  input,
+  select,
+  textarea {
+    width: auto; /* Largeur adaptée au contenu */
+    font-size: 1rem; /* Taille de police normale */
+  }
+
+  .form-group {
+    margin-bottom: 1.25rem;
+  }
+
+  /* Ajustements pour les images et médias */
+  img,
+  video {
+    max-width: 100%;
+    height: auto;
+  }
+
+  /* Éviter les débordements horizontaux */
+  body {
+    overflow-x: hidden;
+  }
+
+  /* Ajustements spécifiques pour les tableaux */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  th,
+  td {
+    padding: 0.75rem;
+    text-align: left;
+  }
+
+  /* Autres ajustements spécifiques si nécessaire */
+  /* ... */
+}
+
+
+/* styles.scss ou styles.css */
+.fade-in {
+  opacity: 0;
+  animation: fadeInAnimation 0.9s forwards;
+}
+
+@keyframes fadeInAnimation {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}

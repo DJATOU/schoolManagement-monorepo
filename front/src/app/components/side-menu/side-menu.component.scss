@@ -1,0 +1,141 @@
+.sidenav {
+  background: linear-gradient(to top, #c1dfc4 0%, #deecdd 100%);
+  color: #333;
+  margin: 0;
+  padding: 0;
+  font-family: 'Roboto', sans-serif;
+  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.15);
+  overflow: hidden; /* Avoid horizontal scroll bar */
+}
+
+.custom-accordion .mat-expansion-panel {
+  background-color: transparent;
+  border: none;
+  margin: 0; /* Removed margin to align with the edges */
+  border-radius: 0; /* Removed border-radius for cleaner alignment */
+  overflow: hidden;
+}
+
+.custom-accordion .mat-expansion-panel-header {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #333;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.3s ease;
+  padding: 10px; /* Ajustement du padding pour éviter le défilement horizontal */
+  font-size: 14px; /* Réduction de la taille de police pour plus d'espace */
+  display: flex;
+  align-items: center;
+}
+
+.custom-accordion .mat-expansion-panel-header:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+  transform: scale(1.05);
+}
+
+.custom-accordion .mat-action-list mat-list-item {
+  color: #333;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  cursor: pointer;
+  transition: background-color 0.3s ease, padding-left 0.3s ease;
+  padding: 8px 10px; /* Ajustement du padding pour éviter le défilement horizontal */
+  display: flex;
+  align-items: center;
+  font-size: 13px; /* Réduction de la taille de police pour plus d'espace */
+}
+
+.custom-accordion .mat-action-list mat-list-item:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  padding-left: 18px; /* Ajustement du padding pour éviter le défilement horizontal */
+}
+
+.mat-list-item {
+  font-size: 13px; /* Réduction de la taille de police pour éviter le défilement horizontal */
+}
+
+.mat-panel-title mat-icon {
+  margin-right: 10px;
+  color: #333;
+}
+
+.mat-panel-title {
+  display: flex;
+  align-items: center;
+}
+
+.custom-accordion .mat-action-list mat-list-item mat-icon {
+  color: #333;
+  margin-right: 10px;
+}
+
+
+@media (min-width: 600px) and (max-width: 1500px) {
+  /* Ajustements pour la barre latérale (.sidenav) */
+  .sidenav {
+    padding: 0;
+    overflow-y: auto; /* Permettre le défilement vertical si nécessaire */
+  }
+
+  /* Ajustements pour le custom accordion */
+  .custom-accordion .mat-expansion-panel-header {
+    padding: 8px; /* Réduction du padding */
+    font-size: 13px; /* Réduction de la taille de police */
+  }
+
+  .custom-accordion .mat-action-list mat-list-item {
+    padding: 6px 8px; /* Ajustement du padding */
+    font-size: 12px; /* Réduction de la taille de police */
+  }
+
+  .custom-accordion .mat-action-list mat-list-item:hover {
+    padding-left: 16px; /* Ajustement du padding pour éviter le défilement horizontal */
+  }
+
+  .mat-list-item {
+    font-size: 12px; /* Réduction de la taille de police */
+  }
+
+  .mat-panel-title mat-icon {
+    margin-right: 8px;
+  }
+
+  .custom-accordion .mat-action-list mat-list-item mat-icon {
+    margin-right: 8px;
+  }
+}
+
+
+@media (max-width: 600px) {
+  /* Ajustements pour la barre latérale (.sidenav) */
+  .sidenav {
+    padding: 0;
+    width: 100%; /* La barre latérale occupe toute la largeur */
+    position: relative; /* Pour un positionnement correct */
+  }
+
+  /* Ajustements pour le custom accordion */
+  .custom-accordion .mat-expansion-panel-header {
+    padding: 6px; /* Réduction du padding */
+    font-size: 12px; /* Réduction de la taille de police */
+  }
+
+  .custom-accordion .mat-action-list mat-list-item {
+    padding: 4px 6px; /* Réduction du padding */
+    font-size: 11px; /* Réduction de la taille de police */
+  }
+
+  .custom-accordion .mat-action-list mat-list-item:hover {
+    padding-left: 14px; /* Ajustement du padding */
+  }
+
+  .mat-list-item {
+    font-size: 11px; /* Réduction de la taille de police */
+  }
+
+  .mat-panel-title mat-icon {
+    margin-right: 6px;
+  }
+
+  .custom-accordion .mat-action-list mat-list-item mat-icon {
+    margin-right: 6px;
+  }
+}

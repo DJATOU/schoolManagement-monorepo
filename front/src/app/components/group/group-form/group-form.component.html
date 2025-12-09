@@ -1,0 +1,90 @@
+<form [formGroup]="groupForm" (ngSubmit)="onSubmit()" class="form-container fade-in">
+  <h2 class="form-title">Formulaire d'inscription du groupe</h2>
+  <p class="form-instruction" style="font-size: 14px; color: #f44336; margin-bottom: 20px;">
+    <mat-icon style="vertical-align: middle; margin-right: 5px;">info</mat-icon>
+    Les champs marqués d'un astérisque (*) sont obligatoires.
+  </p>
+  <mat-tab-group class="tab-group">
+    <mat-tab label="Détails de base">
+      <div class="tab-content" formGroupName="basicInformation">
+        <mat-form-field appearance="fill">
+          <mat-label>Nom</mat-label>
+          <input matInput formControlName="name" required>
+        </mat-form-field>
+
+        <!-- PHASE 3A: Upload photo du groupe -->
+        <mat-form-field appearance="fill" class="photo-field">
+          <mat-label>Télécharger une photo</mat-label>
+          <div class="upload-container">
+            <input matInput readonly [value]="selectedFile?.name" placeholder="Aucun fichier sélectionné" class="upload-input">
+            <button type="button" mat-raised-button color="accent" (click)="photoInput.click()" class="upload-button">
+              <mat-icon>attach_file</mat-icon> Choisir une image
+            </button>
+            <input type="file" (change)="onFileSelected($event)" accept="image/*" hidden #photoInput>
+          </div>
+        </mat-form-field>
+
+        <mat-form-field appearance="fill">
+          <mat-label>Type de groupe</mat-label>
+          <mat-select formControlName="groupTypeId" required>
+            <mat-option *ngFor="let type of groupTypes" [value]="type.id">{{ type.name }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="fill">
+          <mat-label>Niveau</mat-label>
+          <mat-select formControlName="levelId" required>
+            <mat-option *ngFor="let level of levels" [value]="level.id">{{ level.name }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="fill">
+          <mat-label>Matière</mat-label>
+          <mat-select formControlName="subjectId" required>
+            <mat-option *ngFor="let subject of subjects" [value]="subject.id">{{ subject.name }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+    </mat-tab>
+
+    <mat-tab label="Détails supplémentaires">
+      <div class="tab-content" formGroupName="additionalDetails">
+        <mat-form-field appearance="fill">
+          <mat-label>Nombre de sessions par série</mat-label>
+          <mat-select formControlName="sessionNumberPerSerie" required>
+            <mat-option *ngFor="let i of [].constructor(16); let index = index" [value]="index + 1">{{ index + 1 }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+        
+
+        <mat-form-field appearance="fill">
+          <mat-label>Prix</mat-label>
+          <mat-select formControlName="priceId" required>
+            <mat-option *ngFor="let price of prices" [value]="price.id">
+              {{ price.price | currency }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="fill">
+          <mat-label>Description</mat-label>
+          <textarea matInput formControlName="description"></textarea>
+        </mat-form-field>
+
+        <mat-form-field appearance="fill">
+          <mat-label>Enseignant</mat-label>
+          <mat-select formControlName="teacherId" required>
+            <mat-option *ngFor="let teacher of teachers" [value]="teacher.id">
+              {{ teacher.firstName }} {{ teacher.lastName }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+    </mat-tab>
+  </mat-tab-group>
+
+  <div class="button-container">
+    <button mat-raised-button color="primary" type="submit" class="submit-button">Enregistrer le groupe</button>
+    <button mat-raised-button color="accent" type="button" class="clear-button" (click)="onClearForm()">Effacer</button>
+  </div>
+</form>

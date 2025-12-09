@@ -1,0 +1,14 @@
+mat-form-field {
+    width: 100%;
+  }
+  
+  mat-dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+  }
+
+  ::ng-deep .rattrapage-option {
+    background-color: #ffeeba !important;
+  }
+  

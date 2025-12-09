@@ -1,0 +1,61 @@
+<mat-nav-list class="sidenav">
+  <mat-accordion multi="false" class="custom-accordion">
+    <mat-expansion-panel>
+      <mat-expansion-panel-header>
+        <mat-panel-title>
+          <mat-icon>school</mat-icon>
+          Inscription
+        </mat-panel-title>
+      </mat-expansion-panel-header>
+      <mat-action-list>
+        <mat-list-item [routerLink]="['/subscription']">Étudiants</mat-list-item>
+        <mat-list-item [routerLink]="['/teacher/new']">Enseignants</mat-list-item>
+        <mat-list-item [routerLink]="['/group/new']">Groupes</mat-list-item>
+      </mat-action-list>
+    </mat-expansion-panel>
+
+    <mat-expansion-panel>
+      <mat-expansion-panel-header>
+        <mat-panel-title>
+          <mat-icon>attach_money</mat-icon>
+          Gestion Financière
+        </mat-panel-title>
+      </mat-expansion-panel-header>
+      <mat-action-list>
+        <mat-list-item>Paiements</mat-list-item>
+        <mat-list-item>Frais</mat-list-item>
+      </mat-action-list>
+    </mat-expansion-panel>
+
+    <mat-expansion-panel>
+      <mat-expansion-panel-header>
+        <mat-panel-title>
+          <mat-icon>book</mat-icon>
+          Suivi Académique
+        </mat-panel-title>
+      </mat-expansion-panel-header>
+      <mat-action-list>
+        <mat-list-item>Présences</mat-list-item>
+        <mat-list-item [routerLink]="['/session/new']">Sessions</mat-list-item>
+        <mat-list-item [routerLink]="['/calendar/new']">Calendrier</mat-list-item>
+        <mat-list-item [routerLink]="['/serie/new']">Séries</mat-list-item>
+      </mat-action-list>
+    </mat-expansion-panel>
+
+    <mat-expansion-panel>
+      <mat-expansion-panel-header>
+        <mat-panel-title>
+          <mat-icon>more_horiz</mat-icon>
+          Ressources Académiques
+        </mat-panel-title>
+      </mat-expansion-panel-header>
+      <mat-action-list>
+        <mat-list-item [routerLink]="['/level/table']">Niveaux</mat-list-item>
+        <mat-list-item [routerLink]="['/room/table']">Salles</mat-list-item>
+        <mat-list-item [routerLink]="['/subject/table']">Matières</mat-list-item>
+        <mat-list-item [routerLink]="['groupType/table']">Types de Groupes</mat-list-item>
+        <mat-list-item [routerLink]="['/pricing/table']">Tarification</mat-list-item>
+      </mat-action-list>
+    </mat-expansion-panel>
+  </mat-accordion>
+</mat-nav-list>
