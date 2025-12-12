@@ -11,7 +11,6 @@ $accent: #1b9aaa;
   font-family: 'Roboto', sans-serif;
   box-shadow: 2px 0 14px rgba(0, 0, 0, 0.1);
   min-height: 100%;
-  width: 248px;
 }
 
 .sidenav-brand {
@@ -63,11 +62,10 @@ $accent: #1b9aaa;
     color: #fff;
     cursor: pointer;
     transition: background-color 0.25s ease, transform 0.25s ease;
-    padding: 0.95rem 1.35rem;
+    padding: 0.9rem 1.25rem;
     font-size: 14px;
     display: flex;
     align-items: center;
-    gap: 0.65rem;
 
     &:hover {
       background-color: rgba(255, 255, 255, 0.2);
@@ -78,7 +76,7 @@ $accent: #1b9aaa;
   .mat-panel-title {
     display: flex;
     align-items: center;
-    gap: 0.7rem;
+    gap: 0.6rem;
     font-weight: 600;
 
     mat-icon {
@@ -91,24 +89,19 @@ $accent: #1b9aaa;
   }
 
   .mat-action-list {
-    padding: 0.75rem 1.15rem 1.15rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.35rem;
-    margin-bottom: 0.5rem;
+    padding: 0.25rem 0.75rem 0.75rem;
 
     .nav-item {
       color: $text-color;
       border-radius: 10px;
       cursor: pointer;
       transition: background-color 0.2s ease, transform 0.2s ease;
-      padding: 14px 20px;
-      margin: 0 0 6px;
+      padding: 0.5rem 0.75rem;
+      margin: 0.15rem 0;
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 0.75rem;
       font-weight: 500;
-      letter-spacing: 0.01em;
 
       &:hover {
         background-color: rgba(27, 154, 170, 0.08);
@@ -117,23 +110,15 @@ $accent: #1b9aaa;
 
       .item-icon {
         color: $muted;
-        min-width: 24px;
-        text-align: center;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 22px;
       }
 
       &.active-link {
-        background: #e8f0fe;
-        border-left: 3px solid #3b82f6;
-        border-radius: 6px;
-        box-shadow: none;
+        background: rgba(27, 154, 170, 0.18);
+        box-shadow: inset 3px 0 0 $accent;
         color: $text-color;
 
         .item-icon {
-          color: #3b82f6;
+          color: $accent;
         }
       }
     }

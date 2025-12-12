@@ -93,7 +93,7 @@ export class PaymentDialogComponent implements OnInit {
       return;
     }
 
-    const sessionSeriesId = paymentData.sessionSeriesId as number;
+    const sessionSeriesId = paymentData.sessionSeriesId;
     const sessionSeries = this.sessionSeries.find(series => series.id === sessionSeriesId);
     const seriesName = sessionSeries?.name || 'Unknown Series';
   
