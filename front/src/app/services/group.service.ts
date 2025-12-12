@@ -29,7 +29,7 @@ export class GroupService {
 
   // Fetch a single group by ID
   getGroup(id: number): Observable<Group> {
-    return this.http.get<Group>(`${this.apiUrl}/id/${id}`);
+    return this.http.get<Group>(`${this.apiUrl}/${id}`);
   }
 
   getGroupById(groupId: number): Observable<Group> {
@@ -37,12 +37,11 @@ export class GroupService {
   }
 
   getGroupsOfStudent(studentId: number): Observable<Group[]> {
-    return this.http.get<Group[]>(`${this.apiUrl}/${studentId}/groups`);
+    return this.http.get<Group[]>(`${this.apiUrl2}/${studentId}/groups`);
   }
   
   // Create a new group
   createGroup(groupData: FormData): Observable<Group> {
-    console.log('Group created:', groupData);
     return this.http.post<Group>(`${this.apiUrl}/createGroupe`, groupData);
   }
 
@@ -94,7 +93,7 @@ export class GroupService {
   }
 
   addStudentToGroup(groupId: number, studentId: number): Observable<any> {
-    return this.http.post(`${this.apiUrl2}/${studentId}/addStudents`, { studentId });
+    return this.http.post(`${this.apiUrl2}/${groupId}/addStudents`, { studentIds: [studentId] });
   }
   
   getGroupsForPayment(studentId: number): Observable<Group[]> {
