@@ -1,15 +1,27 @@
 export interface Payment {
+  id?: number;
   studentId: number;
-  sessionId: number;
-  sessionSeriesId: number;
+  sessionSeriesId?: number;
+  sessionId?: number;
+  groupId: number;
+
   amountPaid: number;
-  paymentForMonth: Date;
-  status?: string;
+  amountDue: number;
+
+  discountType?: 'PERCENTAGE' | 'FIXED' | 'NONE';
+  discountValue?: number;
+  discountReason?: string;
+
+  paymentType: 'SERIES' | 'SESSION' | 'PARTIAL';
+
   paymentMethod?: string;
   paymentDescription?: string;
-  groupId: number;
-  totalSeriesCost?: number; // Propriété ajoutée pour le coût total de la série
-  totalPaidForSeries?: number; // Propriété ajoutée pour le total payé
-  amountOwed?: number; // Propriété ajoutée pour le montant restant dû
+  paymentForMonth: Date;
+  paymentDate?: Date;
+  status: 'PENDING' | 'PARTIAL' | 'PAID' | 'OVERPAID' | 'REFUNDED';
+
+  totalSeriesCost?: number;
+  totalPaidForSeries?: number;
+  amountOwed?: number;
   seriesPrice?: number;
 }

@@ -7,6 +7,7 @@ import com.school.management.mapper.GroupMapper;
 import com.school.management.persistance.AttendanceEntity;
 import com.school.management.persistance.GroupEntity;
 import com.school.management.service.group.GroupServiceImpl;
+import com.school.management.shared.exception.ResourceNotFoundException;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,7 +59,7 @@ public class GroupController {
     @GetMapping("/{id}")
     public ResponseEntity<GroupDTO> getGroupById(@PathVariable Long id) {
         GroupEntity group = groupService.findById(id)
-                .orElseThrow(() -> new RuntimeException("Group not found")); // Customize exception
+                .orElseThrow(() -> new ResourceNotFoundException("Group", id));
         return ResponseEntity.ok(groupMapper.groupToGroupDTO(group));
     }
 
@@ -78,7 +79,8 @@ public class GroupController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<GroupDTO> updateGroup(@PathVariable Long id, @RequestBody GroupDTO groupDto) {
+    public ResponseEntity<GroupDTO> updateGroup(@PathVariable Long id, @Valid @RequestBody GroupDTO groupDto) {
+        groupService.findById(id).orElseThrow(() -> new ResourceNotFoundException("Group", id));
         // PHASE 1 REFACTORING: Utilise MappingContext au lieu de ApplicationContextProvider
         GroupEntity updatedGroup = groupMapper.groupDTOToGroup(groupDto, groupService.getMappingContext());
         updatedGroup.setId(id);

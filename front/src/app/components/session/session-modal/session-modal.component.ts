@@ -165,16 +165,19 @@ onValidateSession(): void {
       studentId: student.id!,
       sessionId: this.sessionData.id,
       groupId: this.sessionData.groupId,
+      originalGroupId: this.sessionData.groupId,
       sessionSeriesId: this.sessionData.sessionSeriesId, // Make sure this is not undefined
       isPresent: student.isPresent !== undefined ? student.isPresent : true,
       isJustified: student.isJustified !== undefined ? student.isJustified : false,
+      justificationReason: student.description,
       description: student.description ?? '',
+      isCatchUp: student.isCatchUp ?? false,
+      paymentStatus: 'PENDING',
       dateCreation: new Date(),
       dateUpdate: new Date(),
       createdBy: 'system',
       updatedBy: 'system',
-      active: true,
-      isCatchUp: student.isCatchUp
+      active: true
   }));
 
    // Log pour vérifier les valeurs de isCatchUp
