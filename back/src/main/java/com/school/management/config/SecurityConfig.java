@@ -16,11 +16,8 @@ import java.util.List;
 @EnableWebSecurity
 public class SecurityConfig {
 
-    // CORS Configuration: Configure allowed origins via environment variable
-    // Default: http://localhost:4200 (local development)
-    // Production: Set CORS_ALLOWED_ORIGINS to your Vercel frontend URL (e.g., https://your-app.vercel.app)
-    // Multiple origins: separate with comma (e.g., https://app1.vercel.app,https://app2.vercel.app)
-    @Value("${cors.allowed.origins:http://localhost:4200}")
+    // Default: localhost + Vercel
+    @Value("${cors.allowed.origins:http://localhost:4200,https://school-management-monorepo.vercel.app}")
     private String allowedOrigins;
 
     @Bean
@@ -28,16 +25,25 @@ public class SecurityConfig {
         http
                 .cors(cors -> cors.configurationSource(request -> {
                     CorsConfiguration config = new CorsConfiguration();
-                    // Split comma-separated origins and convert to list
+
+                    // Origins
                     List<String> origins = Arrays.asList(allowedOrigins.split(","));
                     config.setAllowedOrigins(origins);
+
+                    // Methods
                     config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
-                    config.setAllowedHeaders(Arrays.asList("Authorization", "Cache-Control", "Content-Type"));
+
+                    // Headers (on ouvre tout pour être tranquille avec Angular)
+                    config.setAllowedHeaders(List.of("*"));
+
+                    // Si tu n’utilises pas de cookies/session côté front, tu peux même mettre false
                     config.setAllowCredentials(true);
+
                     return config;
                 }))
                 .authorizeHttpRequests(authz -> authz
-                        .requestMatchers("/api/v1/aith/**",
+                        .requestMatchers(
+                                "/api/v1/aith/**",      // (ptit typo ici, tu voulais sans doute /auth/**)
                                 "v2/api-docs",
                                 "/v3/api-docs",
                                 "/v3/api-docs/**",
@@ -47,10 +53,12 @@ public class SecurityConfig {
                                 "/configuration/security",
                                 "swagger-ui/**",
                                 "/webjars/**",
-                                "/swagger-ui.html").permitAll() // Allow Swagger UI
+                                "/swagger-ui.html"
+                        ).permitAll()
                         .anyRequest().permitAll()
-                ) .csrf(AbstractHttpConfigurer::disable)// Désactiver CSRF si nécessaire, spécialement pour les API REST
-               ;
+                )
+                .csrf(AbstractHttpConfigurer::disable);
+
         return http.build();
     }
 }
