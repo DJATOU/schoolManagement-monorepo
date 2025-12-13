@@ -21,6 +21,11 @@
   <p><strong>Montant déjà payé :</strong> {{ data.totalPaid }} DA</p>
   <p><strong>Montant restant à payer :</strong> {{ data.remainingAmount }} DA</p>
 
+  <!-- Note rattrapage -->
+  <p *ngIf="data.isCatchUp" style="color: red; font-weight: bold; margin: 10px 0;">
+    Rattrapage : l'étudiant est en règle dès paiement de chaque session suivie.
+  </p>
+
   <!-- Message de confirmation pour rattrapage -->
   <p *ngIf="data.isCatchUp && data.remainingAmount === 0" style="color: green; font-weight: bold;">
     ✓ L'étudiant est en règle pour toutes ses sessions de rattrapage.

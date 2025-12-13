@@ -122,13 +122,14 @@ export class PaymentHistoryDialogComponent implements OnInit {
 
       const pricingId = selectedGroupObject.priceId;
 
-      // Charger en parallèle : pricing, attendances et payment history
+      // Charger en parallèle : pricing, attendances, payment history et détails de paiement
       forkJoin({
         pricing: this.loadGroupPricing(pricingId),
         attendances: this.attendanceService.getAttendanceByStudentAndSeries(this.data.studentId, this.selectedSeries),
-        paymentHistory: this.paymentService.getPaymentHistoryForSeries(this.data.studentId, this.selectedSeries)
+        paymentHistory: this.paymentService.getPaymentHistoryForSeries(this.data.studentId, this.selectedSeries),
+        paymentDetails: this.paymentService.getPaymentDetailsForSeries(this.data.studentId, this.selectedSeries)
       }).subscribe({
-        next: ({ pricing, attendances, paymentHistory }) => {
+        next: ({ pricing, attendances, paymentHistory, paymentDetails }) => {
           const sessionPrice = pricing.price ?? 0;
 
           // Déterminer si l'étudiant est en rattrapage pour cette série
@@ -138,18 +139,20 @@ export class PaymentHistoryDialogComponent implements OnInit {
 
           if (this.isCatchUpSeries) {
             // RATTRAPAGE : Compter uniquement les sessions où l'étudiant est PRÉSENT
-            totalSessions = attendances.filter(a => a.isPresent).length;
+            totalSessions = attendances.filter(a => a.isCatchUp && a.isPresent).length;
           } else {
             // NORMAL : Utiliser le nombre total de sessions de la série
             totalSessions = this.sessionSeries.find(series => series.id === this.selectedSeries)?.totalSessions ?? 0;
           }
 
           this.seriesTotal = totalSessions * sessionPrice;
-          this.seriesPaid = paymentHistory.reduce((acc, payment) => acc + payment.amountPaid, 0);
+          this.seriesPaid = (paymentDetails || [])
+            .filter(detail => !this.isCatchUpSeries || detail.isCatchUp)
+            .reduce((acc, payment) => acc + (payment.amountPaid || 0), 0);
           this.seriesRemaining = this.seriesTotal - this.seriesPaid;
           this.seriesStatus = this.getSeriesStatus();
 
-          this.loadSessionPaymentDetails(sessionPrice);
+          this.loadSessionPaymentDetails(sessionPrice, paymentDetails || []);
         },
         error: (error: Error) => {
           console.error('Error loading payment history data:', error);
@@ -160,28 +163,23 @@ export class PaymentHistoryDialogComponent implements OnInit {
     }
   }
 
-  private loadSessionPaymentDetails(sessionPrice: number): void {
-    if (this.selectedGroup !== null && this.selectedSeries !== null) {
-      this.paymentService.getPaymentDetailsForSessions(this.data.studentId, this.selectedSeries).subscribe({
-        next: (paymentDetails) => {
-          this.paymentHistory.data = paymentDetails.map(detail => ({
-            sessionId: detail.sessionId,
-            sessionName: detail.sessionName,
-            paymentMethod: detail.paymentMethod || 'Cash',
-            description: detail.description || 'Aucune description',
-            paymentDate: detail.paymentDate,
-            amountPaid: detail.amountPaid,
-            status: this.getPaymentStatusWithPrice(detail, sessionPrice),
-            sessionPrice: sessionPrice
-          }));
-        },
-        error: (error: Error) => {
-          console.error('Error loading session payment details:', error);
-        }
-      });
-    } else {
+  private loadSessionPaymentDetails(sessionPrice: number, paymentDetails: PaymentDetail[]): void {
+    if (this.selectedGroup === null || this.selectedSeries === null) {
       console.error('Selected group or selected series is null or undefined.');
+      return;
     }
+
+    this.paymentHistory.data = paymentDetails.map(detail => ({
+      sessionId: detail.sessionId,
+      sessionName: detail.isCatchUp ? `Rattrapage - ${detail.sessionName}` : detail.sessionName,
+      paymentMethod: detail.paymentMethod || 'Cash',
+      description: detail.description || 'Aucune description',
+      paymentDate: detail.paymentDate,
+      amountPaid: detail.amountPaid,
+      status: this.getPaymentStatusWithPrice(detail, sessionPrice),
+      sessionPrice: sessionPrice,
+      isCatchUp: detail.isCatchUp
+    }));
   }
 
   private getPaymentStatusWithPrice(detail: PaymentDetail, sessionPrice: number): string {
