@@ -2,12 +2,13 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable} from 'rxjs';
 import { Subject } from '../models/subject/subject';
+import { API_BASE_URL } from '../app.config';
 
 @Injectable({
   providedIn: 'root'
 })
 export class SubjectService {
-  private apiUrl = 'http://localhost:8080/api/subjects';
+  private apiUrl = `${API_BASE_URL}/api/subjects`;
 
   constructor(private http: HttpClient) { }
 
@@ -27,4 +28,3 @@ export class SubjectService {
     return this.http.delete<boolean>(`${this.apiUrl}/disable/${id_list}`);
   }
 }
-
