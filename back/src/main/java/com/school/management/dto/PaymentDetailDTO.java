@@ -16,5 +16,6 @@ public class PaymentDetailDTO {
     private Double amountPaid;
     private Double remainingBalance;
     private Date paymentDate; // Ajoutez ce champp
+    private Boolean isCatchUp;
 }
 
