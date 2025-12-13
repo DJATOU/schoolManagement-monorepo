@@ -119,11 +119,58 @@ export class PaymentDialogComponent implements OnInit {
           let totalCost: number;
           let calculationNote: string;
 
+          const totalPaidFromDetails = paymentDetails
+            ? paymentDetails.reduce((acc, detail) => acc + (detail.amountPaid || 0), 0)
+            : undefined;
+
           if (isCatchUpStudent) {
             // RATTRAPAGE : Compter uniquement les sessions où l'étudiant est PRÉSENT
-            numberOfSessions = attendances.filter(a => a.isPresent).length;
+            numberOfSessions = attendances.filter(a => a.isCatchUp && a.isPresent).length;
+            const totalPaidPreviously = (paymentDetails || [])
+              .filter(detail => detail.isCatchUp)
+              .reduce((acc, curr) => acc + (curr.amountPaid || 0), 0);
+
             totalCost = numberOfSessions * pricePerSession;
             calculationNote = 'Rattrapage : paiement par session assistée';
+
+            const newTotalPaid = totalPaidPreviously + paymentData.amountPaid;
+
+            // Vérifier si le nouveau total payé dépasse le coût
+            if (newTotalPaid > totalCost) {
+              const surplus = newTotalPaid - totalCost;
+              this.snackBar.open(
+                `Le montant payé dépasse le coût total des sessions de rattrapage (${numberOfSessions}) de ${surplus} DA. Le paiement ne peut pas être effectué.`,
+                'Fermer',
+                { duration: 5000 }
+              );
+              return;
+            }
+
+            const remainingAmount = totalCost - newTotalPaid;
+
+            // Ouvrir le dialogue de confirmation
+            const dialogRef = this.dialog.open(PaymentConfirmationDialogComponent, {
+              width: '500px',
+              data: {
+                seriesName: seriesName,
+                numberOfSessions: numberOfSessions,
+                pricePerSession: pricePerSession,
+                totalCost: totalCost,
+                paymentDetails: paymentDetails,
+                paymentHistory: paymentHistory,
+                totalPaid: newTotalPaid,
+                remainingAmount: remainingAmount,
+                isCatchUp: isCatchUpStudent,
+                calculationNote: calculationNote
+              }
+            });
+
+            dialogRef.afterClosed().subscribe(result => {
+              if (result) {
+                this.submitPayment(paymentData);
+              }
+            });
+            return;
           } else {
             // NORMAL : Utiliser le nombre de sessions créées
             numberOfSessions = sessionSeries!.numberOfSessionsCreated;
@@ -131,8 +178,8 @@ export class PaymentDialogComponent implements OnInit {
             calculationNote = '';
           }
 
-          // Les paiements déjà effectués doivent provenir des détails (inclut rattrapage)
-          const totalPaidPreviously = paymentDetails.reduce((acc, curr) => acc + curr.amountPaid, 0);
+          const totalPaidPreviously = totalPaidFromDetails
+            ?? paymentHistory.reduce((acc, curr) => acc + curr.amountPaid, 0);
           const newTotalPaid = totalPaidPreviously + paymentData.amountPaid;
 
           // Vérifier si le nouveau total payé dépasse le coût
