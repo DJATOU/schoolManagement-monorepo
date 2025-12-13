@@ -30,7 +30,10 @@
     <!-- Définitions des colonnes -->
     <ng-container matColumnDef="session">
       <th mat-header-cell *matHeaderCellDef> Session </th>
-      <td mat-cell *matCellDef="let attendance" [ngClass]="getRowClass(attendance)"> {{ attendance.sessionName }} </td>
+      <td mat-cell *matCellDef="let attendance" [ngClass]="getRowClass(attendance)">
+        {{ attendance.sessionName }}
+        <span *ngIf="attendance.isCatchUp" style="color: red; font-weight: bold;"> (Rattrapage)</span>
+      </td>
     </ng-container>
 
     <ng-container matColumnDef="attendanceDate">
@@ -45,7 +48,9 @@
 
     <ng-container matColumnDef="isJustified">
       <th mat-header-cell *matHeaderCellDef> Justifié </th>
-      <td mat-cell *matCellDef="let attendance" [ngClass]="getRowClass(attendance)"> {{ attendance.isJustified ? 'Oui' : 'Non' }} </td>
+      <td mat-cell *matCellDef="let attendance" [ngClass]="getRowClass(attendance)">
+        {{ attendance.isPresent ? '' : (attendance.isJustified ? 'Oui' : 'Non') }}
+      </td>
     </ng-container>
 
     <ng-container matColumnDef="description">

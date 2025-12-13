@@ -20,13 +20,16 @@ public class StudentHistoryService {
     private final StudentRepository studentRepository;
     private final AttendanceRepository attendanceRepository;
     private final StudentGroupRepository studentGroupRepository;
+    private final com.school.management.repository.PaymentDetailRepository paymentDetailRepository;
 
     public StudentHistoryService(StudentRepository studentRepository,
                                 AttendanceRepository attendanceRepository,
-                                StudentGroupRepository studentGroupRepository) {
+                                StudentGroupRepository studentGroupRepository,
+                                com.school.management.repository.PaymentDetailRepository paymentDetailRepository) {
         this.studentRepository = studentRepository;
         this.attendanceRepository = attendanceRepository;
         this.studentGroupRepository = studentGroupRepository;
+        this.paymentDetailRepository = paymentDetailRepository;
     }
 
     public StudentFullHistoryDTO getStudentFullHistory(Long studentId) {
@@ -95,6 +98,19 @@ public class StudentHistoryService {
         dto.setSeriesId(series.getId());
         dto.setSeriesName(series.getName());
 
+        // IMPORTANT: Charger tous les payment details pour cette série et cet étudiant en une seule requête
+        // Cela évite le problème de lazy loading et améliore les performances
+        List<PaymentDetailEntity> paymentDetailsForSeries = paymentDetailRepository
+                .findByPayment_StudentIdAndSession_SessionSeriesId(student.getId(), series.getId());
+
+        // Créer une map sessionId -> PaymentDetail pour un accès rapide
+        Map<Long, PaymentDetailEntity> paymentDetailMap = paymentDetailsForSeries.stream()
+                .collect(Collectors.toMap(
+                        pd -> pd.getSession().getId(),
+                        pd -> pd,
+                        (existing, replacement) -> existing // En cas de doublon, garder le premier
+                ));
+
         // NOUVEAU: Récupérer la date d'inscription de l'étudiant au groupe
         Date enrollmentDate = isOfficial ? getStudentEnrollmentDate(student, group) : null;
 
@@ -134,8 +150,17 @@ public class StudentHistoryService {
             return null;  // => la série n'apparaîtra pas dans le PDF
         }
 
-        // NOUVEAU: Calculer le coût total uniquement pour les sessions éligibles (après inscription)
-        double totalCostForStudent = calculateTotalCostForStudent(group, eligibleSessions);
+        // NOUVEAU: Calculer le coût total en fonction du type de groupe
+        double totalCostForStudent;
+        if (isOfficial) {
+            // Pour les groupes officiels : coût basé sur toutes les sessions éligibles (après inscription)
+            totalCostForStudent = calculateTotalCostForStudent(group, eligibleSessions);
+        } else {
+            // Pour les sessions de rattrapage : coût basé UNIQUEMENT sur les sessions
+            // où l'étudiant est PRÉSENT avec paiement COMPLÉTÉ
+            totalCostForStudent = calculateTotalCostForCatchUpSessions(group, filteredSessions, student);
+        }
+
         double totalPaidForSeries = calculateTotalPaidForSeries(series, student);
 
         // NOUVEAU: Statut de paiement basé sur les sessions auxquelles l'étudiant a droit
@@ -146,7 +171,7 @@ public class StudentHistoryService {
 
         // 4) Construire la liste finale de SessionHistoryDTO
         List<SessionHistoryDTO> sessionDTOs = filteredSessions.stream()
-                .map(session -> mapSessionEntityToDTO(session, student))
+                .map(session -> mapSessionEntityToDTO(session, student, paymentDetailMap))
                 .toList();
 
         dto.setSessions(sessionDTOs);
@@ -154,10 +179,10 @@ public class StudentHistoryService {
     }
 
     // ===================== mapSessionEntityToDTO ======================
-    private SessionHistoryDTO mapSessionEntityToDTO(SessionEntity session, StudentEntity student) {
+    private SessionHistoryDTO mapSessionEntityToDTO(SessionEntity session, StudentEntity student, Map<Long, PaymentDetailEntity> paymentDetailMap) {
         SessionHistoryDTO dto = new SessionHistoryDTO();
 
-        // Si la session n’est plus active (= dévalidée)
+        // Si la session n'est plus active (= dévalidée)
         if (Boolean.FALSE.equals(session.getActive())) {
             dto.setSessionId(session.getId());
             dto.setSessionName(session.getTitle());
@@ -199,11 +224,9 @@ public class StudentHistoryService {
             dto.setCatchUpSession(false);
         }
 
-        // Gérer le paiement
-        PaymentDetailEntity paymentDetail = session.getPaymentDetails().stream()
-                .filter(pd -> pd.getPayment().getStudent().getId().equals(student.getId()))
-                .findFirst()
-                .orElse(null);
+        // CORRECTION: Utiliser la map pré-chargée au lieu du lazy loading
+        // Cela résout le problème où les paiements n'apparaissaient pas pour les sessions de rattrapage
+        PaymentDetailEntity paymentDetail = paymentDetailMap.get(session.getId());
 
         if (paymentDetail != null) {
             dto.setPaymentStatus(paymentDetail.getPayment().getStatus());
@@ -252,6 +275,34 @@ public class StudentHistoryService {
     private double calculateTotalCostForStudent(GroupEntity group, List<SessionEntity> eligibleSessions) {
         double pricePerSession = group.getPrice().getPrice();
         return pricePerSession * eligibleSessions.size();
+    }
+
+    /**
+     * Calcule le coût total pour les sessions de rattrapage
+     * Ne compte QUE les sessions où l'étudiant est PRÉSENT avec paiement COMPLÉTÉ
+     */
+    private double calculateTotalCostForCatchUpSessions(GroupEntity group, List<SessionEntity> sessions, StudentEntity student) {
+        double pricePerSession = group.getPrice().getPrice();
+
+        // Compter uniquement les sessions où l'étudiant est présent ET le paiement est complété
+        long countPresentAndPaid = sessions.stream()
+                .filter(session -> {
+                    // Vérifier si l'étudiant est présent
+                    boolean isPresent = session.getAttendances().stream()
+                            .filter(a -> a.getStudent().getId().equals(student.getId()))
+                            .filter(AttendanceEntity::isActive)
+                            .anyMatch(a -> Boolean.TRUE.equals(a.getIsPresent()));
+
+                    // Vérifier si le paiement est complété
+                    boolean isPaid = session.getPaymentDetails().stream()
+                            .filter(pd -> pd.getPayment().getStudent().getId().equals(student.getId()))
+                            .anyMatch(pd -> "Completed".equalsIgnoreCase(pd.getPayment().getStatus()));
+
+                    return isPresent && isPaid;
+                })
+                .count();
+
+        return pricePerSession * countPresentAndPaid;
     }
 
     private double calculateTotalPaidForSeries(SessionSeriesEntity series, StudentEntity student) {

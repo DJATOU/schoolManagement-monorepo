@@ -17,6 +17,8 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { PaymentDetail } from '../../../models/paymentDetail/paymentDetail';
 import { PricingService } from '../../../services/pricing.service';
 import { HttpErrorResponse } from '@angular/common/http';
+import { AttendanceService } from '../../../services/attendance.service';
+import { forkJoin } from 'rxjs';
 
 @Component({
   selector: 'app-payment-dialog',
@@ -49,11 +51,11 @@ export class PaymentDialogComponent implements OnInit {
     private dialogRef: MatDialogRef<PaymentDialogComponent>,
     private sessionSeriesService: SeriesService,
     private paymentService: PaymentService,
-    private pricingService :PricingService,
+    private pricingService: PricingService,
+    private attendanceService: AttendanceService,
     private dialog: MatDialog,
     private snackBar: MatSnackBar,
     @Inject(MAT_DIALOG_DATA) public data: { studentId: number, groups: Group[] }
-    
   ) {
     this.groups = data.groups;
     this.studentId = data.studentId;
@@ -96,85 +98,81 @@ export class PaymentDialogComponent implements OnInit {
     const sessionSeriesId = paymentData.sessionSeriesId;
     const sessionSeries = this.sessionSeries.find(series => series.id === sessionSeriesId);
     const seriesName = sessionSeries?.name || 'Unknown Series';
-  
-    // Charger le groupe pour obtenir le priceId et récupérer les informations de tarification
+
     const group = this.groups.find(group => group.id === sessionSeries?.groupId);
     if (group?.priceId) {
-      this.pricingService.getPricingById(group.priceId).subscribe({
-        next: (pricing) => {
+      // Charger en parallèle : pricing, attendances, payment history et payment details
+      forkJoin({
+        pricing: this.pricingService.getPricingById(group.priceId),
+        attendances: this.attendanceService.getAttendanceByStudentAndSeries(this.studentId, sessionSeriesId),
+        paymentHistory: this.paymentService.getPaymentHistoryForSeries(this.studentId, sessionSeriesId),
+        paymentDetails: this.paymentService.getPaymentDetailsForSeries(this.studentId, sessionSeriesId)
+      }).subscribe({
+        next: ({ pricing, attendances, paymentHistory, paymentDetails }) => {
           const pricePerSession = pricing.price;
-          const totalSessionsInSeries = group.sessionNumberPerSerie;
-          const groupPrice = pricePerSession * totalSessionsInSeries;
-  
-          // Calculer le coût total des sessions créées
-          const totalCreatedSessionsCost = sessionSeries!.numberOfSessionsCreated * pricePerSession;
-  
-          // Récupérer le montant total déjà payé par l'étudiant pour cette série
-          this.paymentService.getPaymentHistoryForSeries(this.studentId, sessionSeriesId).subscribe({
-            next: (paymentHistory) => {
-              const totalPaidPreviously = paymentHistory.reduce((acc, curr) => acc + curr.amountPaid, 0);
-              const newTotalPaid = totalPaidPreviously + paymentData.amountPaid;
-  
-              // Vérifier si le nouveau total payé dépasse le coût total de la série
-              if (newTotalPaid > groupPrice) {
-                const surplus = newTotalPaid - groupPrice;
-                this.snackBar.open(
-                  `Le montant payé dépasse le coût total de la série de ${surplus} euros.`,
-                  'Fermer',
-                  { duration: 5000 }
-                );
-                return;
-              }
-  
-              // Vérifier si le nouveau total payé dépasse le coût des sessions créées
-              if (newTotalPaid > totalCreatedSessionsCost) {
-                this.snackBar.open(
-                  "Le paiement ne peut pas être effectué car il dépasse le coût des sessions actuellement créées. Veuillez completer la création des sessions pour cette série.",
-                  'Fermer',
-                  { duration: 5000 }
-                );
-                return;
-              }
-  
-              // Si tout est en ordre, calculer le montant restant
-              const remainingAmount = groupPrice - newTotalPaid;
-  
-              // Récupérer les détails de paiement pour la série
-              this.paymentService.getPaymentDetailsForSeries(this.studentId, sessionSeriesId).subscribe({
-                next: (paymentDetails) => {
-                  // Ouvrir le dialogue de confirmation avec les données nécessaires
-                  const dialogRef = this.dialog.open(PaymentConfirmationDialogComponent, {
-                    width: '500px',
-                    data: {
-                      seriesName: seriesName,
-                      seriesPrice: groupPrice,
-                      paymentDetails: paymentDetails,
-                      paymentHistory: paymentHistory,
-                      totalPaid: newTotalPaid,
-                      totalOwed: groupPrice,
-                      remainingAmount: remainingAmount
-                    }
-                  });
-  
-                  // Après la fermeture du dialogue de confirmation
-                  dialogRef.afterClosed().subscribe(result => {
-                    if (result) {
-                      this.submitPayment(paymentData);
-                    }
-                  });
-                },
-                error: (err) => {
-                  console.error('Erreur lors de la récupération des détails de paiement:', err);
-                }
-              });
-            },
-            error: (err) => {
-              console.error('Erreur lors de la récupération de l’historique des paiements:', err);
+
+          // Déterminer si l'étudiant est en rattrapage pour cette série
+          // Un étudiant est en rattrapage si TOUTES ses attendances pour cette série ont isCatchUp = true
+          const isCatchUpStudent = attendances.length > 0 && attendances.every(a => a.isCatchUp);
+
+          let numberOfSessions: number;
+          let totalCost: number;
+          let calculationNote: string;
+
+          if (isCatchUpStudent) {
+            // RATTRAPAGE : Compter uniquement les sessions où l'étudiant est PRÉSENT
+            numberOfSessions = attendances.filter(a => a.isPresent).length;
+            totalCost = numberOfSessions * pricePerSession;
+            calculationNote = 'Rattrapage : paiement par session assistée';
+          } else {
+            // NORMAL : Utiliser le nombre de sessions créées
+            numberOfSessions = sessionSeries!.numberOfSessionsCreated;
+            totalCost = numberOfSessions * pricePerSession;
+            calculationNote = '';
+          }
+
+          const totalPaidPreviously = paymentHistory.reduce((acc, curr) => acc + curr.amountPaid, 0);
+          const newTotalPaid = totalPaidPreviously + paymentData.amountPaid;
+
+          // Vérifier si le nouveau total payé dépasse le coût
+          if (newTotalPaid > totalCost) {
+            const surplus = newTotalPaid - totalCost;
+            this.snackBar.open(
+              `Le montant payé dépasse le coût total (${numberOfSessions} sessions) de ${surplus} DA. Le paiement ne peut pas être effectué.`,
+              'Fermer',
+              { duration: 5000 }
+            );
+            return;
+          }
+
+          const remainingAmount = totalCost - newTotalPaid;
+
+          // Ouvrir le dialogue de confirmation
+          const dialogRef = this.dialog.open(PaymentConfirmationDialogComponent, {
+            width: '500px',
+            data: {
+              seriesName: seriesName,
+              numberOfSessions: numberOfSessions,
+              pricePerSession: pricePerSession,
+              totalCost: totalCost,
+              paymentDetails: paymentDetails,
+              paymentHistory: paymentHistory,
+              totalPaid: newTotalPaid,
+              remainingAmount: remainingAmount,
+              isCatchUp: isCatchUpStudent,
+              calculationNote: calculationNote
+            }
+          });
+
+          dialogRef.afterClosed().subscribe(result => {
+            if (result) {
+              this.submitPayment(paymentData);
             }
           });
         },
         error: (err) => {
-          console.error('Erreur lors de la récupération des informations de tarification:', err);
+          console.error('Erreur lors de la récupération des données:', err);
+          this.snackBar.open('Erreur lors de la récupération des données.', 'Fermer', { duration: 5000 });
         }
       });
     } else {

@@ -15,7 +15,7 @@ export class PdfGeneratorService {
   }
 
   async generateFullHistoryPdf(fullHistory: StudentFullHistoryDTO, logoUrl: string): Promise<void> {
-    
+
     let logoBase64 = '';
     try {
       logoBase64 = await this.convertImageToBase64(logoUrl);
@@ -179,12 +179,12 @@ export class PdfGeneratorService {
 
   private getFullHistoryContent(fullHistory: StudentFullHistoryDTO): Content[] {
     const content: Content[] = [];
-  
+
     if (fullHistory.groups && fullHistory.groups.length > 0) {
       // Trier les groupes par nom
       const sortedGroups = fullHistory.groups.sort((a, b) => a.groupName.localeCompare(b.groupName));
       sortedGroups.forEach(group => {
-  
+
         // Ligne de séparation + titre du groupe
         content.push(
           {
@@ -206,11 +206,11 @@ export class PdfGeneratorService {
           },
           { text: '\n' }
         );
-  
+
         // S'il y a des séries
         if (group.series && group.series.length > 0) {
           group.series.forEach(series => {
-  
+
             // Vérifier si la série a des sessions
             if (!series.sessions || series.sessions.length === 0) {
               // Aucune session => message
@@ -223,7 +223,7 @@ export class PdfGeneratorService {
               // sessions présentes => distinguer rattrapage ou normal
               // Test : si toutes les sessions sont catchUpSession = true => rattrapage
               const allAreCatchUp = series.sessions.every(s => s.catchUpSession === true);
-  
+
               if (allAreCatchUp) {
                 // Affichage "Session de rattrapage"
                 content.push({
@@ -247,7 +247,7 @@ export class PdfGeneratorService {
                   }
                 );
               }
-  
+
               // Afficher le tableau des sessions
               content.push(this.getSessionsTable(series.sessions));
               content.push({ text: '\n' });
@@ -261,7 +261,7 @@ export class PdfGeneratorService {
             margin: [0, 0, 0, 10]
           });
         }
-  
+
         content.push({ text: '\n' });
       });
     } else {
@@ -271,29 +271,29 @@ export class PdfGeneratorService {
         italics: true
       });
     }
-  
+
     return content;
   }
-  
+
 
   private getSessionsTable(sessions: SessionHistoryDTO[]): Content {
-    
+
     const body: any[] = [];
-  
+
     // Définir la ligne d'en-tête
     const headerRow: any[] = [
       { text: 'Session', style: 'tableHeader' },
       { text: 'Date', style: 'tableHeader' },
       { text: 'Présence', style: 'tableHeader' },
-      { text: 'Justifiée', style: 'tableHeader' },
+      { text: 'onJustifiée', style: 'tableHeader' },
       { text: 'Description', style: 'tableHeader' },
       { text: 'Date de Paiement', style: 'tableHeader' },
       { text: 'Paiement', style: 'tableHeader' },
       { text: 'Montant Payé', style: 'tableHeader' }
     ];
-  
+
     body.push(headerRow);
-  
+
     // Ajouter les lignes de données avec couleurs
     sessions.forEach(session => {
       const fillColor = this.getFillColorForAttendance(session);
@@ -301,7 +301,7 @@ export class PdfGeneratorService {
       const sessionTitle = session.catchUpSession
       ? `Session de rattrapage: ${session.sessionName}`
       : session.sessionName || 'N/A';
-      
+
       // Gestion de la justification
     let justificationText = '';
     if (session.attendanceStatus?.toLowerCase() === 'absent') {
@@ -310,7 +310,7 @@ export class PdfGeneratorService {
       // Présent ou Non renseigné => pas de justification
       justificationText = '';
     }
-  
+
       const row: any[] = [
         { text: sessionTitle || 'N/A', fillColor },
         { text: session.sessionDate ? new Date(session.sessionDate).toLocaleDateString() : 'N/A', fillColor },
@@ -321,10 +321,10 @@ export class PdfGeneratorService {
         { text: session.paymentStatus || 'Non payé', fillColor },
         { text: session.amountPaid != null ? `${session.amountPaid} DA` : '0 DA', fillColor }
       ];
-  
+
       body.push(row);
     });
-  
+
     return {
       table: {
         headerRows: 1,

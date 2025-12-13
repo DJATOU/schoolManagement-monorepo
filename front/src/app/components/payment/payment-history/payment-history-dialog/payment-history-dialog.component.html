@@ -18,6 +18,16 @@
       </mat-select>
     </mat-form-field>
   
+    <!-- Note de rattrapage -->
+    <div *ngIf="selectedSeries && isCatchUpSeries" style="background-color: #ffebee; padding: 10px; margin: 10px 0; border-left: 4px solid red;">
+      <p style="color: red; font-weight: bold; margin: 0;">
+        ⚠️ RATTRAPAGE : Paiement par session assistée uniquement
+      </p>
+      <p style="color: #666; font-size: 0.9em; margin: 5px 0 0 0;">
+        Pour un étudiant en rattrapage, seules les sessions auxquelles il a assisté sont facturées.
+      </p>
+    </div>
+
     <!-- Résumé de la série -->
     <div [ngClass]="{
         'summary-paid': seriesStatus === 'Payée',
@@ -25,7 +35,7 @@
         'summary-unpaid': seriesStatus === 'Non Payée'
       }" class="series-summary" *ngIf="selectedSeries">
       <p><strong>Statut Série :</strong> {{ seriesStatus }}</p>
-      <p><strong>Montant Total Série :</strong> {{ seriesTotal | currency:'DA' }}</p>
+      <p><strong>{{ isCatchUpSeries ? 'Montant Total (sessions assistées)' : 'Montant Total Série' }} :</strong> {{ seriesTotal | currency:'DA' }}</p>
       <p><strong>Montant Payé :</strong> {{ seriesPaid | currency:'DA' }}</p>
       <p><strong>Reste à Payer :</strong> {{ seriesRemaining | currency:'DA' }}</p>
     </div>

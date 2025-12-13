@@ -14,7 +14,8 @@ import { MatOptionModule } from '@angular/material/core';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { StudentService } from '../../../student/services/student.service';
 import { PricingService } from '../../../../services/pricing.service';
-import { Observable } from 'rxjs';
+import { AttendanceService } from '../../../../services/attendance.service';
+import { Observable, forkJoin } from 'rxjs';
 
 // Importations pour pdfMake
 import pdfMake from 'pdfmake/build/pdfmake';
@@ -52,6 +53,7 @@ export class PaymentHistoryDialogComponent implements OnInit {
   seriesPaid = 0;
   seriesRemaining = 0;
   seriesStatus = '';
+  isCatchUpSeries = false;
 
   displayedColumns: string[] = ['session', 'paymentDate', 'amountPaid', 'paymentStatus'];
 
@@ -62,6 +64,7 @@ export class PaymentHistoryDialogComponent implements OnInit {
     private studentService: StudentService,
     private seriesService: SeriesService,
     private pricingService: PricingService,
+    private attendanceService: AttendanceService,
     public dialogRef: MatDialogRef<PaymentHistoryDialogComponent>,
     @Inject(MAT_DIALOG_DATA) public data: { studentId: number }
   ) {}
@@ -119,28 +122,37 @@ export class PaymentHistoryDialogComponent implements OnInit {
 
       const pricingId = selectedGroupObject.priceId;
 
-      this.loadGroupPricing(pricingId).subscribe({
-        next: (pricing) => {
+      // Charger en parallèle : pricing, attendances et payment history
+      forkJoin({
+        pricing: this.loadGroupPricing(pricingId),
+        attendances: this.attendanceService.getAttendanceByStudentAndSeries(this.data.studentId, this.selectedSeries),
+        paymentHistory: this.paymentService.getPaymentHistoryForSeries(this.data.studentId, this.selectedSeries)
+      }).subscribe({
+        next: ({ pricing, attendances, paymentHistory }) => {
           const sessionPrice = pricing.price ?? 0;
 
-          this.paymentService.getPaymentHistoryForSeries(this.data.studentId, this.selectedSeries!).subscribe({
-            next: (seriesPayments) => {
-              const totalSessions = this.sessionSeries.find(series => series.id === this.selectedSeries)?.totalSessions ?? 0;
+          // Déterminer si l'étudiant est en rattrapage pour cette série
+          this.isCatchUpSeries = attendances.length > 0 && attendances.every(a => a.isCatchUp);
 
-              this.seriesTotal = totalSessions * sessionPrice;
-              this.seriesPaid = seriesPayments.reduce((acc, payment) => acc + payment.amountPaid, 0);
-              this.seriesRemaining = this.seriesTotal - this.seriesPaid;
-              this.seriesStatus = this.getSeriesStatus();
+          let totalSessions: number;
 
-              this.loadSessionPaymentDetails(sessionPrice);
-            },
-            error: (error: Error) => {
-              console.error('Error loading payment history for series:', error);
-            }
-          });
+          if (this.isCatchUpSeries) {
+            // RATTRAPAGE : Compter uniquement les sessions où l'étudiant est PRÉSENT
+            totalSessions = attendances.filter(a => a.isPresent).length;
+          } else {
+            // NORMAL : Utiliser le nombre total de sessions de la série
+            totalSessions = this.sessionSeries.find(series => series.id === this.selectedSeries)?.totalSessions ?? 0;
+          }
+
+          this.seriesTotal = totalSessions * sessionPrice;
+          this.seriesPaid = paymentHistory.reduce((acc, payment) => acc + payment.amountPaid, 0);
+          this.seriesRemaining = this.seriesTotal - this.seriesPaid;
+          this.seriesStatus = this.getSeriesStatus();
+
+          this.loadSessionPaymentDetails(sessionPrice);
         },
         error: (error: Error) => {
-          console.error('Error loading group pricing:', error);
+          console.error('Error loading payment history data:', error);
         }
       });
     } else {
@@ -267,9 +279,16 @@ export class PaymentHistoryDialogComponent implements OnInit {
           text: `${this.sessionSeries.find(series => series.id === this.selectedSeries)?.name}`,
           style: 'sectionHeader'
         },
+        ...(this.isCatchUpSeries ? [{
+          text: '⚠️ RATTRAPAGE : Paiement par session assistée uniquement',
+          style: 'catchUpNote',
+          color: 'red',
+          bold: true,
+          margin: [0, 5, 0, 10]
+        }] : []),
         {
           columns: [
-            { text: `Montant Total : ${this.seriesTotal} DA`, width: '50%' },
+            { text: `${this.isCatchUpSeries ? 'Montant Total (sessions assistées)' : 'Montant Total'} : ${this.seriesTotal} DA`, width: '50%' },
             { text: `Montant Payé : ${this.seriesPaid} DA`, width: '50%' }
           ]
         },
