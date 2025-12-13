@@ -25,6 +25,9 @@
   <p *ngIf="data.isCatchUp && data.remainingAmount === 0" style="color: green; font-weight: bold;">
     ✓ L'étudiant est en règle pour toutes ses sessions de rattrapage.
   </p>
+  <p *ngIf="data.isCatchUp" style="color: red; font-weight: bold; margin-top: 6px;">
+    Rattrapage : l'étudiant est en règle dès qu'il a payé chaque session suivie.
+  </p>
 </mat-dialog-content>
 <mat-dialog-actions>
   <button mat-button (click)="onCancel()">Cancel</button>

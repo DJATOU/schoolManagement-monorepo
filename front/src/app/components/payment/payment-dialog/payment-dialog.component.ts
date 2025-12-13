@@ -105,15 +105,15 @@ export class PaymentDialogComponent implements OnInit {
       forkJoin({
         pricing: this.pricingService.getPricingById(group.priceId),
         attendances: this.attendanceService.getAttendanceByStudentAndSeries(this.studentId, sessionSeriesId),
-        paymentHistory: this.paymentService.getPaymentHistoryForSeries(this.studentId, sessionSeriesId),
         paymentDetails: this.paymentService.getPaymentDetailsForSeries(this.studentId, sessionSeriesId)
-      }).subscribe({
-        next: ({ pricing, attendances, paymentHistory, paymentDetails }) => {
-          const pricePerSession = pricing.price;
+        }).subscribe({
+          next: ({ pricing, attendances, paymentDetails }) => {
+            const pricePerSession = pricing.price;
+            const paymentHistory: Payment[] = [];
 
-          // Déterminer si l'étudiant est en rattrapage pour cette série
-          // Un étudiant est en rattrapage si TOUTES ses attendances pour cette série ont isCatchUp = true
-          const isCatchUpStudent = attendances.length > 0 && attendances.every(a => a.isCatchUp);
+            // Déterminer si l'étudiant est en rattrapage pour cette série
+            // Un étudiant est en rattrapage si TOUTES ses attendances pour cette série ont isCatchUp = true
+            const isCatchUpStudent = attendances.length > 0 && attendances.every(a => a.isCatchUp);
 
           let numberOfSessions: number;
           let totalCost: number;
@@ -131,7 +131,8 @@ export class PaymentDialogComponent implements OnInit {
             calculationNote = '';
           }
 
-          const totalPaidPreviously = paymentHistory.reduce((acc, curr) => acc + curr.amountPaid, 0);
+          // Les paiements déjà effectués doivent provenir des détails (inclut rattrapage)
+          const totalPaidPreviously = paymentDetails.reduce((acc, curr) => acc + curr.amountPaid, 0);
           const newTotalPaid = totalPaidPreviously + paymentData.amountPaid;
 
           // Vérifier si le nouveau total payé dépasse le coût
