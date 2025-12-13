@@ -10,114 +10,114 @@
   <mat-accordion multi="false" class="custom-accordion">
     <mat-expansion-panel>
       <mat-expansion-panel-header>
-        <mat-panel-title>
-          <mat-icon>school</mat-icon>
-          Inscription
+        <mat-panel-title class="nav-panel-title">
+          <mat-icon class="nav-panel-icon">school</mat-icon>
+          <span>Inscription</span>
         </mat-panel-title>
       </mat-expansion-panel-header>
-      <mat-action-list>
-        <mat-list-item class="nav-item" routerLinkActive="active-link" [routerLinkActiveOptions]="{ exact: true }" [routerLink]="['/subscription']">
-          <mat-icon class="item-icon">person_add</mat-icon>
-          <span>Étudiants</span>
-        </mat-list-item>
-        <mat-list-item class="nav-item" routerLinkActive="active-link" [routerLink]="['/teacher/new']">
-          <mat-icon class="item-icon">person</mat-icon>
-          <span>Enseignants</span>
-        </mat-list-item>
-        <mat-list-item class="nav-item" routerLinkActive="active-link" [routerLink]="['/group/new']">
-          <mat-icon class="item-icon">diversity_3</mat-icon>
-          <span>Groupes</span>
-        </mat-list-item>
-      </mat-action-list>
+      <div class="panel-content">
+        <button mat-list-item class="nav-item" routerLinkActive="active-link" [routerLinkActiveOptions]="{ exact: true }" [routerLink]="['/subscription']">
+          <mat-icon class="item-icon">school</mat-icon>
+          <span class="item-text">Étudiants</span>
+        </button>
+        <button mat-list-item class="nav-item" routerLinkActive="active-link" [routerLink]="['/teacher/new']">
+          <mat-icon class="item-icon">workspace_premium</mat-icon>
+          <span class="item-text">Enseignants</span>
+        </button>
+        <button mat-list-item class="nav-item" routerLinkActive="active-link" [routerLink]="['/group/new']">
+          <mat-icon class="item-icon">groups_3</mat-icon>
+          <span class="item-text">Groupes</span>
+        </button>
+      </div>
     </mat-expansion-panel>
 
     <mat-expansion-panel>
       <mat-expansion-panel-header>
-        <mat-panel-title>
-          <mat-icon>attach_money</mat-icon>
-          Gestion Financière
+        <mat-panel-title class="nav-panel-title">
+          <mat-icon class="nav-panel-icon">attach_money</mat-icon>
+          <span>Gestion Financière</span>
         </mat-panel-title>
       </mat-expansion-panel-header>
-      <mat-action-list>
-        <mat-list-item class="nav-item">
+      <div class="panel-content">
+        <button mat-list-item class="nav-item">
           <mat-icon class="item-icon">payments</mat-icon>
-          <span>Paiements</span>
-        </mat-list-item>
-        <mat-list-item class="nav-item">
+          <span class="item-text">Paiements</span>
+        </button>
+        <button mat-list-item class="nav-item">
           <mat-icon class="item-icon">receipt_long</mat-icon>
-          <span>Frais</span>
-        </mat-list-item>
-        <mat-list-item class="nav-item" routerLinkActive="active-link" [routerLink]="['/discounts']">
+          <span class="item-text">Frais</span>
+        </button>
+        <button mat-list-item class="nav-item" routerLinkActive="active-link" [routerLink]="['/discounts']">
           <mat-icon class="item-icon">local_offer</mat-icon>
-          <span>Réductions</span>
-        </mat-list-item>
-      </mat-action-list>
+          <span class="item-text">Réductions</span>
+        </button>
+      </div>
     </mat-expansion-panel>
 
     <mat-expansion-panel>
       <mat-expansion-panel-header>
-        <mat-panel-title>
-          <mat-icon>book</mat-icon>
-          Suivi Académique
+        <mat-panel-title class="nav-panel-title">
+          <mat-icon class="nav-panel-icon">book</mat-icon>
+          <span>Suivi Académique</span>
         </mat-panel-title>
       </mat-expansion-panel-header>
-      <mat-action-list>
-        <mat-list-item class="nav-item">
+      <div class="panel-content">
+        <button mat-list-item class="nav-item">
           <mat-icon class="item-icon">task_alt</mat-icon>
-          <span>Présences</span>
-        </mat-list-item>
-        <mat-list-item class="nav-item" routerLinkActive="active-link" [routerLink]="['/session/new']">
+          <span class="item-text">Présences</span>
+        </button>
+        <button mat-list-item class="nav-item" routerLinkActive="active-link" [routerLink]="['/session/new']">
           <mat-icon class="item-icon">schedule</mat-icon>
-          <span>Sessions</span>
-        </mat-list-item>
-        <mat-list-item class="nav-item" routerLinkActive="active-link" [routerLink]="['/calendar/new']">
+          <span class="item-text">Sessions</span>
+        </button>
+        <button mat-list-item class="nav-item" routerLinkActive="active-link" [routerLink]="['/calendar/new']">
           <mat-icon class="item-icon">event</mat-icon>
-          <span>Calendrier</span>
-        </mat-list-item>
-        <mat-list-item class="nav-item" routerLinkActive="active-link" [routerLink]="['/serie/new']">
+          <span class="item-text">Calendrier</span>
+        </button>
+        <button mat-list-item class="nav-item" routerLinkActive="active-link" [routerLink]="['/serie/new']">
           <mat-icon class="item-icon">collections_bookmark</mat-icon>
-          <span>Séries</span>
-        </mat-list-item>
-        <mat-list-item class="nav-item" routerLinkActive="active-link" [routerLink]="['/catch-ups']">
+          <span class="item-text">Séries</span>
+        </button>
+        <button mat-list-item class="nav-item" routerLinkActive="active-link" [routerLink]="['/catch-ups']">
           <mat-icon class="item-icon">history_edu</mat-icon>
-          <span>Rattrapages</span>
-        </mat-list-item>
-        <mat-list-item class="nav-item" routerLinkActive="active-link" [routerLink]="['/transfers']">
+          <span class="item-text">Rattrapages</span>
+        </button>
+        <button mat-list-item class="nav-item" routerLinkActive="active-link" [routerLink]="['/transfers']">
           <mat-icon class="item-icon">swap_horiz</mat-icon>
-          <span>Transferts</span>
-        </mat-list-item>
-      </mat-action-list>
+          <span class="item-text">Transferts</span>
+        </button>
+      </div>
     </mat-expansion-panel>
 
     <mat-expansion-panel>
       <mat-expansion-panel-header>
-        <mat-panel-title>
-          <mat-icon>library_books</mat-icon>
-          Ressources Académiques
+        <mat-panel-title class="nav-panel-title">
+          <mat-icon class="nav-panel-icon">library_books</mat-icon>
+          <span>Ressources Académiques</span>
         </mat-panel-title>
       </mat-expansion-panel-header>
-      <mat-action-list>
-        <mat-list-item class="nav-item" routerLinkActive="active-link" [routerLink]="['/level/table']">
+      <div class="panel-content">
+        <button mat-list-item class="nav-item" routerLinkActive="active-link" [routerLink]="['/level/table']">
           <mat-icon class="item-icon">stairs</mat-icon>
-          <span>Niveaux</span>
-        </mat-list-item>
-        <mat-list-item class="nav-item" routerLinkActive="active-link" [routerLink]="['/room/table']">
+          <span class="item-text">Niveaux</span>
+        </button>
+        <button mat-list-item class="nav-item" routerLinkActive="active-link" [routerLink]="['/room/table']">
           <mat-icon class="item-icon">meeting_room</mat-icon>
-          <span>Salles</span>
-        </mat-list-item>
-        <mat-list-item class="nav-item" routerLinkActive="active-link" [routerLink]="['/subject/table']">
+          <span class="item-text">Salles</span>
+        </button>
+        <button mat-list-item class="nav-item" routerLinkActive="active-link" [routerLink]="['/subject/table']">
           <mat-icon class="item-icon">menu_book</mat-icon>
-          <span>Matières</span>
-        </mat-list-item>
-        <mat-list-item class="nav-item" routerLinkActive="active-link" [routerLink]="['groupType/table']">
+          <span class="item-text">Matières</span>
+        </button>
+        <button mat-list-item class="nav-item" routerLinkActive="active-link" [routerLink]="['groupType/table']">
           <mat-icon class="item-icon">category</mat-icon>
-          <span>Types de Groupes</span>
-        </mat-list-item>
-        <mat-list-item class="nav-item" routerLinkActive="active-link" [routerLink]="['/pricing/table']">
+          <span class="item-text">Types de Groupes</span>
+        </button>
+        <button mat-list-item class="nav-item" routerLinkActive="active-link" [routerLink]="['/pricing/table']">
           <mat-icon class="item-icon">price_change</mat-icon>
-          <span>Tarification</span>
-        </mat-list-item>
-      </mat-action-list>
+          <span class="item-text">Tarification</span>
+        </button>
+      </div>
     </mat-expansion-panel>
   </mat-accordion>
 </mat-nav-list>

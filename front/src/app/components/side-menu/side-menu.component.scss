@@ -1,7 +1,7 @@
-$sidenav-bg: linear-gradient(180deg, #0f4c5c 0%, #1b9aaa 45%, #e0f2f1 100%);
-$text-color: #0e1b2b;
-$muted: #5b6b7a;
-$accent: #1b9aaa;
+$sidenav-bg: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+$text-color: #f5f7ff;
+$muted: rgba(255, 255, 255, 0.75);
+$accent: #c7b9ff;
 
 .sidenav {
   background: $sidenav-bg;
@@ -16,7 +16,7 @@ $accent: #1b9aaa;
 .sidenav-brand {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 1.5rem;
   padding: 1.25rem 1.5rem;
   background: rgba(255, 255, 255, 0.2);
   border-bottom: 1px solid rgba(0, 0, 0, 0.06);
@@ -64,8 +64,6 @@ $accent: #1b9aaa;
     transition: background-color 0.25s ease, transform 0.25s ease;
     padding: 0.9rem 1.25rem;
     font-size: 14px;
-    display: flex;
-    align-items: center;
 
     &:hover {
       background-color: rgba(255, 255, 255, 0.2);
@@ -74,51 +72,116 @@ $accent: #1b9aaa;
   }
 
   .mat-panel-title {
+    font-weight: 600;
+  }
+
+  .nav-panel-title {
     display: flex;
     align-items: center;
-    gap: 0.6rem;
-    font-weight: 600;
+    gap: 1.5rem;
 
-    mat-icon {
+    .nav-panel-icon {
       color: #fff;
+      font-size: 22px;
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    span {
+      font-weight: 600;
     }
   }
 
   .mat-expansion-panel-content {
-    background: rgba(255, 255, 255, 0.85);
+    background: rgba(255, 255, 255, 0.08);
+    color: $text-color;
   }
 
-  .mat-action-list {
-    padding: 0.25rem 0.75rem 0.75rem;
+  .panel-content {
+    padding: 0.7rem 0 1.2rem 0; // Suppression du padding horizontal
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
 
     .nav-item {
-      color: $text-color;
-      border-radius: 10px;
+      color: $text-color !important;
+      border-radius: 0 !important; // Suppression du border-radius
       cursor: pointer;
       transition: background-color 0.2s ease, transform 0.2s ease;
-      padding: 0.5rem 0.75rem;
-      margin: 0.15rem 0;
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
+      padding: 0.75rem 1.5rem !important; // Padding uniquement interne
+      margin: 0 !important;
+      display: flex !important;
+      flex-direction: row !important;
+      align-items: center !important;
       font-weight: 500;
+      font-size: 15px;
+      letter-spacing: 0.2px;
+      height: auto !important;
+      min-height: 48px !important;
+      border: none;
+      background: transparent;
+      text-align: left;
+      width: 100%;
 
       &:hover {
-        background-color: rgba(27, 154, 170, 0.08);
+        background-color: rgba(255, 255, 255, 0.15) !important;
         transform: translateX(4px);
       }
 
-      .item-icon {
-        color: $muted;
-      }
-
       &.active-link {
-        background: rgba(27, 154, 170, 0.18);
+        background: rgba(255, 255, 255, 0.25) !important;
         box-shadow: inset 3px 0 0 $accent;
         color: $text-color;
 
         .item-icon {
           color: $accent;
+        }
+      }
+
+      .item-icon {
+        color: $muted;
+        font-size: 22px;
+        width: 24px;
+        min-width: 24px;
+        height: 24px;
+        margin-right: 1.5rem; // Espacement entre icône et texte
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+
+      .item-text {
+        flex: 1;
+        font-weight: 600;
+        color: inherit;
+        white-space: nowrap;
+      }
+    }
+  }
+}
+
+// Reset Material styles pour forcer la disposition horizontale
+::ng-deep {
+  .custom-accordion {
+    .mat-mdc-list-item {
+      &.nav-item {
+        .mdc-list-item__content {
+          padding: 0 !important;
+          display: flex !important;
+          flex-direction: row !important;
+          align-items: center !important;
+          width: 100%;
+        }
+        
+        .mat-mdc-list-item-unscoped-content {
+          display: flex !important;
+          flex-direction: row !important;
+          align-items: center !important;
+          width: 100%;
         }
       }
     }
@@ -145,8 +208,13 @@ $accent: #1b9aaa;
     min-height: auto;
   }
 
-  .custom-accordion .mat-action-list .nav-item {
-    padding: 0.55rem 0.65rem;
+  .custom-accordion .panel-content .nav-item {
     font-size: 13px;
+    padding: 0.6rem 1rem !important;
+    
+    .item-icon {
+      margin-right: 1rem;
+      font-size: 20px;
+    }
   }
 }

@@ -1,9 +1,9 @@
 import { Component, EventEmitter, OnInit, Output } from '@angular/core';
 import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { NavigationExtras, Router, RouterLink } from '@angular/router';
 import { Observable, debounceTime, map, of, startWith, switchMap } from 'rxjs';
 import { StudentService } from '../student/services/student.service';
-import { TeacherService } from '../../services/teacher.service';  // Import TeacherService
+import { TeacherService } from '../../services/teacher.service';
 import { CommonModule } from '@angular/common';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatInputModule } from '@angular/material/input';
@@ -13,12 +13,26 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { SearchService } from '../../services/SearchService ';
 import { MatTooltip } from '@angular/material/tooltip';
+import { MatButtonModule } from '@angular/material/button';
+import { MatDividerModule } from '@angular/material/divider';
 
 @Component({
   selector: 'app-navigation',
   standalone: true,
   imports: [
-    CommonModule, MatFormFieldModule, MatInputModule, MatIcon, MatToolbarModule, FormsModule, MatAutocompleteModule, ReactiveFormsModule, MatMenuModule, RouterLink, MatTooltip
+    CommonModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatIcon,
+    MatToolbarModule,
+    FormsModule,
+    MatAutocompleteModule,
+    ReactiveFormsModule,
+    MatMenuModule,
+    RouterLink,
+    MatTooltip,
+    MatButtonModule,
+    MatDividerModule
   ],
   templateUrl: './navigation.component.html',
   styleUrls: ['./navigation.component.scss']
@@ -26,10 +40,10 @@ import { MatTooltip } from '@angular/material/tooltip';
 export class NavigationComponent implements OnInit {
   userPhoto: any;
   hideSearch: boolean = false;
-  selectedIcon: string = 'student';
+  selectedIcon: string = 'student'; // Default to student
   searchControl = new FormControl('');
   filteredSuggestions: Observable<string[]> | undefined;
-  placeholder: string = 'Rechercher un élève...';
+  placeholder: string = 'Rechercher un élève...'; // Default placeholder
   currentSearchType: string = 'student';
 
   @Output() sidenavToggle = new EventEmitter<void>();
@@ -43,6 +57,10 @@ export class NavigationComponent implements OnInit {
   ) {}
 
   ngOnInit() {
+    // Initialize with student search by default
+    this.setSearchType('student');
+
+    // Setup autocomplete suggestions
     this.filteredSuggestions = this.searchControl.valueChanges.pipe(
       debounceTime(300),
       startWith(''),
@@ -55,18 +73,55 @@ export class NavigationComponent implements OnInit {
   }
 
   setSearchType(type: string): void {
-    this.clearSearch();
+    // Update search type and icon
     this.currentSearchType = type;
-    this.placeholder = this.getPlaceholderByType(type);
-    this.searchService.setSearch(type);
     this.selectedIcon = type;
+
+    // Update placeholder based on type
+    switch (type) {
+      case 'student':
+        this.placeholder = 'Rechercher un élève...';
+        break;
+      case 'group':
+        this.placeholder = 'Rechercher un groupe...';
+        break;
+      case 'teacher':
+        this.placeholder = 'Rechercher un professeur...';
+        break;
+      default:
+        this.placeholder = 'Rechercher...';
+    }
+
+    // Clear current search
+    this.clearSearch();
+
+    // Focus on search input for better UX
+    setTimeout(() => {
+      const searchInput = document.querySelector('.search-input') as HTMLInputElement;
+      if (searchInput) {
+        searchInput.focus();
+      }
+    }, 100);
   }
 
   onSearch(): void {
-    console.log('Emitting search term:', this.searchControl.value);
-    this.searchEvent.emit(this.searchControl.value ?? '');
-    this.searchService.setSearch(this.searchControl.value ?? '');
-    this.router.navigate([`/${this.currentSearchType}`], { queryParams: { search: this.searchControl.value } });
+    const rawValue = this.searchControl.value ?? '';
+    const searchValue = rawValue.toString().trim();
+    console.log('Searching for:', searchValue, 'Type:', this.currentSearchType);
+
+    // Emit search event even without a query to load full lists if needed
+    this.searchEvent.emit(searchValue);
+
+    // Notify search subscribers (student/teacher/group search pages)
+    if (this.searchService) {
+      this.searchService.setSearch(searchValue);
+    }
+
+    // Navigate to the relevant route and keep query params only when needed
+    const navigationExtras: NavigationExtras = searchValue
+      ? { queryParams: { search: searchValue } }
+      : {};
+    this.router.navigate([`/${this.currentSearchType}`], navigationExtras);
   }
 
   clearSearch(): void {
@@ -74,14 +129,17 @@ export class NavigationComponent implements OnInit {
   }
 
   private determineSearchLogic(value: string): Observable<string[]> {
-    if (!value) return of([]);
+    if (!value || value.trim().length < 2) {
+      return of([]);
+    }
+
     switch (this.currentSearchType) {
       case 'student':
         return this.performStudentSearch(value);
       case 'group':
-        return of([]);  // Implement group search logic here if needed
+        return this.performGroupSearch(value);
       case 'teacher':
-        return this.performTeacherSearch(value);  // Add teacher search logic
+        return this.performTeacherSearch(value);
       default:
         return of([]);
     }
@@ -93,19 +151,16 @@ export class NavigationComponent implements OnInit {
     );
   }
 
-  private performTeacherSearch(value: string): Observable<string[]> {  // New method for teacher search
+  private performGroupSearch(value: string): Observable<string[]> {
+    // Implement group search if service is available
+    // For now, return empty array
+    return of([]);
+  }
+
+  private performTeacherSearch(value: string): Observable<string[]> {
     return this.teacherService.searchTeachersByNameStartingWith(value).pipe(
       map(teachers => teachers.map(teacher => `${teacher.firstName} ${teacher.lastName}`))
     );
-  }
-
-  private getPlaceholderByType(type: string): string {
-    switch (type) {
-      case 'student': return 'Rechercher un élève...';
-      case 'group': return 'Rechercher un groupe...';
-      case 'teacher': return 'Rechercher un enseignant...';
-      default: return 'Search...';
-    }
   }
 
   onSelect(suggestion: string): void {
@@ -114,23 +169,29 @@ export class NavigationComponent implements OnInit {
     this.onSearch();
   }
 
-   // Méthode pour changer le thème
-   toggleDarkMode() {
-    // Votre logique pour activer/désactiver le mode sombre
+  // Theme toggle
+  toggleDarkMode() {
+    // Your dark mode logic here
+    console.log('Toggle dark mode');
   }
 
-  // Méthode pour changer la langue
-  changeLanguage(_lang:string) {
-    
+  // Language change
+  changeLanguage(lang: string) {
+    console.log('Change language to:', lang);
+    // Your language change logic here
   }
 
-  // Méthode pour la déconnexion
+  // Logout
   logout() {
-    // Votre logique pour déconnecter l'utilisateur
+    console.log('Logging out...');
+    // Your logout logic here
+    this.router.navigate(['/login']);
   }
 
-  // Méthode pour ouvrir les paramètres
+  // Settings
   openSettings() {
-    // Votre logique pour ouvrir les paramètres
+    console.log('Opening settings...');
+    // Your settings logic here
+    this.router.navigate(['/settings']);
   }
 }

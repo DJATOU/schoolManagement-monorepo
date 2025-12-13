@@ -1,61 +1,99 @@
-<mat-toolbar class="app-toolbar" color="primary">
-  <div class="toolbar-section left">
-    <button mat-icon-button (click)="toggleSidenav()" matTooltip="Ouvrir/Fermer le menu">
+<mat-toolbar class="main-toolbar">
+  <!-- Logo Section -->
+  <div class="toolbar-section logo-section">
+    <button mat-icon-button (click)="toggleSidenav()" class="menu-toggle" matTooltip="Menu">
       <mat-icon>menu</mat-icon>
     </button>
-    <div class="brand" [routerLink]="['/dashboard']">
-      <img src="assets/succes_assistance.png" alt="Logo de l'école" class="brand-logo" />
-      <div class="brand-text">
-        <span class="brand-title">School Manager</span>
-        <span class="brand-subtitle">Portail administratif</span>
-      </div>
+    <img src="assets/succes_assistance.png" alt="Logo" class="logo" [routerLink]="['/dashboard']">
+  </div>
+
+  <!-- Search Type Tabs -->
+  <div class="search-tabs">
+    <button class="tab-button"
+            [class.active]="selectedIcon === 'student'"
+            (click)="setSearchType('student')"
+            matTooltip="Élèves">
+      <mat-icon>school</mat-icon>
+      <span class="tab-label">Élèves</span>
+    </button>
+    <button class="tab-button"
+            [class.active]="selectedIcon === 'group'"
+            (click)="setSearchType('group')"
+            matTooltip="Groupes">
+      <mat-icon>groups</mat-icon>
+      <span class="tab-label">Groupes</span>
+    </button>
+    <button class="tab-button"
+            [class.active]="selectedIcon === 'teacher'"
+            (click)="setSearchType('teacher')"
+            matTooltip="Professeurs">
+      <mat-icon>person</mat-icon>
+      <span class="tab-label">Professeurs</span>
+    </button>
+  </div>
+
+  <!-- Search Bar -->
+  <div class="search-container">
+    <div class="search-field">
+      <mat-icon class="search-prefix" (click)="onSearch()">search</mat-icon>
+      <input type="text"
+             class="search-input"
+             [placeholder]="placeholder"
+             [formControl]="searchControl"
+             [matAutocomplete]="auto"
+             (keydown.enter)="onSearch()">
+      <button type="button"
+              *ngIf="searchControl.value"
+              (click)="searchControl.setValue('')"
+              class="clear-button"
+              matTooltip="Effacer">
+        <mat-icon>close</mat-icon>
+      </button>
+
+      <mat-autocomplete #auto="matAutocomplete" (optionSelected)="onSelect($event.option.value)">
+        <mat-option *ngFor="let suggestion of filteredSuggestions | async" [value]="suggestion">
+          {{ suggestion }}
+        </mat-option>
+      </mat-autocomplete>
     </div>
   </div>
 
-  <div class="toolbar-section center">
-    <div class="search-shell" [class.hide-search]="hideSearch">
-      <div class="search-switcher">
-        <mat-icon tabindex="0" (click)="setSearchType('student')" [ngClass]="{'selected-icon': selectedIcon === 'student'}" matTooltip="Rechercher un élève">face</mat-icon>
-        <mat-icon tabindex="0" (click)="setSearchType('group')" [ngClass]="{'selected-icon': selectedIcon === 'group'}" matTooltip="Rechercher un groupe">group</mat-icon>
-        <mat-icon tabindex="0" (click)="setSearchType('teacher')" [ngClass]="{'selected-icon': selectedIcon === 'teacher'}" matTooltip="Rechercher un enseignant">person_outline</mat-icon>
-      </div>
-      <mat-form-field appearance="outline" class="search-field">
-        <mat-icon matPrefix class="search-icon" (click)="onSearch()" matTooltip="Chercher">search</mat-icon>
-        <input
-          matInput
-          [placeholder]="placeholder"
-          [formControl]="searchControl"
-          [matAutocomplete]="auto"
-          (keydown.enter)="onSearch()"
-        />
-        <mat-autocomplete #auto="matAutocomplete" (optionSelected)="onSelect($event.option.value)">
-          <mat-option *ngFor="let suggestion of filteredSuggestions | async" [value]="suggestion">
-            {{ suggestion }}
-          </mat-option>
-        </mat-autocomplete>
-        <button mat-icon-button matSuffix *ngIf="searchControl.value" (click)="searchControl.setValue('')" matTooltip="Effacer" class="clear-icon">
-          <mat-icon>close</mat-icon>
-        </button>
-      </mat-form-field>
+  <!-- User Profile Pill -->
+  <div class="user-profile-pill" [matMenuTriggerFor]="userMenu">
+    <img src="assets/pic.jpg" alt="User" class="user-avatar">
+    <div class="user-info">
+      <span class="user-name">M. DJATOU</span>
+      <span class="user-role">Administrateur</span>
     </div>
+    <mat-icon class="dropdown-icon">expand_more</mat-icon>
   </div>
 
-  <div class="toolbar-section right">
-    <div class="user-info" [matMenuTriggerFor]="userMenu" matTooltip="Menu utilisateur">
-      <img src="assets/pic.jpg" alt="Photo de l'utilisateur" class="user-photo" />
-      <div class="user-details">
-        <span class="user-name">M. DJATOU</span>
-        <span class="user-role">Administrateur</span>
-      </div>
-      <mat-icon>expand_more</mat-icon>
-    </div>
-    <mat-menu #userMenu="matMenu">
-      <button mat-menu-item (click)="toggleDarkMode()">Mode sombre/clair</button>
-      <button mat-menu-item (click)="changeLanguage('ar')">Langue: Arabe</button>
-      <button mat-menu-item (click)="changeLanguage('fr')">Langue: Français</button>
-      <button mat-menu-item (click)="changeLanguage('es')">Langue: Espagnol</button>
-      <button mat-menu-item (click)="logout()">Déconnexion</button>
-      <button mat-menu-item (click)="openSettings()">Paramétrage</button>
-    </mat-menu>
-  </div>
+  <!-- User Menu -->
+  <mat-menu #userMenu="matMenu">
+    <button mat-menu-item (click)="toggleDarkMode()">
+      <mat-icon>brightness_6</mat-icon>
+      <span>Mode sombre/clair</span>
+    </button>
+    <button mat-menu-item (click)="changeLanguage('fr')">
+      <mat-icon>language</mat-icon>
+      <span>Français</span>
+    </button>
+    <button mat-menu-item (click)="changeLanguage('ar')">
+      <mat-icon>language</mat-icon>
+      <span>العربية</span>
+    </button>
+    <button mat-menu-item (click)="changeLanguage('es')">
+      <mat-icon>language</mat-icon>
+      <span>Español</span>
+    </button>
+    <button mat-menu-item (click)="openSettings()">
+      <mat-icon>settings</mat-icon>
+      <span>Paramètres</span>
+    </button>
+    <mat-divider></mat-divider>
+    <button mat-menu-item (click)="logout()">
+      <mat-icon>logout</mat-icon>
+      <span>Déconnexion</span>
+    </button>
+  </mat-menu>
 </mat-toolbar>

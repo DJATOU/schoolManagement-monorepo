@@ -1,6 +1,8 @@
 export const environment = {
     production: true,
-    apiUrl: 'https://api.school-management.com',  // TODO: Remplacer par l'URL réelle de production
-    imagesPath: '/personne/'  // Chemin relatif où sont stockées les images en production
+    // IMPORTANT: Update this with your actual Render backend URL after deployment
+    // Example: https://school-management-api.onrender.com
+    apiUrl: 'https://your-backend.onrender.com',
+    imagesPath: '/personne/'  // Path where images are stored
   };
   

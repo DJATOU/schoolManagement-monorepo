@@ -1,287 +1,346 @@
-$app-primary: #0f4c5c;
-$app-secondary: #1b9aaa;
-$app-surface: #f8fbfd;
-$app-muted: #6b7a89;
-
-.app-toolbar {
+// Main toolbar styling
+.main-toolbar {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  background: linear-gradient(90deg, $app-primary 0%, #0f6c7f 45%, $app-secondary 100%);
-  padding: 0.35rem 1.5rem;
-  gap: 1rem;
-  color: #fff;
+  justify-content: space-between;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 0 20px;
+  height: 64px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  gap: 20px;
 
-  .toolbar-section {
+  // Logo section
+  .logo-section {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: 12px;
+    flex-shrink: 0;
 
-    &.left {
-      flex: 1;
+    .menu-toggle {
+      color: white;
+      opacity: 0.95;
+      transition: all 0.2s ease;
+
+      &:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+        opacity: 1;
+      }
     }
 
-    &.center {
-      flex: 2;
-      justify-content: center;
-    }
+    .logo {
+      height: 36px;
+      cursor: pointer;
+      transition: transform 0.2s ease;
 
-    &.right {
-      flex: 1;
-      justify-content: flex-end;
-      gap: 1rem;
+      &:hover {
+        transform: scale(1.05);
+      }
     }
   }
 
-  button[mat-icon-button] {
-    color: #fff;
-    transition: transform 0.2s ease, background-color 0.2s ease;
+  // Search type tabs - Modern navigation style
+  .search-tabs {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 4px;
+    border-radius: 8px;
+    flex-shrink: 0;
+
+    .tab-button {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      background: transparent;
+      border: none;
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 14px;
+      font-weight: 500;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      outline: none;
+
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+      }
+
+      .tab-label {
+        @media (max-width: 768px) {
+          display: none;
+        }
+      }
+
+      &:hover:not(.active) {
+        background: rgba(255, 255, 255, 0.15);
+        color: white;
+      }
+
+      &.active {
+        background: rgba(255, 255, 255, 0.25);
+        color: white;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+    }
+  }
+
+  // Search container
+  .search-container {
+    flex: 1;
+    max-width: 500px;
+    display: flex;
+    align-items: center;
+
+    .search-field {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      background: white;
+      border-radius: 24px;
+      padding: 0 12px;
+      height: 40px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+
+      &:focus-within {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        transform: translateY(-1px);
+      }
+
+      .search-prefix {
+        color: #6b7280;
+        margin-right: 8px;
+        cursor: pointer;
+        font-size: 20px;
+        display: flex;
+        align-items: center;
+        transition: color 0.2s ease;
+
+        &:hover {
+          color: #667eea;
+        }
+      }
+
+      .search-input {
+        flex: 1;
+        border: none;
+        outline: none;
+        font-size: 14px;
+        color: #1f2937;
+        background: transparent;
+        padding: 8px 0;
+
+        &::placeholder {
+          color: #9ca3af;
+          font-weight: 400;
+        }
+      }
+
+      .clear-button {
+        flex: 0 0 auto;
+        width: 24px;
+        height: 24px;
+        margin-left: 4px;
+        padding: 0;
+        border: none;
+        background: transparent;
+        border-radius: 50%;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.2s ease;
+        appearance: none;
+
+        mat-icon {
+          font-size: 18px;
+          color: #9ca3af;
+          line-height: 1;
+        }
+
+        &:hover {
+          background: rgba(107, 114, 128, 0.1);
+
+          mat-icon {
+            color: #6b7280;
+          }
+        }
+
+        &:focus-visible {
+          outline: 2px solid rgba(102, 126, 234, 0.4);
+          outline-offset: 2px;
+        }
+      }
+    }
+  }
+
+  // User profile pill - Clean, aligned design
+  .user-profile-pill {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 24px;
+    padding: 4px 12px 4px 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+    min-height: 40px;
 
     &:hover {
-      transform: scale(1.05);
-      background-color: rgba(255, 255, 255, 0.08);
-    }
-  }
-
-  .brand {
-    display: flex;
-    align-items: center;
-    gap: 0.65rem;
-    cursor: pointer;
-
-    .brand-logo {
-      height: 40px;
-      width: 40px;
-      border-radius: 10px;
-      object-fit: contain;
-      background: #fff;
-      padding: 4px;
-      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
-    }
-
-    .brand-text {
-      display: flex;
-      flex-direction: column;
-      line-height: 1.1;
-
-      .brand-title {
-        font-weight: 700;
-        font-size: 16px;
-      }
-
-      .brand-subtitle {
-        font-size: 12px;
-        color: rgba(255, 255, 255, 0.8);
-      }
-    }
-  }
-
-  .search-shell {
-    width: 100%;
-    max-width: 720px;
-    background: rgba(255, 255, 255, 0.12);
-    border-radius: 16px;
-    padding: 0.5rem 0.75rem;
-    display: flex;
-    gap: 0.75rem;
-    align-items: center;
-    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.12);
-    transition: box-shadow 0.2s ease, transform 0.2s ease;
-
-    &.hide-search {
-      display: none;
-    }
-
-    &:focus-within {
-      box-shadow: 0 14px 28px rgba(0, 0, 0, 0.16);
+      background: rgba(255, 255, 255, 0.2);
       transform: translateY(-1px);
     }
-  }
 
-  .search-switcher {
-    display: flex;
-    align-items: center;
-    gap: 0.35rem;
-    padding: 0.35rem 0.55rem;
-    border-radius: 12px;
-    background: rgba(255, 255, 255, 0.12);
-
-    mat-icon {
-      color: rgba(255, 255, 255, 0.85);
-      font-size: 22px;
-      cursor: pointer;
-      transition: color 0.2s ease, transform 0.2s ease, background-color 0.2s ease;
-      padding: 6px;
-      border-radius: 10px;
-
-      &:hover {
-        color: #fff;
-        background: rgba(255, 255, 255, 0.16);
-      }
-
-      &.selected-icon {
-        color: $app-secondary;
-        background: #fff;
-        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.12);
-      }
-    }
-  }
-
-  .search-field {
-    flex: 1;
-
-    .mat-form-field-wrapper {
-      margin: 0;
-    }
-
-    .mat-form-field-flex {
-      align-items: center;
-      background: #fff;
-      border-radius: 12px;
-    }
-
-    .mat-form-field-outline {
-      color: rgba(15, 76, 92, 0.22);
-    }
-
-    .mat-form-field-outline-thick {
-      color: $app-secondary;
-    }
-
-    input {
-      padding: 0.55rem 0.75rem;
-      font-size: 15px;
-      color: $app-primary;
-
-      &::placeholder {
-        color: $app-muted;
-        opacity: 0.85;
-      }
-    }
-  }
-
-    .search-icon {
-      color: $app-secondary;
-      cursor: pointer;
-    }
-  }
-
-    .clear-icon {
-      color: $app-muted;
-
-      &:hover {
-        color: $app-secondary;
-      }
-    }
-  }
-
-  .user-info {
-    display: flex;
-    align-items: center;
-    gap: 0.65rem;
-    padding: 0.35rem 0.65rem;
-    border-radius: 12px;
-    background: rgba(255, 255, 255, 0.12);
-    cursor: pointer;
-    transition: background-color 0.2s ease, box-shadow 0.2s ease;
-
-    &:hover {
-      background: rgba(255, 255, 255, 0.18);
-      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
-    }
-
-    .user-photo {
-      width: 36px;
-      height: 36px;
+    .user-avatar {
+      width: 32px;
+      height: 32px;
       border-radius: 50%;
       object-fit: cover;
-      border: 2px solid rgba(255, 255, 255, 0.35);
-      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.18);
-    }
-
-    .user-details {
-      display: flex;
-      flex-direction: column;
-      line-height: 1.1;
-
-      .user-name {
-        font-weight: 700;
-      }
-
-      .user-role {
-        font-size: 12px;
-        color: rgba(255, 255, 255, 0.78);
-      }
-    }
-
-    mat-icon {
-      color: rgba(255, 255, 255, 0.8);
-    }
-  }
-}
-
-@media (max-width: 1024px) {
-  .app-toolbar {
-    padding: 0.35rem 1rem;
-
-    .toolbar-section.left {
-      flex: 1.2;
-    }
-
-    .toolbar-section.center {
-      flex: 2.2;
-    }
-  }
-}
-
-@media (max-width: 768px) {
-  .app-toolbar {
-    flex-wrap: wrap;
-    gap: 0.65rem;
-
-    .toolbar-section {
-      width: 100%;
-      justify-content: space-between;
-    }
-
-    .toolbar-section.center {
-      order: 3;
-    }
-
-    .search-shell {
-      max-width: 100%;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      display: block;
     }
 
     .user-info {
-      width: 100%;
-      justify-content: space-between;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      line-height: 1.2;
+
+      .user-name {
+        color: white;
+        font-size: 14px;
+        font-weight: 500;
+      }
+
+      .user-role {
+        color: rgba(255, 255, 255, 0.8);
+        font-size: 11px;
+        margin-top: 2px;
+      }
+    }
+
+    .dropdown-icon {
+      color: rgba(255, 255, 255, 0.9);
+      font-size: 20px;
+      margin-left: 4px;
+      transition: transform 0.2s ease;
+    }
+
+    &:hover .dropdown-icon {
+      transform: rotate(180deg);
     }
   }
 }
 
-@media (max-width: 520px) {
-  .app-toolbar {
-    padding: 0.35rem 0.75rem;
+// Autocomplete panel styling
+::ng-deep {
+  .mat-mdc-autocomplete-panel {
+    margin-top: 8px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    max-height: 300px;
 
-    .brand-text .brand-title {
+    .mat-mdc-option {
       font-size: 14px;
-    }
+      padding: 10px 16px;
 
-    .brand-text .brand-subtitle {
-      display: none;
-    }
+      &:hover {
+        background: #f9fafb;
+      }
 
-    .search-switcher mat-icon {
-      font-size: 20px;
-      padding: 5px;
+      &.mat-mdc-option-active {
+        background: #f3f4f6;
+      }
     }
+  }
 
-    .search-field input {
+  // Menu styling
+  .mat-mdc-menu-panel {
+    margin-top: 8px;
+    min-width: 200px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+
+    .mat-mdc-menu-item {
       font-size: 14px;
+      height: 40px;
+
+      mat-icon {
+        margin-right: 12px;
+        color: #6b7280;
+        font-size: 20px;
+      }
+
+      &:hover {
+        background: #f9fafb;
+      }
+    }
+  }
+}
+
+// Responsive adjustments
+@media (max-width: 960px) {
+  .main-toolbar {
+    padding: 0 12px;
+
+    .search-container {
+      max-width: 350px;
     }
 
-    .user-details {
-      display: none;
+    .user-profile-pill {
+      .user-role {
+        display: none;
+      }
+    }
+  }
+}
+
+@media (max-width: 600px) {
+  .main-toolbar {
+    gap: 10px;
+
+    .logo-section .logo {
+      height: 30px;
+    }
+
+    .search-tabs {
+      padding: 2px;
+
+      .tab-button {
+        padding: 4px 8px;
+      }
+    }
+
+    .search-container {
+      .search-field {
+        height: 36px;
+        padding: 0 8px;
+      }
+    }
+
+    .user-profile-pill {
+      padding: 3px 8px 3px 3px;
+      min-height: 36px;
+
+      .user-avatar {
+        width: 28px;
+        height: 28px;
+      }
+
+      .user-info {
+        display: none;
+      }
+
+      .dropdown-icon {
+        margin-left: 2px;
+      }
     }
   }
 }
