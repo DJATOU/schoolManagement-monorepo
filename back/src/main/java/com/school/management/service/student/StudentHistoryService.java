@@ -284,25 +284,15 @@ public class StudentHistoryService {
     private double calculateTotalCostForCatchUpSessions(GroupEntity group, List<SessionEntity> sessions, StudentEntity student) {
         double pricePerSession = group.getPrice().getPrice();
 
-        // Compter uniquement les sessions où l'étudiant est présent ET le paiement est complété
-        long countPresentAndPaid = sessions.stream()
-                .filter(session -> {
-                    // Vérifier si l'étudiant est présent
-                    boolean isPresent = session.getAttendances().stream()
-                            .filter(a -> a.getStudent().getId().equals(student.getId()))
-                            .filter(AttendanceEntity::isActive)
-                            .anyMatch(a -> Boolean.TRUE.equals(a.getIsPresent()));
-
-                    // Vérifier si le paiement est complété
-                    boolean isPaid = session.getPaymentDetails().stream()
-                            .filter(pd -> pd.getPayment().getStudent().getId().equals(student.getId()))
-                            .anyMatch(pd -> "Completed".equalsIgnoreCase(pd.getPayment().getStatus()));
-
-                    return isPresent && isPaid;
-                })
+        // Compter uniquement les sessions de rattrapage EFFECTIVEMENT SUIVIES par l'étudiant (présent)
+        long attendedCatchUpSessions = sessions.stream()
+                .filter(session -> session.getAttendances().stream()
+                        .anyMatch(a -> a.getStudent().getId().equals(student.getId())
+                                && a.isActive()
+                                && Boolean.TRUE.equals(a.getIsPresent())))
                 .count();
 
-        return pricePerSession * countPresentAndPaid;
+        return pricePerSession * attendedCatchUpSessions;
     }
 
     private double calculateTotalPaidForSeries(SessionSeriesEntity series, StudentEntity student) {
