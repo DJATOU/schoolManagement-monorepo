@@ -52,6 +52,7 @@ export class PaymentDialogComponent implements OnInit {
   totalAmountOwed = 0;
   remainingAmount = 0;
   nextCatchUpSessionId: number | null = null;
+  sessionPrice: number | null = null;
 
   constructor(
     private fb: FormBuilder,

@@ -1,19 +1,72 @@
-<mat-card class="profile-card" (click)="navigateToGroupProfile()">
-  <div class="profile-card-content">
-    <div class="profile-photo">
-      <img *ngIf="groupPhotoUrl; else groupIcon" [src]="groupPhotoUrl" alt="Photo du groupe" class="group-photo">
-      <ng-template #groupIcon>
-        <mat-icon class="default-icon">group</mat-icon>
-      </ng-template>
+<div class="entity-card-container">
+  <mat-card class="entity-card" [class.flipped]="isFlipped">
+    <!-- RECTO -->
+    <div class="entity-card-face entity-card-front">
+      <div class="entity-card-content" (click)="navigateToGroupProfile()">
+        <div class="entity-photo">
+          <img *ngIf="groupPhotoUrl; else groupIcon" [src]="groupPhotoUrl" alt="Photo du groupe">
+          <ng-template #groupIcon>
+            <mat-icon class="default-icon">group</mat-icon>
+          </ng-template>
+        </div>
+        <div class="entity-info">
+          <mat-card-title class="entity-name">
+            {{ group.name || 'Unknown Group' }}
+          </mat-card-title>
+          <mat-card-subtitle class="entity-subtitle">
+            <div>Niveau: {{ level }}</div>
+            <div>Type: {{ type }}</div>
+          </mat-card-subtitle>
+        </div>
+      </div>
+
+      <!-- Bouton flip -->
+      <button mat-icon-button
+              class="entity-flip-button"
+              (click)="toggleFlip($event)"
+              matTooltip="Voir plus d'informations">
+        <mat-icon>arrow_forward</mat-icon>
+      </button>
     </div>
-    <div class="profile-info">
-      <mat-card-title class="profile-name">
-        {{ group.name || 'Unknown Group' }}
-      </mat-card-title>
-      <mat-card-subtitle class="profile-subtitle">
-        <div>Level: {{ level }}</div>
-        <div>Type: {{ type }}</div>
-      </mat-card-subtitle>
+
+    <!-- VERSO -->
+    <div class="entity-card-face entity-card-back">
+      <div class="entity-back-content">
+        <h3 class="entity-back-title">Informations du groupe</h3>
+
+        <div class="entity-info-item">
+          <mat-icon class="entity-info-icon">badge</mat-icon>
+          <span class="entity-info-text">{{ group.name }}</span>
+        </div>
+
+        <div class="entity-info-item">
+          <mat-icon class="entity-info-icon">school</mat-icon>
+          <span class="entity-info-text">Niveau: {{ level }}</span>
+        </div>
+
+        <div class="entity-info-item">
+          <mat-icon class="entity-info-icon">category</mat-icon>
+          <span class="entity-info-text">Type: {{ type }}</span>
+        </div>
+
+        <div class="entity-info-item" *ngIf="group.description">
+          <mat-icon class="entity-info-icon">description</mat-icon>
+          <span class="entity-info-text">{{ group.description }}</span>
+        </div>
+
+        <div class="entity-info-item" *ngIf="group.sessionNumberPerSerie">
+          <mat-icon class="entity-info-icon">event_note</mat-icon>
+          <span class="entity-info-text">{{ group.sessionNumberPerSerie }} sessions/série</span>
+        </div>
+      </div>
+
+      <!-- Bouton retour -->
+      <button mat-icon-button
+              class="entity-flip-button entity-back-button"
+              (click)="toggleFlip($event)"
+              matTooltip="Retour">
+        <mat-icon>arrow_back</mat-icon>
+      </button>
     </div>
-  </div>
-</mat-card>
+  </mat-card>
+</div>

@@ -32,7 +32,7 @@
       <th mat-header-cell *matHeaderCellDef> Session </th>
       <td mat-cell *matCellDef="let attendance" [ngClass]="getRowClass(attendance)">
         {{ attendance.sessionName }}
-        <span *ngIf="attendance.isCatchUp" style="color: red; font-weight: bold;"> (Rattrapage)</span>
+        <span *ngIf="attendance.isCatchUp" style="color: #ffa200; font-weight: bold;"> (Rattrapage)</span>
       </td>
     </ng-container>
 
@@ -47,8 +47,8 @@
     </ng-container>
 
     <ng-container matColumnDef="isJustified">
-      <th mat-header-cell *matHeaderCellDef> Justifié </th>
-      <td mat-cell *matCellDef="let attendance" [ngClass]="getRowClass(attendance)">
+      <th *matHeaderCellDef> Justifié </th>
+      <td *matCellDef="let attendance" [ngClass]="getRowClass(attendance)">
         {{ attendance.isPresent ? '' : (attendance.isJustified ? 'Oui' : 'Non') }}
       </td>
     </ng-container>

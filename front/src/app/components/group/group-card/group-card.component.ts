@@ -3,6 +3,7 @@ import { MatCardModule } from '@angular/material/card';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { Group } from '../../../models/group/group';
 import { Level } from '../../../models/level/level';
 import { GroupType } from '../../../models/GroupType/groupType';
@@ -12,7 +13,7 @@ import { GroupService } from '../../../services/group.service';
 @Component({
   selector: 'app-group-card',
   standalone: true,
-  imports: [MatCardModule, CommonModule, MatButtonModule, MatIconModule],
+  imports: [MatCardModule, CommonModule, MatButtonModule, MatIconModule, MatTooltipModule],
   templateUrl: './group-card.component.html',
   styleUrls: ['./group-card.component.scss']
 })
@@ -24,6 +25,7 @@ export class GroupCardComponent implements OnInit {
   level: string = 'Unknown Level';
   type: string = 'Unknown Type';
   groupPhotoUrl: string = '';
+  isFlipped: boolean = false;
 
   constructor(
     private router: Router,
@@ -52,5 +54,10 @@ export class GroupCardComponent implements OnInit {
 
   navigateToGroupProfile(): void {
     this.router.navigate(['/group', this.group.id]);
+  }
+
+  toggleFlip(event: Event): void {
+    event.stopPropagation();
+    this.isFlipped = !this.isFlipped;
   }
 }

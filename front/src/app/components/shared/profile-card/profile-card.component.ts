@@ -29,6 +29,7 @@ export class ProfileCardComponent implements OnInit {
   @Input() profile!: Profile;
   @Input() profileType!: string;
   profilePhotoUrl: string = '';
+  isFlipped: boolean = false;
 
   constructor(private router: Router) {}
 
@@ -80,5 +81,13 @@ export class ProfileCardComponent implements OnInit {
       const phoneNumber = cleanPhone.startsWith('+') ? cleanPhone : `+212${cleanPhone}`;
       window.open(`https://wa.me/${phoneNumber}`, '_blank');
     }
+  }
+
+  /**
+   * Bascule l'état de flip de la card
+   */
+  toggleFlip(event: Event): void {
+    event.stopPropagation();
+    this.isFlipped = !this.isFlipped;
   }
 }

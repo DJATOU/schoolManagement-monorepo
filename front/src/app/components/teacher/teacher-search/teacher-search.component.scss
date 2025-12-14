@@ -45,45 +45,12 @@ html {
     margin-top: 64px; // Adjust this value to match the height of your fixed header
   }
   
-  // Teacher card view styling - CSS Grid for professional responsive layout
+  // Import shared entity grid layout
+  @import '../../../../styles/entity-grid';
+
+  // Teacher card view styling - uses shared entity-grid-container
   .card-view {
-    padding: 2rem;
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
-    gap: 2rem;
-    align-items: start;
-    max-width: 1600px;
-    margin: 0 auto;
-
-    // For small number of items, limit max columns
-    &:has(app-teacher-card:nth-last-child(1):first-child) {
-      // 1 item: center it
-      grid-template-columns: minmax(280px, 400px);
-      justify-content: center;
-    }
-
-    &:has(app-teacher-card:nth-last-child(2):first-child) {
-      // 2 items: limit to 2 columns
-      grid-template-columns: repeat(2, minmax(280px, 400px));
-      justify-content: center;
-    }
-
-    // Tablet: 2 columns
-    @media (min-width: 768px) and (max-width: 1199px) {
-      grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
-      max-width: 800px;
-    }
-
-    // Desktop: 3-4 columns
-    @media (min-width: 1200px) {
-      grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
-      max-width: 1400px;
-    }
-
-    // Large screens: max 4 columns
-    @media (min-width: 1400px) {
-      grid-template-columns: repeat(4, 1fr);
-    }
+    @extend .entity-grid-container;
   }
 
   .list-view {
@@ -93,13 +60,6 @@ html {
     gap: 1rem;
     max-width: 1200px;
     margin: 0 auto;
-  }
-
-  // Remove individual margins - grid gap handles spacing
-  app-teacher-card,
-  app-teacher-list {
-    margin: 0;
-    width: 100%;
   }
   
   // Paginator styling
@@ -155,16 +115,8 @@ html {
   }
 
 
-  .card-view,
   .list-view {
     transition: all 0.3s ease-in-out;
-  }
-
-  .card-view {
-    opacity: 1;
-  }
-
-  .list-view {
     opacity: 1;
   }
 
