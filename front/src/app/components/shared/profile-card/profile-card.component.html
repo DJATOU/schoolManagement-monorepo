@@ -1,75 +1,29 @@
-<div class="entity-card-container">
-  <mat-card class="entity-card" [class.flipped]="isFlipped">
-    <!-- RECTO -->
-    <div class="entity-card-face entity-card-front">
-      <div class="entity-card-content" (click)="navigateToProfile()">
-        <img mat-card-avatar [src]="profilePhotoUrl" alt="Profile Photo" class="entity-photo">
-        <div class="entity-info">
-          <mat-card-title class="entity-name">{{ profile.firstName }} {{ profile.lastName }}</mat-card-title>
-          <mat-card-subtitle class="entity-subtitle">{{ profile.subtitle }}</mat-card-subtitle>
-        </div>
-      </div>
-      <mat-card-actions class="entity-card-actions">
-        <button mat-icon-button
-                class="entity-contact-button email-button"
-                (click)="sendEmail($event)"
-                [disabled]="!profile.email"
-                matTooltip="Envoyer un email"
-                color="primary">
-          <mat-icon>email</mat-icon>
-        </button>
-        <button mat-icon-button
-                class="entity-contact-button phone-button"
-                (click)="callPhone($event)"
-                [disabled]="!profile.phoneNumber"
-                matTooltip="Ouvrir WhatsApp"
-                color="accent">
-          <mat-icon>phone</mat-icon>
-        </button>
-      </mat-card-actions>
-
-      <!-- Bouton flip en bas à droite -->
-      <button mat-icon-button
-              class="entity-flip-button"
-              (click)="toggleFlip($event)"
-              matTooltip="Voir plus d'informations">
-        <mat-icon>arrow_forward</mat-icon>
-      </button>
+<mat-card class="app-entity-card profile-card">
+  <div class="app-entity-card__body profile-card-content" (click)="navigateToProfile()">
+    <div class="app-entity-card__avatar profile-photo">
+      <img [src]="profilePhotoUrl" alt="Photo de profil">
     </div>
-
-    <!-- VERSO -->
-    <div class="entity-card-face entity-card-back">
-      <div class="entity-back-content">
-        <h3 class="entity-back-title">Informations détaillées</h3>
-
-        <div class="entity-info-item" *ngIf="profile.email">
-          <mat-icon class="entity-info-icon">email</mat-icon>
-          <span class="entity-info-text">{{ profile.email }}</span>
-        </div>
-
-        <div class="entity-info-item" *ngIf="profile.phoneNumber">
-          <mat-icon class="entity-info-icon">phone</mat-icon>
-          <span class="entity-info-text">{{ profile.phoneNumber }}</span>
-        </div>
-
-        <div class="entity-info-item" *ngIf="profile.level">
-          <mat-icon class="entity-info-icon">school</mat-icon>
-          <span class="entity-info-text">Niveau: {{ profile.level }}</span>
-        </div>
-
-        <div class="entity-info-item" *ngIf="profileType">
-          <mat-icon class="entity-info-icon">badge</mat-icon>
-          <span class="entity-info-text">Type: {{ profileType === 'student' ? 'Étudiant' : 'Professeur' }}</span>
-        </div>
-      </div>
-
-      <!-- Bouton retour -->
-      <button mat-icon-button
-              class="entity-flip-button entity-back-button"
-              (click)="toggleFlip($event)"
-              matTooltip="Retour">
-        <mat-icon>arrow_back</mat-icon>
-      </button>
+    <div class="profile-info">
+      <mat-card-title class="app-entity-card__title profile-name">{{ profile.firstName }} {{ profile.lastName }}</mat-card-title>
+      <mat-card-subtitle class="app-entity-card__subtitle profile-subtitle">{{ profile.subtitle }}</mat-card-subtitle>
     </div>
-  </mat-card>
-</div>
+  </div>
+  <mat-card-actions class="app-entity-card__actions card-actions">
+    <button mat-icon-button
+            class="contact-button email-button"
+            (click)="sendEmail($event)"
+            [disabled]="!profile.email"
+            matTooltip="Envoyer un email"
+            color="primary">
+      <mat-icon>email</mat-icon>
+    </button>
+    <button mat-icon-button
+            class="contact-button phone-button"
+            (click)="callPhone($event)"
+            [disabled]="!profile.phoneNumber"
+            matTooltip="Ouvrir WhatsApp"
+            color="accent">
+      <mat-icon>phone</mat-icon>
+    </button>
+  </mat-card-actions>
+</mat-card>

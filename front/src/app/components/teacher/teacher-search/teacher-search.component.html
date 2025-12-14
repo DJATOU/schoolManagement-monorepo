@@ -15,7 +15,7 @@
   </mat-toolbar>
 
   <ng-container *ngIf="!isLoading && filteredTeachers.length > 0; else loadingOrEmptyState">
-    <div class="teacher-view" [ngClass]="{'card-view': viewMode === 'card', 'list-view': viewMode === 'list'}">
+    <div class="teacher-view app-entity-card-container" [ngClass]="{'card-view': viewMode === 'card', 'list-view': viewMode === 'list'}">
       <ng-container *ngIf="viewMode === 'card'">
         <app-teacher-card *ngFor="let teacher of currentPageTeachers" [teacher]="teacher" class="fade-in"></app-teacher-card>
       </ng-container>

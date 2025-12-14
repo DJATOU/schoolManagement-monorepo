@@ -1,5 +1,15 @@
-@import '../../../../styles/entity-card';
+.group-card {
+  cursor: pointer;
+}
 
-// Import shared entity card styles
-// All base styles are now in _entity-card.scss
-// This file only contains group-specific overrides if needed
+.profile-photo {
+  .group-photo {
+    border-radius: 50%;
+  }
+
+  .default-icon {
+    font-size: 3rem;
+    color: #94a3b8;
+  }
+}
+  

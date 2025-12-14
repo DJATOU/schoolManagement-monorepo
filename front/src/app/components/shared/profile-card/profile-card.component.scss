@@ -1,56 +1,38 @@
-@import '../../../../styles/entity-card';
-
-// Import shared entity card styles
-// All base styles are now in _entity-card.scss
-// This file contains profile-specific styles and overrides
-
-// Profile-specific: card-front should have space-between for contact buttons
-.entity-card-face.entity-card-front {
-  justify-content: space-between;
+.profile-card {
+  cursor: default;
 }
 
-// Profile-specific: card content should grow and have hover effect
-.entity-card-content {
-  cursor: pointer;
+.profile-card-content {
   flex-grow: 1;
 
   &:hover {
-    .entity-name {
+    .profile-name {
       color: #3f51b5;
     }
   }
 }
 
-// Profile-specific: Photo should have object-fit
-.entity-photo {
-  object-fit: cover;
+.profile-info {
+  text-align: center;
 }
 
-// Profile-specific: Contact actions section
-.entity-card-actions {
-  display: flex;
-  justify-content: center;
-  gap: 0.5rem;
-  padding-top: 0.5rem;
-  margin-top: auto;
-  border-top: 1px solid #e0e0e0;
+.profile-name {
+  transition: color 0.2s ease;
+}
+
+.card-actions {
   width: 100%;
 }
 
-// Profile-specific: Contact button styles
-.entity-contact-button {
-  transition: transform 0.2s ease, background-color 0.3s ease;
-
-  &:hover:not([disabled]) {
-    transform: scale(1.15);
+@media (max-width: 600px) {
+  .profile-card-content {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.75rem;
   }
 
-  &[disabled] {
-    opacity: 0.4;
-    cursor: not-allowed;
-  }
-
-  mat-icon {
-    font-size: 22px;
+  .profile-info {
+    text-align: left;
   }
 }
+  

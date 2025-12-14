@@ -45,12 +45,30 @@ html {
     margin-top: 64px; // Adjust this value to match the height of your fixed header
   }
   
-  // Import shared entity grid layout
-  @import '../../../../styles/entity-grid';
-
-  // Group card view styling - uses shared entity-grid-container
+  // Group card view styling - CSS Grid for professional responsive layout
   .card-view {
-    @extend .entity-grid-container;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(16.5rem, 1fr));
+    gap: 1.5rem;
+    align-items: stretch;
+    padding: 1.5rem;
+    max-width: 90rem;
+    margin: 0 auto;
+
+    &:has(app-group-card:nth-last-child(1):first-child) {
+      grid-template-columns: minmax(18rem, 22rem);
+      justify-content: center;
+    }
+
+    &:has(app-group-card:nth-last-child(2):first-child) {
+      grid-template-columns: repeat(2, minmax(18rem, 22rem));
+      justify-content: center;
+    }
+
+    @media (max-width: 768px) {
+      padding: 1rem;
+      gap: 1rem;
+    }
   }
 
   .list-view {
@@ -60,6 +78,12 @@ html {
     gap: 1rem;
     max-width: 1200px;
     margin: 0 auto;
+  }
+
+  // Remove individual margins - grid gap handles spacing
+  app-group-card {
+    margin: 0;
+    width: 100%;
   }
   
   // Paginator styling
@@ -122,8 +146,16 @@ html {
   }
 
 
+  .card-view,
   .list-view {
     transition: all 0.3s ease-in-out;
+  }
+
+  .card-view {
+    opacity: 1;
+  }
+
+  .list-view {
     opacity: 1;
   }
 

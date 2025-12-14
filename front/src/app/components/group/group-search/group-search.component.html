@@ -15,7 +15,7 @@
   </mat-toolbar>
 
   <ng-container *ngIf="!isLoading && filteredGroups.length > 0; else loadingOrEmptyState">
-    <div class="group-view" [ngClass]="{'card-view': viewMode === 'card', 'list-view': viewMode === 'list'}">
+    <div class="group-view app-entity-card-container" [ngClass]="{'card-view': viewMode === 'card', 'list-view': viewMode === 'list'}">
       <ng-container *ngIf="viewMode === 'card'">
         <app-group-card *ngFor="let group of currentPageGroups"
                         [group]="group"
