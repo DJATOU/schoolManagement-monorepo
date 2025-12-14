@@ -146,7 +146,7 @@ export class PaymentHistoryDialogComponent implements OnInit {
 
           if (this.isCatchUpSeries) {
             // RATTRAPAGE : Compter uniquement les sessions où l'étudiant est PRÉSENT
-            totalSessions = attendedCatchUpSessionIds.size;
+            totalSessions = attendances.filter(a => a.isCatchUp && a.isPresent).length;
           } else {
             // NORMAL : Utiliser le nombre total de sessions de la série
             totalSessions = this.sessionSeries.find(series => series.id === this.selectedSeries)?.totalSessions ?? 0;
@@ -154,12 +154,12 @@ export class PaymentHistoryDialogComponent implements OnInit {
 
           this.seriesTotal = totalSessions * sessionPrice;
           this.seriesPaid = (paymentDetails || [])
-            .filter(detail => !this.isCatchUpSeries || attendedCatchUpSessionIds.has(detail.sessionId))
+            .filter(detail => !this.isCatchUpSeries || detail.isCatchUp)
             .reduce((acc, payment) => acc + (payment.amountPaid || 0), 0);
           this.seriesRemaining = this.seriesTotal - this.seriesPaid;
           this.seriesStatus = this.getSeriesStatus();
 
-          this.loadSessionPaymentDetails(sessionPrice, paymentDetails || [], attendedCatchUpSessionIds);
+          this.loadSessionPaymentDetails(sessionPrice, paymentDetails || []);
         },
         error: (error: Error) => {
           console.error('Error loading payment history data:', error);
@@ -170,11 +170,7 @@ export class PaymentHistoryDialogComponent implements OnInit {
     }
   }
 
-  private loadSessionPaymentDetails(
-    sessionPrice: number,
-    paymentDetails: PaymentDetail[],
-    attendedCatchUpSessionIds: Set<number>
-  ): void {
+  private loadSessionPaymentDetails(sessionPrice: number, paymentDetails: PaymentDetail[]): void {
     if (this.selectedGroup === null || this.selectedSeries === null) {
       console.error('Selected group or selected series is null or undefined.');
       return;
@@ -182,16 +178,14 @@ export class PaymentHistoryDialogComponent implements OnInit {
 
     this.paymentHistory.data = paymentDetails.map(detail => ({
       sessionId: detail.sessionId,
-      isCatchUp: detail.isCatchUp ?? attendedCatchUpSessionIds.has(detail.sessionId),
-      sessionName: (detail.isCatchUp ?? attendedCatchUpSessionIds.has(detail.sessionId))
-        ? `Rattrapage - ${detail.sessionName}`
-        : detail.sessionName,
+      sessionName: detail.isCatchUp ? `Rattrapage - ${detail.sessionName}` : detail.sessionName,
       paymentMethod: detail.paymentMethod || 'Cash',
       description: detail.description || 'Aucune description',
       paymentDate: detail.paymentDate,
       amountPaid: detail.amountPaid,
       status: this.getPaymentStatusWithPrice(detail, sessionPrice),
-      sessionPrice: sessionPrice
+      sessionPrice: sessionPrice,
+      isCatchUp: detail.isCatchUp
     }));
   }
 
