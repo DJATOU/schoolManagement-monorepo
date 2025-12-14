@@ -45,6 +45,7 @@ export class PaymentDialogComponent implements OnInit {
   totalAmountPaid = 0;
   totalAmountOwed = 0;
   remainingAmount = 0;
+  nextCatchUpSessionId: number | null = null;
 
   constructor(
     private fb: FormBuilder,
@@ -101,6 +102,7 @@ export class PaymentDialogComponent implements OnInit {
 
     const group = this.groups.find(group => group.id === sessionSeries?.groupId);
     if (group?.priceId) {
+      this.nextCatchUpSessionId = null;
       // Charger en parallèle : pricing, attendances, payment history et payment details
       forkJoin({
         pricing: this.pricingService.getPricingById(group.priceId),
@@ -240,7 +242,15 @@ export class PaymentDialogComponent implements OnInit {
   }
 
   submitPayment(paymentData: Payment): void {
-    this.paymentService.addPayment(paymentData).subscribe({
+    if (this.nextCatchUpSessionId) {
+      paymentData.sessionId = this.nextCatchUpSessionId;
+    }
+
+    const paymentRequest = paymentData.sessionId && this.nextCatchUpSessionId
+      ? this.paymentService.processCatchUpPayment(paymentData)
+      : this.paymentService.addPayment(paymentData);
+
+    paymentRequest.subscribe({
       next: (response) => {
         this.snackBar.open('Paiement effectué avec succès', 'Fermer', { duration: 3000 });
         this.dialogRef.close(response);
