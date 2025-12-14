@@ -31,7 +31,15 @@ public interface PaymentRepository extends JpaRepository<PaymentEntity, Long> {
     @Query("SELECT p.amountPaid FROM PaymentEntity p WHERE p.student.id = :studentId AND p.sessionSeries.id = :sessionSeriesId")
     Double findAmountPaidForStudentAndSeries(@Param("studentId") Long studentId, @Param("sessionSeriesId") Long sessionSeriesId);
 
-    @Query("SELECT p FROM PaymentEntity p WHERE p.student.id = :studentId AND p.sessionSeries.id = :sessionSeriesId")
+    @Query("""
+            SELECT p
+            FROM PaymentEntity p
+            WHERE p.student.id = :studentId
+              AND (
+                    p.sessionSeries.id = :sessionSeriesId
+                 OR (p.session.id IS NOT NULL AND p.session.sessionSeries.id = :sessionSeriesId)
+              )
+            """)
     List<PaymentEntity> findAllByStudentIdAndSessionSeriesId(Long studentId, Long sessionSeriesId);
 
 }
