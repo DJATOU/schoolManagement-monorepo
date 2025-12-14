@@ -202,6 +202,29 @@ public class PaymentController {
     }
 
     /**
+     * Traite un paiement de rattrapage pour une session précise.
+     *
+     * PHASE 2: Utilise PaymentProcessingService.processCatchUpPayment.
+     *
+     * @param paymentDto les informations du paiement (studentId, sessionId, amountPaid)
+     * @return le paiement traité
+     */
+    @PostMapping("/process/catch-up")
+    public ResponseEntity<PaymentDTO> processCatchUpPayment(@Valid @RequestBody PaymentDTO paymentDto) {
+        LOGGER.info("Processing catch-up payment - student: {}, session: {}, amount: {}",
+            paymentDto.getStudentId(), paymentDto.getSessionId(), paymentDto.getAmountPaid());
+
+        PaymentEntity processedPayment = paymentProcessingService.processCatchUpPayment(
+            paymentDto.getStudentId(),
+            paymentDto.getSessionId(),
+            paymentDto.getAmountPaid()
+        );
+
+        PaymentDTO responseDto = paymentMapper.toDto(processedPayment);
+        return ResponseEntity.ok(responseDto);
+    }
+
+    /**
      * Récupère le statut de paiement pour tous les étudiants d'un groupe.
      *
      * PHASE 2: Utilise PaymentStatusService.
