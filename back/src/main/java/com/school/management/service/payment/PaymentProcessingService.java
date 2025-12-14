@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -35,6 +36,7 @@ public class PaymentProcessingService {
     private final SessionRepository sessionRepository;
     private final SessionSeriesRepository sessionSeriesRepository;
     private final PaymentDetailRepository paymentDetailRepository;
+    private final AttendanceRepository attendanceRepository;
 
     private final PaymentDistributionService distributionService;
 
@@ -45,6 +47,7 @@ public class PaymentProcessingService {
             SessionRepository sessionRepository,
             SessionSeriesRepository sessionSeriesRepository,
             PaymentDetailRepository paymentDetailRepository,
+            AttendanceRepository attendanceRepository,
             PaymentDistributionService distributionService) {
         this.paymentRepository = paymentRepository;
         this.studentRepository = studentRepository;
@@ -52,6 +55,7 @@ public class PaymentProcessingService {
         this.sessionRepository = sessionRepository;
         this.sessionSeriesRepository = sessionSeriesRepository;
         this.paymentDetailRepository = paymentDetailRepository;
+        this.attendanceRepository = attendanceRepository;
         this.distributionService = distributionService;
     }
 
@@ -131,11 +135,7 @@ public class PaymentProcessingService {
 
         // 1. Valider les entités
         StudentEntity student = getStudent(studentId);
-        SessionEntity session = sessionRepository.findById(sessionId)
-            .orElseThrow(() -> new CustomServiceException(
-                "Session not found with ID: " + sessionId,
-                HttpStatus.BAD_REQUEST
-            ));
+        SessionEntity session = resolveCatchUpSession(studentId, sessionId);
 
         // 2. Vérifier le montant
         double sessionCost = session.getGroup().getPrice().getPrice();
@@ -167,6 +167,39 @@ public class PaymentProcessingService {
         LOGGER.info("Catch-up payment processed successfully: paymentId={}", savedPayment.getId());
 
         return savedPayment;
+    }
+
+    private SessionEntity resolveCatchUpSession(Long studentId, Long requestedSessionId) {
+        if (requestedSessionId == null) {
+            throw new CustomServiceException(
+                "Une session de rattrapage valide est requise pour enregistrer le paiement.",
+                HttpStatus.BAD_REQUEST
+            );
+        }
+
+        boolean sessionAlreadyPaid = paymentDetailRepository.findByPayment_StudentIdAndSessionId(studentId, requestedSessionId)
+            .stream()
+            .anyMatch(detail -> Boolean.TRUE.equals(detail.getIsCatchUp()));
+
+        if (sessionAlreadyPaid) {
+            throw new CustomServiceException(
+                "Cette session de rattrapage est déjà payée.",
+                HttpStatus.BAD_REQUEST
+            );
+        }
+
+        AttendanceEntity attendedCatchUp = attendanceRepository.findBySessionId(requestedSessionId)
+            .stream()
+            .filter(att -> att.getStudent().getId().equals(studentId))
+            .filter(att -> Boolean.TRUE.equals(att.getIsCatchUp()))
+            .filter(att -> Boolean.TRUE.equals(att.getIsPresent()))
+            .findFirst()
+            .orElseThrow(() -> new CustomServiceException(
+                "L'étudiant n'a pas assisté à cette session de rattrapage ou elle est invalide.",
+                HttpStatus.BAD_REQUEST
+            ));
+
+        return attendedCatchUp.getSession();
     }
 
     /**

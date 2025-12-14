@@ -11,11 +11,127 @@ html, body {
 }
 
 body {
-  max-width: 95rem;
-  margin: 0 auto;
+  margin: 0;
+  width: 100%;
   font-family: Roboto, "Helvetica Neue", sans-serif;
   background: linear-gradient(to top, #accbee 0%, #e7f0fd 100%);
   overflow-y: auto;
+}
+
+/* Shared entity card styling */
+.app-entity-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 21.25rem;
+  padding: 1.25rem 1.5rem;
+  border-radius: 16px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+  background-color: #fff;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 16px 32px rgba(15, 23, 42, 0.18);
+  }
+}
+
+.app-entity-card__body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  text-align: center;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+
+.app-entity-card__avatar {
+  width: 5.5rem;
+  height: 5.5rem;
+  border-radius: 50%;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #eef2ff, #e0f2fe);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.04);
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+.app-entity-card__title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0.1rem 0;
+}
+
+.app-entity-card__subtitle {
+  color: #6b7280;
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+.app-entity-card__actions {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  margin-top: auto;
+  padding-top: 0.75rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.app-entity-card__actions .contact-button {
+  transition: transform 0.2s ease, background-color 0.2s ease;
+
+  &:hover:not([disabled]) {
+    transform: scale(1.1);
+    background-color: rgba(59, 130, 246, 0.08);
+  }
+
+  &[disabled] {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+}
+
+.app-entity-card-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16.5rem, 1fr));
+  gap: clamp(1rem, 2vw, 1.5rem);
+  align-items: stretch;
+  padding: clamp(1rem, 2vw, 1.5rem);
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 768px) {
+  .app-entity-card {
+    min-height: 19rem;
+    padding: 1rem 1.25rem;
+  }
+
+  .app-entity-card__avatar {
+    width: 4.5rem;
+    height: 4.5rem;
+  }
+
+  .app-entity-card-container {
+    grid-template-columns: repeat(auto-fit, minmax(14.5rem, 1fr));
+    gap: 1rem;
+    padding: 1rem;
+  }
 }
 
 

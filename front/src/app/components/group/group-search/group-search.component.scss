@@ -47,42 +47,29 @@ html {
   
   // Group card view styling - CSS Grid for professional responsive layout
   .card-view {
-    padding: 2rem;
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
-    gap: 2rem;
-    align-items: start;
-    max-width: 1600px;
-    margin: 0 auto;
+    grid-template-columns: repeat(auto-fit, minmax(16.5rem, 1fr));
+    gap: clamp(1rem, 2vw, 1.5rem);
+    align-items: stretch;
+    padding: clamp(1rem, 2vw, 1.5rem);
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    box-sizing: border-box;
 
-    // For small number of items, limit max columns
     &:has(app-group-card:nth-last-child(1):first-child) {
-      // 1 item: center it
-      grid-template-columns: minmax(280px, 400px);
+      grid-template-columns: minmax(18rem, 22rem);
       justify-content: center;
     }
 
     &:has(app-group-card:nth-last-child(2):first-child) {
-      // 2 items: limit to 2 columns
-      grid-template-columns: repeat(2, minmax(280px, 400px));
+      grid-template-columns: repeat(2, minmax(18rem, 22rem));
       justify-content: center;
     }
 
-    // Tablet: 2 columns
-    @media (min-width: 768px) and (max-width: 1199px) {
-      grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
-      max-width: 800px;
-    }
-
-    // Desktop: 3-4 columns
-    @media (min-width: 1200px) {
-      grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
-      max-width: 1400px;
-    }
-
-    // Large screens: max 4 columns
-    @media (min-width: 1400px) {
-      grid-template-columns: repeat(4, 1fr);
+    @media (max-width: 768px) {
+      padding: 1rem;
+      gap: 1rem;
     }
   }
 
