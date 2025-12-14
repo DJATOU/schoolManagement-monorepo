@@ -9,7 +9,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
+import java.util.Date;
+import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Service responsable du traitement des paiements.
@@ -35,6 +40,7 @@ public class PaymentProcessingService {
     private final SessionRepository sessionRepository;
     private final SessionSeriesRepository sessionSeriesRepository;
     private final PaymentDetailRepository paymentDetailRepository;
+    private final AttendanceRepository attendanceRepository;
 
     private final PaymentDistributionService distributionService;
 
@@ -45,6 +51,7 @@ public class PaymentProcessingService {
             SessionRepository sessionRepository,
             SessionSeriesRepository sessionSeriesRepository,
             PaymentDetailRepository paymentDetailRepository,
+            AttendanceRepository attendanceRepository,
             PaymentDistributionService distributionService) {
         this.paymentRepository = paymentRepository;
         this.studentRepository = studentRepository;
@@ -52,6 +59,7 @@ public class PaymentProcessingService {
         this.sessionRepository = sessionRepository;
         this.sessionSeriesRepository = sessionSeriesRepository;
         this.paymentDetailRepository = paymentDetailRepository;
+        this.attendanceRepository = attendanceRepository;
         this.distributionService = distributionService;
     }
 
@@ -131,11 +139,7 @@ public class PaymentProcessingService {
 
         // 1. Valider les entités
         StudentEntity student = getStudent(studentId);
-        SessionEntity session = sessionRepository.findById(sessionId)
-            .orElseThrow(() -> new CustomServiceException(
-                "Session not found with ID: " + sessionId,
-                HttpStatus.BAD_REQUEST
-            ));
+        SessionEntity session = resolveCatchUpSession(studentId, sessionId);
 
         // 2. Vérifier le montant
         double sessionCost = session.getGroup().getPrice().getPrice();
@@ -167,6 +171,55 @@ public class PaymentProcessingService {
         LOGGER.info("Catch-up payment processed successfully: paymentId={}", savedPayment.getId());
 
         return savedPayment;
+    }
+
+    private SessionEntity resolveCatchUpSession(Long studentId, Long requestedSessionId) {
+        List<AttendanceEntity> catchUpAttendances = attendanceRepository
+            .findByStudentIdAndIsCatchUp(studentId, true)
+            .stream()
+            .filter(att -> Boolean.TRUE.equals(att.getIsPresent()))
+            .filter(att -> att.getSession() != null)
+            .toList();
+
+        if (catchUpAttendances.isEmpty()) {
+            throw new CustomServiceException(
+                "Aucune session de rattrapage assistée n'a été trouvée pour cet étudiant.",
+                HttpStatus.BAD_REQUEST
+            );
+        }
+
+        Set<Long> paidCatchUpSessionIds = paymentDetailRepository.findByPayment_StudentId(studentId)
+            .stream()
+            .filter(detail -> Boolean.TRUE.equals(detail.getIsCatchUp()))
+            .map(detail -> detail.getSession().getId())
+            .collect(Collectors.toSet());
+
+        Optional<AttendanceEntity> requestedAttendance = catchUpAttendances.stream()
+            .filter(att -> att.getSession().getId().equals(requestedSessionId))
+            .findFirst();
+
+        if (requestedAttendance.isPresent() && paidCatchUpSessionIds.contains(requestedSessionId)) {
+            throw new CustomServiceException(
+                "Cette session de rattrapage est déjà payée.",
+                HttpStatus.BAD_REQUEST
+            );
+        }
+
+        Optional<AttendanceEntity> targetAttendance = requestedAttendance;
+        if (targetAttendance.isEmpty()) {
+            targetAttendance = catchUpAttendances.stream()
+                .filter(att -> !paidCatchUpSessionIds.contains(att.getSession().getId()))
+                .min(Comparator.comparing(
+                    att -> Optional.ofNullable(att.getSession().getSessionTimeStart()).orElse(new Date(0))
+                ));
+        }
+
+        return targetAttendance
+            .map(AttendanceEntity::getSession)
+            .orElseThrow(() -> new CustomServiceException(
+                "Aucune session de rattrapage impayée n'a été trouvée pour cet étudiant.",
+                HttpStatus.BAD_REQUEST
+            ));
     }
 
     /**
