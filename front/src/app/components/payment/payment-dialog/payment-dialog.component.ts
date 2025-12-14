@@ -52,7 +52,6 @@ export class PaymentDialogComponent implements OnInit {
   totalAmountOwed = 0;
   remainingAmount = 0;
   nextCatchUpSessionId: number | null = null;
-  sessionPrice: number | null = null;
 
   constructor(
     private fb: FormBuilder,
@@ -138,15 +137,15 @@ export class PaymentDialogComponent implements OnInit {
       forkJoin({
         pricing: this.pricingService.getPricingById(group.priceId),
         attendances: this.attendanceService.getAttendanceByStudentAndSeries(this.studentId, sessionSeriesId),
-        paymentHistory: this.paymentService.getPaymentHistoryForSeries(this.studentId, sessionSeriesId),
         paymentDetails: this.paymentService.getPaymentDetailsForSeries(this.studentId, sessionSeriesId)
-      }).subscribe({
-        next: ({ pricing, attendances, paymentHistory, paymentDetails }) => {
-          const pricePerSession = pricing.price;
+        }).subscribe({
+          next: ({ pricing, attendances, paymentDetails }) => {
+            const pricePerSession = pricing.price;
+            const paymentHistory: Payment[] = [];
 
-          // Déterminer si l'étudiant est en rattrapage pour cette série
-          // Un étudiant est en rattrapage si TOUTES ses attendances pour cette série ont isCatchUp = true
-          const isCatchUpStudent = attendances.length > 0 && attendances.every(a => a.isCatchUp);
+            // Déterminer si l'étudiant est en rattrapage pour cette série
+            // Un étudiant est en rattrapage si TOUTES ses attendances pour cette série ont isCatchUp = true
+            const isCatchUpStudent = attendances.length > 0 && attendances.every(a => a.isCatchUp);
 
           let numberOfSessions: number;
           let totalCost: number;
@@ -158,34 +157,10 @@ export class PaymentDialogComponent implements OnInit {
 
           if (isCatchUpStudent) {
             // RATTRAPAGE : Compter uniquement les sessions où l'étudiant est PRÉSENT
-            const attendedCatchUpSessions = attendances.filter(a => a.isCatchUp && a.isPresent);
-            numberOfSessions = attendedCatchUpSessions.length;
-
-            const catchUpAttendanceSessionIds = new Set(attendedCatchUpSessions.map(a => a.sessionId));
+            numberOfSessions = attendances.filter(a => a.isCatchUp && a.isPresent).length;
             const totalPaidPreviously = (paymentDetails || [])
-              .filter(detail => detail.isCatchUp || catchUpAttendanceSessionIds.has(detail.sessionId))
+              .filter(detail => detail.isCatchUp)
               .reduce((acc, curr) => acc + (curr.amountPaid || 0), 0);
-
-            const paidCatchUpSessionIds = new Set(
-              (paymentDetails || [])
-                .filter(detail => detail.isCatchUp || catchUpAttendanceSessionIds.has(detail.sessionId))
-                .map(detail => detail.sessionId)
-            );
-
-            const unpaidCatchUpSessions = attendedCatchUpSessions.filter(
-              session => !paidCatchUpSessionIds.has(session.sessionId)
-            );
-
-            if (unpaidCatchUpSessions.length === 0) {
-              this.snackBar.open(
-                'Toutes les sessions de rattrapage suivies sont déjà payées.',
-                'Fermer',
-                { duration: 4000 }
-              );
-              return;
-            }
-
-            this.nextCatchUpSessionId = unpaidCatchUpSessions[0].sessionId;
 
             totalCost = numberOfSessions * pricePerSession;
             calculationNote = 'Rattrapage : paiement par session assistée';
@@ -204,16 +179,6 @@ export class PaymentDialogComponent implements OnInit {
             }
 
             const remainingAmount = totalCost - newTotalPaid;
-
-            // Le paiement de rattrapage se fait session par session, on limite le montant à une session
-            if (paymentData.amountPaid > pricePerSession) {
-              this.snackBar.open(
-                `Le paiement de rattrapage est limité à ${pricePerSession} DA (prix d'une session).`,
-                'Fermer',
-                { duration: 5000 }
-              );
-              return;
-            }
 
             // Ouvrir le dialogue de confirmation
             const dialogRef = this.dialog.open(PaymentConfirmationDialogComponent, {

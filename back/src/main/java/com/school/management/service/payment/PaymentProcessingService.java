@@ -9,8 +9,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Service responsable du traitement des paiements.
@@ -170,36 +174,52 @@ public class PaymentProcessingService {
     }
 
     private SessionEntity resolveCatchUpSession(Long studentId, Long requestedSessionId) {
-        if (requestedSessionId == null) {
+        List<AttendanceEntity> catchUpAttendances = attendanceRepository
+            .findByStudentIdAndIsCatchUp(studentId, true)
+            .stream()
+            .filter(att -> Boolean.TRUE.equals(att.getIsPresent()))
+            .filter(att -> att.getSession() != null)
+            .toList();
+
+        if (catchUpAttendances.isEmpty()) {
             throw new CustomServiceException(
-                "Une session de rattrapage valide est requise pour enregistrer le paiement.",
+                "Aucune session de rattrapage assistée n'a été trouvée pour cet étudiant.",
                 HttpStatus.BAD_REQUEST
             );
         }
 
-        boolean sessionAlreadyPaid = paymentDetailRepository.findByPayment_StudentIdAndSessionId(studentId, requestedSessionId)
+        Set<Long> paidCatchUpSessionIds = paymentDetailRepository.findByPayment_StudentId(studentId)
             .stream()
-            .anyMatch(detail -> Boolean.TRUE.equals(detail.getIsCatchUp()));
+            .filter(detail -> Boolean.TRUE.equals(detail.getIsCatchUp()))
+            .map(detail -> detail.getSession().getId())
+            .collect(Collectors.toSet());
 
-        if (sessionAlreadyPaid) {
+        Optional<AttendanceEntity> requestedAttendance = catchUpAttendances.stream()
+            .filter(att -> att.getSession().getId().equals(requestedSessionId))
+            .findFirst();
+
+        if (requestedAttendance.isPresent() && paidCatchUpSessionIds.contains(requestedSessionId)) {
             throw new CustomServiceException(
                 "Cette session de rattrapage est déjà payée.",
                 HttpStatus.BAD_REQUEST
             );
         }
 
-        AttendanceEntity attendedCatchUp = attendanceRepository.findBySessionId(requestedSessionId)
-            .stream()
-            .filter(att -> att.getStudent().getId().equals(studentId))
-            .filter(att -> Boolean.TRUE.equals(att.getIsCatchUp()))
-            .filter(att -> Boolean.TRUE.equals(att.getIsPresent()))
-            .findFirst()
+        Optional<AttendanceEntity> targetAttendance = requestedAttendance;
+        if (targetAttendance.isEmpty()) {
+            targetAttendance = catchUpAttendances.stream()
+                .filter(att -> !paidCatchUpSessionIds.contains(att.getSession().getId()))
+                .min(Comparator.comparing(
+                    att -> Optional.ofNullable(att.getSession().getSessionTimeStart()).orElse(new Date(0))
+                ));
+        }
+
+        return targetAttendance
+            .map(AttendanceEntity::getSession)
             .orElseThrow(() -> new CustomServiceException(
-                "L'étudiant n'a pas assisté à cette session de rattrapage ou elle est invalide.",
+                "Aucune session de rattrapage impayée n'a été trouvée pour cet étudiant.",
                 HttpStatus.BAD_REQUEST
             ));
-
-        return attendedCatchUp.getSession();
     }
 
     /**
