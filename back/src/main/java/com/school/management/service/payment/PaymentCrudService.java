@@ -219,7 +219,6 @@ public class PaymentCrudService {
             .sessionName(detail.getSession().getTitle())
             .amountPaid(detail.getAmountPaid())
             .remainingBalance(detail.getSession().getGroup().getPrice().getPrice() - detail.getAmountPaid())
-            .paymentDate(detail.getPaymentDate())
             .isCatchUp(detail.getIsCatchUp())
             .build();
     }
