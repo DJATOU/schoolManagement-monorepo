@@ -137,6 +137,13 @@ export class PaymentHistoryDialogComponent implements OnInit {
 
           let totalSessions: number;
 
+          // Préparer les sessions de rattrapage effectivement suivies (présent)
+          const attendedCatchUpSessionIds = new Set(
+            attendances
+              .filter(a => a.isCatchUp && a.isPresent)
+              .map(a => a.sessionId)
+          );
+
           if (this.isCatchUpSeries) {
             // RATTRAPAGE : Compter uniquement les sessions où l'étudiant est PRÉSENT
             totalSessions = attendances.filter(a => a.isCatchUp && a.isPresent).length;
