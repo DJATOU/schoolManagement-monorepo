@@ -49,13 +49,11 @@ html {
   .card-view {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(16.5rem, 1fr));
-    gap: clamp(1rem, 2vw, 1.5rem);
+    gap: 1.5rem;
     align-items: stretch;
-    padding: clamp(1rem, 2vw, 1.5rem);
-    width: 100%;
-    max-width: 100%;
-    margin: 0;
-    box-sizing: border-box;
+    padding: 1.5rem;
+    max-width: 90rem;
+    margin: 0 auto;
 
     &:has(app-teacher-card:nth-last-child(1):first-child) {
       grid-template-columns: minmax(18rem, 22rem);
