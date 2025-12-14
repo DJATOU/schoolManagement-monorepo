@@ -1,0 +1,52 @@
+// Shared grid layout for entity search pages (students, teachers, groups)
+// Based on group-search responsive grid design
+
+.entity-grid-container {
+  padding: 2rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: 2rem;
+  align-items: start;
+  max-width: 1600px;
+  margin: 0 auto;
+
+  // For small number of items, limit max columns and center
+  &:has(> *:nth-last-child(1):first-child) {
+    // 1 item: center it
+    grid-template-columns: minmax(280px, 400px);
+    justify-content: center;
+  }
+
+  &:has(> *:nth-last-child(2):first-child) {
+    // 2 items: limit to 2 columns
+    grid-template-columns: repeat(2, minmax(280px, 400px));
+    justify-content: center;
+  }
+
+  // Tablet: 2 columns
+  @media (min-width: 768px) and (max-width: 1199px) {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+    max-width: 800px;
+  }
+
+  // Desktop: 3-4 columns
+  @media (min-width: 1200px) {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+    max-width: 1400px;
+  }
+
+  // Large screens: max 4 columns
+  @media (min-width: 1400px) {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  // Remove individual margins - grid gap handles spacing
+  > * {
+    margin: 0;
+    width: 100%;
+  }
+
+  // Smooth transitions
+  transition: all 0.3s ease-in-out;
+  opacity: 1;
+}
