@@ -40,11 +40,19 @@ export class PaymentDialogComponent implements OnInit {
   paymentForm: FormGroup;
   groups: Group[];
   sessionSeries: SessionSeries[] = [];
+  paymentMethods = [
+    { value: 'cash', label: 'Espèces' },
+    { value: 'cheque', label: 'Chèque' },
+    { value: 'carte_bancaire', label: 'Carte bancaire' },
+    { value: 'autre', label: 'Autre' }
+  ];
   studentId: number;
   paymentDetails: PaymentDetail[] = [];
   totalAmountPaid = 0;
   totalAmountOwed = 0;
   remainingAmount = 0;
+  nextCatchUpSessionId: number | null = null;
+  sessionPrice: number | null = null;
 
   constructor(
     private fb: FormBuilder,
@@ -72,10 +80,11 @@ export class PaymentDialogComponent implements OnInit {
   ngOnInit(): void {
     this.paymentForm.get('groupId')!.valueChanges.subscribe(groupId => {
       this.loadSessionSeries(groupId);
+      this.loadSessionPrice(groupId);
     });
   }
 
-  loadSessionSeries(groupId: number): void {
+  loadSessionSeries(groupId: number | null): void {
     if (groupId) {
       this.sessionSeriesService.getSessionSeriesByGroupId(groupId).subscribe({
         next: (series) => {
@@ -83,9 +92,32 @@ export class PaymentDialogComponent implements OnInit {
           this.paymentForm.get('sessionSeriesId')!.setValue(null);
         },
         error: (err) => {
-          console.error('Error loading session series:', err);
+          console.error('Erreur lors du chargement des séries de sessions :', err);
         }
       });
+    }
+  }
+
+  loadSessionPrice(groupId: number | null): void {
+    const group = this.groups.find(g => g.id === groupId);
+
+    if (group?.priceId) {
+      this.pricingService.getPricingById(group.priceId).subscribe({
+        next: pricing => {
+          this.sessionPrice = pricing.price;
+          const amountControl = this.paymentForm.get('amountPaid');
+          if (amountControl && (amountControl.pristine || amountControl.value === null)) {
+            amountControl.setValue(pricing.price);
+          }
+        },
+        error: (err) => {
+          console.error('Erreur lors du chargement du tarif de la session :', err);
+          this.sessionPrice = null;
+        }
+      });
+    } else {
+      this.sessionPrice = null;
+      this.paymentForm.get('amountPaid')!.reset();
     }
   }
 
@@ -97,10 +129,11 @@ export class PaymentDialogComponent implements OnInit {
 
     const sessionSeriesId = paymentData.sessionSeriesId;
     const sessionSeries = this.sessionSeries.find(series => series.id === sessionSeriesId);
-    const seriesName = sessionSeries?.name || 'Unknown Series';
+    const seriesName = sessionSeries?.name || 'Série inconnue';
 
     const group = this.groups.find(group => group.id === sessionSeries?.groupId);
     if (group?.priceId) {
+      this.nextCatchUpSessionId = null;
       // Charger en parallèle : pricing, attendances, payment history et payment details
       forkJoin({
         pricing: this.pricingService.getPricingById(group.priceId),
@@ -119,11 +152,92 @@ export class PaymentDialogComponent implements OnInit {
           let totalCost: number;
           let calculationNote: string;
 
+          const totalPaidFromDetails = paymentDetails
+            ? paymentDetails.reduce((acc, detail) => acc + (detail.amountPaid || 0), 0)
+            : undefined;
+
           if (isCatchUpStudent) {
             // RATTRAPAGE : Compter uniquement les sessions où l'étudiant est PRÉSENT
-            numberOfSessions = attendances.filter(a => a.isPresent).length;
+            const attendedCatchUpSessions = attendances.filter(a => a.isCatchUp && a.isPresent);
+            numberOfSessions = attendedCatchUpSessions.length;
+
+            const catchUpAttendanceSessionIds = new Set(attendedCatchUpSessions.map(a => a.sessionId));
+            const totalPaidPreviously = (paymentDetails || [])
+              .filter(detail => detail.isCatchUp || catchUpAttendanceSessionIds.has(detail.sessionId))
+              .reduce((acc, curr) => acc + (curr.amountPaid || 0), 0);
+
+            const paidCatchUpSessionIds = new Set(
+              (paymentDetails || [])
+                .filter(detail => detail.isCatchUp || catchUpAttendanceSessionIds.has(detail.sessionId))
+                .map(detail => detail.sessionId)
+            );
+
+            const unpaidCatchUpSessions = attendedCatchUpSessions.filter(
+              session => !paidCatchUpSessionIds.has(session.sessionId)
+            );
+
+            if (unpaidCatchUpSessions.length === 0) {
+              this.snackBar.open(
+                'Toutes les sessions de rattrapage suivies sont déjà payées.',
+                'Fermer',
+                { duration: 4000 }
+              );
+              return;
+            }
+
+            this.nextCatchUpSessionId = unpaidCatchUpSessions[0].sessionId;
+
             totalCost = numberOfSessions * pricePerSession;
             calculationNote = 'Rattrapage : paiement par session assistée';
+
+            const newTotalPaid = totalPaidPreviously + paymentData.amountPaid;
+
+            // Vérifier si le nouveau total payé dépasse le coût
+            if (newTotalPaid > totalCost) {
+              const surplus = newTotalPaid - totalCost;
+              this.snackBar.open(
+                `Le montant payé dépasse le coût total des sessions de rattrapage (${numberOfSessions}) de ${surplus} DA. Le paiement ne peut pas être effectué.`,
+                'Fermer',
+                { duration: 5000 }
+              );
+              return;
+            }
+
+            const remainingAmount = totalCost - newTotalPaid;
+
+            // Le paiement de rattrapage se fait session par session, on limite le montant à une session
+            if (paymentData.amountPaid > pricePerSession) {
+              this.snackBar.open(
+                `Le paiement de rattrapage est limité à ${pricePerSession} DA (prix d'une session).`,
+                'Fermer',
+                { duration: 5000 }
+              );
+              return;
+            }
+
+            // Ouvrir le dialogue de confirmation
+            const dialogRef = this.dialog.open(PaymentConfirmationDialogComponent, {
+              width: '500px',
+              data: {
+                seriesName: seriesName,
+                numberOfSessions: numberOfSessions,
+                pricePerSession: pricePerSession,
+                totalCost: totalCost,
+                paymentDetails: paymentDetails,
+                paymentHistory: paymentHistory,
+                totalPaid: newTotalPaid,
+                remainingAmount: remainingAmount,
+                isCatchUp: isCatchUpStudent,
+                calculationNote: calculationNote
+              }
+            });
+
+            dialogRef.afterClosed().subscribe(result => {
+              if (result) {
+                this.submitPayment(paymentData);
+              }
+            });
+            return;
           } else {
             // NORMAL : Utiliser le nombre de sessions créées
             numberOfSessions = sessionSeries!.numberOfSessionsCreated;
@@ -131,7 +245,8 @@ export class PaymentDialogComponent implements OnInit {
             calculationNote = '';
           }
 
-          const totalPaidPreviously = paymentHistory.reduce((acc, curr) => acc + curr.amountPaid, 0);
+          const totalPaidPreviously = totalPaidFromDetails
+            ?? paymentHistory.reduce((acc, curr) => acc + curr.amountPaid, 0);
           const newTotalPaid = totalPaidPreviously + paymentData.amountPaid;
 
           // Vérifier si le nouveau total payé dépasse le coût
@@ -192,7 +307,15 @@ export class PaymentDialogComponent implements OnInit {
   }
 
   submitPayment(paymentData: Payment): void {
-    this.paymentService.addPayment(paymentData).subscribe({
+    if (this.nextCatchUpSessionId) {
+      paymentData.sessionId = this.nextCatchUpSessionId;
+    }
+
+    const paymentRequest = paymentData.sessionId && this.nextCatchUpSessionId
+      ? this.paymentService.processCatchUpPayment(paymentData)
+      : this.paymentService.addPayment(paymentData);
+
+    paymentRequest.subscribe({
       next: (response) => {
         this.snackBar.open('Paiement effectué avec succès', 'Fermer', { duration: 3000 });
         this.dialogRef.close(response);
