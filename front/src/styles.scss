@@ -5,6 +5,7 @@
 @import 'styles/layout';
 @import 'styles/buttons';
 @import 'styles/forms';
+@import 'styles/entity-grid';
 
 html, body {
   height: 100%;
@@ -106,13 +107,7 @@ body {
 }
 
 .app-entity-card-container {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(16.5rem, 1fr));
-  gap: 1.5rem;
-  align-items: stretch;
-  padding: 1.5rem;
-  max-width: 90rem;
-  margin: 0 auto;
+  @extend .cards-container;
 }
 
 @media (max-width: 768px) {
@@ -126,11 +121,6 @@ body {
     height: 4.5rem;
   }
 
-  .app-entity-card-container {
-    grid-template-columns: repeat(auto-fit, minmax(14.5rem, 1fr));
-    gap: 1rem;
-    padding: 1rem;
-  }
 }
 
 
