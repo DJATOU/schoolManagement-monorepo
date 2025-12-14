@@ -40,6 +40,12 @@ export class PaymentDialogComponent implements OnInit {
   paymentForm: FormGroup;
   groups: Group[];
   sessionSeries: SessionSeries[] = [];
+  paymentMethods = [
+    { value: 'cash', label: 'Espèces' },
+    { value: 'cheque', label: 'Chèque' },
+    { value: 'carte_bancaire', label: 'Carte bancaire' },
+    { value: 'autre', label: 'Autre' }
+  ];
   studentId: number;
   paymentDetails: PaymentDetail[] = [];
   totalAmountPaid = 0;
@@ -73,10 +79,11 @@ export class PaymentDialogComponent implements OnInit {
   ngOnInit(): void {
     this.paymentForm.get('groupId')!.valueChanges.subscribe(groupId => {
       this.loadSessionSeries(groupId);
+      this.loadSessionPrice(groupId);
     });
   }
 
-  loadSessionSeries(groupId: number): void {
+  loadSessionSeries(groupId: number | null): void {
     if (groupId) {
       this.sessionSeriesService.getSessionSeriesByGroupId(groupId).subscribe({
         next: (series) => {
@@ -84,9 +91,32 @@ export class PaymentDialogComponent implements OnInit {
           this.paymentForm.get('sessionSeriesId')!.setValue(null);
         },
         error: (err) => {
-          console.error('Error loading session series:', err);
+          console.error('Erreur lors du chargement des séries de sessions :', err);
         }
       });
+    }
+  }
+
+  loadSessionPrice(groupId: number | null): void {
+    const group = this.groups.find(g => g.id === groupId);
+
+    if (group?.priceId) {
+      this.pricingService.getPricingById(group.priceId).subscribe({
+        next: pricing => {
+          this.sessionPrice = pricing.price;
+          const amountControl = this.paymentForm.get('amountPaid');
+          if (amountControl && (amountControl.pristine || amountControl.value === null)) {
+            amountControl.setValue(pricing.price);
+          }
+        },
+        error: (err) => {
+          console.error('Erreur lors du chargement du tarif de la session :', err);
+          this.sessionPrice = null;
+        }
+      });
+    } else {
+      this.sessionPrice = null;
+      this.paymentForm.get('amountPaid')!.reset();
     }
   }
 
@@ -98,7 +128,7 @@ export class PaymentDialogComponent implements OnInit {
 
     const sessionSeriesId = paymentData.sessionSeriesId;
     const sessionSeries = this.sessionSeries.find(series => series.id === sessionSeriesId);
-    const seriesName = sessionSeries?.name || 'Unknown Series';
+    const seriesName = sessionSeries?.name || 'Série inconnue';
 
     const group = this.groups.find(group => group.id === sessionSeries?.groupId);
     if (group?.priceId) {
