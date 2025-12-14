@@ -219,6 +219,8 @@ public class PaymentCrudService {
             .sessionName(detail.getSession().getTitle())
             .amountPaid(detail.getAmountPaid())
             .remainingBalance(detail.getSession().getGroup().getPrice().getPrice() - detail.getAmountPaid())
+            .paymentDate(detail.getPaymentDate())
+            .isCatchUp(detail.getIsCatchUp())
             .build();
     }
 
@@ -229,10 +231,21 @@ public class PaymentCrudService {
      * @return le coût total
      */
     private Double calculateTotalSeriesCost(PaymentEntity payment) {
-        if (payment.getGroup() == null || payment.getSessionSeries() == null) {
+        if (payment.getGroup() == null) {
             return 0.0;
         }
+
         double pricePerSession = payment.getGroup().getPrice().getPrice();
+
+        // Paiement de rattrapage (lié à une session unique)
+        if (payment.getSession() != null && payment.getSessionSeries() == null) {
+            return pricePerSession;
+        }
+
+        if (payment.getSessionSeries() == null) {
+            return 0.0;
+        }
+
         int sessionCount = payment.getSessionSeries().getSessions().size();
         return pricePerSession * sessionCount;
     }
