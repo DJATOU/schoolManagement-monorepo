@@ -1,10 +1,11 @@
 .shared-layout-container {
-  max-width: 100%;
+  display: flex;
+  flex-direction: column;
   width: 100%;
   margin: 0 auto;
-  padding: 16px;
-  background-color: #f4f5f7;
+  padding: 0;
+  background-color: transparent;
   flex-grow: 1;
-  box-sizing: border-box; /* Assurez-vous que la taille inclut le padding */
-  overflow: hidden; /* Empêche le débordement */
+  box-sizing: border-box;
+  min-height: 100%;
 }

@@ -1,12 +1,16 @@
-<div class="all-content" fxLayout="column">
-  <app-navigation (sidenavToggle)="toggleSidenav()"></app-navigation>
-  <div class="main-container" fxLayout="row" fxFlexFill>
-    <mat-sidenav-container class="sidenav-container" fxFlex>
+<div class="app-layout">
+  <app-navigation class="app-navigation" (sidenavToggle)="toggleSidenav()"></app-navigation>
+
+  <div class="app-body">
+    <mat-sidenav-container class="sidenav-container">
       <mat-sidenav #sidenav mode="side" [(opened)]="isSidenavOpen" class="sidenav">
         <app-side-menu></app-side-menu>
       </mat-sidenav>
-      <mat-sidenav-content class="content-area" fxLayout="column" fxFlex>
-        <app-shared-layout-container fxFlex></app-shared-layout-container>
+
+      <mat-sidenav-content class="content-area">
+        <div class="app-main-container">
+          <app-shared-layout-container></app-shared-layout-container>
+        </div>
       </mat-sidenav-content>
     </mat-sidenav-container>
   </div>
