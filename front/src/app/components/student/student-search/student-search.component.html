@@ -25,6 +25,12 @@
           <app-student-list-item *ngFor="let student of currentPageStudents" [student]="student" class="fade-in"></app-student-list-item>
         </ng-container>
       </div>
+
+      <mat-paginator [length]="totalStudents"
+                     [pageSize]="pageSize"
+                     [pageSizeOptions]="pageSizeOptions"
+                     (page)="changePage($event)">
+      </mat-paginator>
     </ng-container>
 
     <ng-template #loadingOrEmptyState>
@@ -36,12 +42,5 @@
         <p>Aucun étudiant trouvé.</p>
       </div>
     </ng-template>
-
-
-    <mat-paginator [length]="totalStudents"
-                   [pageSize]="pageSize"
-                   [pageSizeOptions]="pageSizeOptions"
-                   (page)="changePage($event)">
-    </mat-paginator>
   </div>
 </div>

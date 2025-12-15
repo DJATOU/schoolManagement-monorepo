@@ -1,39 +1,28 @@
-*::before,
-*::after {
-  box-sizing: border-box;
-}
-
-.content-container {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  min-height: 100vh;
-
-  > * {
-    flex-shrink: 0;
-  }
-
-  > .student-view {
-    flex-grow: 1;
-  }
-}
-
+// View toggle toolbar
 .view-toggle-toolbar {
+  display: flex;
   justify-content: flex-end;
+  gap: 0.5rem;
   background-color: transparent;
-  padding: 0.5rem 0 0.75rem;
+  padding: 0;
+  margin-bottom: 1.5rem;
+
+  button {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+
+    &.active {
+      background-color: rgba(59, 130, 246, 0.1);
+      color: #3b82f6;
+    }
+  }
 }
 
-.card-view,
-.list-view {
-  width: 100%;
-  transition: all 0.3s ease-in-out;
-}
-
-.card-view {
-  align-content: start;
-}
-
+// List view styles
 .list-view {
   display: flex;
   flex-direction: column;
@@ -42,25 +31,32 @@
   margin: 0 auto;
 }
 
+// Ensure cards and list items are full width
 app-student-card,
 app-student-list-item {
   margin: 0;
   width: 100%;
 }
 
+// Paginator styles - IMPORTANT: Must be visible!
 mat-paginator {
-  display: flex;
+  display: flex !important;
   justify-content: center;
-  padding: 0.5rem;
-  box-shadow: 0 -2px 4px -1px rgba(0, 0, 0, 0.2);
-}
+  align-items: center;
+  margin-top: 2rem;
+  padding: 1rem 0;
+  border-top: 2px solid #e5e7eb;
+  background-color: #fafafa;
+  min-height: 56px;
+  width: 100%;
 
-@media (max-width: 768px) {
-  mat-paginator {
+  @media (max-width: 768px) {
     flex-wrap: wrap;
+    padding: 0.75rem 0;
   }
 }
 
+// Loading state
 .loading-container {
   display: flex;
   justify-content: center;
@@ -69,6 +65,7 @@ mat-paginator {
   padding: 3rem;
 }
 
+// Empty state
 .empty-state {
   display: flex;
   flex-direction: column;

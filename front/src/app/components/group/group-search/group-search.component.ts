@@ -118,6 +118,7 @@ export class GroupSearchComponent implements OnInit {
     const startIndex = event.pageIndex * event.pageSize;
     const endIndex = startIndex + event.pageSize;
     this.currentPageGroups = this.filteredGroups.slice(startIndex, endIndex);
+    this.pageSize = event.pageSize;
   }
 
   changeViewMode(mode: 'card' | 'list'): void {
