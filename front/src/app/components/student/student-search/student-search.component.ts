@@ -68,24 +68,22 @@ export class StudentSearchComponent implements OnInit {
   }
   
   loadAllStudents(): void {
-    this.isLoading = true; 
+    this.isLoading = true;
     this.studentService.getStudents().subscribe(students => {
       this.filteredStudents = students;
       this.totalStudents = students.length;
       this.updatePageStudents();
       this.isLoading = false; // Désactiver le loader
+      console.log('Total students:', this.totalStudents, 'Page size:', this.pageSize, 'Current page students:', this.currentPageStudents.length);
     });
   }
 
   changePage(event: PageEvent) {
-    this.isLoading = true; // Activer le loader lors du changement de page
     const startIndex = event.pageIndex * event.pageSize;
     const endIndex = startIndex + event.pageSize;
-  
-    setTimeout(() => {
-      this.currentPageStudents = this.filteredStudents.slice(startIndex, endIndex);
-      this.isLoading = false; // Désactiver le loader après le changement
-    }, 1000); // Simuler un délai de chargement
+    this.currentPageStudents = this.filteredStudents.slice(startIndex, endIndex);
+    this.pageSize = event.pageSize;
+    console.log('Page changed - Index:', event.pageIndex, 'Size:', event.pageSize, 'Showing students:', this.currentPageStudents.length);
   }
   
 
