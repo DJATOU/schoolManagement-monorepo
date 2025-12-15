@@ -75,6 +75,7 @@ export class TeacherSearchComponent implements OnInit {
     const startIndex = event.pageIndex * event.pageSize;
     const endIndex = startIndex + event.pageSize;
     this.currentPageTeachers = this.filteredTeachers.slice(startIndex, endIndex);
+    this.pageSize = event.pageSize;
   }
 
   changeViewMode(mode: string): void {

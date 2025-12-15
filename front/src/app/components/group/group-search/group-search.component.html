@@ -33,6 +33,12 @@
           </app-group-list>
         </ng-container>
       </div>
+
+      <mat-paginator [length]="totalGroups"
+                     [pageSize]="pageSize"
+                     [pageSizeOptions]="pageSizeOptions"
+                     (page)="changePage($event)">
+      </mat-paginator>
     </ng-container>
 
     <ng-template #loadingOrEmptyState>
@@ -44,11 +50,5 @@
         <p>Aucun groupe trouvé.</p>
       </div>
     </ng-template>
-
-    <mat-paginator [length]="totalGroups"
-                   [pageSize]="pageSize"
-                   [pageSizeOptions]="pageSizeOptions"
-                   (page)="changePage($event)">
-    </mat-paginator>
   </div>
 </div>
