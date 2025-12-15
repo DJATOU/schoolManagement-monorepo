@@ -1,10 +1,27 @@
 .shared-layout-container {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
   max-width: 100%;
   width: 100%;
   margin: 0 auto;
-  padding: 16px;
-  background-color: #f4f5f7;
-  flex-grow: 1;
-  box-sizing: border-box; /* Assurez-vous que la taille inclut le padding */
-  overflow: hidden; /* Empêche le débordement */
+  padding: 0;
+  background-color: #f5f6fa;
+  box-sizing: border-box;
+  overflow: auto;
+}
+
+.app-main-container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 24px 32px;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+@media (max-width: 1024px) {
+  .app-main-container {
+    max-width: 100%;
+    padding: 16px;
+  }
 }

@@ -1,47 +1,53 @@
-<div class="page-container">
-  <div class="content-container">
-    <mat-toolbar class="view-toggle-toolbar">
-      <button mat-button
-              [class.active]="viewMode === 'card'"
-              (click)="changeViewMode('card')">
-        <mat-icon>view_comfy</mat-icon>
-        Grid
-      </button>
-      <button mat-button
-              [class.active]="viewMode === 'list'"
-              (click)="changeViewMode('list')">
-        <mat-icon>view_list</mat-icon>
-        List
-      </button>
-    </mat-toolbar>
+<div class="cards-page">
+  <mat-toolbar class="view-toggle-toolbar">
+    <button mat-button
+            [class.active]="viewMode === 'card'"
+            (click)="changeViewMode('card')">
+      <mat-icon>view_comfy</mat-icon>
+      Grid
+    </button>
+    <button mat-button
+            [class.active]="viewMode === 'list'"
+            (click)="changeViewMode('list')">
+      <mat-icon>view_list</mat-icon>
+      List
+    </button>
+  </mat-toolbar>
 
-    <ng-container *ngIf="!isLoading && filteredStudents.length > 0; else loadingOrEmptyState">
-      <div class="student-view"
-           [ngClass]="viewMode === 'card' ? 'cards-container card-view' : 'list-view'">
-        <ng-container *ngIf="viewMode === 'card'">
-          <app-student-card *ngFor="let student of currentPageStudents" [student]="student" class="fade-in"></app-student-card>
-        </ng-container>
-        <ng-container *ngIf="viewMode === 'list'">
-          <app-student-list-item *ngFor="let student of currentPageStudents" [student]="student" class="fade-in"></app-student-list-item>
-        </ng-container>
+  <ng-container *ngIf="isLoading; else loadedState">
+    <div class="loading-container">
+      <mat-spinner></mat-spinner>
+    </div>
+  </ng-container>
+
+  <ng-template #loadedState>
+    <ng-container *ngIf="filteredStudents.length > 0; else emptyState">
+      <div class="cards-grid" *ngIf="viewMode === 'card'">
+        <app-student-card *ngFor="let student of currentPageStudents"
+                          [student]="student"
+                          class="fade-in"></app-student-card>
+      </div>
+
+      <div class="list-view" *ngIf="viewMode === 'list'">
+        <app-student-list-item *ngFor="let student of currentPageStudents"
+                               [student]="student"
+                               class="fade-in"></app-student-list-item>
+      </div>
+
+      <div class="paginator-container">
+        <mat-paginator [length]="totalStudents"
+                       [pageSize]="pageSize"
+                       [pageSizeOptions]="pageSizeOptions"
+                       (page)="changePage($event)">
+        </mat-paginator>
       </div>
     </ng-container>
+  </ng-template>
 
-    <ng-template #loadingOrEmptyState>
-      <div *ngIf="isLoading" class="loading-container">
-        <mat-spinner></mat-spinner>
-      </div>
-      <div *ngIf="!isLoading && filteredStudents.length === 0" class="empty-state">
-        <mat-icon class="empty-icon">person_off</mat-icon>
-        <p>Aucun étudiant trouvé.</p>
-      </div>
-    </ng-template>
-
-
-    <mat-paginator [length]="totalStudents"
-                   [pageSize]="pageSize"
-                   [pageSizeOptions]="pageSizeOptions"
-                   (page)="changePage($event)">
-    </mat-paginator>
-  </div>
+  <ng-template #emptyState>
+    <div class="empty-state">
+      <mat-icon class="empty-icon">person_off</mat-icon>
+      <p>Aucun étudiant trouvé.</p>
+    </div>
+  </ng-template>
 </div>
