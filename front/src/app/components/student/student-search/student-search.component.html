@@ -1,19 +1,18 @@
-<div class="page-container">
-  <div class="content-container">
-    <mat-toolbar class="view-toggle-toolbar">
-      <button mat-button
-              [class.active]="viewMode === 'card'"
-              (click)="changeViewMode('card')">
-        <mat-icon>view_comfy</mat-icon>
-        Grid
-      </button>
-      <button mat-button
-              [class.active]="viewMode === 'list'"
-              (click)="changeViewMode('list')">
-        <mat-icon>view_list</mat-icon>
-        List
-      </button>
-    </mat-toolbar>
+<div class="cards-page">
+  <mat-toolbar class="view-toggle-toolbar">
+    <button mat-button
+            [class.active]="viewMode === 'card'"
+            (click)="changeViewMode('card')">
+      <mat-icon>view_comfy</mat-icon>
+      Grid
+    </button>
+    <button mat-button
+            [class.active]="viewMode === 'list'"
+            (click)="changeViewMode('list')">
+      <mat-icon>view_list</mat-icon>
+      List
+    </button>
+  </mat-toolbar>
 
     <ng-container *ngIf="!isLoading && filteredStudents.length > 0; else loadingOrEmptyState">
       <div class="student-view"
