@@ -12,16 +12,21 @@
 }
 
 .app-main-container {
-  max-width: 1280px;
+  max-width: 1360px;
   margin: 0 auto;
   padding: 24px 32px;
   box-sizing: border-box;
   width: 100%;
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 768px) {
   .app-main-container {
-    max-width: 100%;
-    padding: 16px;
+    padding: 20px 24px;
+  }
+}
+
+@media (max-width: 600px) {
+  .app-main-container {
+    padding: 16px 16px;
   }
 }

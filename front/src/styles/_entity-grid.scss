@@ -1,12 +1,5 @@
 // Shared responsive layout for entity search pages (students, teachers, groups)
-
-.page-container {
-  width: 100%;
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 0 24px 32px;
-  box-sizing: border-box;
-}
+// This file provides backward compatibility for .cards-container class
 
 .cards-container {
   display: grid;
@@ -15,15 +8,15 @@
   grid-template-columns: repeat(1, minmax(0, 1fr));
   align-items: stretch;
 
-  @media (min-width: 768px) {
+  @media (min-width: 600px) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  @media (min-width: 1024px) {
+  @media (min-width: 900px) {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  @media (min-width: 1400px) {
+  @media (min-width: 1200px) {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 

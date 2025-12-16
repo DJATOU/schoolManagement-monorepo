@@ -1,0 +1,50 @@
+// Shared page layout styles for list/grid pages (students, teachers, groups)
+// Fixed-width centered layout like Leboncoin with responsive grid
+// Note: The max-width and centering is handled by .app-main-container in shared-layout-container
+
+// Cards section wrapper - contains grid and paginator together
+.cards-section {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  width: 100%;
+}
+
+// Responsive grid for cards with explicit breakpoints
+// Large screens: 4 cards | Medium: 3 cards | Tablet: 2 cards | Mobile: 1 card
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 24px;
+  width: 100%;
+
+  // Medium screens: 3 cards per row
+  @media (max-width: 1200px) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 20px;
+  }
+
+  // Tablets: 2 cards per row
+  @media (max-width: 900px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+  }
+
+  // Mobile: 1 card per row, full width
+  @media (max-width: 600px) {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+
+// Paginator wrapper - centered under grid
+.paginator-wrapper {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+
+  mat-paginator {
+    width: 100%;
+    max-width: 100%;
+  }
+}
