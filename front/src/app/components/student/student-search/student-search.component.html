@@ -32,19 +32,10 @@
       </mat-paginator>
     </ng-container>
 
-  <ng-template #studentsContent>
-    <ng-container *ngIf="filteredStudents.length > 0; else emptyState">
-      <div class="cards-grid" *ngIf="viewMode === 'card'">
-        <app-student-card *ngFor="let student of currentPageStudents"
-                          [student]="student"
-                          class="fade-in"></app-student-card>
-      </div>
-
-      <div class="list-view" *ngIf="viewMode === 'list'">
-        <app-student-list-item *ngFor="let student of currentPageStudents"
-                               [student]="student"
-                               class="fade-in"></app-student-list-item>
-      </div>
-    </ng-template>
-  </div>
+  <ng-template #loadingOrEmptyState>
+    <div class="empty-state">
+      <p *ngIf="isLoading">Loading students...</p>
+      <p *ngIf="!isLoading">No students found.</p>
+    </div>
+  </ng-template>
 </div>
