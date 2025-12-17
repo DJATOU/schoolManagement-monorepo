@@ -1,36 +1,29 @@
 import { Injectable } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
 
-const LANGUAGE_KEY = 'app_language';
+const LANGUAGE_STORAGE_KEY = 'app-language';
 
 @Injectable({ providedIn: 'root' })
 export class TranslationService {
+  readonly defaultLang = 'fr';
+
   constructor(private translate: TranslateService) {
-    this.initLanguage();
+    const savedLanguage = localStorage.getItem(LANGUAGE_STORAGE_KEY) || this.defaultLang;
+    this.translate.setDefaultLang(this.defaultLang);
+    this.useLanguage(savedLanguage);
   }
 
-  private initLanguage(): void {
-    const savedLanguage = this.getSavedLanguage();
-    const defaultLang = savedLanguage || 'fr';
-    this.translate.setDefaultLang('fr');
-    this.translate.use(defaultLang);
-    this.saveLanguage(defaultLang);
+  useLanguage(lang: string) {
+    this.translate.use(lang);
+    localStorage.setItem(LANGUAGE_STORAGE_KEY, lang);
   }
 
-  changeLanguage(language: string): void {
-    this.translate.use(language);
-    this.saveLanguage(language);
+  toggleLanguage(): void {
+    const nextLang = this.translate.currentLang === 'fr' ? 'en' : 'fr';
+    this.useLanguage(nextLang);
   }
 
-  getCurrentLanguage(): string {
-    return this.translate.currentLang || this.translate.defaultLang || 'fr';
-  }
-
-  private saveLanguage(language: string): void {
-    localStorage.setItem(LANGUAGE_KEY, language);
-  }
-
-  private getSavedLanguage(): string | null {
-    return localStorage.getItem(LANGUAGE_KEY);
+  get currentLanguage(): string {
+    return this.translate.currentLang || this.defaultLang;
   }
 }

@@ -2,8 +2,8 @@
   <div class="sidenav-brand">
     <mat-icon>auto_stories</mat-icon>
     <div class="brand-text">
-      <span class="brand-title">{{ 'sideMenu.title' | translate }}</span>
-      <span class="brand-subtitle">{{ 'sideMenu.subtitle' | translate }}</span>
+      <span class="brand-title">{{ 'SIDE_MENU.BRAND_TITLE' | translate }}</span>
+      <span class="brand-subtitle">{{ 'SIDE_MENU.BRAND_SUBTITLE' | translate }}</span>
     </div>
   </div>
 
@@ -12,21 +12,21 @@
       <mat-expansion-panel-header>
         <mat-panel-title class="nav-panel-title">
           <mat-icon class="nav-panel-icon">school</mat-icon>
-          <span>{{ 'sideMenu.enrollment.title' | translate }}</span>
+          <span>{{ 'SIDE_MENU.REGISTRATION' | translate }}</span>
         </mat-panel-title>
       </mat-expansion-panel-header>
       <div class="panel-content">
         <button mat-list-item class="nav-item" routerLinkActive="active-link" [routerLinkActiveOptions]="{ exact: true }" [routerLink]="['/subscription']">
           <mat-icon class="item-icon">school</mat-icon>
-          <span class="item-text">{{ 'sideMenu.enrollment.students' | translate }}</span>
+          <span class="item-text">{{ 'SIDE_MENU.STUDENTS' | translate }}</span>
         </button>
         <button mat-list-item class="nav-item" routerLinkActive="active-link" [routerLink]="['/teacher/new']">
           <mat-icon class="item-icon">workspace_premium</mat-icon>
-          <span class="item-text">{{ 'sideMenu.enrollment.teachers' | translate }}</span>
+          <span class="item-text">{{ 'SIDE_MENU.TEACHERS' | translate }}</span>
         </button>
         <button mat-list-item class="nav-item" routerLinkActive="active-link" [routerLink]="['/group/new']">
           <mat-icon class="item-icon">groups_3</mat-icon>
-          <span class="item-text">{{ 'sideMenu.enrollment.groups' | translate }}</span>
+          <span class="item-text">{{ 'SIDE_MENU.GROUPS' | translate }}</span>
         </button>
       </div>
     </mat-expansion-panel>
@@ -35,21 +35,21 @@
       <mat-expansion-panel-header>
         <mat-panel-title class="nav-panel-title">
           <mat-icon class="nav-panel-icon">attach_money</mat-icon>
-          <span>{{ 'sideMenu.finance.title' | translate }}</span>
+          <span>{{ 'SIDE_MENU.FINANCIAL_MANAGEMENT' | translate }}</span>
         </mat-panel-title>
       </mat-expansion-panel-header>
       <div class="panel-content">
         <button mat-list-item class="nav-item" routerLinkActive="active-link" [routerLink]="['/admin/payment-management']">
           <mat-icon class="item-icon">payments</mat-icon>
-          <span class="item-text">{{ 'sideMenu.finance.payments' | translate }}</span>
+          <span class="item-text">{{ 'SIDE_MENU.PAYMENTS' | translate }}</span>
         </button>
         <button mat-list-item class="nav-item">
           <mat-icon class="item-icon">receipt_long</mat-icon>
-          <span class="item-text">{{ 'sideMenu.finance.fees' | translate }}</span>
+          <span class="item-text">{{ 'SIDE_MENU.FEES' | translate }}</span>
         </button>
         <button mat-list-item class="nav-item" routerLinkActive="active-link" [routerLink]="['/discounts']">
           <mat-icon class="item-icon">local_offer</mat-icon>
-          <span class="item-text">{{ 'sideMenu.finance.discounts' | translate }}</span>
+          <span class="item-text">{{ 'SIDE_MENU.DISCOUNTS' | translate }}</span>
         </button>
       </div>
     </mat-expansion-panel>
@@ -58,33 +58,33 @@
       <mat-expansion-panel-header>
         <mat-panel-title class="nav-panel-title">
           <mat-icon class="nav-panel-icon">book</mat-icon>
-          <span>{{ 'sideMenu.academics.title' | translate }}</span>
+          <span>{{ 'SIDE_MENU.ACADEMIC_TRACKING' | translate }}</span>
         </mat-panel-title>
       </mat-expansion-panel-header>
       <div class="panel-content">
         <button mat-list-item class="nav-item">
           <mat-icon class="item-icon">task_alt</mat-icon>
-          <span class="item-text">{{ 'sideMenu.academics.attendance' | translate }}</span>
+          <span class="item-text">{{ 'SIDE_MENU.ATTENDANCE' | translate }}</span>
         </button>
         <button mat-list-item class="nav-item" routerLinkActive="active-link" [routerLink]="['/session/new']">
           <mat-icon class="item-icon">schedule</mat-icon>
-          <span class="item-text">{{ 'sideMenu.academics.sessions' | translate }}</span>
+          <span class="item-text">{{ 'SIDE_MENU.SESSIONS' | translate }}</span>
         </button>
         <button mat-list-item class="nav-item" routerLinkActive="active-link" [routerLink]="['/calendar/new']">
           <mat-icon class="item-icon">event</mat-icon>
-          <span class="item-text">{{ 'sideMenu.academics.calendar' | translate }}</span>
+          <span class="item-text">{{ 'SIDE_MENU.CALENDAR' | translate }}</span>
         </button>
         <button mat-list-item class="nav-item" routerLinkActive="active-link" [routerLink]="['/serie/new']">
           <mat-icon class="item-icon">collections_bookmark</mat-icon>
-          <span class="item-text">{{ 'sideMenu.academics.series' | translate }}</span>
+          <span class="item-text">{{ 'SIDE_MENU.SERIES' | translate }}</span>
         </button>
         <button mat-list-item class="nav-item" routerLinkActive="active-link" [routerLink]="['/catch-ups']">
           <mat-icon class="item-icon">history_edu</mat-icon>
-          <span class="item-text">{{ 'sideMenu.academics.catchUps' | translate }}</span>
+          <span class="item-text">{{ 'SIDE_MENU.CATCH_UPS' | translate }}</span>
         </button>
         <button mat-list-item class="nav-item" routerLinkActive="active-link" [routerLink]="['/transfers']">
           <mat-icon class="item-icon">swap_horiz</mat-icon>
-          <span class="item-text">{{ 'sideMenu.academics.transfers' | translate }}</span>
+          <span class="item-text">{{ 'SIDE_MENU.TRANSFERS' | translate }}</span>
         </button>
       </div>
     </mat-expansion-panel>
@@ -93,29 +93,29 @@
       <mat-expansion-panel-header>
         <mat-panel-title class="nav-panel-title">
           <mat-icon class="nav-panel-icon">library_books</mat-icon>
-          <span>{{ 'sideMenu.resources.title' | translate }}</span>
+          <span>{{ 'SIDE_MENU.ACADEMIC_RESOURCES' | translate }}</span>
         </mat-panel-title>
       </mat-expansion-panel-header>
       <div class="panel-content">
         <button mat-list-item class="nav-item" routerLinkActive="active-link" [routerLink]="['/level/table']">
           <mat-icon class="item-icon">stairs</mat-icon>
-          <span class="item-text">{{ 'sideMenu.resources.levels' | translate }}</span>
+          <span class="item-text">{{ 'SIDE_MENU.LEVELS' | translate }}</span>
         </button>
         <button mat-list-item class="nav-item" routerLinkActive="active-link" [routerLink]="['/room/table']">
           <mat-icon class="item-icon">meeting_room</mat-icon>
-          <span class="item-text">{{ 'sideMenu.resources.rooms' | translate }}</span>
+          <span class="item-text">{{ 'SIDE_MENU.ROOMS' | translate }}</span>
         </button>
         <button mat-list-item class="nav-item" routerLinkActive="active-link" [routerLink]="['/subject/table']">
           <mat-icon class="item-icon">menu_book</mat-icon>
-          <span class="item-text">{{ 'sideMenu.resources.subjects' | translate }}</span>
+          <span class="item-text">{{ 'SIDE_MENU.SUBJECTS' | translate }}</span>
         </button>
         <button mat-list-item class="nav-item" routerLinkActive="active-link" [routerLink]="['groupType/table']">
           <mat-icon class="item-icon">category</mat-icon>
-          <span class="item-text">{{ 'sideMenu.resources.groupTypes' | translate }}</span>
+          <span class="item-text">{{ 'SIDE_MENU.GROUP_TYPES' | translate }}</span>
         </button>
         <button mat-list-item class="nav-item" routerLinkActive="active-link" [routerLink]="['/pricing/table']">
           <mat-icon class="item-icon">price_change</mat-icon>
-          <span class="item-text">{{ 'sideMenu.resources.pricing' | translate }}</span>
+          <span class="item-text">{{ 'SIDE_MENU.PRICING' | translate }}</span>
         </button>
       </div>
     </mat-expansion-panel>
