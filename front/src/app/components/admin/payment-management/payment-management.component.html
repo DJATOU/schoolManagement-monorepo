@@ -1,0 +1,152 @@
+<div class="header">
+  <div>
+    <h1>Gestion des paiements</h1>
+    <p>Administration des détails de paiement, filtres et historique</p>
+  </div>
+  <button mat-raised-button color="primary" (click)="exportToCSV()">
+    <mat-icon>download</mat-icon>
+    Exporter
+  </button>
+</div>
+
+<mat-card class="filters-card">
+  <form [formGroup]="filterForm" class="filters-grid">
+    <mat-form-field appearance="outline">
+      <mat-label>Étudiant</mat-label>
+      <mat-select formControlName="studentId">
+        <mat-option [value]="null">Tous</mat-option>
+        <mat-option *ngFor="let student of students" [value]="student.id">{{student.firstName}} {{student.lastName}}</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Groupe</mat-label>
+      <mat-select formControlName="groupId">
+        <mat-option [value]="null">Tous</mat-option>
+        <mat-option *ngFor="let group of groups" [value]="group.id">{{group.name}}</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Série</mat-label>
+      <mat-select formControlName="sessionSeriesId">
+        <mat-option [value]="null">Toutes</mat-option>
+        <mat-option *ngFor="let serie of series" [value]="serie.id">{{serie.name}}</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Statut</mat-label>
+      <mat-select formControlName="active">
+        <mat-option [value]="null">Tous</mat-option>
+        <mat-option [value]="true">Actif</mat-option>
+        <mat-option [value]="false">Inactif</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Date de début</mat-label>
+      <input matInput [matDatepicker]="pickerStart" formControlName="dateFrom">
+      <mat-datepicker-toggle matSuffix [for]="pickerStart"></mat-datepicker-toggle>
+      <mat-datepicker #pickerStart></mat-datepicker>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Date de fin</mat-label>
+      <input matInput [matDatepicker]="pickerEnd" formControlName="dateTo">
+      <mat-datepicker-toggle matSuffix [for]="pickerEnd"></mat-datepicker-toggle>
+      <mat-datepicker #pickerEnd></mat-datepicker>
+    </mat-form-field>
+
+    <div class="filter-actions">
+      <button mat-raised-button color="primary" type="button" (click)="loadPaymentDetails()">
+        <mat-icon>search</mat-icon>
+        Rechercher
+      </button>
+      <button mat-stroked-button type="button" (click)="resetFilters()">
+        <mat-icon>refresh</mat-icon>
+        Réinitialiser
+      </button>
+    </div>
+  </form>
+</mat-card>
+
+<mat-card class="table-card">
+  <div class="table-header">
+    <h2>Résultats</h2>
+    <mat-chip color="primary" selected> {{totalElements}} éléments </mat-chip>
+  </div>
+
+  <div class="table-wrapper" *ngIf="!isLoading; else loading">
+    <table mat-table [dataSource]="dataSource" class="mat-elevation-z2">
+      <ng-container matColumnDef="id">
+        <th mat-header-cell *matHeaderCellDef> ID </th>
+        <td mat-cell *matCellDef="let element"> {{element.id}} </td>
+      </ng-container>
+
+      <ng-container matColumnDef="student">
+        <th mat-header-cell *matHeaderCellDef> Étudiant </th>
+        <td mat-cell *matCellDef="let element"> {{element.studentName}} </td>
+      </ng-container>
+
+      <ng-container matColumnDef="group">
+        <th mat-header-cell *matHeaderCellDef> Groupe </th>
+        <td mat-cell *matCellDef="let element"> {{element.groupName}} </td>
+      </ng-container>
+
+      <ng-container matColumnDef="series">
+        <th mat-header-cell *matHeaderCellDef> Série </th>
+        <td mat-cell *matCellDef="let element"> {{element.seriesName || '-'}} </td>
+      </ng-container>
+
+      <ng-container matColumnDef="amount">
+        <th mat-header-cell *matHeaderCellDef> Montant </th>
+        <td mat-cell *matCellDef="let element"> {{element.amountPaid | currency:'DZD'}} </td>
+      </ng-container>
+
+      <ng-container matColumnDef="active">
+        <th mat-header-cell *matHeaderCellDef> Actif </th>
+        <td mat-cell *matCellDef="let element">
+          <mat-chip [color]="element.active ? 'primary' : 'warn'" selected>
+            {{ element.active ? 'Actif' : 'Inactif' }}
+          </mat-chip>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="dateCreation">
+        <th mat-header-cell *matHeaderCellDef> Créé le </th>
+        <td mat-cell *matCellDef="let element"> {{element.dateCreation | date:'short'}} </td>
+      </ng-container>
+
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef class="actions-header"> Actions </th>
+        <td mat-cell *matCellDef="let element" class="actions-cell">
+          <button mat-icon-button color="primary" matTooltip="Modifier" (click)="openEditDialog(element)">
+            <mat-icon>edit</mat-icon>
+          </button>
+          <button mat-icon-button color="accent" matTooltip="Historique" (click)="openHistoryDialog(element)">
+            <mat-icon>history</mat-icon>
+          </button>
+          <button mat-icon-button color="warn" matTooltip="Supprimer" (click)="deletePaymentDetail(element)">
+            <mat-icon>delete</mat-icon>
+          </button>
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+    </table>
+    <mat-paginator [length]="totalElements"
+                   [pageIndex]="pageIndex"
+                   [pageSize]="pageSize"
+                   [pageSizeOptions]="[5, 10, 20]"
+                   (page)="onPageChange($event)">
+    </mat-paginator>
+  </div>
+  <ng-template #loading>
+    <div class="loading">
+      <mat-progress-spinner mode="indeterminate"></mat-progress-spinner>
+      <p>Chargement des paiements...</p>
+    </div>
+  </ng-template>
+</mat-card>
