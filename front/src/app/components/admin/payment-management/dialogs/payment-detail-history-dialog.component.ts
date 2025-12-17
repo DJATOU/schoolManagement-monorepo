@@ -53,6 +53,31 @@ export class PaymentDetailHistoryDialogComponent implements OnInit {
 
   ngOnInit(): void {
     this.http.get<PaymentDetailAudit[]>(`${API_BASE_URL}/api/payment-details/${this.data.id}/history`)
-      .subscribe(history => this.history = history || []);
+      .subscribe(history => {
+        this.history = (history || []).map(item => ({
+          ...item,
+          timestamp: this.convertToDate(item.timestamp) as any
+        }));
+      });
+  }
+
+  private convertToDate(dateArray: any): Date | string {
+    if (!dateArray) {
+      return '';
+    }
+
+    // If it's already a Date or string, return it
+    if (dateArray instanceof Date || typeof dateArray === 'string') {
+      return new Date(dateArray);
+    }
+
+    // If it's an array [year, month, day, hour, minute, second, nano]
+    if (Array.isArray(dateArray) && dateArray.length >= 3) {
+      const [year, month, day, hour = 0, minute = 0, second = 0, nano = 0] = dateArray;
+      // Month in JavaScript Date is 0-indexed, but Java LocalDateTime is 1-indexed
+      return new Date(year, month - 1, day, hour, minute, second, Math.floor(nano / 1000000));
+    }
+
+    return dateArray;
   }
 }

@@ -20,8 +20,28 @@
 
   .filter-actions {
     display: flex;
-    gap: 8px;
+    gap: 12px;
     align-items: center;
+    flex-wrap: wrap;
+    margin-top: 8px;
+
+    button {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 16px;
+      min-width: 120px;
+      white-space: nowrap;
+
+      mat-icon {
+        margin: 0;
+      }
+
+      span {
+        font-size: 14px;
+        font-weight: 500;
+      }
+    }
   }
 }
 
@@ -66,9 +86,34 @@
     gap: 8px;
   }
 
+  .filters-card {
+    .filter-actions {
+      width: 100%;
+
+      button {
+        flex: 1;
+        min-width: auto;
+        justify-content: center;
+      }
+    }
+  }
+
   .table-card {
     table {
       min-width: 600px;
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .filters-card {
+    .filter-actions {
+      flex-direction: column;
+      width: 100%;
+
+      button {
+        width: 100%;
+      }
     }
   }
 }

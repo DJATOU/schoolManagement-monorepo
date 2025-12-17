@@ -1,6 +1,8 @@
 package com.school.management.persistance;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -16,6 +18,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @SuperBuilder
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class PaymentEntity extends BaseEntity {
 
     @Id
@@ -56,6 +59,7 @@ public class PaymentEntity extends BaseEntity {
 
     @OneToMany(mappedBy = "payment", cascade = CascadeType.ALL)
     @Builder.Default
+    @JsonIgnore
     private List<PaymentDetailEntity> paymentDetails = new ArrayList<>();
 
     @Override

@@ -38,13 +38,13 @@ public class PaymentDetailAuditEntity {
     @Column(nullable = false)
     private LocalDateTime timestamp;
 
-    @Column(name = "old_value")
+    @Column(name = "old_value", columnDefinition = "TEXT")
     private String oldValue;
 
-    @Column(name = "new_value")
+    @Column(name = "new_value", columnDefinition = "TEXT")
     private String newValue;
 
-    @Column(name = "reason")
+    @Column(name = "reason", columnDefinition = "TEXT")
     private String reason;
 
     @PrePersist

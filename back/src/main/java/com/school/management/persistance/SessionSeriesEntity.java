@@ -1,5 +1,7 @@
 package com.school.management.persistance;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -16,6 +18,7 @@ import java.util.Set;
 @NoArgsConstructor
 @AllArgsConstructor
 @SuperBuilder
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class SessionSeriesEntity extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -35,6 +38,7 @@ public class SessionSeriesEntity extends BaseEntity {
     private int sessionsCompleted; // Nombre de séances déjà complétées
 
     @OneToMany(mappedBy = "sessionSeries")
+    @JsonIgnore
     private Set<SessionEntity> sessions ;
 
     @Temporal(TemporalType.TIMESTAMP)

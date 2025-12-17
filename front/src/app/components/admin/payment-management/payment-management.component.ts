@@ -16,6 +16,7 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { API_BASE_URL } from '../../../app.config';
 import { GroupService } from '../../../services/group.service';
 import { EditPaymentDetailDialogComponent } from './dialogs/edit-payment-detail-dialog.component';
@@ -56,6 +57,7 @@ interface PaymentDetailView {
     MatDialogModule,
     MatTooltipModule,
     MatProgressSpinnerModule,
+    MatSnackBarModule,
     EditPaymentDetailDialogComponent,
     PaymentDetailHistoryDialogComponent
   ]
@@ -80,7 +82,8 @@ export class PaymentManagementComponent implements OnInit {
     private fb: FormBuilder,
     private http: HttpClient,
     private dialog: MatDialog,
-    private groupService: GroupService
+    private groupService: GroupService,
+    private snackBar: MatSnackBar
   ) {
     this.filterForm = this.fb.group({
       studentId: [null],
@@ -100,21 +103,27 @@ export class PaymentManagementComponent implements OnInit {
   loadPaymentDetails(): void {
     this.isLoading = true;
     let params = new HttpParams()
-      .set('page', this.pageIndex)
-      .set('size', this.pageSize)
+      .set('page', String(this.pageIndex))
+      .set('size', String(this.pageSize))
       .set('sort', 'id')
       .set('direction', 'DESC');
 
     Object.entries(this.filterForm.value).forEach(([key, value]) => {
-      if (value !== null && value !== '') {
-        params = params.set(key, value);
+      const normalized = this.normalizeParamValue(value);
+      if (normalized !== null) {
+        params = params.set(key, normalized);
       }
     });
 
     this.http.get<any>(`${API_BASE_URL}/api/payment-details`, { params })
       .pipe(finalize(() => this.isLoading = false))
       .subscribe(response => {
-        this.dataSource.data = response.content || [];
+        // Transform date arrays to JavaScript Date objects
+        const content = (response.content || []).map((item: any) => ({
+          ...item,
+          dateCreation: this.convertToDate(item.dateCreation)
+        }));
+        this.dataSource.data = content;
         this.totalElements = response.totalElements || 0;
         setTimeout(() => {
           if (this.paginator) {
@@ -122,6 +131,52 @@ export class PaymentManagementComponent implements OnInit {
           }
         });
       });
+  }
+
+  private normalizeParamValue(value: any): string | null {
+    if (value === null || value === undefined || value === '') {
+      return null;
+    }
+
+    // Handle Date objects (e.g., from date pickers) as yyyy-MM-dd
+    if (value instanceof Date) {
+      const yyyy = value.getFullYear();
+      const mm = String(value.getMonth() + 1).padStart(2, '0');
+      const dd = String(value.getDate()).padStart(2, '0');
+      return `${yyyy}-${mm}-${dd}`;
+    }
+
+    // If it's an object from a select, try to use its id; otherwise skip
+    if (typeof value === 'object') {
+      const maybeId = (value as any)?.id;
+      if (maybeId !== undefined && maybeId !== null) {
+        return String(maybeId);
+      }
+      return null;
+    }
+
+    // Primitives: string/number/boolean
+    return String(value);
+  }
+
+  private convertToDate(dateArray: any): Date | null {
+    if (!dateArray) {
+      return null;
+    }
+
+    // If it's already a Date or string, return it
+    if (dateArray instanceof Date || typeof dateArray === 'string') {
+      return new Date(dateArray);
+    }
+
+    // If it's an array [year, month, day, hour, minute, second, nano]
+    if (Array.isArray(dateArray) && dateArray.length >= 3) {
+      const [year, month, day, hour = 0, minute = 0, second = 0, nano = 0] = dateArray;
+      // Month in JavaScript Date is 0-indexed, but Java LocalDateTime is 1-indexed
+      return new Date(year, month - 1, day, hour, minute, second, Math.floor(nano / 1000000));
+    }
+
+    return null;
   }
 
   loadFilterOptions(): void {
@@ -145,6 +200,11 @@ export class PaymentManagementComponent implements OnInit {
     dialogRef.afterClosed().subscribe(result => {
       if (result) {
         this.loadPaymentDetails();
+        this.snackBar.open('Paiement modifié avec succès', 'Fermer', {
+          duration: 3000,
+          horizontalPosition: 'center',
+          verticalPosition: 'bottom'
+        });
       }
     });
   }
@@ -164,13 +224,25 @@ export class PaymentManagementComponent implements OnInit {
 
     const headers = new HttpHeaders().set('X-Admin-Name', 'Admin');
     this.http.delete(`${API_BASE_URL}/api/payment-details/${detail.id}`, { headers, body: { reason } })
-      .subscribe(() => this.loadPaymentDetails());
+      .subscribe(() => {
+        this.loadPaymentDetails();
+        this.snackBar.open('Paiement supprimé avec succès', 'Fermer', {
+          duration: 3000,
+          horizontalPosition: 'center',
+          verticalPosition: 'bottom'
+        });
+      });
   }
 
   resetFilters(): void {
     this.filterForm.reset();
     this.pageIndex = 0;
     this.loadPaymentDetails();
+    this.snackBar.open('Filtres effacés avec succès', 'Fermer', {
+      duration: 3000,
+      horizontalPosition: 'center',
+      verticalPosition: 'bottom'
+    });
   }
 
   exportToCSV(): void {

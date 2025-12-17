@@ -56,12 +56,13 @@ public interface PaymentDetailRepository extends JpaRepository<PaymentDetailEnti
     List<PaymentDetailEntity> findByPaymentIdAndActiveTrue(Long paymentId);
 
     @Query("SELECT pd FROM PaymentDetailEntity pd " +
-            "WHERE (:studentId IS NULL OR pd.payment.student.id = :studentId) " +
-            "AND (:groupId IS NULL OR pd.payment.group.id = :groupId) " +
-            "AND (:sessionSeriesId IS NULL OR pd.payment.sessionSeries.id = :sessionSeriesId) " +
+            "JOIN pd.payment p " +
+            "WHERE (:studentId IS NULL OR p.student.id = :studentId) " +
+            "AND (:groupId IS NULL OR p.group.id = :groupId) " +
+            "AND (:sessionSeriesId IS NULL OR p.sessionSeries.id = :sessionSeriesId) " +
             "AND (:active IS NULL OR pd.active = :active) " +
-            "AND (:dateFrom IS NULL OR pd.paymentDate >= :dateFrom) " +
-            "AND (:dateTo IS NULL OR pd.paymentDate <= :dateTo)")
+            "AND (CAST(:dateFrom AS timestamp) IS NULL OR pd.paymentDate >= :dateFrom) " +
+            "AND (CAST(:dateTo AS timestamp) IS NULL OR pd.paymentDate <= :dateTo)")
     org.springframework.data.domain.Page<PaymentDetailEntity> findAllWithFilters(
             @Param("studentId") Long studentId,
             @Param("groupId") Long groupId,
@@ -72,12 +73,13 @@ public interface PaymentDetailRepository extends JpaRepository<PaymentDetailEnti
             org.springframework.data.domain.Pageable pageable);
 
     @Query("SELECT COUNT(pd) FROM PaymentDetailEntity pd " +
-            "WHERE (:studentId IS NULL OR pd.payment.student.id = :studentId) " +
-            "AND (:groupId IS NULL OR pd.payment.group.id = :groupId) " +
-            "AND (:sessionSeriesId IS NULL OR pd.payment.sessionSeries.id = :sessionSeriesId) " +
+            "JOIN pd.payment p " +
+            "WHERE (:studentId IS NULL OR p.student.id = :studentId) " +
+            "AND (:groupId IS NULL OR p.group.id = :groupId) " +
+            "AND (:sessionSeriesId IS NULL OR p.sessionSeries.id = :sessionSeriesId) " +
             "AND (:active IS NULL OR pd.active = :active) " +
-            "AND (:dateFrom IS NULL OR pd.paymentDate >= :dateFrom) " +
-            "AND (:dateTo IS NULL OR pd.paymentDate <= :dateTo)")
+            "AND (CAST(:dateFrom AS timestamp) IS NULL OR pd.paymentDate >= :dateFrom) " +
+            "AND (CAST(:dateTo AS timestamp) IS NULL OR pd.paymentDate <= :dateTo)")
     long countWithFilters(
             @Param("studentId") Long studentId,
             @Param("groupId") Long groupId,

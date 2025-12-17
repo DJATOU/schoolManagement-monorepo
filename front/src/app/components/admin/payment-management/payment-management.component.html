@@ -61,11 +61,11 @@
     <div class="filter-actions">
       <button mat-raised-button color="primary" type="button" (click)="loadPaymentDetails()">
         <mat-icon>search</mat-icon>
-        Rechercher
+        <span>Rechercher</span>
       </button>
-      <button mat-stroked-button type="button" (click)="resetFilters()">
-        <mat-icon>refresh</mat-icon>
-        Réinitialiser
+      <button mat-raised-button color="accent" type="button" (click)="resetFilters()">
+        <mat-icon>clear_all</mat-icon>
+        <span>Effacer</span>
       </button>
     </div>
   </form>
