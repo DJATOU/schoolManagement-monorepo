@@ -127,9 +127,13 @@
           <button mat-icon-button color="accent" matTooltip="Historique" (click)="openHistoryDialog(element)">
             <mat-icon>history</mat-icon>
           </button>
-          <button mat-icon-button color="warn" matTooltip="Supprimer" (click)="deletePaymentDetail(element)">
-            <mat-icon>delete</mat-icon>
+          <button *ngIf="element.active" mat-icon-button color="warn" matTooltip="Supprimer définitivement" (click)="deletePaymentDetail(element)">
+            <mat-icon>cancel</mat-icon>
           </button>
+          <button *ngIf="!element.active && !element.permanentlyDeleted" mat-icon-button color="success" matTooltip="Réactiver" (click)="reactivatePaymentDetail(element)">
+            <mat-icon>check_circle</mat-icon>
+          </button>
+          <span *ngIf="!element.active && element.permanentlyDeleted" style="color: #666; font-size: 12px; font-style: italic;">Supprimé définitivement</span>
         </td>
       </ng-container>
 

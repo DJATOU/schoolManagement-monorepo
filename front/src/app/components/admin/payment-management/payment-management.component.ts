@@ -30,6 +30,7 @@ interface PaymentDetailView {
   seriesName?: string;
   amountPaid: number;
   active: boolean;
+  permanentlyDeleted?: boolean;
   dateCreation?: string;
   paymentId?: number;
   sessionId?: number;
@@ -217,7 +218,7 @@ export class PaymentManagementComponent implements OnInit {
   }
 
   deletePaymentDetail(detail: PaymentDetailView): void {
-    const reason = window.prompt('Veuillez fournir une raison pour la suppression:');
+    const reason = window.prompt('Veuillez fournir une raison pour la désactivation:');
     if (!reason) {
       return;
     }
@@ -226,11 +227,51 @@ export class PaymentManagementComponent implements OnInit {
     this.http.delete(`${API_BASE_URL}/api/payment-details/${detail.id}`, { headers, body: { reason } })
       .subscribe(() => {
         this.loadPaymentDetails();
-        this.snackBar.open('Paiement supprimé avec succès', 'Fermer', {
-          duration: 3000,
+        this.snackBar.open('Paiement désactivé avec succès. Vous pouvez maintenant repayer cette session.', 'Fermer', {
+          duration: 5000,
           horizontalPosition: 'center',
           verticalPosition: 'bottom'
         });
+      });
+  }
+
+  reactivatePaymentDetail(detail: PaymentDetailView): void {
+    // Vérifier si c'est une suppression définitive
+    if (detail.permanentlyDeleted) {
+      this.snackBar.open('Ce paiement a été définitivement supprimé et ne peut pas être réactivé.', 'Fermer', {
+        duration: 5000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom',
+        panelClass: ['error-snackbar']
+      });
+      return;
+    }
+
+    const reason = window.prompt('Veuillez fournir une raison pour la réactivation:');
+    if (!reason) {
+      return;
+    }
+
+    const headers = new HttpHeaders().set('X-Admin-Name', 'Admin');
+    this.http.post(`${API_BASE_URL}/api/payment-details/${detail.id}/reactivate`, { reason }, { headers })
+      .subscribe({
+        next: () => {
+          this.loadPaymentDetails();
+          this.snackBar.open('Paiement réactivé avec succès', 'Fermer', {
+            duration: 3000,
+            horizontalPosition: 'center',
+            verticalPosition: 'bottom'
+          });
+        },
+        error: (error) => {
+          const errorMessage = error.error?.message || 'Erreur lors de la réactivation du paiement';
+          this.snackBar.open(errorMessage, 'Fermer', {
+            duration: 5000,
+            horizontalPosition: 'center',
+            verticalPosition: 'bottom',
+            panelClass: ['error-snackbar']
+          });
+        }
       });
   }
 

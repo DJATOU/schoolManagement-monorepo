@@ -39,6 +39,14 @@ public class PaymentDetailEntity extends BaseEntity {
     @Column(name = "is_catch_up")
     private Boolean isCatchUp = false;
 
+    /**
+     * Indique si ce paiement a été définitivement supprimé.
+     * - true: Suppression définitive (irréversible, ne peut pas être re-payé)
+     * - false/null: Suppression temporaire ou désactivation (peut être réactivé)
+     */
+    @Column(name = "permanently_deleted")
+    private Boolean permanentlyDeleted = false;
+
     @Override
     protected void onCreate() {
         super.onCreate();

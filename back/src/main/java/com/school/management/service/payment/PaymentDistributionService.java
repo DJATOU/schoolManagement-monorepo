@@ -97,17 +97,45 @@ public class PaymentDistributionService {
 
         if (existingDetail.isPresent()) {
             PaymentDetailEntity detail = existingDetail.get();
-            double alreadyPaid = detail.getAmountPaid();
-            double stillOwed = pricePerSession - alreadyPaid;
 
-            if (stillOwed > 0) {
-                double amountToAdd = Math.min(stillOwed, remaining);
-                detail.setAmountPaid(alreadyPaid + amountToAdd);
-                paymentDetailRepository.save(detail);
-                remaining -= amountToAdd;
+            // CRITICAL: Check if payment was permanently deleted (irreversible)
+            if (detail.getPermanentlyDeleted() != null && detail.getPermanentlyDeleted()) {
+                throw new IllegalStateException(
+                    "Cannot create a new payment for session " + session.getId() +
+                    ". This session had a payment that was permanently deleted (irreversible). " +
+                    "Payment detail ID: " + detail.getId()
+                );
+            }
 
-                LOGGER.debug("Updated existing PaymentDetail for session {} - added: {}, new total: {}",
-                        session.getId(), amountToAdd, detail.getAmountPaid());
+            // Only consider the payment if it's ACTIVE
+            // If inactive (but not permanently deleted), treat it as if it doesn't exist (create new one)
+            if (detail.getActive() != null && detail.getActive()) {
+                double alreadyPaid = detail.getAmountPaid();
+                double stillOwed = pricePerSession - alreadyPaid;
+
+                if (stillOwed > 0) {
+                    double amountToAdd = Math.min(stillOwed, remaining);
+                    detail.setAmountPaid(alreadyPaid + amountToAdd);
+                    paymentDetailRepository.save(detail);
+                    remaining -= amountToAdd;
+
+                    LOGGER.debug("Updated existing ACTIVE PaymentDetail for session {} - added: {}, new total: {}",
+                            session.getId(), amountToAdd, detail.getAmountPaid());
+                }
+            } else {
+                // Inactive detail exists (but not permanently deleted), create a new active one
+                LOGGER.info("Found INACTIVE PaymentDetail for session {}, creating new active one", session.getId());
+                double amountForThisSession = Math.min(pricePerSession, remaining);
+                PaymentDetailEntity newDetail = PaymentDetailEntity.builder()
+                        .payment(payment)
+                        .session(session)
+                        .amountPaid(amountForThisSession)
+                        .build();
+                paymentDetailRepository.save(newDetail);
+                remaining -= amountForThisSession;
+
+                LOGGER.debug("Created new ACTIVE PaymentDetail for session {} - amount: {}",
+                        session.getId(), amountForThisSession);
             }
         } else {
             double amountForThisSession = Math.min(pricePerSession, remaining);
@@ -189,7 +217,10 @@ public class PaymentDistributionService {
         List<PaymentDetailEntity> details = paymentDetailRepository
                 .findByPayment_StudentIdAndSession_SessionSeriesId(studentId, sessionSeriesId);
 
+        // IMPORTANT: Only count ACTIVE PaymentDetails
+        // This allows re-payment after cancellation/deactivation
         return details.stream()
+                .filter(detail -> detail.getActive() != null && detail.getActive())
                 .mapToDouble(PaymentDetailEntity::getAmountPaid)
                 .sum();
     }

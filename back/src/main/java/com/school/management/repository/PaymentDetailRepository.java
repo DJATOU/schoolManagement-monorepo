@@ -55,6 +55,12 @@ public interface PaymentDetailRepository extends JpaRepository<PaymentDetailEnti
 
     List<PaymentDetailEntity> findByPaymentIdAndActiveTrue(Long paymentId);
 
+    /**
+     * Trouve tous les PaymentDetails pour un paiement donné (actifs ET inactifs).
+     * Utilisé pour vérifier si tous les paiements ont été définitivement supprimés.
+     */
+    List<PaymentDetailEntity> findByPaymentId(Long paymentId);
+
     @Query("SELECT pd FROM PaymentDetailEntity pd " +
             "JOIN pd.payment p " +
             "WHERE (:studentId IS NULL OR p.student.id = :studentId) " +

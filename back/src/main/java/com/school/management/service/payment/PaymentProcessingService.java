@@ -151,6 +151,18 @@ public class PaymentProcessingService {
     private PaymentEntity getOrCreateSeriesPayment(StudentEntity student, GroupEntity group,
                                                    Long sessionSeriesId, double attendedSessionsCost) {
         return paymentRepository.findByStudentIdAndSessionSeriesId(student.getId(), sessionSeriesId)
+                .map(existingPayment -> {
+                    // CRITICAL: Empêcher tout paiement sur un Payment CANCELLED
+                    if ("CANCELLED".equals(existingPayment.getStatus())) {
+                        throw new IllegalStateException(
+                            "Cannot process payment for student " + student.getId() +
+                            " on series " + sessionSeriesId +
+                            ". This payment was CANCELLED (all payment details were permanently deleted). " +
+                            "Payment ID: " + existingPayment.getId()
+                        );
+                    }
+                    return existingPayment;
+                })
                 .orElseGet(() -> {
                     LOGGER.info("Creating new payment for student {} and series {}",
                             student.getId(), sessionSeriesId);

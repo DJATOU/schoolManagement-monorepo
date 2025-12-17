@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.util.Date;
+import java.util.List;
 import java.util.Objects;
 
 @Service
@@ -82,6 +83,7 @@ public class PaymentDetailAdminService {
 
         String oldValue = buildValueString(detail);
         detail.setActive(false);
+        detail.setPermanentlyDeleted(true); // SUPPRESSION DÉFINITIVE - irréversible
         paymentDetailRepository.save(detail);
 
         paymentDetailAuditService.logAction(id, "DELETED", adminName, oldValue, buildValueString(detail), reason);
@@ -89,11 +91,48 @@ public class PaymentDetailAdminService {
     }
 
     @Transactional
+    public PaymentDetailEntity reactivatePaymentDetail(Long id, String reason, String adminName) {
+        validateReason(reason);
+
+        PaymentDetailEntity detail = paymentDetailRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Payment detail not found with id: " + id));
+
+        if (detail.getActive() != null && detail.getActive()) {
+            throw new IllegalStateException("Payment detail is already active");
+        }
+
+        // IMPORTANT: Empêcher la réactivation des suppressions définitives
+        if (detail.getPermanentlyDeleted() != null && detail.getPermanentlyDeleted()) {
+            throw new IllegalStateException("Cannot reactivate a permanently deleted payment detail. This deletion is irreversible.");
+        }
+
+        String oldValue = buildValueString(detail);
+        detail.setActive(true);
+        paymentDetailRepository.save(detail);
+
+        paymentDetailAuditService.logAction(id, "REACTIVATED", adminName, oldValue, buildValueString(detail), reason);
+        recalculatePayment(detail.getPayment().getId());
+
+        return detail;
+    }
+
+    @Transactional
     public void recalculatePayment(Long paymentId) {
         PaymentEntity payment = paymentRepository.findById(paymentId)
                 .orElseThrow(() -> new RuntimeException("Payment not found with id: " + paymentId));
 
-        double totalPaid = paymentDetailRepository.findByPaymentIdAndActiveTrue(paymentId).stream()
+        // Récupérer TOUS les PaymentDetails (actifs et inactifs)
+        List<PaymentDetailEntity> allDetails = paymentDetailRepository.findByPaymentId(paymentId);
+
+        // Vérifier si tous les PaymentDetails ont été définitivement supprimés
+        boolean allPermanentlyDeleted = !allDetails.isEmpty() &&
+                allDetails.stream().allMatch(detail ->
+                    detail.getPermanentlyDeleted() != null && detail.getPermanentlyDeleted()
+                );
+
+        // Calculer le total payé (uniquement les actifs)
+        double totalPaid = allDetails.stream()
+                .filter(detail -> detail.getActive() != null && detail.getActive())
                 .map(PaymentDetailEntity::getAmountPaid)
                 .filter(Objects::nonNull)
                 .mapToDouble(Double::doubleValue)
@@ -111,7 +150,14 @@ public class PaymentDetailAdminService {
             expectedAmount = pricePerSession * sessions;
         }
 
-        if (totalPaid <= 0) {
+        // LOGIQUE DE STATUT:
+        // 1. Si tous les paiements ont été définitivement supprimés → CANCELLED (annulé)
+        // 2. Sinon si totalPaid = 0 → PENDING
+        // 3. Sinon si totalPaid >= expectedAmount → COMPLETED
+        // 4. Sinon → IN_PROGRESS
+        if (allPermanentlyDeleted) {
+            payment.setStatus("CANCELLED");
+        } else if (totalPaid <= 0) {
             payment.setStatus("PENDING");
         } else if (expectedAmount > 0 && totalPaid >= expectedAmount) {
             payment.setStatus("COMPLETED");

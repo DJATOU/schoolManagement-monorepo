@@ -88,4 +88,12 @@ public class PaymentDetailAdminController {
     public ResponseEntity<PaymentDetailEntity> getPaymentDetailById(@PathVariable Long id) {
         return ResponseEntity.ok(paymentDetailAdminService.getPaymentDetail(id));
     }
+
+    @PostMapping("/{id}/reactivate")
+    public ResponseEntity<PaymentDetailEntity> reactivatePaymentDetail(@PathVariable Long id,
+                                                                        @RequestHeader("X-Admin-Name") String adminName,
+                                                                        @RequestBody Map<String, String> requestBody) {
+        String reason = requestBody.get("reason");
+        return ResponseEntity.ok(paymentDetailAdminService.reactivatePaymentDetail(id, reason, adminName));
+    }
 }

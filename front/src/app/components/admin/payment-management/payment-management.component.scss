@@ -68,6 +68,10 @@
 
   .actions-cell button {
     margin: 0 4px;
+
+    &.mat-mdc-icon-button.mat-success {
+      color: #4caf50;
+    }
   }
 }
 

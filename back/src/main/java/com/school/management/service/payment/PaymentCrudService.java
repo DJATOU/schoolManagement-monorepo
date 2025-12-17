@@ -168,20 +168,29 @@ public class PaymentCrudService {
     /**
      * Récupère les détails de paiement pour une série.
      *
+     * IMPORTANT: Ne retourne que les PaymentDetails ACTIFS pour éviter d'afficher
+     * les paiements désactivés dans l'historique de l'étudiant.
+     *
      * @param studentId l'ID de l'étudiant
      * @param sessionSeriesId l'ID de la série de sessions
-     * @return la liste des détails de paiement
+     * @return la liste des détails de paiement actifs
      */
     @Transactional(readOnly = true)
     public List<PaymentDetailDTO> getPaymentDetailsForSeries(Long studentId, Long sessionSeriesId) {
         LOGGER.info("Fetching payment details for student: {} and series: {}", studentId, sessionSeriesId);
         List<PaymentDetailEntity> details = paymentDetailRepository
             .findByPayment_StudentIdAndSession_SessionSeriesId(studentId, sessionSeriesId);
-        LOGGER.debug("Found {} payment details", details.size());
+        LOGGER.debug("Found {} payment details (before filtering)", details.size());
 
-        return details.stream()
+        // IMPORTANT: Filter only ACTIVE payment details
+        // Inactive payments should not appear in student payment history
+        List<PaymentDetailDTO> activeDetails = details.stream()
+            .filter(detail -> detail.getActive() != null && detail.getActive())
             .map(this::convertToPaymentDetailDto)
             .toList();
+
+        LOGGER.debug("Returning {} active payment details", activeDetails.size());
+        return activeDetails;
     }
 
     /**
