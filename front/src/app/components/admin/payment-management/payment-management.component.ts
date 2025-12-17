@@ -1,38 +1,37 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpParams, HttpHeaders } from '@angular/common/http';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatPaginator, MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
-import { MatOptionModule } from '@angular/material/core';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatNativeDateModule } from '@angular/material/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatChipsModule } from '@angular/material/chips';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatSortModule } from '@angular/material/sort';
-import { API_BASE_URL } from '../../../app.config';
-import { Group } from '../../../models/group/group';
-import { GroupService } from '../../../services/group.service';
-import { Student } from '../../student/domain/student';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { API_BASE_URL } from '../../../app.config';
+import { GroupService } from '../../../services/group.service';
 import { EditPaymentDetailDialogComponent } from './dialogs/edit-payment-detail-dialog.component';
 import { PaymentDetailHistoryDialogComponent } from './dialogs/payment-detail-history-dialog.component';
+import { finalize } from 'rxjs';
 
-interface PaymentDetailRow {
+interface PaymentDetailView {
   id: number;
-  paymentId: number;
-  studentName?: string;
-  groupName?: string;
+  studentName: string;
+  groupName: string;
   seriesName?: string;
   amountPaid: number;
   active: boolean;
   dateCreation?: string;
+  paymentId?: number;
+  sessionId?: number;
 }
 
 @Component({
@@ -48,15 +47,14 @@ interface PaymentDetailRow {
     MatFormFieldModule,
     MatInputModule,
     MatSelectModule,
-    MatOptionModule,
+    MatDatepickerModule,
+    MatNativeDateModule,
     MatButtonModule,
     MatIconModule,
     MatCardModule,
-    MatSnackBarModule,
-    MatDialogModule,
     MatChipsModule,
+    MatDialogModule,
     MatTooltipModule,
-    MatSortModule,
     MatProgressSpinnerModule,
     EditPaymentDetailDialogComponent,
     PaymentDetailHistoryDialogComponent
@@ -64,23 +62,25 @@ interface PaymentDetailRow {
 })
 export class PaymentManagementComponent implements OnInit {
   displayedColumns: string[] = ['id', 'student', 'group', 'series', 'amount', 'active', 'dateCreation', 'actions'];
-  dataSource = new MatTableDataSource<PaymentDetailRow>([]);
+  dataSource = new MatTableDataSource<PaymentDetailView>([]);
   filterForm: FormGroup;
-  groups: Group[] = [];
-  students: Student[] = [];
+
+  groups: any[] = [];
+  students: any[] = [];
+  series: any[] = [];
+
   isLoading = false;
+  totalElements = 0;
   pageIndex = 0;
   pageSize = 10;
-  totalElements = 0;
 
   @ViewChild(MatPaginator) paginator!: MatPaginator;
 
   constructor(
     private fb: FormBuilder,
     private http: HttpClient,
-    private groupService: GroupService,
-    private snackBar: MatSnackBar,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private groupService: GroupService
   ) {
     this.filterForm = this.fb.group({
       studentId: [null],
@@ -93,48 +93,41 @@ export class PaymentManagementComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.loadFilterOptions();
     this.loadPaymentDetails();
+    this.loadFilterOptions();
   }
 
   loadPaymentDetails(): void {
     this.isLoading = true;
     let params = new HttpParams()
-      .set('page', this.pageIndex.toString())
-      .set('size', this.pageSize.toString())
-      .set('direction', 'DESC')
-      .set('sort', 'dateCreation');
+      .set('page', this.pageIndex)
+      .set('size', this.pageSize)
+      .set('sort', 'id')
+      .set('direction', 'DESC');
 
     Object.entries(this.filterForm.value).forEach(([key, value]) => {
       if (value !== null && value !== '') {
-        params = params.set(key, value as any);
+        params = params.set(key, value);
       }
     });
 
-    this.http.get<{ content: PaymentDetailRow[]; totalElements: number }>(`${API_BASE_URL}/api/payment-details`, { params })
-      .subscribe({
-        next: (response) => {
-          this.dataSource.data = response.content;
-          this.totalElements = response.totalElements;
+    this.http.get<any>(`${API_BASE_URL}/api/payment-details`, { params })
+      .pipe(finalize(() => this.isLoading = false))
+      .subscribe(response => {
+        this.dataSource.data = response.content || [];
+        this.totalElements = response.totalElements || 0;
+        setTimeout(() => {
           if (this.paginator) {
-            this.paginator.length = response.totalElements;
+            this.dataSource.paginator = this.paginator;
           }
-        },
-        error: () => this.snackBar.open('Erreur lors du chargement des paiements', 'Fermer', { duration: 3000 }),
-        complete: () => this.isLoading = false
+        });
       });
   }
 
   loadFilterOptions(): void {
-    this.groupService.getGroups().subscribe({
-      next: groups => this.groups = groups,
-      error: () => this.snackBar.open('Erreur lors du chargement des groupes', 'Fermer', { duration: 3000 })
-    });
-
-    this.http.get<Student[]>(`${API_BASE_URL}/api/students`).subscribe({
-      next: students => this.students = students,
-      error: () => this.snackBar.open('Erreur lors du chargement des étudiants', 'Fermer', { duration: 3000 })
-    });
+    this.groupService.getGroups().subscribe(groups => this.groups = groups || []);
+    this.http.get<any[]>(`${API_BASE_URL}/api/students`).subscribe(students => this.students = students || []);
+    this.http.get<any[]>(`${API_BASE_URL}/api/series`).subscribe(series => this.series = series || []);
   }
 
   onPageChange(event: PageEvent): void {
@@ -143,10 +136,10 @@ export class PaymentManagementComponent implements OnInit {
     this.loadPaymentDetails();
   }
 
-  openEditDialog(row: PaymentDetailRow): void {
+  openEditDialog(detail: PaymentDetailView): void {
     const dialogRef = this.dialog.open(EditPaymentDetailDialogComponent, {
       width: '420px',
-      data: { id: row.id, amount: row.amountPaid, active: row.active }
+      data: detail
     });
 
     dialogRef.afterClosed().subscribe(result => {
@@ -156,30 +149,22 @@ export class PaymentManagementComponent implements OnInit {
     });
   }
 
-  openHistoryDialog(row: PaymentDetailRow): void {
+  openHistoryDialog(detail: PaymentDetailView): void {
     this.dialog.open(PaymentDetailHistoryDialogComponent, {
       width: '600px',
-      data: { id: row.id }
+      data: detail
     });
   }
 
-  deletePaymentDetail(row: PaymentDetailRow): void {
-    const reason = prompt('Veuillez fournir une raison pour la suppression :');
+  deletePaymentDetail(detail: PaymentDetailView): void {
+    const reason = window.prompt('Veuillez fournir une raison pour la suppression:');
     if (!reason) {
-      this.snackBar.open('La raison est obligatoire pour la suppression', 'Fermer', { duration: 3000 });
       return;
     }
 
-    this.http.delete(`${API_BASE_URL}/api/payment-details/${row.id}`, {
-      headers: { 'X-Admin-Name': 'Admin' },
-      body: { reason }
-    }).subscribe({
-      next: () => {
-        this.snackBar.open('Paiement supprimé avec succès', 'Fermer', { duration: 3000 });
-        this.loadPaymentDetails();
-      },
-      error: () => this.snackBar.open('Erreur lors de la suppression', 'Fermer', { duration: 3000 })
-    });
+    const headers = new HttpHeaders().set('X-Admin-Name', 'Admin');
+    this.http.delete(`${API_BASE_URL}/api/payment-details/${detail.id}`, { headers, body: { reason } })
+      .subscribe(() => this.loadPaymentDetails());
   }
 
   resetFilters(): void {
@@ -189,6 +174,7 @@ export class PaymentManagementComponent implements OnInit {
   }
 
   exportToCSV(): void {
-    this.snackBar.open('Export CSV à implémenter', 'Fermer', { duration: 3000 });
+    // TODO: Implémenter l'export CSV
+    window.alert('Export CSV à venir');
   }
 }
