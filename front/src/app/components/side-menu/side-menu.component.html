@@ -39,7 +39,7 @@
         </mat-panel-title>
       </mat-expansion-panel-header>
       <div class="panel-content">
-        <button mat-list-item class="nav-item">
+        <button mat-list-item class="nav-item" routerLinkActive="active-link" [routerLink]="['/admin/payment-management']">
           <mat-icon class="item-icon">payments</mat-icon>
           <span class="item-text">Paiements</span>
         </button>
