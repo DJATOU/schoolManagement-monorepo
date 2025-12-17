@@ -1,13 +1,12 @@
-import { Component, Inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Component, Inject } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogRef, MatDialogModule } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatSelectModule } from '@angular/material/select';
-import { MatOptionModule } from '@angular/material/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { API_BASE_URL } from '../../../../app.config';
 
 @Component({
@@ -18,7 +17,7 @@ import { API_BASE_URL } from '../../../../app.config';
     <form [formGroup]="form" (ngSubmit)="onSave()" class="dialog-form">
       <mat-form-field appearance="outline">
         <mat-label>Montant</mat-label>
-        <input matInput type="number" formControlName="amount" required />
+        <input matInput formControlName="amount" type="number" required>
       </mat-form-field>
 
       <mat-form-field appearance="outline">
@@ -31,11 +30,11 @@ import { API_BASE_URL } from '../../../../app.config';
 
       <mat-form-field appearance="outline">
         <mat-label>Raison</mat-label>
-        <textarea matInput rows="3" formControlName="reason" required></textarea>
+        <textarea matInput formControlName="reason" rows="3" required></textarea>
       </mat-form-field>
 
       <div class="actions">
-        <button mat-button type="button" (click)="dialogRef.close(false)">Annuler</button>
+        <button mat-stroked-button type="button" (click)="dialogRef.close(false)">Annuler</button>
         <button mat-raised-button color="primary" type="submit" [disabled]="form.invalid">Enregistrer</button>
       </div>
     </form>
@@ -45,14 +44,13 @@ import { API_BASE_URL } from '../../../../app.config';
       display: flex;
       flex-direction: column;
       gap: 12px;
-      width: 100%;
       min-width: 320px;
     }
-
     .actions {
       display: flex;
       justify-content: flex-end;
       gap: 8px;
+      margin-top: 8px;
     }
   `],
   imports: [
@@ -62,8 +60,7 @@ import { API_BASE_URL } from '../../../../app.config';
     MatFormFieldModule,
     MatInputModule,
     MatButtonModule,
-    MatSelectModule,
-    MatOptionModule
+    MatSelectModule
   ]
 })
 export class EditPaymentDetailDialogComponent {
@@ -73,11 +70,11 @@ export class EditPaymentDetailDialogComponent {
     private fb: FormBuilder,
     private http: HttpClient,
     public dialogRef: MatDialogRef<EditPaymentDetailDialogComponent>,
-    @Inject(MAT_DIALOG_DATA) public data: { id: number; amount: number; active: boolean }
+    @Inject(MAT_DIALOG_DATA) public data: any
   ) {
     this.form = this.fb.group({
-      amount: [data.amount, [Validators.required, Validators.min(0)]],
-      active: [data.active, Validators.required],
+      amount: [data?.amountPaid, Validators.required],
+      active: [data?.active, Validators.required],
       reason: ['', Validators.required]
     });
   }
@@ -86,12 +83,8 @@ export class EditPaymentDetailDialogComponent {
     if (this.form.invalid) {
       return;
     }
-
-    this.http.patch(`${API_BASE_URL}/api/payment-details/${this.data.id}`, this.form.value, {
-      headers: { 'X-Admin-Name': 'Admin' }
-    }).subscribe({
-      next: () => this.dialogRef.close(true),
-      error: () => this.dialogRef.close(false)
-    });
+    const headers = new HttpHeaders().set('X-Admin-Name', 'Admin');
+    this.http.patch(`${API_BASE_URL}/api/payment-details/${this.data.id}`, this.form.value, { headers })
+      .subscribe(() => this.dialogRef.close(true));
   }
 }

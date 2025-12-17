@@ -3,18 +3,17 @@ package com.school.management.controller;
 import com.school.management.dto.PaymentDetailAuditDTO;
 import com.school.management.dto.PaymentDetailUpdateDTO;
 import com.school.management.persistance.PaymentDetailEntity;
-import com.school.management.repository.PaymentDetailRepository;
 import com.school.management.service.payment.PaymentDetailAdminService;
 import com.school.management.service.payment.PaymentDetailAuditService;
-import com.school.management.shared.exception.ResourceNotFoundException;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -25,34 +24,31 @@ public class PaymentDetailAdminController {
 
     private final PaymentDetailAdminService paymentDetailAdminService;
     private final PaymentDetailAuditService paymentDetailAuditService;
-    private final PaymentDetailRepository paymentDetailRepository;
 
+    @Autowired
     public PaymentDetailAdminController(PaymentDetailAdminService paymentDetailAdminService,
-                                        PaymentDetailAuditService paymentDetailAuditService,
-                                        PaymentDetailRepository paymentDetailRepository) {
+                                        PaymentDetailAuditService paymentDetailAuditService) {
         this.paymentDetailAdminService = paymentDetailAdminService;
         this.paymentDetailAuditService = paymentDetailAuditService;
-        this.paymentDetailRepository = paymentDetailRepository;
     }
 
     @GetMapping
-    public Map<String, Object> getPaymentDetails(@RequestParam(required = false) Long studentId,
-                                                 @RequestParam(required = false) Long groupId,
-                                                 @RequestParam(required = false) Long sessionSeriesId,
-                                                 @RequestParam(required = false) Boolean active,
-                                                 @RequestParam(required = false)
-                                                 @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime dateFrom,
-                                                 @RequestParam(required = false)
-                                                 @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime dateTo,
-                                                 @RequestParam(defaultValue = "0") int page,
-                                                 @RequestParam(defaultValue = "10") int size,
-                                                 @RequestParam(defaultValue = "dateCreation") String sort,
-                                                 @RequestParam(defaultValue = "DESC") String direction) {
-        Sort sortObj = Sort.by(Sort.Direction.fromString(direction), sort);
-        Pageable pageable = PageRequest.of(page, size, sortObj);
-
+    public ResponseEntity<Map<String, Object>> getPaymentDetails(
+            @RequestParam(required = false) Long studentId,
+            @RequestParam(required = false) Long groupId,
+            @RequestParam(required = false, name = "sessionSeriesId") Long sessionSeriesId,
+            @RequestParam(required = false) Boolean active,
+            @RequestParam(required = false) Date dateFrom,
+            @RequestParam(required = false) Date dateTo,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "id") String sort,
+            @RequestParam(defaultValue = "DESC") String direction
+    ) {
+        Sort sortOrder = Sort.by(Sort.Direction.fromString(direction), sort);
+        Pageable pageable = PageRequest.of(page, size, sortOrder);
         Page<PaymentDetailEntity> result = paymentDetailAdminService.getAllPaymentDetailsWithFilters(
-            studentId, groupId, sessionSeriesId, active, dateFrom, dateTo, pageable);
+                studentId, groupId, sessionSeriesId, active, dateFrom, dateTo, pageable);
 
         Map<String, Object> response = new HashMap<>();
         response.put("content", result.getContent());
@@ -60,35 +56,35 @@ public class PaymentDetailAdminController {
         response.put("totalPages", result.getTotalPages());
         response.put("currentPage", result.getNumber());
         response.put("size", result.getSize());
-        return response;
+
+        return ResponseEntity.ok(response);
     }
 
     @PatchMapping("/{id}")
-    public PaymentDetailEntity updatePaymentDetail(@PathVariable Long id,
-                                                   @RequestBody PaymentDetailUpdateDTO updateDTO,
-                                                   @RequestHeader("X-Admin-Name") String adminName) {
-        return paymentDetailAdminService.updatePaymentDetail(id, updateDTO, adminName);
+    public ResponseEntity<PaymentDetailEntity> updatePaymentDetail(@PathVariable Long id,
+                                                                   @RequestHeader("X-Admin-Name") String adminName,
+                                                                   @RequestBody PaymentDetailUpdateDTO updateDTO) {
+        return ResponseEntity.ok(paymentDetailAdminService.updatePaymentDetail(id, updateDTO, adminName));
     }
 
     @DeleteMapping("/{id}")
-    public Map<String, String> deletePaymentDetail(@PathVariable Long id,
-                                                   @RequestBody Map<String, String> body,
-                                                   @RequestHeader("X-Admin-Name") String adminName) {
-        String reason = body.get("reason");
+    public ResponseEntity<Map<String, String>> deletePaymentDetail(@PathVariable Long id,
+                                                                   @RequestHeader("X-Admin-Name") String adminName,
+                                                                   @RequestBody Map<String, String> requestBody) {
+        String reason = requestBody.get("reason");
         paymentDetailAdminService.deletePaymentDetail(id, reason, adminName);
         Map<String, String> response = new HashMap<>();
         response.put("message", "Payment detail deleted successfully");
-        return response;
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{id}/history")
-    public List<PaymentDetailAuditDTO> getPaymentDetailHistory(@PathVariable Long id) {
-        return paymentDetailAuditService.getAuditHistory(id);
+    public ResponseEntity<List<PaymentDetailAuditDTO>> getPaymentDetailHistory(@PathVariable Long id) {
+        return ResponseEntity.ok(paymentDetailAuditService.getAuditHistory(id));
     }
 
     @GetMapping("/{id}")
-    public PaymentDetailEntity getPaymentDetail(@PathVariable Long id) {
-        return paymentDetailRepository.findById(id)
-            .orElseThrow(() -> new ResourceNotFoundException("PaymentDetail", id));
+    public ResponseEntity<PaymentDetailEntity> getPaymentDetailById(@PathVariable Long id) {
+        return ResponseEntity.ok(paymentDetailAdminService.getPaymentDetail(id));
     }
 }

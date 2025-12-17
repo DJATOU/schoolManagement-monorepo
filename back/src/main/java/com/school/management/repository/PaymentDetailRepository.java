@@ -55,38 +55,36 @@ public interface PaymentDetailRepository extends JpaRepository<PaymentDetailEnti
 
     List<PaymentDetailEntity> findByPaymentIdAndActiveTrue(Long paymentId);
 
-    @Query("""
-        SELECT pd FROM PaymentDetailEntity pd
-        WHERE (:studentId IS NULL OR pd.payment.student.id = :studentId)
-        AND (:groupId IS NULL OR pd.payment.group.id = :groupId)
-        AND (:sessionSeriesId IS NULL OR pd.payment.sessionSeries.id = :sessionSeriesId)
-        AND (:active IS NULL OR pd.active = :active)
-        AND (:dateFrom IS NULL OR pd.dateCreation >= :dateFrom)
-        AND (:dateTo IS NULL OR pd.dateCreation <= :dateTo)
-    """)
-    Page<PaymentDetailEntity> findAllWithFilters(@Param("studentId") Long studentId,
-                                                 @Param("groupId") Long groupId,
-                                                 @Param("sessionSeriesId") Long sessionSeriesId,
-                                                 @Param("active") Boolean active,
-                                                 @Param("dateFrom") LocalDateTime dateFrom,
-                                                 @Param("dateTo") LocalDateTime dateTo,
-                                                 Pageable pageable);
+    @Query("SELECT pd FROM PaymentDetailEntity pd " +
+            "WHERE (:studentId IS NULL OR pd.payment.student.id = :studentId) " +
+            "AND (:groupId IS NULL OR pd.payment.group.id = :groupId) " +
+            "AND (:sessionSeriesId IS NULL OR pd.payment.sessionSeries.id = :sessionSeriesId) " +
+            "AND (:active IS NULL OR pd.active = :active) " +
+            "AND (:dateFrom IS NULL OR pd.paymentDate >= :dateFrom) " +
+            "AND (:dateTo IS NULL OR pd.paymentDate <= :dateTo)")
+    org.springframework.data.domain.Page<PaymentDetailEntity> findAllWithFilters(
+            @Param("studentId") Long studentId,
+            @Param("groupId") Long groupId,
+            @Param("sessionSeriesId") Long sessionSeriesId,
+            @Param("active") Boolean active,
+            @Param("dateFrom") java.util.Date dateFrom,
+            @Param("dateTo") java.util.Date dateTo,
+            org.springframework.data.domain.Pageable pageable);
 
-    @Query("""
-        SELECT COUNT(pd) FROM PaymentDetailEntity pd
-        WHERE (:studentId IS NULL OR pd.payment.student.id = :studentId)
-        AND (:groupId IS NULL OR pd.payment.group.id = :groupId)
-        AND (:sessionSeriesId IS NULL OR pd.payment.sessionSeries.id = :sessionSeriesId)
-        AND (:active IS NULL OR pd.active = :active)
-        AND (:dateFrom IS NULL OR pd.dateCreation >= :dateFrom)
-        AND (:dateTo IS NULL OR pd.dateCreation <= :dateTo)
-    """)
-    long countWithFilters(@Param("studentId") Long studentId,
-                          @Param("groupId") Long groupId,
-                          @Param("sessionSeriesId") Long sessionSeriesId,
-                          @Param("active") Boolean active,
-                          @Param("dateFrom") LocalDateTime dateFrom,
-                          @Param("dateTo") LocalDateTime dateTo);
+    @Query("SELECT COUNT(pd) FROM PaymentDetailEntity pd " +
+            "WHERE (:studentId IS NULL OR pd.payment.student.id = :studentId) " +
+            "AND (:groupId IS NULL OR pd.payment.group.id = :groupId) " +
+            "AND (:sessionSeriesId IS NULL OR pd.payment.sessionSeries.id = :sessionSeriesId) " +
+            "AND (:active IS NULL OR pd.active = :active) " +
+            "AND (:dateFrom IS NULL OR pd.paymentDate >= :dateFrom) " +
+            "AND (:dateTo IS NULL OR pd.paymentDate <= :dateTo)")
+    long countWithFilters(
+            @Param("studentId") Long studentId,
+            @Param("groupId") Long groupId,
+            @Param("sessionSeriesId") Long sessionSeriesId,
+            @Param("active") Boolean active,
+            @Param("dateFrom") java.util.Date dateFrom,
+            @Param("dateTo") java.util.Date dateTo);
 
     @Query("SELECT pd FROM PaymentDetailEntity pd WHERE pd.payment.group.id = :groupId")
     List<PaymentDetailEntity> findByGroupId(@Param("groupId") Long groupId);
@@ -94,21 +92,11 @@ public interface PaymentDetailRepository extends JpaRepository<PaymentDetailEnti
     @Query("SELECT pd FROM PaymentDetailEntity pd WHERE pd.payment.sessionSeries.id = :sessionSeriesId")
     List<PaymentDetailEntity> findBySessionSeriesId(@Param("sessionSeriesId") Long sessionSeriesId);
 
-    @Query("""
-        SELECT COALESCE(SUM(pd.amountPaid), 0) FROM PaymentDetailEntity pd
-        WHERE pd.payment.student.id = :studentId
-        AND pd.payment.group.id = :groupId
-        AND pd.active = true
-    """)
-    Double sumAmountByStudentAndGroup(@Param("studentId") Long studentId,
-                                       @Param("groupId") Long groupId);
+    @Query("SELECT COALESCE(SUM(pd.amountPaid), 0) FROM PaymentDetailEntity pd " +
+            "WHERE pd.payment.student.id = :studentId AND pd.payment.group.id = :groupId")
+    Double sumAmountByStudentAndGroup(@Param("studentId") Long studentId, @Param("groupId") Long groupId);
 
-    @Query("""
-        SELECT COALESCE(SUM(pd.amountPaid), 0) FROM PaymentDetailEntity pd
-        WHERE pd.payment.student.id = :studentId
-        AND pd.payment.sessionSeries.id = :sessionSeriesId
-        AND pd.active = true
-    """)
-    Double sumAmountByStudentAndSeries(@Param("studentId") Long studentId,
-                                        @Param("sessionSeriesId") Long sessionSeriesId);
+    @Query("SELECT COALESCE(SUM(pd.amountPaid), 0) FROM PaymentDetailEntity pd " +
+            "WHERE pd.payment.student.id = :studentId AND pd.payment.sessionSeries.id = :sessionSeriesId")
+    Double sumAmountByStudentAndSeries(@Param("studentId") Long studentId, @Param("sessionSeriesId") Long sessionSeriesId);
 }

@@ -48,9 +48,7 @@ public class PaymentDetailAuditEntity {
     private String reason;
 
     @PrePersist
-    public void prePersist() {
-        if (timestamp == null) {
-            timestamp = LocalDateTime.now();
-        }
+    protected void onCreate() {
+        timestamp = LocalDateTime.now();
     }
 }
