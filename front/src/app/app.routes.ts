@@ -26,6 +26,7 @@ import { GroupProfileComponent } from './components/group/group-profile/group-pr
 import { CatchUpListComponent } from './components/catch-up/catch-up-list/catch-up-list.component';
 import { DiscountListComponent } from './components/discount/discount-list/discount-list.component';
 import { TransferListComponent } from './components/transfer/transfer-list/transfer-list.component';
+import { PaymentManagementComponent } from './components/admin/payment-management/payment-management.component';
 
 export const routes: Routes = [
   { path: '', redirectTo: '/dashboard', pathMatch: 'full' },
@@ -57,6 +58,7 @@ export const routes: Routes = [
   { path: 'catch-ups', component: CatchUpListComponent },
   { path: 'discounts', component: DiscountListComponent },
   { path: 'transfers', component: TransferListComponent },
+  { path: 'admin/payment-management', component: PaymentManagementComponent },
 ];
   
   @NgModule({
