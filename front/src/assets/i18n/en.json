@@ -1,0 +1,122 @@
+{
+  "COMMON": {
+    "CLEAR": "Clear",
+    "SUBMIT": "Submit",
+    "REQUIRED_MESSAGE": "Fields marked with an asterisk (*) are required.",
+    "FIRST_NAME": "First name",
+    "LAST_NAME": "Last name",
+    "GENDER": "Gender",
+    "MALE": "Male",
+    "FEMALE": "Female",
+    "UPLOAD_PHOTO": "Upload a photo",
+    "NO_FILE_SELECTED": "No file selected",
+    "CHOOSE_IMAGE": "Choose an image",
+    "EMAIL": "Email",
+    "PHONE": "Phone number",
+    "BIRTHDATE": "Date of birth",
+    "BIRTHPLACE": "Place of birth",
+    "LEVEL": "Level",
+    "SCHOOL": "School",
+    "DESCRIPTION": "Description"
+  },
+  "LANGUAGE": {
+    "FRENCH": "French",
+    "ENGLISH": "English",
+    "TOGGLE": "Switch language (current: {{value}})"
+  },
+  "NAV": {
+    "MENU": "Menu",
+    "TABS": {
+      "STUDENTS": "Students",
+      "GROUPS": "Groups",
+      "TEACHERS": "Teachers"
+    },
+    "SEARCH": {
+      "PLACEHOLDER_STUDENT": "Search for a student...",
+      "PLACEHOLDER_GROUP": "Search for a group...",
+      "PLACEHOLDER_TEACHER": "Search for a teacher...",
+      "PLACEHOLDER_GENERIC": "Search..."
+    },
+    "USER": {
+      "ROLE": "Administrator"
+    },
+    "ACTIONS": {
+      "TOGGLE_THEME": "Light/Dark mode",
+      "SETTINGS": "Settings",
+      "LOGOUT": "Logout"
+    }
+  },
+  "SIDE_MENU": {
+    "BRAND_TITLE": "School Manager",
+    "BRAND_SUBTITLE": "Main navigation",
+    "REGISTRATION": "Registration",
+    "STUDENTS": "Students",
+    "TEACHERS": "Teachers",
+    "GROUPS": "Groups",
+    "FINANCIAL_MANAGEMENT": "Financial Management",
+    "PAYMENTS": "Payments",
+    "FEES": "Fees",
+    "DISCOUNTS": "Discounts",
+    "ACADEMIC_TRACKING": "Academic Tracking",
+    "ATTENDANCE": "Attendance",
+    "SESSIONS": "Sessions",
+    "CALENDAR": "Calendar",
+    "SERIES": "Series",
+    "CATCH_UPS": "Catch-ups",
+    "TRANSFERS": "Transfers",
+    "ACADEMIC_RESOURCES": "Academic Resources",
+    "LEVELS": "Levels",
+    "ROOMS": "Rooms",
+    "SUBJECTS": "Subjects",
+    "GROUP_TYPES": "Group Types",
+    "PRICING": "Pricing"
+  },
+  "DATATABLE": {
+    "PRINT": "Print",
+    "CREATE": "Create",
+    "DELETE": "Delete",
+    "EDIT": "Edit",
+    "VIEW": "View",
+    "FILTER": "Filter",
+    "FILTER_PLACEHOLDER": "Text",
+    "PRIMARY_INFORMATION": "Primary information",
+    "OTHER_INFORMATION": "Other information",
+    "INFORMATION": "Information",
+    "DISABLE_SUCCESS": "Items disabled successfully.",
+    "DISABLE_ERROR": "Error disabling items."
+  },
+  "CONFIRMATION_DIALOG": {
+    "TITLE": "Confirmation dialog",
+    "MESSAGE": "Do you really want to delete these items?",
+    "CONFIRM": "Yes, delete",
+    "CANCEL": "No, cancel"
+  },
+  "STUDENT_FORM": {
+    "TITLE": "Student registration form",
+    "TABS": {
+      "PERSONAL": "Personal information",
+      "CONTACT": "Contact information",
+      "ACADEMIC": "Academic information"
+    },
+    "AVERAGE": "Average score"
+  },
+  "TEACHER_FORM": {
+    "TITLE": "Teacher registration form",
+    "TABS": {
+      "BASIC": "Basic information",
+      "CONTACT": "Contact details",
+      "PROFESSIONAL": "Professional details",
+      "OTHER": "Other information"
+    },
+    "ADDRESS": "Address",
+    "CITY": "City",
+    "SPECIALIZATION": "Specialization",
+    "QUALIFICATIONS": "Qualifications",
+    "EXPERIENCE": "Years of experience",
+    "NATIONALITY": "Nationality",
+    "MARITAL_STATUS": "Marital status",
+    "SINGLE": "Single",
+    "MARRIED": "Married",
+    "COMMUNICATION": "Communication preferences"
+  }
+}

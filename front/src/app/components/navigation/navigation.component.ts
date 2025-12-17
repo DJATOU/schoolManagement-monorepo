@@ -15,6 +15,8 @@ import { SearchService } from '../../services/SearchService ';
 import { MatTooltip } from '@angular/material/tooltip';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDividerModule } from '@angular/material/divider';
+import { TranslateModule } from '@ngx-translate/core';
+import { TranslationService } from '../../services/translation.service';
 
 @Component({
   selector: 'app-navigation',
@@ -32,7 +34,8 @@ import { MatDividerModule } from '@angular/material/divider';
     RouterLink,
     MatTooltip,
     MatButtonModule,
-    MatDividerModule
+    MatDividerModule,
+    TranslateModule
   ],
   templateUrl: './navigation.component.html',
   styleUrls: ['./navigation.component.scss']
@@ -43,7 +46,7 @@ export class NavigationComponent implements OnInit {
   selectedIcon: string = 'student'; // Default to student
   searchControl = new FormControl('');
   filteredSuggestions: Observable<string[]> | undefined;
-  placeholder: string = 'Rechercher un élève...'; // Default placeholder
+  placeholderKey = 'NAV.SEARCH.PLACEHOLDER_STUDENT';
   currentSearchType: string = 'student';
 
   @Output() sidenavToggle = new EventEmitter<void>();
@@ -53,7 +56,8 @@ export class NavigationComponent implements OnInit {
     private router: Router,
     private studentService: StudentService,
     private teacherService: TeacherService,
-    private searchService: SearchService
+    private searchService: SearchService,
+    public translationService: TranslationService
   ) {}
 
   ngOnInit() {
@@ -80,16 +84,16 @@ export class NavigationComponent implements OnInit {
     // Update placeholder based on type
     switch (type) {
       case 'student':
-        this.placeholder = 'Rechercher un élève...';
+        this.placeholderKey = 'NAV.SEARCH.PLACEHOLDER_STUDENT';
         break;
       case 'group':
-        this.placeholder = 'Rechercher un groupe...';
+        this.placeholderKey = 'NAV.SEARCH.PLACEHOLDER_GROUP';
         break;
       case 'teacher':
-        this.placeholder = 'Rechercher un professeur...';
+        this.placeholderKey = 'NAV.SEARCH.PLACEHOLDER_TEACHER';
         break;
       default:
-        this.placeholder = 'Rechercher...';
+        this.placeholderKey = 'NAV.SEARCH.PLACEHOLDER_GENERIC';
     }
 
     // Clear current search
@@ -177,8 +181,15 @@ export class NavigationComponent implements OnInit {
 
   // Language change
   changeLanguage(lang: string) {
-    console.log('Change language to:', lang);
-    // Your language change logic here
+    this.translationService.useLanguage(lang);
+  }
+
+  toggleLanguage(): void {
+    this.translationService.toggleLanguage();
+  }
+
+  get currentLanguage(): string {
+    return this.translationService.currentLanguage;
   }
 
   // Logout

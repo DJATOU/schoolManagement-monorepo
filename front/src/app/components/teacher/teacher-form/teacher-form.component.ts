@@ -17,6 +17,7 @@ import { ReactiveFormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatCardModule } from '@angular/material/card';
+import { TranslateModule } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-teacher-form',
@@ -33,7 +34,8 @@ import { MatCardModule } from '@angular/material/card';
     MatTabsModule,
     MatSnackBarModule,
     CommonModule,
-    MatCardModule
+    MatCardModule,
+    TranslateModule
   ],
   templateUrl: './teacher-form.component.html',
   styleUrls: ['./teacher-form.component.scss'],

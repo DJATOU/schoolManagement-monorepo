@@ -5,11 +5,12 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { TranslateModule } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-side-menu',
   standalone: true,
-  imports: [MatSidenavModule, MatListModule, MatIconModule, MatExpansionModule, MatToolbarModule, RouterOutlet, RouterLink, RouterLinkActive],
+  imports: [MatSidenavModule, MatListModule, MatIconModule, MatExpansionModule, MatToolbarModule, RouterOutlet, RouterLink, RouterLinkActive, TranslateModule],
   templateUrl: './side-menu.component.html',
   styleUrl: './side-menu.component.scss'
 })

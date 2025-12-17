@@ -1,5 +1,4 @@
 import { CommonModule } from '@angular/common';
-import { HttpClientModule } from '@angular/common/http';
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatCard, MatCardContent, MatCardHeader, MatCardTitle } from '@angular/material/card';
@@ -18,6 +17,7 @@ import { Level } from '../../../models/level/level';
 import { LevelService } from '../../../services/level.service';
 import { StudentService } from '../services/student.service';
 import { SummaryDialogComponent } from '../../summary-dialog/summary-dialog.component';
+import { TranslateModule } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-student',
@@ -28,10 +28,6 @@ import { SummaryDialogComponent } from '../../summary-dialog/summary-dialog.comp
     MatInputModule,
     MatDatepickerModule,
     
-// TODO: `HttpClientModule` should not be imported into a component directly.
-// Please refactor the code to add `provideHttpClient()` call to the provider list in the
-// application bootstrap logic and remove the `HttpClientModule` import from this component.
-HttpClientModule,
     MatNativeDateModule,
     RouterModule,
     MatStepperModule,
@@ -45,7 +41,8 @@ HttpClientModule,
     MatCardContent,
     MatCardHeader,
     MatCardTitle,
-    MatSnackBarModule // Ajoutez ceci
+    MatSnackBarModule,
+    TranslateModule
   ],
   templateUrl: './student-form.component.html',
   styleUrls: ['./student-form.component.scss'],

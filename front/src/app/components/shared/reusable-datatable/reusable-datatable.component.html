@@ -1,29 +1,29 @@
 <ng-container class="btn-group" (click)="onPrint()">
     <button mat-stroked-button (click)="onPrint()">
       <mat-icon>print</mat-icon>
-      Print
+      {{ 'DATATABLE.PRINT' | translate }}
     </button>
     <button mat-raised-button color="primary" (click)="onCreate()">
       <mat-icon>add</mat-icon>
-      Create
+      {{ 'DATATABLE.CREATE' | translate }}
     </button>
     <button mat-raised-button color="warn" (click)="onDisable()">
       <mat-icon>delete</mat-icon>
-      Delete
+      {{ 'DATATABLE.DELETE' | translate }}
     </button>
     <button mat-raised-button *ngIf="isOneItemSelected()" (click)="onEdit()">
       <mat-icon>edit</mat-icon>
-      Edit
+      {{ 'DATATABLE.EDIT' | translate }}
     </button>
     <button mat-stroked-button *ngIf="isOneItemSelected()" (click)="onView()">
       <mat-icon>visibility</mat-icon>
-      View
+      {{ 'DATATABLE.VIEW' | translate }}
     </button>
 </ng-container>
 
 <mat-form-field>
-    <mat-label>Filter</mat-label>
-    <input matInput (keyup)="applyFilter($event)" placeholder="Text" #input class="datatableFilter">
+    <mat-label>{{ 'DATATABLE.FILTER' | translate }}</mat-label>
+    <input matInput (keyup)="applyFilter($event)" [placeholder]="'DATATABLE.FILTER_PLACEHOLDER' | translate" #input class="datatableFilter">
 </mat-form-field>
 
 <table mat-table [dataSource]="dataSource" matSort recycleRows class="datatable">
