@@ -1,13 +1,11 @@
 <mat-toolbar class="main-toolbar">
-  <!-- Logo Section -->
   <div class="toolbar-section logo-section">
     <button mat-icon-button (click)="toggleSidenav()" class="menu-toggle" [matTooltip]="'NAV.MENU' | translate">
       <mat-icon>menu</mat-icon>
     </button>
-    <img src="assets/succes_assistance.png" alt="Logo" class="logo" [routerLink]="['/dashboard']">
+    <img src="assets/succes_assistance.png" alt="Logo" class="logo" [routerLink]="['/dashboard']" />
   </div>
 
-  <!-- Search Type Tabs -->
   <div class="search-tabs">
     <button class="tab-button"
             [class.active]="selectedIcon === 'student'"
@@ -32,7 +30,6 @@
     </button>
   </div>
 
-  <!-- Search Bar -->
   <div class="search-container">
     <div class="search-field">
       <mat-icon class="search-prefix" (click)="onSearch()">search</mat-icon>
@@ -58,9 +55,8 @@
     </div>
   </div>
 
-  <!-- User Profile Pill -->
   <div class="user-profile-pill" [matMenuTriggerFor]="userMenu">
-    <img src="assets/pic.jpg" alt="User" class="user-avatar">
+    <img src="assets/pic.jpg" alt="User" class="user-avatar" />
     <div class="user-info">
       <span class="user-name">M. DJATOU</span>
       <span class="user-role">{{ 'NAV.USER.ROLE' | translate }}</span>
@@ -68,12 +64,12 @@
     <mat-icon class="dropdown-icon">expand_more</mat-icon>
   </div>
 
-  <!-- User Menu -->
   <mat-menu #userMenu="matMenu">
     <button mat-menu-item (click)="toggleDarkMode()">
       <mat-icon>brightness_6</mat-icon>
       <span>{{ 'NAV.ACTIONS.TOGGLE_THEME' | translate }}</span>
     </button>
+    <button mat-menu-item disabled>{{ 'navigation.language' | translate }}</button>
     <button mat-menu-item (click)="changeLanguage('fr')">
       <mat-icon>language</mat-icon>
       <span>{{ 'LANGUAGE.FRENCH' | translate }}</span>

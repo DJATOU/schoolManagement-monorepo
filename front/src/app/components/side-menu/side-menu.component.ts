@@ -15,11 +15,9 @@ import { TranslateModule } from '@ngx-translate/core';
   styleUrl: './side-menu.component.scss'
 })
 export class SideMenuComponent {
+  constructor(private router: Router) {}
 
-  
-constructor(private router: Router) {}
-
-  isOpen = true; // État initial du sidenav
+  isOpen = true;
 
   toggleSidenav() {
     this.isOpen = !this.isOpen;

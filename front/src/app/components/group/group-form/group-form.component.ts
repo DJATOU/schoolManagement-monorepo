@@ -26,6 +26,7 @@ import { ReactiveFormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatCardModule } from '@angular/material/card';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-group-form',
@@ -42,7 +43,8 @@ import { MatCardModule } from '@angular/material/card';
     MatTabsModule,
     MatSnackBarModule,
     CommonModule,
-    MatCardModule
+    MatCardModule,
+    TranslateModule
   ],
   templateUrl: './group-form.component.html',
   styleUrls: ['./group-form.component.scss'],
@@ -66,7 +68,8 @@ export class GroupFormComponent implements OnInit {
     private subjectService: SubjectService,
     private teacherService: TeacherService,
     public dialog: MatDialog,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private translate: TranslateService
   ) {}
 
   ngOnInit(): void {
@@ -166,22 +169,22 @@ export class GroupFormComponent implements OnInit {
                   next: (filename) => {
                     console.log('Photo uploaded:', filename);
                     this.onClearForm();
-                    this.showSuccessMessage('Group created successfully with photo.');
+                    this.showSuccessMessage('groupForm.messages.createdWithPhoto');
                   },
                   error: (error) => {
                     console.error('Error uploading photo:', error);
                     this.onClearForm();
-                    this.showErrorMessage('Group created but photo upload failed.');
+                    this.showErrorMessage('groupForm.messages.photoUploadFailed');
                   }
                 });
               } else {
                 this.onClearForm();
-                this.showSuccessMessage('Group created successfully.');
+                this.showSuccessMessage('groupForm.messages.created');
               }
             },
             error: (error) => {
               console.error('Error creating group:', error);
-              this.showErrorMessage('Error creating group.');
+              this.showErrorMessage('groupForm.messages.createError');
             }
           });
         } else {
@@ -190,7 +193,7 @@ export class GroupFormComponent implements OnInit {
       });
     } else {
       console.warn('The form is not valid.');
-      this.showErrorMessage('The form is not valid.');
+      this.showErrorMessage('groupForm.messages.invalid');
     }
   }
   
@@ -225,15 +228,15 @@ export class GroupFormComponent implements OnInit {
     this.selectedFile = null;
   }
 
-  showSuccessMessage(message: string): void {
-    this.snackBar.open(message, 'OK', {
+  showSuccessMessage(messageKey: string): void {
+    this.snackBar.open(this.translate.instant(messageKey), this.translate.instant('common.ok'), {
       duration: 3000,
       panelClass: ['snack-bar-success']
     });
   }
 
-  showErrorMessage(message: string): void {
-    this.snackBar.open(message, 'OK', {
+  showErrorMessage(messageKey: string): void {
+    this.snackBar.open(this.translate.instant(messageKey), this.translate.instant('common.ok'), {
       duration: 3000,
       panelClass: ['snack-bar-error']
     });
