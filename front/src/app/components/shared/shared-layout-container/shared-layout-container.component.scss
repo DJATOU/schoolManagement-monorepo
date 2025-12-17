@@ -5,7 +5,7 @@
   max-width: 100%;
   width: 100%;
   margin: 0 auto;
-  padding: 0;
+  padding: 0 clamp(24px, 6vw, 104px);
   background-color: #f5f6fa;
   box-sizing: border-box;
   overflow: auto;
@@ -21,7 +21,7 @@
 
 @media (max-width: 1200px) {
   .shared-layout-container {
-    padding: 0;
+    padding: 0 32px;
   }
 }
 
@@ -31,7 +31,7 @@
   }
 
   .shared-layout-container {
-    padding: 0;
+    padding: 0 24px;
   }
 }
 
