@@ -192,7 +192,7 @@ export class PaymentHistoryDialogComponent implements OnInit {
     }));
   }
 
-  private getPaymentStatusWithPrice(detail: PaymentDetail, sessionPrice: number): string {
+  private getPaymentStatusWithPrice(detail: PaymentDetail, sessionPrice: number): 'paid' | 'partiallyPaid' | 'unpaid' {
     if (detail.amountPaid >= sessionPrice) {
       return 'paid';
     } else if (detail.amountPaid > 0 && detail.amountPaid < sessionPrice) {
@@ -202,7 +202,7 @@ export class PaymentHistoryDialogComponent implements OnInit {
     }
   }
 
-  private getSeriesStatus(): string {
+  private getSeriesStatus(): 'paid' | 'partiallyPaid' | 'unpaid' {
     if (this.seriesRemaining === 0) {
       return 'paid';
     } else if (this.seriesPaid > 0) {

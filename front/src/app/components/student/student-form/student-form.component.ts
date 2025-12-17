@@ -48,6 +48,7 @@ import { TranslateModule } from '@ngx-translate/core';
   styleUrls: ['./student-form.component.scss'],
   providers: [
     StudentService,
+    TranslateService,
     { provide: DateAdapter, useClass: NativeDateAdapter },
     { provide: MAT_DATE_LOCALE, useValue: 'us-US' },
     {
