@@ -1,0 +1,122 @@
+{
+  "COMMON": {
+    "CLEAR": "Effacer",
+    "SUBMIT": "Soumettre",
+    "REQUIRED_MESSAGE": "Les champs marqués d'un astérisque (*) sont obligatoires.",
+    "FIRST_NAME": "Prénom",
+    "LAST_NAME": "Nom",
+    "GENDER": "Sexe",
+    "MALE": "Masculin",
+    "FEMALE": "Féminin",
+    "UPLOAD_PHOTO": "Télécharger une photo",
+    "NO_FILE_SELECTED": "Aucun fichier sélectionné",
+    "CHOOSE_IMAGE": "Choisir une image",
+    "EMAIL": "Email",
+    "PHONE": "Numéro de téléphone",
+    "BIRTHDATE": "Date de naissance",
+    "BIRTHPLACE": "Lieu de naissance",
+    "LEVEL": "Niveau",
+    "SCHOOL": "Établissement",
+    "DESCRIPTION": "Description"
+  },
+  "LANGUAGE": {
+    "FRENCH": "Français",
+    "ENGLISH": "Anglais",
+    "TOGGLE": "Changer la langue (actuelle: {{value}})"
+  },
+  "NAV": {
+    "MENU": "Menu",
+    "TABS": {
+      "STUDENTS": "Élèves",
+      "GROUPS": "Groupes",
+      "TEACHERS": "Professeurs"
+    },
+    "SEARCH": {
+      "PLACEHOLDER_STUDENT": "Rechercher un élève...",
+      "PLACEHOLDER_GROUP": "Rechercher un groupe...",
+      "PLACEHOLDER_TEACHER": "Rechercher un professeur...",
+      "PLACEHOLDER_GENERIC": "Rechercher..."
+    },
+    "USER": {
+      "ROLE": "Administrateur"
+    },
+    "ACTIONS": {
+      "TOGGLE_THEME": "Mode sombre/clair",
+      "SETTINGS": "Paramètres",
+      "LOGOUT": "Déconnexion"
+    }
+  },
+  "SIDE_MENU": {
+    "BRAND_TITLE": "School Manager",
+    "BRAND_SUBTITLE": "Navigation principale",
+    "REGISTRATION": "Inscription",
+    "STUDENTS": "Étudiants",
+    "TEACHERS": "Enseignants",
+    "GROUPS": "Groupes",
+    "FINANCIAL_MANAGEMENT": "Gestion Financière",
+    "PAYMENTS": "Paiements",
+    "FEES": "Frais",
+    "DISCOUNTS": "Réductions",
+    "ACADEMIC_TRACKING": "Suivi Académique",
+    "ATTENDANCE": "Présences",
+    "SESSIONS": "Sessions",
+    "CALENDAR": "Calendrier",
+    "SERIES": "Séries",
+    "CATCH_UPS": "Rattrapages",
+    "TRANSFERS": "Transferts",
+    "ACADEMIC_RESOURCES": "Ressources Académiques",
+    "LEVELS": "Niveaux",
+    "ROOMS": "Salles",
+    "SUBJECTS": "Matières",
+    "GROUP_TYPES": "Types de Groupes",
+    "PRICING": "Tarification"
+  },
+  "DATATABLE": {
+    "PRINT": "Imprimer",
+    "CREATE": "Créer",
+    "DELETE": "Supprimer",
+    "EDIT": "Éditer",
+    "VIEW": "Voir",
+    "FILTER": "Filtrer",
+    "FILTER_PLACEHOLDER": "Texte",
+    "PRIMARY_INFORMATION": "Informations fondamentales",
+    "OTHER_INFORMATION": "Autres informations",
+    "INFORMATION": "Informations",
+    "DISABLE_SUCCESS": "Éléments désactivés avec succès.",
+    "DISABLE_ERROR": "Erreur lors de la désactivation des éléments."
+  },
+  "CONFIRMATION_DIALOG": {
+    "TITLE": "Dialogue de confirmation",
+    "MESSAGE": "Voulez-vous vraiment supprimer ces éléments?",
+    "CONFIRM": "Oui, supprimer",
+    "CANCEL": "Non, annuler"
+  },
+  "STUDENT_FORM": {
+    "TITLE": "Formulaire d'inscription étudiant",
+    "TABS": {
+      "PERSONAL": "Informations personnelles",
+      "CONTACT": "Informations de contact",
+      "ACADEMIC": "Informations académiques"
+    },
+    "AVERAGE": "Moyenne"
+  },
+  "TEACHER_FORM": {
+    "TITLE": "Formulaire d'inscription des enseignants",
+    "TABS": {
+      "BASIC": "Informations de base",
+      "CONTACT": "Coordonnées",
+      "PROFESSIONAL": "Détails professionnels",
+      "OTHER": "Autres informations"
+    },
+    "ADDRESS": "Adresse",
+    "CITY": "Ville",
+    "SPECIALIZATION": "Spécialisation",
+    "QUALIFICATIONS": "Qualifications",
+    "EXPERIENCE": "Années d'expérience",
+    "NATIONALITY": "Nationalité",
+    "MARITAL_STATUS": "Statut matrimonial",
+    "SINGLE": "Célibataire",
+    "MARRIED": "Marié",
+    "COMMUNICATION": "Préférences de communication"
+  }
+}

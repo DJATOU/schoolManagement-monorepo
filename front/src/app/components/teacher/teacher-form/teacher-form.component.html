@@ -1,112 +1,112 @@
 <form [formGroup]="teacherForm" (ngSubmit)="onSubmit()" class="form-container fade-in">
-  <h2 class="form-title">Formulaire d'inscription des enseignants</h2>
+  <h2 class="form-title">{{ 'TEACHER_FORM.TITLE' | translate }}</h2>
   <p class="form-instruction" style="font-size: 14px; color: #f44336; margin-bottom: 20px;">
     <mat-icon style="vertical-align: middle; margin-right: 5px;">info</mat-icon>
-    Les champs marqués d'un astérisque (*) sont obligatoires.
+    {{ 'COMMON.REQUIRED_MESSAGE' | translate }}
   </p>
   <mat-tab-group class="tab-group">
-    <mat-tab label="Informations de base">
+    <mat-tab [label]="'TEACHER_FORM.TABS.BASIC' | translate">
       <div class="tab-content" formGroupName="basicInformation">
         <mat-form-field appearance="fill">
-          <mat-label>Prénom</mat-label>
+          <mat-label>{{ 'COMMON.FIRST_NAME' | translate }}</mat-label>
           <input matInput formControlName="firstName" required>
         </mat-form-field>
 
         <mat-form-field appearance="fill">
-          <mat-label>Nom</mat-label>
+          <mat-label>{{ 'COMMON.LAST_NAME' | translate }}</mat-label>
           <input matInput formControlName="lastName" required>
         </mat-form-field>
 
         <mat-form-field appearance="fill">
-          <mat-label>Sexe</mat-label>
+          <mat-label>{{ 'COMMON.GENDER' | translate }}</mat-label>
           <mat-select formControlName="gender" required>
-            <mat-option value="male">Homme</mat-option>
-            <mat-option value="female">Femme</mat-option>
+            <mat-option value="male">{{ 'COMMON.MALE' | translate }}</mat-option>
+            <mat-option value="female">{{ 'COMMON.FEMALE' | translate }}</mat-option>
           </mat-select>
         </mat-form-field>
 
         <mat-form-field appearance="fill" class="photo-field">
-          <mat-label>Télécharger une photo</mat-label>
+          <mat-label>{{ 'COMMON.UPLOAD_PHOTO' | translate }}</mat-label>
           <div class="upload-container">
-            <input matInput readonly [value]="selectedFile?.name" placeholder="Aucun fichier choisi" class="upload-input">
+            <input matInput readonly [value]="selectedFile?.name" [placeholder]="'COMMON.NO_FILE_SELECTED' | translate" class="upload-input">
             <button type="button" mat-raised-button color="accent" (click)="photoInput.click()" class="upload-button">
-              <mat-icon>attach_file</mat-icon> Choisir une image
+              <mat-icon>attach_file</mat-icon> {{ 'COMMON.CHOOSE_IMAGE' | translate }}
             </button>
             <input type="file" (change)="onFileSelected($event)" accept="image/*" hidden #photoInput>
           </div>
         </mat-form-field>
       </div>
     </mat-tab>
-    <mat-tab label="Coordonnées">
+    <mat-tab [label]="'TEACHER_FORM.TABS.CONTACT' | translate">
       <div class="tab-content" formGroupName="contactInformation">
         <mat-form-field appearance="fill">
-          <mat-label>Email</mat-label>
+          <mat-label>{{ 'COMMON.EMAIL' | translate }}</mat-label>
           <input matInput formControlName="email" required>
         </mat-form-field>
 
         <mat-form-field appearance="fill">
-          <mat-label>Numéro de téléphone</mat-label>
+          <mat-label>{{ 'COMMON.PHONE' | translate }}</mat-label>
           <input matInput formControlName="phoneNumber" required>
         </mat-form-field>
 
         <mat-form-field appearance="fill">
-          <mat-label>Adresse</mat-label>
+          <mat-label>{{ 'TEACHER_FORM.ADDRESS' | translate }}</mat-label>
           <input matInput formControlName="address" required>
         </mat-form-field>
 
         <mat-form-field appearance="fill">
-          <mat-label>Ville</mat-label>
+          <mat-label>{{ 'TEACHER_FORM.CITY' | translate }}</mat-label>
           <input matInput formControlName="city" required>
         </mat-form-field>
       </div>
     </mat-tab>
-    <mat-tab label="Détails professionnels">
+    <mat-tab [label]="'TEACHER_FORM.TABS.PROFESSIONAL' | translate">
       <div class="tab-content" formGroupName="professionalDetails">
         <mat-form-field appearance="fill">
-          <mat-label>Date de naissance</mat-label>
+          <mat-label>{{ 'COMMON.BIRTHDATE' | translate }}</mat-label>
           <input matInput [matDatepicker]="picker" formControlName="dateOfBirth" required>
           <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
           <mat-datepicker #picker></mat-datepicker>
         </mat-form-field>
 
         <mat-form-field appearance="fill">
-          <mat-label>Lieu de naissance</mat-label>
+          <mat-label>{{ 'COMMON.BIRTHPLACE' | translate }}</mat-label>
           <input matInput formControlName="placeOfBirth" required>
         </mat-form-field>
 
         <mat-form-field appearance="fill">
-          <mat-label>Spécialisation</mat-label>
+          <mat-label>{{ 'TEACHER_FORM.SPECIALIZATION' | translate }}</mat-label>
           <input matInput formControlName="specialization" required>
         </mat-form-field>
 
         <mat-form-field appearance="fill">
-          <mat-label>Qualifications</mat-label>
+          <mat-label>{{ 'TEACHER_FORM.QUALIFICATIONS' | translate }}</mat-label>
           <textarea matInput formControlName="qualifications"></textarea>
         </mat-form-field>
       </div>
     </mat-tab>
-    <mat-tab label="Autres informations">
+    <mat-tab [label]="'TEACHER_FORM.TABS.OTHER' | translate">
       <div class="tab-content" formGroupName="otherInformation">
         <mat-form-field appearance="fill">
-          <mat-label>Années d'expérience</mat-label>
+          <mat-label>{{ 'TEACHER_FORM.EXPERIENCE' | translate }}</mat-label>
           <input matInput type="number" formControlName="yearsOfExperience" required>
         </mat-form-field>
 
         <mat-form-field appearance="fill">
-          <mat-label>Nationalité</mat-label>
+          <mat-label>{{ 'TEACHER_FORM.NATIONALITY' | translate }}</mat-label>
           <input matInput formControlName="nationality" required>
         </mat-form-field>
 
         <mat-form-field appearance="fill">
-          <mat-label>Statut matrimonial</mat-label>
+          <mat-label>{{ 'TEACHER_FORM.MARITAL_STATUS' | translate }}</mat-label>
           <mat-select formControlName="maritalStatus">
-            <mat-option value="single">Célibataire</mat-option>
-            <mat-option value="married">Marié</mat-option>
+            <mat-option value="single">{{ 'TEACHER_FORM.SINGLE' | translate }}</mat-option>
+            <mat-option value="married">{{ 'TEACHER_FORM.MARRIED' | translate }}</mat-option>
           </mat-select>
         </mat-form-field>
 
         <mat-form-field appearance="fill">
-          <mat-label>Préférences de communication</mat-label>
+          <mat-label>{{ 'TEACHER_FORM.COMMUNICATION' | translate }}</mat-label>
           <input matInput formControlName="communicationPreference">
         </mat-form-field>
       </div>
@@ -114,7 +114,7 @@
   </mat-tab-group>
 
   <div class="button-container">
-    <button mat-raised-button color="primary" type="submit" class="submit-button">Soumettre</button>
-    <button mat-raised-button color="accent" type="button" class="clear-button" (click)="onClearForm()">Effacer</button>
+    <button mat-raised-button color="primary" type="submit" class="submit-button">{{ 'COMMON.SUBMIT' | translate }}</button>
+    <button mat-raised-button color="accent" type="button" class="clear-button" (click)="onClearForm()">{{ 'COMMON.CLEAR' | translate }}</button>
   </div>
 </form>

@@ -1,89 +1,89 @@
 <form [formGroup]="studentForm" (ngSubmit)="onSubmit()" class="form-container fade-in">
-  <h2 class="form-title">Formulaire d'inscription étudiant</h2>
+  <h2 class="form-title">{{ 'STUDENT_FORM.TITLE' | translate }}</h2>
   <p class="form-instruction" style="font-size: 14px; color: #f44336; margin-bottom: 20px;">
     <mat-icon style="vertical-align: middle; margin-right: 5px;">info</mat-icon>
-    Les champs marqués d'un astérisque (*) sont obligatoires.
+    {{ 'COMMON.REQUIRED_MESSAGE' | translate }}
   </p>
   <mat-tab-group class="tab-group">
-    <mat-tab label="Informations personnelles">
+    <mat-tab [label]="'STUDENT_FORM.TABS.PERSONAL' | translate">
       <div class="tab-content" formGroupName="personalInformation">
         <mat-form-field appearance="fill">
-          <mat-label>Prénom</mat-label>
+          <mat-label>{{ 'COMMON.FIRST_NAME' | translate }}</mat-label>
           <input matInput formControlName="firstName">
         </mat-form-field>
 
         <mat-form-field appearance="fill">
-          <mat-label>Nom</mat-label>
+          <mat-label>{{ 'COMMON.LAST_NAME' | translate }}</mat-label>
           <input matInput formControlName="lastName">
         </mat-form-field>
 
         <mat-form-field appearance="fill">
-          <mat-label>Sexe</mat-label>
+          <mat-label>{{ 'COMMON.GENDER' | translate }}</mat-label>
           <mat-select formControlName="gender">
-            <mat-option value="male">Masculin</mat-option>
-            <mat-option value="female">Féminin</mat-option>
+            <mat-option value="male">{{ 'COMMON.MALE' | translate }}</mat-option>
+            <mat-option value="female">{{ 'COMMON.FEMALE' | translate }}</mat-option>
           </mat-select>
         </mat-form-field>
 
         <mat-form-field appearance="fill" class="photo-field">
-          <mat-label>Télécharger une photo</mat-label>
+          <mat-label>{{ 'COMMON.UPLOAD_PHOTO' | translate }}</mat-label>
           <div class="upload-container">
-            <input matInput readonly [value]="selectedFile?.name" placeholder="Aucun fichier sélectionné" class="upload-input">
+            <input matInput readonly [value]="selectedFile?.name" [placeholder]="'COMMON.NO_FILE_SELECTED' | translate" class="upload-input">
             <button type="button" mat-raised-button color="accent" (click)="photoInput.click()" class="upload-button">
-            <mat-icon>attach_file</mat-icon> Choisir une image
+            <mat-icon>attach_file</mat-icon> {{ 'COMMON.CHOOSE_IMAGE' | translate }}
           </button>
           <input type="file" (change)="onFileSelected($event)" accept="image/*" hidden #photoInput>
         </div>
         </mat-form-field>
       </div>
     </mat-tab>
-    
-    <mat-tab label="Informations de contact">
+
+    <mat-tab [label]="'STUDENT_FORM.TABS.CONTACT' | translate">
       <div class="tab-content" formGroupName="contactInformation">
         <mat-form-field appearance="fill">
-          <mat-label>Email</mat-label>
+          <mat-label>{{ 'COMMON.EMAIL' | translate }}</mat-label>
           <input matInput formControlName="email">
         </mat-form-field>
 
         <mat-form-field appearance="fill">
-          <mat-label>Numéro de téléphone</mat-label>
+          <mat-label>{{ 'COMMON.PHONE' | translate }}</mat-label>
           <input matInput formControlName="phoneNumber">
         </mat-form-field>
 
         <mat-form-field appearance="fill">
-          <mat-label>Date de naissance</mat-label>
+          <mat-label>{{ 'COMMON.BIRTHDATE' | translate }}</mat-label>
           <input matInput [matDatepicker]="picker" formControlName="dateOfBirth">
           <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
           <mat-datepicker #picker></mat-datepicker>
         </mat-form-field>
 
         <mat-form-field appearance="fill">
-          <mat-label>Lieu de naissance</mat-label>
+          <mat-label>{{ 'COMMON.BIRTHPLACE' | translate }}</mat-label>
           <input matInput formControlName="placeOfBirth">
         </mat-form-field>
       </div>
     </mat-tab>
-    <mat-tab label="Informations académiques">
+    <mat-tab [label]="'STUDENT_FORM.TABS.ACADEMIC' | translate">
       <div class="tab-content" formGroupName="academicInformation">
         <mat-form-field appearance="fill">
-          <mat-label>Niveau</mat-label>
+          <mat-label>{{ 'COMMON.LEVEL' | translate }}</mat-label>
           <mat-select formControlName="level">
             <mat-option *ngFor="let level of levels" [value]="level.id">{{ level.name }}</mat-option>
           </mat-select>
         </mat-form-field>
 
         <mat-form-field appearance="fill">
-          <mat-label>Établissement</mat-label>
+          <mat-label>{{ 'COMMON.SCHOOL' | translate }}</mat-label>
           <input matInput formControlName="establishment">
         </mat-form-field>
 
         <mat-form-field appearance="fill">
-          <mat-label>Moyenne</mat-label>
+          <mat-label>{{ 'STUDENT_FORM.AVERAGE' | translate }}</mat-label>
           <input matInput formControlName="averageScore">
         </mat-form-field>
 
         <mat-form-field appearance="fill">
-          <mat-label>Description</mat-label>
+          <mat-label>{{ 'COMMON.DESCRIPTION' | translate }}</mat-label>
           <textarea matInput formControlName="description"></textarea>
         </mat-form-field>
       </div>
@@ -91,7 +91,7 @@
   </mat-tab-group>
 
   <div class="button-container">
-    <button mat-raised-button color="primary" type="submit" class="submit-button">Soumettre</button>
-    <button mat-raised-button color="accent" type="button" class="clear-button" (click)="onClearForm()">Effacer</button>
+    <button mat-raised-button color="primary" type="submit" class="submit-button">{{ 'COMMON.SUBMIT' | translate }}</button>
+    <button mat-raised-button color="accent" type="button" class="clear-button" (click)="onClearForm()">{{ 'COMMON.CLEAR' | translate }}</button>
   </div>
 </form>

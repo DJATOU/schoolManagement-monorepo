@@ -1,7 +1,7 @@
 <mat-toolbar class="main-toolbar">
   <!-- Logo Section -->
   <div class="toolbar-section logo-section">
-    <button mat-icon-button (click)="toggleSidenav()" class="menu-toggle" matTooltip="Menu">
+    <button mat-icon-button (click)="toggleSidenav()" class="menu-toggle" [matTooltip]="'NAV.MENU' | translate">
       <mat-icon>menu</mat-icon>
     </button>
     <img src="assets/succes_assistance.png" alt="Logo" class="logo" [routerLink]="['/dashboard']">
@@ -12,23 +12,23 @@
     <button class="tab-button"
             [class.active]="selectedIcon === 'student'"
             (click)="setSearchType('student')"
-            matTooltip="Élèves">
+            [matTooltip]="'NAV.TABS.STUDENTS' | translate">
       <mat-icon>school</mat-icon>
-      <span class="tab-label">Élèves</span>
+      <span class="tab-label">{{ 'NAV.TABS.STUDENTS' | translate }}</span>
     </button>
     <button class="tab-button"
             [class.active]="selectedIcon === 'group'"
             (click)="setSearchType('group')"
-            matTooltip="Groupes">
+            [matTooltip]="'NAV.TABS.GROUPS' | translate">
       <mat-icon>groups</mat-icon>
-      <span class="tab-label">Groupes</span>
+      <span class="tab-label">{{ 'NAV.TABS.GROUPS' | translate }}</span>
     </button>
     <button class="tab-button"
             [class.active]="selectedIcon === 'teacher'"
             (click)="setSearchType('teacher')"
-            matTooltip="Professeurs">
+            [matTooltip]="'NAV.TABS.TEACHERS' | translate">
       <mat-icon>person</mat-icon>
-      <span class="tab-label">Professeurs</span>
+      <span class="tab-label">{{ 'NAV.TABS.TEACHERS' | translate }}</span>
     </button>
   </div>
 
@@ -38,7 +38,7 @@
       <mat-icon class="search-prefix" (click)="onSearch()">search</mat-icon>
       <input type="text"
              class="search-input"
-             [placeholder]="placeholder"
+             [placeholder]="placeholderKey | translate"
              [formControl]="searchControl"
              [matAutocomplete]="auto"
              (keydown.enter)="onSearch()">
@@ -46,7 +46,7 @@
               *ngIf="searchControl.value"
               (click)="searchControl.setValue('')"
               class="clear-button"
-              matTooltip="Effacer">
+              [matTooltip]="'COMMON.CLEAR' | translate">
         <mat-icon>close</mat-icon>
       </button>
 
@@ -63,7 +63,7 @@
     <img src="assets/pic.jpg" alt="User" class="user-avatar">
     <div class="user-info">
       <span class="user-name">M. DJATOU</span>
-      <span class="user-role">Administrateur</span>
+      <span class="user-role">{{ 'NAV.USER.ROLE' | translate }}</span>
     </div>
     <mat-icon class="dropdown-icon">expand_more</mat-icon>
   </div>
@@ -72,28 +72,28 @@
   <mat-menu #userMenu="matMenu">
     <button mat-menu-item (click)="toggleDarkMode()">
       <mat-icon>brightness_6</mat-icon>
-      <span>Mode sombre/clair</span>
+      <span>{{ 'NAV.ACTIONS.TOGGLE_THEME' | translate }}</span>
     </button>
     <button mat-menu-item (click)="changeLanguage('fr')">
       <mat-icon>language</mat-icon>
-      <span>Français</span>
+      <span>{{ 'LANGUAGE.FRENCH' | translate }}</span>
     </button>
-    <button mat-menu-item (click)="changeLanguage('ar')">
+    <button mat-menu-item (click)="changeLanguage('en')">
       <mat-icon>language</mat-icon>
-      <span>العربية</span>
+      <span>{{ 'LANGUAGE.ENGLISH' | translate }}</span>
     </button>
-    <button mat-menu-item (click)="changeLanguage('es')">
-      <mat-icon>language</mat-icon>
-      <span>Español</span>
+    <button mat-menu-item (click)="toggleLanguage()">
+      <mat-icon>swap_horiz</mat-icon>
+      <span>{{ 'LANGUAGE.TOGGLE' | translate:{ value: currentLanguage.toUpperCase() } }}</span>
     </button>
     <button mat-menu-item (click)="openSettings()">
       <mat-icon>settings</mat-icon>
-      <span>Paramètres</span>
+      <span>{{ 'NAV.ACTIONS.SETTINGS' | translate }}</span>
     </button>
     <mat-divider></mat-divider>
     <button mat-menu-item (click)="logout()">
       <mat-icon>logout</mat-icon>
-      <span>Déconnexion</span>
+      <span>{{ 'NAV.ACTIONS.LOGOUT' | translate }}</span>
     </button>
   </mat-menu>
 </mat-toolbar>
