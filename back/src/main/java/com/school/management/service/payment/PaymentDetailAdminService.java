@@ -5,14 +5,15 @@ import com.school.management.persistance.PaymentDetailEntity;
 import com.school.management.persistance.PaymentEntity;
 import com.school.management.repository.PaymentDetailRepository;
 import com.school.management.repository.PaymentRepository;
-import com.school.management.shared.exception.ResourceNotFoundException;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
-import java.time.LocalDateTime;
-import java.util.List;
+import java.util.Date;
+import java.util.Objects;
 
 @Service
 public class PaymentDetailAdminService {
@@ -21,6 +22,7 @@ public class PaymentDetailAdminService {
     private final PaymentRepository paymentRepository;
     private final PaymentDetailAuditService paymentDetailAuditService;
 
+    @Autowired
     public PaymentDetailAdminService(PaymentDetailRepository paymentDetailRepository,
                                      PaymentRepository paymentRepository,
                                      PaymentDetailAuditService paymentDetailAuditService) {
@@ -34,10 +36,16 @@ public class PaymentDetailAdminService {
                                                                      Long groupId,
                                                                      Long sessionSeriesId,
                                                                      Boolean active,
-                                                                     LocalDateTime dateFrom,
-                                                                     LocalDateTime dateTo,
+                                                                     Date dateFrom,
+                                                                     Date dateTo,
                                                                      Pageable pageable) {
         return paymentDetailRepository.findAllWithFilters(studentId, groupId, sessionSeriesId, active, dateFrom, dateTo, pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public PaymentDetailEntity getPaymentDetail(Long id) {
+        return paymentDetailRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Payment detail not found with id: " + id));
     }
 
     @Transactional
@@ -45,81 +53,67 @@ public class PaymentDetailAdminService {
         validateReason(updateDTO.getReason());
 
         PaymentDetailEntity detail = paymentDetailRepository.findById(id)
-            .orElseThrow(() -> new ResourceNotFoundException("PaymentDetail", id));
+                .orElseThrow(() -> new RuntimeException("Payment detail not found with id: " + id));
 
         String oldValue = buildValueString(detail);
 
         if (updateDTO.getAmount() != null) {
             detail.setAmountPaid(updateDTO.getAmount());
         }
-
         if (updateDTO.getActive() != null) {
             detail.setActive(updateDTO.getActive());
         }
 
-        PaymentDetailEntity updatedDetail = paymentDetailRepository.save(detail);
-        String newValue = buildValueString(updatedDetail);
+        String newValue = buildValueString(detail);
+        paymentDetailRepository.save(detail);
 
-        paymentDetailAuditService.logAction(
-            updatedDetail.getId(),
-            "MODIFIED",
-            adminName,
-            oldValue,
-            newValue,
-            updateDTO.getReason()
-        );
+        paymentDetailAuditService.logAction(id, "MODIFIED", adminName, oldValue, newValue, updateDTO.getReason());
+        recalculatePayment(detail.getPayment().getId());
 
-        recalculatePayment(updatedDetail.getPayment().getId());
-        return updatedDetail;
+        return detail;
     }
 
     @Transactional
-    public PaymentDetailEntity deletePaymentDetail(Long id, String reason, String adminName) {
+    public void deletePaymentDetail(Long id, String reason, String adminName) {
         validateReason(reason);
 
         PaymentDetailEntity detail = paymentDetailRepository.findById(id)
-            .orElseThrow(() -> new ResourceNotFoundException("PaymentDetail", id));
+                .orElseThrow(() -> new RuntimeException("Payment detail not found with id: " + id));
 
         String oldValue = buildValueString(detail);
         detail.setActive(false);
+        paymentDetailRepository.save(detail);
 
-        PaymentDetailEntity updatedDetail = paymentDetailRepository.save(detail);
-
-        paymentDetailAuditService.logAction(
-            updatedDetail.getId(),
-            "DELETED",
-            adminName,
-            oldValue,
-            buildValueString(updatedDetail),
-            reason
-        );
-
-        recalculatePayment(updatedDetail.getPayment().getId());
-        return updatedDetail;
+        paymentDetailAuditService.logAction(id, "DELETED", adminName, oldValue, buildValueString(detail), reason);
+        recalculatePayment(detail.getPayment().getId());
     }
 
     @Transactional
     public void recalculatePayment(Long paymentId) {
         PaymentEntity payment = paymentRepository.findById(paymentId)
-            .orElseThrow(() -> new ResourceNotFoundException("Payment", paymentId));
+                .orElseThrow(() -> new RuntimeException("Payment not found with id: " + paymentId));
 
-        List<PaymentDetailEntity> activeDetails = paymentDetailRepository.findByPaymentIdAndActiveTrue(paymentId);
-        double totalPaid = activeDetails.stream()
-            .map(PaymentDetailEntity::getAmountPaid)
-            .filter(amount -> amount != null)
-            .mapToDouble(Double::doubleValue)
-            .sum();
+        double totalPaid = paymentDetailRepository.findByPaymentIdAndActiveTrue(paymentId).stream()
+                .map(PaymentDetailEntity::getAmountPaid)
+                .filter(Objects::nonNull)
+                .mapToDouble(Double::doubleValue)
+                .sum();
 
         payment.setAmountPaid(totalPaid);
 
-        Double expectedAmount = null;
-        if (payment.getGroup() != null && payment.getGroup().getPrice() != null) {
-            expectedAmount = payment.getGroup().getPrice().getPrice();
+        double expectedAmount = 0;
+        if (payment.getGroup() != null && payment.getGroup().getPrice() != null && payment.getGroup().getPrice().getPrice() != null) {
+            double pricePerSession = payment.getGroup().getPrice().getPrice();
+            int sessions = 1;
+            if (payment.getSessionSeries() != null && payment.getSessionSeries().getTotalSessions() > 0) {
+                sessions = payment.getSessionSeries().getTotalSessions();
+            }
+            expectedAmount = pricePerSession * sessions;
         }
 
         if (totalPaid <= 0) {
             payment.setStatus("PENDING");
-        } else if (expectedAmount != null && totalPaid >= expectedAmount) {
+        } else if (expectedAmount > 0 && totalPaid >= expectedAmount) {
             payment.setStatus("COMPLETED");
         } else {
             payment.setStatus("IN_PROGRESS");
@@ -129,19 +123,18 @@ public class PaymentDetailAdminService {
     }
 
     private void validateReason(String reason) {
-        if (reason == null || reason.isBlank()) {
-            throw new IllegalArgumentException("Reason is required for audit logging");
+        if (!StringUtils.hasText(reason)) {
+            throw new IllegalArgumentException("Reason is required for audit logging.");
         }
     }
 
     private String buildValueString(PaymentDetailEntity detail) {
-        return String.format(
-            "PaymentDetail{id=%d, paymentId=%d, sessionId=%s, amount=%.2f, active=%s}",
-            detail.getId(),
-            detail.getPayment() != null ? detail.getPayment().getId() : null,
-            detail.getSession() != null ? detail.getSession().getId() : null,
-            detail.getAmountPaid() != null ? detail.getAmountPaid() : 0.0,
-            detail.getActive()
-        );
+        return "PaymentDetail{" +
+                "id=" + detail.getId() +
+                ", amountPaid=" + detail.getAmountPaid() +
+                ", active=" + detail.getActive() +
+                ", sessionId=" + (detail.getSession() != null ? detail.getSession().getId() : null) +
+                ", paymentId=" + (detail.getPayment() != null ? detail.getPayment().getId() : null) +
+                '}';
     }
 }
