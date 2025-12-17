@@ -5,10 +5,12 @@ import com.school.management.dto.StudentDTO;
 import com.school.management.dto.student.StudentFullHistoryDTO;
 import com.school.management.mapper.GroupMapper;
 import com.school.management.mapper.StudentMapper;
+import com.school.management.persistance.GroupEntity;
 import com.school.management.persistance.StudentEntity;
 import com.school.management.persistance.TutorEntity;
 import com.school.management.infrastructure.storage.FileManagementService;
 import com.school.management.service.exception.CustomServiceException;
+import com.school.management.service.group.StudentPayableGroupsService;
 import com.school.management.service.student.StudentHistoryService;
 import com.school.management.service.student.StudentService;
 import jakarta.validation.Valid;
@@ -45,15 +47,17 @@ public class StudentController {
     private final GroupMapper groupMapper;
     private final StudentHistoryService studentHistoryService;
     private final FileManagementService fileManagementService;
+    private final StudentPayableGroupsService studentPayableGroupsService;
 
     @Autowired
     public StudentController(StudentService studentService, StudentMapper studentMapper, GroupMapper groupMapper,
-                           StudentHistoryService studentHistoryService, FileManagementService fileManagementService) {
+                             StudentHistoryService studentHistoryService, FileManagementService fileManagementService, StudentPayableGroupsService studentPayableGroupsService) {
         this.studentService = studentService;
         this.studentMapper = studentMapper;
         this.groupMapper = groupMapper;
         this.studentHistoryService = studentHistoryService;
         this.fileManagementService = fileManagementService;
+        this.studentPayableGroupsService = studentPayableGroupsService;
     }
 
 
@@ -338,6 +342,34 @@ public class StudentController {
             LOGGER.error("Failed to get photo for student {}: {}", id, e.getMessage(), e);
             return ResponseEntity.notFound().build();
         }
+    }
+
+    /**
+     * Récupère les groupes "payables" pour un étudiant.
+     *
+     * LOGIQUE :
+     * - Groupes FIXES (student_groups avec active=true) : TOUJOURS retournés
+     * - Groupes RATTRAPAGE (attendances sans student_groups) :
+     *   Retournés UNIQUEMENT si au moins une attendance.active = true
+     *
+     * UTILISATION :
+     * Appelé par le frontend lors de l'ouverture du dialogue de paiement
+     * pour afficher uniquement les groupes pour lesquels l'étudiant peut payer.
+     *
+     * @param studentId l'ID de l'étudiant
+     * @return la liste des groupes payables
+     */
+    @GetMapping("/{studentId}/payable-groups")
+    public ResponseEntity<List<GroupDTO>> getPayableGroups(@PathVariable Long studentId) {
+        LOGGER.info("Fetching payable groups for student: {}", studentId);
+
+        List<GroupEntity> groups = studentPayableGroupsService.getPayableGroupsForStudent(studentId);
+        List<GroupDTO> groupDTOs = groups.stream()
+                .map(groupMapper::groupToGroupDTO)
+                .toList();
+
+        LOGGER.info("Found {} payable groups for student {}", groupDTOs.size(), studentId);
+        return ResponseEntity.ok(groupDTOs);
     }
 
 }

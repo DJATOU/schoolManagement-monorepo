@@ -15,12 +15,12 @@ export class GroupService {
   private apiUrl = `${API_BASE_URL}/api/groups`;
   private apiUrl2 = `${API_BASE_URL}/api/student-groups`;
   constructor(private http: HttpClient) { }
- 
-  
+
+
   getGroupDetailsById(groupId: number): Observable<Group> {
     return this.http.get<Group>(`${this.apiUrl}/details/${groupId}`);
   }
-  
+
 
   // Fetch all groups
   getGroups(): Observable<Group[]> {
@@ -39,13 +39,13 @@ export class GroupService {
   getGroupsOfStudent(studentId: number): Observable<Group[]> {
     return this.http.get<Group[]>(`${this.apiUrl2}/${studentId}/groups`);
   }
-  
+
   // Create a new group
   createGroup(groupData: FormData): Observable<Group> {
     return this.http.post<Group>(`${this.apiUrl}/createGroupe`, groupData);
   }
 
- 
+
   updateGroup(group: Group): Observable<Group> {
     if (!group.id) {
       throw new Error('Group ID is required for update.');
@@ -56,8 +56,8 @@ export class GroupService {
   updateGroupPartial(groupId: number, partialGroup: Partial<Group>): Observable<Group> {
     return this.http.patch<Group>(`${this.apiUrl}/${groupId}`, partialGroup);
   }
-  
-  
+
+
 
   // Search groups by a specific criteria, e.g., name
   searchGroupsByName(name: string): Observable<Group[]> {
@@ -95,9 +95,9 @@ export class GroupService {
   addStudentToGroup(groupId: number, studentId: number): Observable<any> {
     return this.http.post(`${this.apiUrl2}/${groupId}/addStudents`, { studentIds: [studentId] });
   }
-  
+
   getGroupsForPayment(studentId: number): Observable<Group[]> {
-    return this.http.get<Group[]>(`${this.apiUrl}/${studentId}/groups-for-payment`);
+    return this.http.get<Group[]>(`${API_BASE_URL}/api/students/${studentId}/payable-groups`);
   }
 
   /**

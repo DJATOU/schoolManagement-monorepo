@@ -9,6 +9,7 @@ import com.school.management.persistance.SessionEntity;
 import com.school.management.persistance.TeacherEntity;
 import com.school.management.repository.*;
 import com.school.management.service.exception.CustomServiceException;
+import com.school.management.service.payment.PaymentDetailDeactivationService;  // ← AJOUTÉ
 import com.school.management.service.util.CommonSpecifications;
 import com.school.management.shared.mapper.MappingContext;
 import jakarta.annotation.PostConstruct;
@@ -44,13 +45,24 @@ public class SessionService {
     private final PatchService patchService;
     private final SessionMapper sessionMapper;
 
+    // ========== NOUVELLES DÉPENDANCES AJOUTÉES ==========
+    private final PaymentDetailDeactivationService paymentDetailDeactivationService;  // ← AJOUTÉ
+    private final AttendanceService attendanceService;  // ← AJOUTÉ
+
     // MappingContext pour SessionMapper
     private MappingContext mappingContext;
 
     @Autowired
-    public SessionService(SessionRepository sessionRepository, PatchService patchService, GroupRepository groupRepository,
-                          SessionMapper sessionMapper, RoomRepository roomRepository, TeacherRepository teacherRepository,
-                          SessionSeriesRepository sessionSeriesRepository) {
+    public SessionService(
+            SessionRepository sessionRepository,
+            PatchService patchService,
+            GroupRepository groupRepository,
+            SessionMapper sessionMapper,
+            RoomRepository roomRepository,
+            TeacherRepository teacherRepository,
+            SessionSeriesRepository sessionSeriesRepository,
+            PaymentDetailDeactivationService paymentDetailDeactivationService,  // ← AJOUTÉ
+            AttendanceService attendanceService) {  // ← AJOUTÉ
         this.sessionRepository = sessionRepository;
         this.patchService = patchService;
         this.groupRepository = groupRepository;
@@ -58,6 +70,8 @@ public class SessionService {
         this.roomRepository = roomRepository;
         this.teacherRepository = teacherRepository;
         this.sessionSeriesRepository = sessionSeriesRepository;
+        this.paymentDetailDeactivationService = paymentDetailDeactivationService;  // ← AJOUTÉ
+        this.attendanceService = attendanceService;  // ← AJOUTÉ
     }
 
     /**
@@ -229,4 +243,74 @@ public class SessionService {
     }
 
 
+    // ========== NOUVELLES MÉTHODES AJOUTÉES ==========
+
+    /**
+     * Désactive une session et TOUS ses éléments associés.
+     *
+     * IMPORTANT : Cette méthode désactive :
+     * 1. La session elle-même (session.active = false)
+     * 2. Toutes les attendances associées (attendance.active = false)
+     * 3. Tous les PaymentDetails associés (paymentDetail.active = false)  ← CRITIQUE !
+     *
+     * POURQUOI C'EST IMPORTANT :
+     * Si vous ne désactivez pas les PaymentDetails, ils continuent à être comptés
+     * dans les calculs de paiement, ce qui cause l'erreur :
+     * "Le montant payé dépasse le coût total"
+     *
+     * UTILISATION :
+     * Appelez cette méthode au lieu de simplement mettre session.active = false
+     *
+     * @param sessionId l'ID de la session à désactiver
+     */
+    @Transactional
+    public void deactivateSession(Long sessionId) {
+        LOGGER.info("Deactivating session: {}", sessionId);
+
+        // 1. Désactiver la session
+        SessionEntity session = sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new CustomServiceException(SESSION_NOT_FOUND_MESSAGE + sessionId));
+
+        session.setActive(false);
+        sessionRepository.save(session);
+        LOGGER.debug("Session {} deactivated", sessionId);
+
+        // 2. Désactiver les attendances
+        attendanceService.deactivateBySessionId(sessionId);
+        LOGGER.debug("Attendances deactivated for session {}", sessionId);
+
+        // 3. Désactiver les PaymentDetails (LA PARTIE CRITIQUE !)
+        int deactivatedPayments = paymentDetailDeactivationService
+                .deactivatePaymentDetailsBySessionId(sessionId);
+
+        LOGGER.info("Session {} fully deactivated ({} payment details deactivated)",
+                sessionId, deactivatedPayments);
+    }
+
+    /**
+     * Réactive une session et tous ses éléments associés.
+     *
+     * Utilisez cette méthode pour annuler une dévalidation de session.
+     *
+     * @param sessionId l'ID de la session à réactiver
+     */
+    @Transactional
+    public void reactivateSession(Long sessionId) {
+        LOGGER.info("Reactivating session: {}", sessionId);
+
+        // 1. Réactiver la session
+        SessionEntity session = sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new CustomServiceException(SESSION_NOT_FOUND_MESSAGE + sessionId));
+
+        session.setActive(true);
+        sessionRepository.save(session);
+        LOGGER.debug("Session {} reactivated", sessionId);
+
+        // 2. Réactiver les PaymentDetails
+        int reactivatedPayments = paymentDetailDeactivationService
+                .reactivatePaymentDetailsBySessionId(sessionId);
+
+        LOGGER.info("Session {} fully reactivated ({} payment details reactivated)",
+                sessionId, reactivatedPayments);
+    }
 }

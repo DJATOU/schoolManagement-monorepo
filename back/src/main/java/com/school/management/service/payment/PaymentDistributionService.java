@@ -1,9 +1,11 @@
 package com.school.management.service.payment;
 
+import com.school.management.persistance.AttendanceEntity;
 import com.school.management.persistance.GroupEntity;
 import com.school.management.persistance.PaymentDetailEntity;
 import com.school.management.persistance.PaymentEntity;
 import com.school.management.persistance.SessionEntity;
+import com.school.management.repository.AttendanceRepository;
 import com.school.management.repository.PaymentDetailRepository;
 import com.school.management.repository.SessionRepository;
 import com.school.management.service.exception.CustomServiceException;
@@ -17,15 +19,6 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * Service responsable de la distribution des paiements sur les sessions.
- *
- * Gère la logique de répartition d'un montant payé sur les différentes
- * sessions d'une série, en ordre chronologique.
- *
- * @author Claude Code
- * @since Phase 2 Refactoring
- */
 @Service
 public class PaymentDistributionService {
 
@@ -33,36 +26,36 @@ public class PaymentDistributionService {
 
     private final SessionRepository sessionRepository;
     private final PaymentDetailRepository paymentDetailRepository;
+    private final AttendanceRepository attendanceRepository;
 
     public PaymentDistributionService(
             SessionRepository sessionRepository,
-            PaymentDetailRepository paymentDetailRepository) {
+            PaymentDetailRepository paymentDetailRepository,
+            AttendanceRepository attendanceRepository) {
         this.sessionRepository = sessionRepository;
         this.paymentDetailRepository = paymentDetailRepository;
+        this.attendanceRepository = attendanceRepository;
     }
 
-    /**
-     * Distribue un montant sur toutes les sessions d'une série en ordre chronologique.
-     *
-     * La distribution se fait session par session, en commençant par la première.
-     * Si une session a déjà un PaymentDetail, on complète le montant manquant.
-     *
-     * @param payment le paiement à distribuer
-     * @param sessionSeriesId l'ID de la série de sessions
-     * @param amountPaid le montant à distribuer
-     * @throws CustomServiceException si le paiement dépasse le coût total
-     */
     @Transactional
     public void distributePayment(PaymentEntity payment, Long sessionSeriesId, double amountPaid) {
         LOGGER.info("Distributing payment {} of amount {} for series {}",
-            payment.getId(), amountPaid, sessionSeriesId);
+                payment.getId(), amountPaid, sessionSeriesId);
 
-        // Récupérer toutes les sessions de la série, triées chronologiquement
-        List<SessionEntity> sessions = sessionRepository
-            .findBySessionSeriesId(sessionSeriesId)
-            .stream()
-            .sorted(Comparator.comparing(SessionEntity::getSessionTimeStart))
-            .toList();
+        Long studentId = payment.getStudent().getId();
+
+        List<AttendanceEntity> existingAttendances = attendanceRepository
+                .findByStudentIdAndSessionSeriesIdAndActiveTrue(studentId, sessionSeriesId);
+
+        List<SessionEntity> sessions;
+        if (!existingAttendances.isEmpty()) {
+            LOGGER.info("Student {} has {} attendances - using CATCH-UP distribution mode",
+                    studentId, existingAttendances.size());
+            sessions = getAttendedSessionsForStudent(studentId, sessionSeriesId);
+        } else {
+            LOGGER.info("Student {} has no attendances - using NORMAL distribution mode", studentId);
+            sessions = getAllSessionsForSeries(sessionSeriesId);
+        }
 
         if (sessions.isEmpty()) {
             LOGGER.warn("No sessions found for series: {}", sessionSeriesId);
@@ -83,14 +76,13 @@ public class PaymentDistributionService {
             remaining = distributeToSession(payment, session, pricePerSession, remaining);
         }
 
-        // Vérifier si le paiement dépasse le coût total
         double totalCost = calculateTotalCost(payment.getGroup());
         if (payment.getAmountPaid() >= totalCost) {
             double surplus = payment.getAmountPaid() - totalCost;
             if (surplus > 0) {
                 throw new CustomServiceException(
-                    "Le paiement a été complété. Le montant excédentaire de " + surplus + " euros sera remboursé.",
-                    HttpStatus.OK
+                        "Le paiement a été complété. Le montant excédentaire de " + surplus + " euros sera remboursé.",
+                        HttpStatus.OK
                 );
             }
         }
@@ -98,100 +90,113 @@ public class PaymentDistributionService {
         LOGGER.info("Payment distribution completed. Remaining: {}", remaining);
     }
 
-    /**
-     * Distribue un montant sur une session spécifique.
-     *
-     * @param payment le paiement
-     * @param session la session
-     * @param pricePerSession le prix par session
-     * @param remaining le montant restant à distribuer
-     * @return le montant restant après distribution sur cette session
-     */
-    private double distributeToSession(
-            PaymentEntity payment,
-            SessionEntity session,
-            double pricePerSession,
-            double remaining) {
+    private double distributeToSession(PaymentEntity payment, SessionEntity session,
+                                       double pricePerSession, double remaining) {
+        Optional<PaymentDetailEntity> existingDetail = paymentDetailRepository
+                .findByPaymentIdAndSessionId(payment.getId(), session.getId());
 
-        LOGGER.debug("Distributing to session {} - remaining: {}", session.getId(), remaining);
+        if (existingDetail.isPresent()) {
+            PaymentDetailEntity detail = existingDetail.get();
+            double alreadyPaid = detail.getAmountPaid();
+            double stillOwed = pricePerSession - alreadyPaid;
 
-        Optional<PaymentDetailEntity> existingDetailOpt = paymentDetailRepository
-            .findByPaymentIdAndSessionId(payment.getId(), session.getId());
-
-        if (existingDetailOpt.isPresent()) {
-            // Session déjà partiellement payée - compléter le montant
-            PaymentDetailEntity detail = existingDetailOpt.get();
-            double needed = pricePerSession - detail.getAmountPaid();
-
-            if (needed > 0) {
-                double toAdd = Math.min(needed, remaining);
-                detail.setAmountPaid(detail.getAmountPaid() + toAdd);
+            if (stillOwed > 0) {
+                double amountToAdd = Math.min(stillOwed, remaining);
+                detail.setAmountPaid(alreadyPaid + amountToAdd);
                 paymentDetailRepository.save(detail);
+                remaining -= amountToAdd;
 
-                LOGGER.debug("Updated payment detail {} - added: {}, new total: {}",
-                    detail.getId(), toAdd, detail.getAmountPaid());
-
-                return remaining - toAdd;
+                LOGGER.debug("Updated existing PaymentDetail for session {} - added: {}, new total: {}",
+                        session.getId(), amountToAdd, detail.getAmountPaid());
             }
         } else {
-            // Nouvelle session - créer un PaymentDetail
-            double toPay = Math.min(pricePerSession, remaining);
-            PaymentDetailEntity newDetail = new PaymentDetailEntity();
-            newDetail.setPayment(payment);
-            newDetail.setSession(session);
-            newDetail.setAmountPaid(toPay);
-            newDetail.setIsCatchUp(false); // Pas un rattrapage
+            double amountForThisSession = Math.min(pricePerSession, remaining);
+            PaymentDetailEntity newDetail = PaymentDetailEntity.builder()
+                    .payment(payment)
+                    .session(session)
+                    .amountPaid(amountForThisSession)
+                    .build();
             paymentDetailRepository.save(newDetail);
+            remaining -= amountForThisSession;
 
-            LOGGER.debug("Created new payment detail for session {} - amount: {}",
-                session.getId(), toPay);
-
-            return remaining - toPay;
+            LOGGER.debug("Created new PaymentDetail for session {} - amount: {}",
+                    session.getId(), amountForThisSession);
         }
 
         return remaining;
     }
 
-    /**
-     * Calcule le coût total d'un groupe (prix par session × nombre de sessions dans la série)
-     *
-     * @param group le groupe
-     * @return le coût total
-     */
+    public List<SessionEntity> getAttendedSessionsForStudent(Long studentId, Long sessionSeriesId) {
+        List<AttendanceEntity> attendances = attendanceRepository
+                .findByStudentIdAndSessionSeriesIdAndActiveTrue(studentId, sessionSeriesId);
+
+        return attendances.stream()
+                .map(AttendanceEntity::getSession)
+                .sorted(Comparator.comparing(SessionEntity::getSessionTimeStart))
+                .toList();
+    }
+
+    public List<SessionEntity> getAllSessionsForSeries(Long sessionSeriesId) {
+        return sessionRepository
+                .findBySessionSeriesId(sessionSeriesId)
+                .stream()
+                .sorted(Comparator.comparing(SessionEntity::getSessionTimeStart))
+                .toList();
+    }
+
+    public double calculateAttendedSessionsCost(Long studentId, Long sessionSeriesId, GroupEntity group) {
+        List<AttendanceEntity> existingAttendances = attendanceRepository
+                .findByStudentIdAndSessionSeriesIdAndActiveTrue(studentId, sessionSeriesId);
+
+        double pricePerSession = group.getPrice().getPrice();
+
+        if (!existingAttendances.isEmpty()) {
+            int attendedSessionsCount = existingAttendances.size();
+            double cost = attendedSessionsCount * pricePerSession;
+            LOGGER.debug("Student {} (CATCH-UP): {} sessions attended, cost: {}",
+                    studentId, attendedSessionsCount, cost);
+            return cost;
+        } else {
+            List<SessionEntity> allSessions = getAllSessionsForSeries(sessionSeriesId);
+            double cost = allSessions.size() * pricePerSession;
+            LOGGER.debug("Student {} (NORMAL): {} sessions in series, cost: {}",
+                    studentId, allSessions.size(), cost);
+            return cost;
+        }
+    }
+
+    public boolean canProcessPayment(Long studentId, Long sessionSeriesId, GroupEntity group, double newAmount) {
+        double totalPaidBefore = getTotalPaidForSeries(studentId, sessionSeriesId);
+        double newTotal = totalPaidBefore + newAmount;
+        double expectedCost = calculateAttendedSessionsCost(studentId, sessionSeriesId, group);
+
+        LOGGER.debug("Payment validation - Paid before: {}, New amount: {}, Expected cost: {}",
+                totalPaidBefore, newAmount, expectedCost);
+
+        if (newTotal > expectedCost) {
+            double surplus = newTotal - expectedCost;
+            throw new CustomServiceException(
+                    String.format("Le montant payé dépasse le coût total (%d sessions) de %.2f DA. Le paiement ne peut pas être effectué.",
+                            (int)(expectedCost / group.getPrice().getPrice()), surplus),
+                    HttpStatus.BAD_REQUEST
+            );
+        }
+
+        return true;
+    }
+
+    private double getTotalPaidForSeries(Long studentId, Long sessionSeriesId) {
+        List<PaymentDetailEntity> details = paymentDetailRepository
+                .findByPayment_StudentIdAndSession_SessionSeriesId(studentId, sessionSeriesId);
+
+        return details.stream()
+                .mapToDouble(PaymentDetailEntity::getAmountPaid)
+                .sum();
+    }
+
     private double calculateTotalCost(GroupEntity group) {
         double pricePerSession = group.getPrice().getPrice();
         int sessionNumberPerSerie = group.getSessionNumberPerSerie();
         return pricePerSession * sessionNumberPerSerie;
-    }
-
-    /**
-     * Calcule le coût des sessions créées pour une série
-     *
-     * @param seriesId l'ID de la série
-     * @param group le groupe
-     * @return le coût des sessions créées
-     */
-    public double calculateCreatedSessionsCost(Long seriesId, GroupEntity group) {
-        int totalSessions = sessionRepository.countBySessionSeriesId(seriesId);
-        double pricePerSession = group.getPrice().getPrice();
-        return totalSessions * pricePerSession;
-    }
-
-    /**
-     * Vérifie si un paiement peut être traité (ne dépasse pas le coût des sessions créées)
-     *
-     * @param seriesId l'ID de la série
-     * @param newTotalAmount le nouveau montant total
-     * @param group le groupe
-     * @return true si le paiement peut être traité
-     */
-    public boolean canProcessPayment(Long seriesId, double newTotalAmount, GroupEntity group) {
-        double totalCreatedCost = calculateCreatedSessionsCost(seriesId, group);
-        boolean canProcess = newTotalAmount <= totalCreatedCost;
-
-        LOGGER.debug("Can process payment: {} (total: {}, created cost: {})",
-            canProcess, newTotalAmount, totalCreatedCost);
-
-        return canProcess;
     }
 }

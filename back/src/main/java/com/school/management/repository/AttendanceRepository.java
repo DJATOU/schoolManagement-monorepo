@@ -37,5 +37,7 @@ public interface AttendanceRepository extends JpaRepository<AttendanceEntity, Lo
     List<AttendanceEntity> findByStudentIdAndIsCatchUp(Long studentId, boolean isCatchUp);
 
     boolean existsByGroupIdAndStudentIdAndIsCatchUp(Long id, Long studentId, boolean b);
+
+    List<AttendanceEntity> findByStudentIdAndActiveTrue(Long studentId);
 }
 

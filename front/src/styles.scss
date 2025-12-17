@@ -12,7 +12,7 @@ html, body {
 }
 
 body {
-  margin: 0;
+  //margin: 0;
   width: 100%;
   font-family: Roboto, "Helvetica Neue", sans-serif;
   background: linear-gradient(to top, #accbee 0%, #e7f0fd 100%);
@@ -20,18 +20,13 @@ body {
   padding: 0;
 }
 
-@media (min-width: 992px) {
-  body {
-    padding: 0 32px;
-  }
-}
 
-@media (min-width: 1400px) {
+/*@media (min-width: 1400px) {
   body {
-    padding-left: clamp(48px, 10vw, 140px);
-    padding-right: clamp(48px, 10vw, 140px);
+    padding-left: clamp(48px, 40vw, 200px);
+    padding-right: clamp(18px, 10vw, 100px);
   }
-}
+}*/
 
 /* Shared entity card styling */
 .app-entity-card {
