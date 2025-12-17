@@ -16,6 +16,7 @@ import { StudentService } from '../../../student/services/student.service';
 import { PricingService } from '../../../../services/pricing.service';
 import { AttendanceService } from '../../../../services/attendance.service';
 import { Observable, forkJoin } from 'rxjs';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
 // Importations pour pdfMake
 import pdfMake from 'pdfmake/build/pdfmake';
@@ -38,7 +39,8 @@ import { Content, TDocumentDefinitions } from 'pdfmake/interfaces';
     MatFormFieldModule,
     MatSelectModule,
     MatOptionModule,
-    MatTableModule
+    MatTableModule,
+    TranslateModule
   ]
 })
 export class PaymentHistoryDialogComponent implements OnInit {
@@ -52,7 +54,7 @@ export class PaymentHistoryDialogComponent implements OnInit {
   seriesTotal = 0;
   seriesPaid = 0;
   seriesRemaining = 0;
-  seriesStatus = '';
+  seriesStatus: 'paid' | 'partiallyPaid' | 'unpaid' = 'unpaid';
   isCatchUpSeries = false;
 
   displayedColumns: string[] = ['session', 'paymentDate', 'amountPaid', 'paymentStatus'];
@@ -66,7 +68,8 @@ export class PaymentHistoryDialogComponent implements OnInit {
     private pricingService: PricingService,
     private attendanceService: AttendanceService,
     public dialogRef: MatDialogRef<PaymentHistoryDialogComponent>,
-    @Inject(MAT_DIALOG_DATA) public data: { studentId: number }
+    @Inject(MAT_DIALOG_DATA) public data: { studentId: number },
+    private translate: TranslateService
   ) {}
 
   ngOnInit(): void {
@@ -178,9 +181,9 @@ export class PaymentHistoryDialogComponent implements OnInit {
 
     this.paymentHistory.data = paymentDetails.map(detail => ({
       sessionId: detail.sessionId,
-      sessionName: detail.isCatchUp ? `Rattrapage - ${detail.sessionName}` : detail.sessionName,
-      paymentMethod: detail.paymentMethod || 'Cash',
-      description: detail.description || 'Aucune description',
+      sessionName: detail.isCatchUp ? `${this.translate.instant('payment.history.labels.catchUpPrefix')} ${detail.sessionName}` : detail.sessionName,
+      paymentMethod: detail.paymentMethod || this.translate.instant('payment.history.labels.cash'),
+      description: detail.description || this.translate.instant('payment.history.labels.noDescription'),
       paymentDate: detail.paymentDate,
       amountPaid: detail.amountPaid,
       status: this.getPaymentStatusWithPrice(detail, sessionPrice),
@@ -189,23 +192,23 @@ export class PaymentHistoryDialogComponent implements OnInit {
     }));
   }
 
-  private getPaymentStatusWithPrice(detail: PaymentDetail, sessionPrice: number): string {
+  private getPaymentStatusWithPrice(detail: PaymentDetail, sessionPrice: number): 'paid' | 'partiallyPaid' | 'unpaid' {
     if (detail.amountPaid >= sessionPrice) {
-      return 'Payée';
+      return 'paid';
     } else if (detail.amountPaid > 0 && detail.amountPaid < sessionPrice) {
-      return 'Partiellement Payée';
+      return 'partiallyPaid';
     } else {
-      return 'Non Payée';
+      return 'unpaid';
     }
   }
 
-  private getSeriesStatus(): string {
+  private getSeriesStatus(): 'paid' | 'partiallyPaid' | 'unpaid' {
     if (this.seriesRemaining === 0) {
-      return 'Payée';
+      return 'paid';
     } else if (this.seriesPaid > 0) {
-      return 'Partiellement Payée';
+      return 'partiallyPaid';
     } else {
-      return 'Non Payée';
+      return 'unpaid';
     }
   }
 
@@ -215,11 +218,11 @@ export class PaymentHistoryDialogComponent implements OnInit {
 
   private getFillColorForStatus(status: string): string {
     switch (status) {
-      case 'Payée':
+      case 'paid':
         return '#d0f0c0'; // Vert
-      case 'Partiellement Payée':
+      case 'partiallyPaid':
         return '#ffe4b5'; // Orange
-      case 'Non Payée':
+      case 'unpaid':
         return '#ffcccb'; // Rouge
       default:
         return '#ffffff'; // Blanc
@@ -264,7 +267,7 @@ export class PaymentHistoryDialogComponent implements OnInit {
               width: 100
             },
             {
-              text: 'Historique des Paiements',
+              text: this.translate.instant('payment.history.pdf.title'),
               style: 'header',
               alignment: 'right'
             }
@@ -272,11 +275,11 @@ export class PaymentHistoryDialogComponent implements OnInit {
         },
         { text: '\n\n' },
         {
-          text: `Étudiant : ${this.studentName}`,
+          text: `${this.translate.instant('payment.history.pdf.student')}: ${this.studentName}`,
           style: 'subheader'
         },
         {
-          text: `Date : ${new Date().toLocaleDateString()}`,
+          text: `${this.translate.instant('payment.history.pdf.date')}: ${new Date().toLocaleDateString()}`,
           alignment: 'right'
         },
         { text: '\n' },
@@ -285,7 +288,7 @@ export class PaymentHistoryDialogComponent implements OnInit {
           style: 'sectionHeader'
         },
         ...(this.isCatchUpSeries ? [{
-          text: '⚠️ RATTRAPAGE : Paiement par session assistée uniquement',
+          text: this.translate.instant('payment.history.pdf.catchUpOnly'),
           style: 'catchUpNote',
           color: 'red',
           bold: true,
@@ -293,30 +296,30 @@ export class PaymentHistoryDialogComponent implements OnInit {
         }] : []),
         {
           columns: [
-            { text: `${this.isCatchUpSeries ? 'Montant Total (sessions assistées)' : 'Montant Total'} : ${this.seriesTotal} DA`, width: '50%' },
-            { text: `Montant Payé : ${this.seriesPaid} DA`, width: '50%' }
+            { text: `${this.translate.instant(this.isCatchUpSeries ? 'payment.history.labels.totalCatchUp' : 'payment.history.labels.total')} : ${this.seriesTotal} DA`, width: '50%' },
+            { text: `${this.translate.instant('payment.history.labels.paid')} : ${this.seriesPaid} DA`, width: '50%' }
           ]
         },
         {
           columns: [
-            { text: `Reste à Payer : ${this.seriesRemaining} DA`, width: '50%' },
-            { text: `Statut : ${this.seriesStatus}`, width: '50%' }
+            { text: `${this.translate.instant('payment.history.labels.remaining')} : ${this.seriesRemaining} DA`, width: '50%' },
+            { text: `${this.translate.instant('payment.history.labels.status')} : ${this.translate.instant('payment.history.status.' + this.seriesStatus)}`, width: '50%' }
           ]
         },
         { text: '\n' },
         {
-          text: 'Détails des Paiements',
+          text: this.translate.instant('payment.history.pdf.details'),
           style: 'sectionHeader'
         },
         this.getPaymentHistoryTable(),
         { text: '\n\n' },
         {
-          text: 'Signature étudiant : ________________________',
+          text: this.translate.instant('payment.history.pdf.studentSignature'),
           alignment: 'right',
           margin: [0, 50, 0, 0]
         },
         {
-          text: 'Signature de l\'Administration : ________________________',
+          text: this.translate.instant('payment.history.pdf.adminSignature'),
           alignment: 'right',
           margin: [0, 50, 0, 0]
         }
@@ -352,7 +355,7 @@ export class PaymentHistoryDialogComponent implements OnInit {
       },
       footer: (currentPage: number, pageCount: number): Content => {
         return {
-          text: `Page ${currentPage} sur ${pageCount}`,
+          text: `${this.translate.instant('payment.history.pdf.page')} ${currentPage} ${this.translate.instant('payment.history.pdf.of')} ${pageCount}`,
           alignment: 'center',
           fontSize: 10,
           margin: [0, 10, 0, 0]
@@ -373,10 +376,10 @@ export class PaymentHistoryDialogComponent implements OnInit {
 
     // En-têtes du tableau
     body.push([
-      { text: 'Session', style: 'tableHeader' },
-      { text: 'Date de Paiement', style: 'tableHeader' },
-      { text: 'Montant Payé', style: 'tableHeader' },
-      { text: 'Statut du Paiement', style: 'tableHeader' }
+      { text: this.translate.instant('payment.history.table.session'), style: 'tableHeader' },
+      { text: this.translate.instant('payment.history.table.paymentDate'), style: 'tableHeader' },
+      { text: this.translate.instant('payment.history.table.amountPaid'), style: 'tableHeader' },
+      { text: this.translate.instant('payment.history.table.paymentStatus'), style: 'tableHeader' }
     ]);
 
     // Données du tableau
@@ -389,12 +392,12 @@ export class PaymentHistoryDialogComponent implements OnInit {
           { text: payment.sessionName || 'N/A', fillColor },
           { text: payment.paymentDate ? new Date(payment.paymentDate).toLocaleDateString() : 'N/A', fillColor },
           { text: `${payment.amountPaid} DA`, fillColor },
-          { text: status, fillColor }
+          { text: this.translate.instant('payment.history.status.' + status), fillColor }
         ]);
       }
     } else {
       body.push([
-        { text: 'Aucun paiement trouvé', colSpan: 4, alignment: 'center' }
+        { text: this.translate.instant('payment.history.table.empty'), colSpan: 4, alignment: 'center' }
       ]);
     }
 

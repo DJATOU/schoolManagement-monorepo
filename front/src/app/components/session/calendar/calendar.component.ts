@@ -18,6 +18,7 @@ import { MatOptionModule } from '@angular/material/core';
 import { CommonModule } from '@angular/common';
 import { MatMenuModule } from '@angular/material/menu';
 import { GroupSelectorComponent } from '../../group/group-selector/group-selector.component';
+import { TranslateService } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-calendar',
@@ -50,7 +51,8 @@ export class CalendarComponent implements OnInit {
     private ngZone: NgZone,
     private injector: Injector,
     private appRef: ApplicationRef,
-    private resolver: ComponentFactoryResolver
+    private resolver: ComponentFactoryResolver,
+    private translate: TranslateService
   ) {}
 
   ngOnInit() {
@@ -63,13 +65,18 @@ export class CalendarComponent implements OnInit {
     this.calendarOptions = {
       plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin, listPlugin],
       initialView: 'dayGridMonth',
+      locale: this.translate.currentLang,
       headerToolbar: {
         left: 'prev,next today',
         center: 'title',
         right: 'dayGridMonth,timeGridWeek,timeGridDay,listMonth,customGroupSelector'
       },
       buttonText: {
-        listMonth: 'list'
+        today: this.translate.instant('calendar.buttons.today'),
+        month: this.translate.instant('calendar.buttons.month'),
+        week: this.translate.instant('calendar.buttons.week'),
+        day: this.translate.instant('calendar.buttons.day'),
+        listMonth: this.translate.instant('calendar.buttons.list')
       },
       customButtons: {
         customGroupSelector: {
@@ -88,6 +95,23 @@ export class CalendarComponent implements OnInit {
         hour12: false
       }
     };
+
+    this.translate.onLangChange.subscribe(({ lang }) => {
+      if (this.calendarOptions) {
+        this.calendarOptions = {
+          ...this.calendarOptions,
+          locale: lang,
+          buttonText: {
+            today: this.translate.instant('calendar.buttons.today'),
+            month: this.translate.instant('calendar.buttons.month'),
+            week: this.translate.instant('calendar.buttons.week'),
+            day: this.translate.instant('calendar.buttons.day'),
+            listMonth: this.translate.instant('calendar.buttons.list')
+          }
+        };
+        this.refreshEvents();
+      }
+    });
 
     this.insertGroupSelector();
   }

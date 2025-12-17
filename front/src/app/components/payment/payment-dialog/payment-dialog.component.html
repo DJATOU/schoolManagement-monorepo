@@ -1,8 +1,8 @@
-<h2 mat-dialog-title>Ajouter un paiement</h2>
+<h2 mat-dialog-title>{{ 'payment.dialog.title' | translate }}</h2>
 <mat-dialog-content>
   <form [formGroup]="paymentForm" (ngSubmit)="onSubmit()">
     <mat-form-field appearance="fill">
-      <mat-label>Groupe</mat-label>
+      <mat-label>{{ 'payment.dialog.fields.group' | translate }}</mat-label>
       <mat-select formControlName="groupId" required>
         <mat-option
           *ngFor="let group of groups"
@@ -11,7 +11,7 @@
         >
           {{ group.name }}
           <ng-container *ngIf="group.catchUp">
-            &nbsp;(Rattrapage)
+            &nbsp;({{ 'payment.dialog.fields.catchUp' | translate }})
           </ng-container>
         </mat-option>
       </mat-select>
@@ -19,34 +19,34 @@
 
 
     <mat-form-field appearance="fill">
-      <mat-label>Série de sessions</mat-label>
+      <mat-label>{{ 'payment.dialog.fields.sessionSeries' | translate }}</mat-label>
       <mat-select formControlName="sessionSeriesId" required>
         <mat-option *ngFor="let series of sessionSeries" [value]="series.id">{{ series.name }}</mat-option>
       </mat-select>
     </mat-form-field>
 
     <mat-form-field appearance="fill">
-      <mat-label>Montant</mat-label>
+      <mat-label>{{ 'payment.dialog.fields.amount' | translate }}</mat-label>
       <input matInput formControlName="amountPaid" type="number" min="0" required>
     </mat-form-field>
 
     <mat-form-field appearance="fill">
-      <mat-label>Méthode de paiement</mat-label>
+      <mat-label>{{ 'payment.dialog.fields.paymentMethod' | translate }}</mat-label>
       <mat-select formControlName="paymentMethod" required>
         <mat-option *ngFor="let method of paymentMethods" [value]="method.value">
-          {{ method.label }}
+          {{ method.labelKey | translate }}
         </mat-option>
       </mat-select>
     </mat-form-field>
 
     <mat-form-field appearance="fill">
-      <mat-label>Description</mat-label>
+      <mat-label>{{ 'payment.dialog.fields.description' | translate }}</mat-label>
       <textarea matInput formControlName="paymentDescription"></textarea>
     </mat-form-field>
 
     <div mat-dialog-actions>
-      <button mat-button type="button" (click)="onCancel()">Annuler</button>
-      <button mat-raised-button color="primary" type="submit">Valider</button>
+      <button mat-button type="button" (click)="onCancel()">{{ 'common.cancel' | translate }}</button>
+      <button mat-raised-button color="primary" type="submit">{{ 'common.confirm' | translate }}</button>
     </div>
   </form>
 </mat-dialog-content>

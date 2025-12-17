@@ -30,6 +30,8 @@
     "@fullcalendar/interaction": "^6.1.11",
     "@fullcalendar/list": "^6.1.11",
     "@fullcalendar/timegrid": "^6.1.11",
+    "@ngx-translate/core": "^17.0.0",
+    "@ngx-translate/http-loader": "^17.0.0",
     "@types/pdfmake": "^0.2.9",
     "gsap": "^3.12.5",
     "html2canvas": "^1.4.1",

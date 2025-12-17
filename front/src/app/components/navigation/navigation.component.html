@@ -1,52 +1,59 @@
 <mat-toolbar class="main-toolbar">
-  <!-- Logo Section -->
   <div class="toolbar-section logo-section">
-    <button mat-icon-button (click)="toggleSidenav()" class="menu-toggle" matTooltip="Menu">
+    <button mat-icon-button (click)="toggleSidenav()" class="menu-toggle" [matTooltip]="'navigation.menu' | translate">
       <mat-icon>menu</mat-icon>
     </button>
-    <img src="assets/succes_assistance.png" alt="Logo" class="logo" [routerLink]="['/dashboard']">
+    <img src="assets/succes_assistance.png" alt="Logo" class="logo" [routerLink]="['/dashboard']" />
   </div>
 
-  <!-- Search Type Tabs -->
   <div class="search-tabs">
-    <button class="tab-button"
-            [class.active]="selectedIcon === 'student'"
-            (click)="setSearchType('student')"
-            matTooltip="Élèves">
+    <button
+      class="tab-button"
+      [class.active]="selectedIcon === 'student'"
+      (click)="setSearchType('student')"
+      [matTooltip]="'navigation.tabs.students' | translate"
+    >
       <mat-icon>school</mat-icon>
-      <span class="tab-label">Élèves</span>
+      <span class="tab-label">{{ 'navigation.tabs.students' | translate }}</span>
     </button>
-    <button class="tab-button"
-            [class.active]="selectedIcon === 'group'"
-            (click)="setSearchType('group')"
-            matTooltip="Groupes">
+    <button
+      class="tab-button"
+      [class.active]="selectedIcon === 'group'"
+      (click)="setSearchType('group')"
+      [matTooltip]="'navigation.tabs.groups' | translate"
+    >
       <mat-icon>groups</mat-icon>
-      <span class="tab-label">Groupes</span>
+      <span class="tab-label">{{ 'navigation.tabs.groups' | translate }}</span>
     </button>
-    <button class="tab-button"
-            [class.active]="selectedIcon === 'teacher'"
-            (click)="setSearchType('teacher')"
-            matTooltip="Professeurs">
+    <button
+      class="tab-button"
+      [class.active]="selectedIcon === 'teacher'"
+      (click)="setSearchType('teacher')"
+      [matTooltip]="'navigation.tabs.teachers' | translate"
+    >
       <mat-icon>person</mat-icon>
-      <span class="tab-label">Professeurs</span>
+      <span class="tab-label">{{ 'navigation.tabs.teachers' | translate }}</span>
     </button>
   </div>
 
-  <!-- Search Bar -->
   <div class="search-container">
     <div class="search-field">
       <mat-icon class="search-prefix" (click)="onSearch()">search</mat-icon>
-      <input type="text"
-             class="search-input"
-             [placeholder]="placeholder"
-             [formControl]="searchControl"
-             [matAutocomplete]="auto"
-             (keydown.enter)="onSearch()">
-      <button type="button"
-              *ngIf="searchControl.value"
-              (click)="searchControl.setValue('')"
-              class="clear-button"
-              matTooltip="Effacer">
+      <input
+        type="text"
+        class="search-input"
+        [placeholder]="placeholder | translate"
+        [formControl]="searchControl"
+        [matAutocomplete]="auto"
+        (keydown.enter)="onSearch()"
+      />
+      <button
+        type="button"
+        *ngIf="searchControl.value"
+        (click)="searchControl.setValue('')"
+        class="clear-button"
+        [matTooltip]="'navigation.clear' | translate"
+      >
         <mat-icon>close</mat-icon>
       </button>
 
@@ -58,42 +65,37 @@
     </div>
   </div>
 
-  <!-- User Profile Pill -->
   <div class="user-profile-pill" [matMenuTriggerFor]="userMenu">
-    <img src="assets/pic.jpg" alt="User" class="user-avatar">
+    <img src="assets/pic.jpg" alt="User" class="user-avatar" />
     <div class="user-info">
       <span class="user-name">M. DJATOU</span>
-      <span class="user-role">Administrateur</span>
+      <span class="user-role">{{ 'navigation.role.admin' | translate }}</span>
     </div>
     <mat-icon class="dropdown-icon">expand_more</mat-icon>
   </div>
 
-  <!-- User Menu -->
   <mat-menu #userMenu="matMenu">
     <button mat-menu-item (click)="toggleDarkMode()">
       <mat-icon>brightness_6</mat-icon>
-      <span>Mode sombre/clair</span>
+      <span>{{ 'navigation.theme' | translate }}</span>
     </button>
+    <button mat-menu-item disabled>{{ 'navigation.language' | translate }}</button>
     <button mat-menu-item (click)="changeLanguage('fr')">
       <mat-icon>language</mat-icon>
-      <span>Français</span>
+      <span>{{ 'navigation.languages.fr' | translate }}</span>
     </button>
-    <button mat-menu-item (click)="changeLanguage('ar')">
+    <button mat-menu-item (click)="changeLanguage('en')">
       <mat-icon>language</mat-icon>
-      <span>العربية</span>
-    </button>
-    <button mat-menu-item (click)="changeLanguage('es')">
-      <mat-icon>language</mat-icon>
-      <span>Español</span>
+      <span>{{ 'navigation.languages.en' | translate }}</span>
     </button>
     <button mat-menu-item (click)="openSettings()">
       <mat-icon>settings</mat-icon>
-      <span>Paramètres</span>
+      <span>{{ 'navigation.settings' | translate }}</span>
     </button>
     <mat-divider></mat-divider>
     <button mat-menu-item (click)="logout()">
       <mat-icon>logout</mat-icon>
-      <span>Déconnexion</span>
+      <span>{{ 'navigation.logout' | translate }}</span>
     </button>
   </mat-menu>
 </mat-toolbar>

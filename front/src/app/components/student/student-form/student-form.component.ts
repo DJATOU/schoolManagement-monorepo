@@ -18,6 +18,7 @@ import { Level } from '../../../models/level/level';
 import { LevelService } from '../../../services/level.service';
 import { StudentService } from '../services/student.service';
 import { SummaryDialogComponent } from '../../summary-dialog/summary-dialog.component';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-student',
@@ -27,11 +28,7 @@ import { SummaryDialogComponent } from '../../summary-dialog/summary-dialog.comp
     MatFormFieldModule,
     MatInputModule,
     MatDatepickerModule,
-    
-// TODO: `HttpClientModule` should not be imported into a component directly.
-// Please refactor the code to add `provideHttpClient()` call to the provider list in the
-// application bootstrap logic and remove the `HttpClientModule` import from this component.
-HttpClientModule,
+    HttpClientModule,
     MatNativeDateModule,
     RouterModule,
     MatStepperModule,
@@ -45,25 +42,28 @@ HttpClientModule,
     MatCardContent,
     MatCardHeader,
     MatCardTitle,
-    MatSnackBarModule // Ajoutez ceci
+    MatSnackBarModule,
+    TranslateModule
   ],
   templateUrl: './student-form.component.html',
   styleUrls: ['./student-form.component.scss'],
   providers: [
     StudentService,
+    TranslateService,
     { provide: DateAdapter, useClass: NativeDateAdapter },
     { provide: MAT_DATE_LOCALE, useValue: 'us-US' },
     {
-      provide: MAT_DATE_FORMATS, useValue: {
+      provide: MAT_DATE_FORMATS,
+      useValue: {
         parse: {
-          dateInput: 'LL',
+          dateInput: 'LL'
         },
         display: {
           dateInput: 'LL',
           monthYearLabel: 'MMM YYYY',
           dateA11yLabel: 'LL',
-          monthYearA11yLabel: 'MMMM YYYY',
-        },
+          monthYearA11yLabel: 'MMMM YYYY'
+        }
       }
     }
   ]
@@ -78,7 +78,8 @@ export class StudentFormComponent implements OnInit {
     private studentService: StudentService,
     private levelService: LevelService,
     public dialog: MatDialog,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private translateService: TranslateService
   ) {}
 
   ngOnInit(): void {
@@ -103,7 +104,7 @@ export class StudentFormComponent implements OnInit {
       academicInformation: this.fb.group({
         level: ['', Validators.required],
         establishment: [''],
-        averageScore: ['', Validators.pattern("^[0-9]*$")],
+        averageScore: ['', Validators.pattern('^[0-9]*$')],
         description: ['']
       })
     });
@@ -112,7 +113,7 @@ export class StudentFormComponent implements OnInit {
   private loadLevels(): void {
     this.levelService.getLevels().subscribe({
       next: (data) => (this.levels = data),
-      error: () => this.showErrorMessage('Error loading levels.')
+      error: () => this.showErrorMessage('messages.levelsError')
     });
   }
 
@@ -125,13 +126,12 @@ export class StudentFormComponent implements OnInit {
 
   onSubmit(): void {
     if (this.studentForm.invalid) {
-      this.showErrorMessage('The form is not valid or the file is not selected.');
+      this.showErrorMessage('messages.invalidForm');
       return;
     }
 
     const formData = this.prepareFormData();
 
-    // Ouvrir un dialogue pour afficher le résumé des données saisies
     const flattenedData = this.flattenFormData(this.studentForm.value);
     const dialogRef = this.dialog.open(SummaryDialogComponent, {
       data: flattenedData
@@ -168,8 +168,8 @@ export class StudentFormComponent implements OnInit {
     return formDataToSubmit;
   }
 
-  private flattenFormData(data: any, parentKey: string = ''): { label: string, value: any }[] {
-    let result: { label: string, value: any }[] = [];
+  private flattenFormData(data: any, parentKey: string = ''): { label: string; value: any }[] {
+    let result: { label: string; value: any }[] = [];
     Object.keys(data).forEach(key => {
       const newKey = parentKey ? `${parentKey} - ${key}` : key;
       const value = data[key];
@@ -187,11 +187,11 @@ export class StudentFormComponent implements OnInit {
       next: (response) => {
         console.log('Student created:', response);
         this.onClearForm();
-        this.showSuccessMessage('Student created successfully.');
+        this.showSuccessMessage('messages.studentCreated');
       },
       error: (error) => {
         console.error('Error creating student:', error);
-        this.showErrorMessage('Error creating student.');
+        this.showErrorMessage('messages.studentCreateError');
       }
     });
   }
@@ -201,15 +201,15 @@ export class StudentFormComponent implements OnInit {
     this.selectedFile = null;
   }
 
-  private showSuccessMessage(message: string): void {
-    this.snackBar.open(message, 'OK', {
+  private showSuccessMessage(messageKey: string): void {
+    this.snackBar.open(this.translateService.instant(messageKey), this.translateService.instant('common.ok'), {
       duration: 3000,
       panelClass: ['snack-bar-success']
     });
   }
 
-  private showErrorMessage(message: string): void {
-    this.snackBar.open(message, 'OK', {
+  private showErrorMessage(messageKey: string): void {
+    this.snackBar.open(this.translateService.instant(messageKey), this.translateService.instant('common.ok'), {
       duration: 3000,
       panelClass: ['snack-bar-error']
     });

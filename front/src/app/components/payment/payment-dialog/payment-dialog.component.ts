@@ -19,6 +19,7 @@ import { PricingService } from '../../../services/pricing.service';
 import { HttpErrorResponse } from '@angular/common/http';
 import { AttendanceService } from '../../../services/attendance.service';
 import { forkJoin } from 'rxjs';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-payment-dialog',
@@ -33,7 +34,8 @@ import { forkJoin } from 'rxjs';
     MatFormFieldModule,
     MatInputModule,
     MatSelectModule,
-    MatOptionModule
+    MatOptionModule,
+    TranslateModule
   ]
 })
 export class PaymentDialogComponent implements OnInit {
@@ -41,10 +43,10 @@ export class PaymentDialogComponent implements OnInit {
   groups: Group[];
   sessionSeries: SessionSeries[] = [];
   paymentMethods = [
-    { value: 'cash', label: 'Espèces' },
-    { value: 'cheque', label: 'Chèque' },
-    { value: 'carte_bancaire', label: 'Carte bancaire' },
-    { value: 'autre', label: 'Autre' }
+    { value: 'cash', labelKey: 'payment.dialog.methods.cash' },
+    { value: 'cheque', labelKey: 'payment.dialog.methods.cheque' },
+    { value: 'carte_bancaire', labelKey: 'payment.dialog.methods.card' },
+    { value: 'autre', labelKey: 'payment.dialog.methods.other' }
   ];
   studentId: number;
   paymentDetails: PaymentDetail[] = [];
@@ -63,6 +65,7 @@ export class PaymentDialogComponent implements OnInit {
     private attendanceService: AttendanceService,
     private dialog: MatDialog,
     private snackBar: MatSnackBar,
+    private translate: TranslateService,
     @Inject(MAT_DIALOG_DATA) public data: { studentId: number, groups: Group[] }
   ) {
     this.groups = data.groups;
@@ -123,13 +126,17 @@ export class PaymentDialogComponent implements OnInit {
 
   openConfirmationDialog(paymentData: Payment): void {
     if (!paymentData.sessionSeriesId) {
-      this.snackBar.open('Veuillez sélectionner une série avant de poursuivre.', 'Fermer', { duration: 4000 });
+      this.snackBar.open(
+        this.translate.instant('payment.dialog.messages.selectSeries'),
+        this.translate.instant('common.cancel'),
+        { duration: 4000 }
+      );
       return;
     }
 
     const sessionSeriesId = paymentData.sessionSeriesId;
     const sessionSeries = this.sessionSeries.find(series => series.id === sessionSeriesId);
-    const seriesName = sessionSeries?.name || 'Série inconnue';
+    const seriesName = sessionSeries?.name || this.translate.instant('payment.dialog.messages.unknownSeries');
 
     const group = this.groups.find(group => group.id === sessionSeries?.groupId);
     if (group?.priceId) {
@@ -164,7 +171,7 @@ export class PaymentDialogComponent implements OnInit {
               .reduce((acc, curr) => acc + (curr.amountPaid || 0), 0);
 
             totalCost = numberOfSessions * pricePerSession;
-            calculationNote = 'Rattrapage : paiement par session assistée';
+            calculationNote = this.translate.instant('payment.dialog.notes.catchUp');
 
             const newTotalPaid = totalPaidPreviously + paymentData.amountPaid;
 
@@ -172,8 +179,8 @@ export class PaymentDialogComponent implements OnInit {
             if (newTotalPaid > totalCost) {
               const surplus = newTotalPaid - totalCost;
               this.snackBar.open(
-                `Le montant payé dépasse le coût total des sessions de rattrapage (${numberOfSessions}) de ${surplus} DA. Le paiement ne peut pas être effectué.`,
-                'Fermer',
+                this.translate.instant('payment.dialog.messages.overpayCatchUp', { sessions: numberOfSessions, surplus }),
+                this.translate.instant('common.cancel'),
                 { duration: 5000 }
               );
               return;

@@ -1,76 +1,76 @@
 <form [formGroup]="sessionForm" (ngSubmit)="onSubmit()" class="form-container fade-in">
-  <h2 class="form-title">Session Registration Form</h2>
+  <h2 class="form-title">{{ 'sessionForm.title' | translate }}</h2>
   <mat-tab-group class="tab-group">
-    <mat-tab label="Session Details">
+    <mat-tab [label]="'sessionForm.tabs.details' | translate">
       <div class="tab-content" formGroupName="sessionDetails">
         <mat-form-field appearance="fill">
-          <mat-label>Title</mat-label>
+          <mat-label>{{ 'sessionForm.fields.title' | translate }}</mat-label>
           <input matInput formControlName="title">
         </mat-form-field>
 
         <mat-form-field appearance="fill">
-          <mat-label>Description</mat-label>
+          <mat-label>{{ 'common.description' | translate }}</mat-label>
           <textarea matInput formControlName="description"></textarea>
         </mat-form-field>
 
         <mat-form-field appearance="fill">
-          <mat-label>Session Type</mat-label>
+          <mat-label>{{ 'sessionForm.fields.sessionType' | translate }}</mat-label>
           <input matInput formControlName="sessionType">
         </mat-form-field>
 
         <mat-form-field appearance="fill">
-          <mat-label>Feedback Link</mat-label>
+          <mat-label>{{ 'sessionForm.fields.feedbackLink' | translate }}</mat-label>
           <input matInput formControlName="feedbackLink">
         </mat-form-field>
       </div>
     </mat-tab>
-    <mat-tab label="Session Timing">
+    <mat-tab [label]="'sessionForm.tabs.timing' | translate">
       <div class="tab-content" formGroupName="sessionTiming">
         <mat-form-field appearance="fill">
-          <mat-label>Session Start Date</mat-label>
-          <input matInput [matDatepicker]="startDatePicker" placeholder="Choose a date" formControlName="sessionDateStart">
+          <mat-label>{{ 'sessionForm.fields.sessionDateStart' | translate }}</mat-label>
+          <input matInput [matDatepicker]="startDatePicker" [placeholder]="'sessionForm.fields.chooseDate' | translate" formControlName="sessionDateStart">
           <mat-datepicker-toggle matSuffix [for]="startDatePicker"></mat-datepicker-toggle>
           <mat-datepicker #startDatePicker></mat-datepicker>
         </mat-form-field>
         <mat-form-field appearance="fill">
-          <mat-label>Session Start Time</mat-label>
-          <input matInput [ngxTimepicker]="startTimePicker" readonly placeholder="Select Time" formControlName="sessionTimeStart">
+          <mat-label>{{ 'sessionForm.fields.sessionTimeStart' | translate }}</mat-label>
+          <input matInput [ngxTimepicker]="startTimePicker" readonly [placeholder]="'sessionForm.fields.selectTime' | translate" formControlName="sessionTimeStart">
           <ngx-material-timepicker-toggle [for]="startTimePicker" matSuffix></ngx-material-timepicker-toggle>
           <ngx-material-timepicker #startTimePicker></ngx-material-timepicker>
         </mat-form-field>
-      
+
         <mat-form-field appearance="fill">
-          <mat-label>Session End Date</mat-label>
-          <input matInput [matDatepicker]="endDatePicker" placeholder="Choose a date" formControlName="sessionDateEnd">
+          <mat-label>{{ 'sessionForm.fields.sessionDateEnd' | translate }}</mat-label>
+          <input matInput [matDatepicker]="endDatePicker" [placeholder]="'sessionForm.fields.chooseDate' | translate" formControlName="sessionDateEnd">
           <mat-datepicker-toggle matSuffix [for]="endDatePicker"></mat-datepicker-toggle>
           <mat-datepicker #endDatePicker></mat-datepicker>
         </mat-form-field>
         <mat-form-field appearance="fill">
-          <mat-label>Session End Time</mat-label>
-          <input matInput [ngxTimepicker]="endTimePicker" readonly placeholder="Select Time" formControlName="sessionTimeEnd">
+          <mat-label>{{ 'sessionForm.fields.sessionTimeEnd' | translate }}</mat-label>
+          <input matInput [ngxTimepicker]="endTimePicker" readonly [placeholder]="'sessionForm.fields.selectTime' | translate" formControlName="sessionTimeEnd">
           <ngx-material-timepicker-toggle [for]="endTimePicker" matSuffix></ngx-material-timepicker-toggle>
           <ngx-material-timepicker #endTimePicker></ngx-material-timepicker>
         </mat-form-field>
       </div>
     </mat-tab>
-    <mat-tab label="Identifiers">
+    <mat-tab [label]="'sessionForm.tabs.identifiers' | translate">
       <div class="tab-content" formGroupName="identifiers">
         <mat-form-field appearance="fill">
-          <mat-label>Group</mat-label>
+          <mat-label>{{ 'sessionForm.fields.group' | translate }}</mat-label>
           <mat-select formControlName="groupId">
             <mat-option *ngFor="let group of groups" [value]="group.id">{{ group.name }}</mat-option>
           </mat-select>
         </mat-form-field>
 
         <mat-form-field appearance="fill">
-          <mat-label>Room</mat-label>
+          <mat-label>{{ 'sessionForm.fields.room' | translate }}</mat-label>
           <mat-select formControlName="roomId">
             <mat-option *ngFor="let room of rooms" [value]="room.id">{{ room.name }}</mat-option>
           </mat-select>
         </mat-form-field>
-        
+
         <mat-form-field appearance="fill">
-          <mat-label>Teacher</mat-label>
+          <mat-label>{{ 'sessionForm.fields.teacher' | translate }}</mat-label>
           <mat-select formControlName="teacherId">
             <mat-option *ngFor="let teacher of teachers" [value]="teacher.id">
               {{ teacher.firstName }} {{ teacher.lastName }}
@@ -82,7 +82,7 @@
   </mat-tab-group>
 
   <div class="button-container">
-    <button mat-raised-button color="primary" type="submit" class="submit-button">Save Session</button>
-    <button mat-raised-button color="accent" type="button" class="clear-button" (click)="onClearForm()">Clear</button>
+    <button mat-raised-button color="primary" type="submit" class="submit-button">{{ 'sessionForm.actions.save' | translate }}</button>
+    <button mat-raised-button color="accent" type="button" class="clear-button" (click)="onClearForm()">{{ 'common.clear' | translate }}</button>
   </div>
 </form>

@@ -15,6 +15,8 @@ import { SearchService } from '../../services/SearchService ';
 import { MatTooltip } from '@angular/material/tooltip';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDividerModule } from '@angular/material/divider';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { TranslationService } from '../../services/translation.service';
 
 @Component({
   selector: 'app-navigation',
@@ -32,19 +34,20 @@ import { MatDividerModule } from '@angular/material/divider';
     RouterLink,
     MatTooltip,
     MatButtonModule,
-    MatDividerModule
+    MatDividerModule,
+    TranslateModule
   ],
   templateUrl: './navigation.component.html',
   styleUrls: ['./navigation.component.scss']
 })
 export class NavigationComponent implements OnInit {
   userPhoto: any;
-  hideSearch: boolean = false;
-  selectedIcon: string = 'student'; // Default to student
+  hideSearch = false;
+  selectedIcon = 'student';
   searchControl = new FormControl('');
   filteredSuggestions: Observable<string[]> | undefined;
-  placeholder: string = 'Rechercher un élève...'; // Default placeholder
-  currentSearchType: string = 'student';
+  placeholder = 'navigation.search.student';
+  currentSearchType = 'student';
 
   @Output() sidenavToggle = new EventEmitter<void>();
   @Output() searchEvent = new EventEmitter<string>();
@@ -53,19 +56,23 @@ export class NavigationComponent implements OnInit {
     private router: Router,
     private studentService: StudentService,
     private teacherService: TeacherService,
-    private searchService: SearchService
+    private searchService: SearchService,
+    private translationService: TranslationService,
+    private translateService: TranslateService
   ) {}
 
   ngOnInit() {
-    // Initialize with student search by default
     this.setSearchType('student');
 
-    // Setup autocomplete suggestions
     this.filteredSuggestions = this.searchControl.valueChanges.pipe(
       debounceTime(300),
       startWith(''),
       switchMap(value => this.determineSearchLogic(value ?? ''))
     );
+
+    this.translateService.onLangChange.subscribe(() => {
+      this.updatePlaceholder();
+    });
   }
 
   toggleSidenav() {
@@ -73,29 +80,11 @@ export class NavigationComponent implements OnInit {
   }
 
   setSearchType(type: string): void {
-    // Update search type and icon
     this.currentSearchType = type;
     this.selectedIcon = type;
-
-    // Update placeholder based on type
-    switch (type) {
-      case 'student':
-        this.placeholder = 'Rechercher un élève...';
-        break;
-      case 'group':
-        this.placeholder = 'Rechercher un groupe...';
-        break;
-      case 'teacher':
-        this.placeholder = 'Rechercher un professeur...';
-        break;
-      default:
-        this.placeholder = 'Rechercher...';
-    }
-
-    // Clear current search
+    this.updatePlaceholder();
     this.clearSearch();
 
-    // Focus on search input for better UX
     setTimeout(() => {
       const searchInput = document.querySelector('.search-input') as HTMLInputElement;
       if (searchInput) {
@@ -104,20 +93,32 @@ export class NavigationComponent implements OnInit {
     }, 100);
   }
 
+  private updatePlaceholder(): void {
+    switch (this.currentSearchType) {
+      case 'student':
+        this.placeholder = 'navigation.search.student';
+        break;
+      case 'group':
+        this.placeholder = 'navigation.search.group';
+        break;
+      case 'teacher':
+        this.placeholder = 'navigation.search.teacher';
+        break;
+      default:
+        this.placeholder = 'navigation.search.default';
+    }
+  }
+
   onSearch(): void {
     const rawValue = this.searchControl.value ?? '';
     const searchValue = rawValue.toString().trim();
-    console.log('Searching for:', searchValue, 'Type:', this.currentSearchType);
 
-    // Emit search event even without a query to load full lists if needed
     this.searchEvent.emit(searchValue);
 
-    // Notify search subscribers (student/teacher/group search pages)
     if (this.searchService) {
       this.searchService.setSearch(searchValue);
     }
 
-    // Navigate to the relevant route and keep query params only when needed
     const navigationExtras: NavigationExtras = searchValue
       ? { queryParams: { search: searchValue } }
       : {};
@@ -152,8 +153,6 @@ export class NavigationComponent implements OnInit {
   }
 
   private performGroupSearch(value: string): Observable<string[]> {
-    // Implement group search if service is available
-    // For now, return empty array
     return of([]);
   }
 
@@ -164,34 +163,23 @@ export class NavigationComponent implements OnInit {
   }
 
   onSelect(suggestion: string): void {
-    console.log('User selected:', suggestion);
     this.searchControl.setValue(suggestion);
     this.onSearch();
   }
 
-  // Theme toggle
   toggleDarkMode() {
-    // Your dark mode logic here
     console.log('Toggle dark mode');
   }
 
-  // Language change
   changeLanguage(lang: string) {
-    console.log('Change language to:', lang);
-    // Your language change logic here
+    this.translationService.changeLanguage(lang);
   }
 
-  // Logout
   logout() {
-    console.log('Logging out...');
-    // Your logout logic here
     this.router.navigate(['/login']);
   }
 
-  // Settings
   openSettings() {
-    console.log('Opening settings...');
-    // Your settings logic here
     this.router.navigate(['/settings']);
   }
 }
