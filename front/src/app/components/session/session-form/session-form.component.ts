@@ -25,6 +25,7 @@ import { CommonModule } from '@angular/common';
 import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatCardModule } from '@angular/material/card';
 import { NgxMaterialTimepickerModule } from 'ngx-material-timepicker';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-session-form',
@@ -42,7 +43,8 @@ import { NgxMaterialTimepickerModule } from 'ngx-material-timepicker';
     MatSnackBarModule,
     CommonModule,
     MatCardModule,
-    NgxMaterialTimepickerModule
+    NgxMaterialTimepickerModule,
+    TranslateModule
   ],
   templateUrl: './session-form.component.html',
   styleUrls: ['./session-form.component.scss'],
@@ -63,7 +65,8 @@ export class SessionFormComponent implements OnInit {
     private roomService: RoomService,
     private seriesService: SeriesService,
     public dialog: MatDialog,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private translate: TranslateService
   ) {}
 
   ngOnInit(): void {
@@ -153,7 +156,7 @@ export class SessionFormComponent implements OnInit {
             });
         } else {
             console.warn('The form is not valid.');
-            this.showErrorMessage('The form is not valid.');
+            this.showErrorMessage('sessionForm.messages.invalid');
         }
     } catch (error: unknown) {
         this.handleError(error);
@@ -261,7 +264,7 @@ private submitSession(submissionData: any): void {
         next: response => {
             console.log('Session created successfully:', response);
             this.sessionForm.reset();
-            this.showSuccessMessage('Session created successfully.');
+            this.showSuccessMessage('sessionForm.messages.created');
         },
         error: (error: unknown) => {
             this.handleError(error);
@@ -314,15 +317,15 @@ private handleError(error: unknown): void {
     this.sessionForm.reset();
   }
 
-  showSuccessMessage(message: string): void {
-    this.snackBar.open(message, 'OK', {
+  showSuccessMessage(messageKey: string): void {
+    this.snackBar.open(this.translate.instant(messageKey), this.translate.instant('common.ok'), {
       duration: 3000,
       panelClass: ['snack-bar-success']
     });
   }
 
-  showErrorMessage(message: string): void {
-    this.snackBar.open(message, 'OK', {
+  showErrorMessage(messageKey: string): void {
+    this.snackBar.open(this.translate.instant(messageKey), this.translate.instant('common.ok'), {
       duration: 3000,
       panelClass: ['snack-bar-error']
     });

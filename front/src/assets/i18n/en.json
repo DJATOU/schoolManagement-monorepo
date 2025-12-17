@@ -1,0 +1,254 @@
+{
+  "common": {
+    "firstName": "First name",
+    "lastName": "Last name",
+    "gender": "Gender",
+    "genderMale": "Male",
+    "genderFemale": "Female",
+    "phoneNumber": "Phone number",
+    "dateOfBirth": "Date of birth",
+    "level": "Level",
+    "description": "Description",
+    "submit": "Submit",
+    "clear": "Clear",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "ok": "OK"
+  },
+  "navigation": {
+    "menu": "Menu",
+    "tabs": {
+      "students": "Students",
+      "groups": "Groups",
+      "teachers": "Teachers"
+    },
+    "search": {
+      "student": "Search for a student...",
+      "group": "Search for a group...",
+      "teacher": "Search for a teacher...",
+      "default": "Search..."
+    },
+    "clear": "Clear",
+    "role": {
+      "admin": "Administrator"
+    },
+    "theme": "Dark/Light mode",
+    "language": "Language",
+    "languages": {
+      "fr": "French",
+      "en": "English"
+    },
+    "settings": "Settings",
+    "logout": "Logout"
+  },
+  "sideMenu": {
+    "title": "School Manager",
+    "subtitle": "Main navigation",
+    "enrollment": {
+      "title": "Enrollment",
+      "students": "Students",
+      "teachers": "Teachers",
+      "groups": "Groups"
+    },
+    "finance": {
+      "title": "Financial Management",
+      "payments": "Payments",
+      "fees": "Fees",
+      "discounts": "Discounts"
+    },
+    "academics": {
+      "title": "Academic Tracking",
+      "attendance": "Attendance",
+      "sessions": "Sessions",
+      "calendar": "Calendar",
+      "series": "Series",
+      "catchUps": "Catch-up",
+      "transfers": "Transfers"
+    },
+    "resources": {
+      "title": "Academic Resources",
+      "levels": "Levels",
+      "rooms": "Rooms",
+      "subjects": "Subjects",
+      "groupTypes": "Group Types",
+      "pricing": "Pricing"
+    }
+  },
+  "studentForm": {
+    "title": "Student enrollment form",
+    "requiredFields": "Fields marked with an asterisk (*) are required.",
+    "personalInfo": {
+      "title": "Personal information",
+      "photo": "Upload a photo",
+      "noFile": "No file selected",
+      "chooseImage": "Choose an image"
+    },
+    "contactInfo": {
+      "title": "Contact information",
+      "placeOfBirth": "Place of birth"
+    },
+    "academicInfo": {
+      "title": "Academic information",
+      "school": "School",
+      "averageScore": "Average score"
+    }
+  },
+  "summary": {
+    "title": "Summary"
+  },
+  "groupForm": {
+    "title": "Group enrollment form",
+    "requiredFields": "Fields marked with an asterisk (*) are required.",
+    "tabs": {
+      "basicDetails": "Basic details",
+      "additionalDetails": "Additional details"
+    },
+    "fields": {
+      "name": "Name",
+      "uploadPhoto": "Upload a photo",
+      "noFile": "No file selected",
+      "chooseImage": "Choose an image",
+      "groupType": "Group type",
+      "level": "Level",
+      "subject": "Subject",
+      "sessionNumberPerSerie": "Sessions per series",
+      "price": "Price",
+      "teacher": "Teacher"
+    },
+    "actions": {
+      "save": "Save group"
+    },
+    "messages": {
+      "createdWithPhoto": "Group created successfully with photo.",
+      "photoUploadFailed": "Group created but photo upload failed.",
+      "created": "Group created successfully.",
+      "createError": "Error creating group.",
+      "invalid": "The form is not valid."
+    }
+  },
+  "dashboard": {
+    "subscribeStudents": "Subscribe students",
+    "subscribeProfessors": "Subscribe professors",
+    "subscribeGroups": "Subscribe groups",
+    "subscribeAttendance": "Track attendance",
+    "subscribeSession": "Schedule a session",
+    "subscribePayment": "Record a payment"
+  },
+  "messages": {
+    "levelsError": "Error loading levels.",
+    "invalidForm": "The form is not valid or the file is not selected.",
+    "studentCreated": "Student created successfully.",
+    "studentCreateError": "Error creating student."
+  },
+  "sessionForm": {
+    "title": "Session registration form",
+    "tabs": {
+      "details": "Session details",
+      "timing": "Session timing",
+      "identifiers": "Identifiers"
+    },
+    "fields": {
+      "title": "Title",
+      "sessionType": "Session type",
+      "feedbackLink": "Feedback link",
+      "sessionDateStart": "Start date",
+      "sessionDateEnd": "End date",
+      "sessionTimeStart": "Start time",
+      "sessionTimeEnd": "End time",
+      "chooseDate": "Choose a date",
+      "selectTime": "Select time",
+      "group": "Group",
+      "room": "Room",
+      "teacher": "Teacher"
+    },
+    "actions": {
+      "save": "Save session"
+    },
+    "messages": {
+      "created": "Session created successfully.",
+      "invalid": "The form is not valid."
+    }
+  },
+  "payment": {
+    "dialog": {
+      "title": "Add payment",
+      "fields": {
+        "group": "Group",
+        "catchUp": "Catch-up",
+        "sessionSeries": "Session series",
+        "amount": "Amount",
+        "paymentMethod": "Payment method",
+        "description": "Description"
+      },
+      "methods": {
+        "cash": "Cash",
+        "cheque": "Check",
+        "card": "Card",
+        "other": "Other"
+      },
+      "messages": {
+        "selectSeries": "Please select a series before continuing.",
+        "unknownSeries": "Unknown series",
+        "overpayCatchUp": "The paid amount exceeds the total cost of catch-up sessions ({{sessions}}) by {{surplus}} DA. The payment cannot be processed."
+      },
+      "notes": {
+        "catchUp": "Catch-up: pay per attended session"
+      }
+    },
+    "history": {
+      "fields": {
+        "groups": "Groups",
+        "series": "Series"
+      },
+      "catchUpNotice": {
+        "title": "⚠️ CATCH-UP: Payment only for attended sessions",
+        "description": "For a catch-up student, only the sessions they attended are billed."
+      },
+      "labels": {
+        "status": "Status",
+        "totalCatchUp": "Total amount (attended sessions)",
+        "total": "Total series amount",
+        "paid": "Amount paid",
+        "remaining": "Remaining",
+        "catchUpPrefix": "Catch-up -",
+        "cash": "Cash",
+        "noDescription": "No description"
+      },
+      "table": {
+        "session": "Session",
+        "paymentDate": "Payment date",
+        "amountPaid": "Amount paid",
+        "paymentStatus": "Payment status",
+        "empty": "No payments found"
+      },
+      "status": {
+        "paid": "Paid",
+        "partiallyPaid": "Partially paid",
+        "unpaid": "Unpaid"
+      },
+      "actions": {
+        "print": "Print"
+      },
+      "pdf": {
+        "title": "Payment history",
+        "student": "Student",
+        "date": "Date",
+        "catchUpOnly": "⚠️ CATCH-UP: Payment only for attended sessions",
+        "details": "Payment details",
+        "studentSignature": "Student signature: ________________________",
+        "adminSignature": "Administration signature: ________________________",
+        "page": "Page",
+        "of": "of"
+      }
+    }
+  },
+  "calendar": {
+    "buttons": {
+      "today": "Today",
+      "month": "Month",
+      "week": "Week",
+      "day": "Day",
+      "list": "List"
+    }
+  }
+}
