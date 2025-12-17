@@ -19,14 +19,28 @@
   width: 100%;
 }
 
+@media (max-width: 1200px) {
+  .shared-layout-container {
+    padding: 0;
+  }
+}
+
 @media (max-width: 768px) {
   .app-main-container {
     padding: 20px 24px;
+  }
+
+  .shared-layout-container {
+    padding: 0;
   }
 }
 
 @media (max-width: 600px) {
   .app-main-container {
     padding: 16px 16px;
+  }
+
+  .shared-layout-container {
+    padding: 0;
   }
 }
