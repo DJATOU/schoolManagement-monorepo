@@ -1,5 +1,4 @@
 import { CommonModule } from '@angular/common';
-import { HttpClientModule } from '@angular/common/http';
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatCard, MatCardContent, MatCardHeader, MatCardTitle } from '@angular/material/card';
@@ -18,7 +17,7 @@ import { Level } from '../../../models/level/level';
 import { LevelService } from '../../../services/level.service';
 import { StudentService } from '../services/student.service';
 import { SummaryDialogComponent } from '../../summary-dialog/summary-dialog.component';
-import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { TranslateModule } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-student',
@@ -28,7 +27,7 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
     MatFormFieldModule,
     MatInputModule,
     MatDatepickerModule,
-    HttpClientModule,
+    
     MatNativeDateModule,
     RouterModule,
     MatStepperModule,
@@ -79,7 +78,7 @@ export class StudentFormComponent implements OnInit {
     private levelService: LevelService,
     public dialog: MatDialog,
     private snackBar: MatSnackBar,
-    private translateService: TranslateService
+    private translate: TranslateService
   ) {}
 
   ngOnInit(): void {
@@ -202,14 +201,14 @@ export class StudentFormComponent implements OnInit {
   }
 
   private showSuccessMessage(messageKey: string): void {
-    this.snackBar.open(this.translateService.instant(messageKey), this.translateService.instant('common.ok'), {
+    this.snackBar.open(this.translate.instant(messageKey), this.translate.instant('common.ok'), {
       duration: 3000,
       panelClass: ['snack-bar-success']
     });
   }
 
   private showErrorMessage(messageKey: string): void {
-    this.snackBar.open(this.translateService.instant(messageKey), this.translateService.instant('common.ok'), {
+    this.snackBar.open(this.translate.instant(messageKey), this.translate.instant('common.ok'), {
       duration: 3000,
       panelClass: ['snack-bar-error']
     });

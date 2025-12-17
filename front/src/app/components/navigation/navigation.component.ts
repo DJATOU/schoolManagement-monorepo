@@ -15,7 +15,7 @@ import { SearchService } from '../../services/SearchService ';
 import { MatTooltip } from '@angular/material/tooltip';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDividerModule } from '@angular/material/divider';
-import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { TranslateModule } from '@ngx-translate/core';
 import { TranslationService } from '../../services/translation.service';
 
 @Component({
@@ -46,8 +46,8 @@ export class NavigationComponent implements OnInit {
   selectedIcon = 'student';
   searchControl = new FormControl('');
   filteredSuggestions: Observable<string[]> | undefined;
-  placeholder = 'navigation.search.student';
-  currentSearchType = 'student';
+  placeholderKey = 'NAV.SEARCH.PLACEHOLDER_STUDENT';
+  currentSearchType: string = 'student';
 
   @Output() sidenavToggle = new EventEmitter<void>();
   @Output() searchEvent = new EventEmitter<string>();
@@ -57,8 +57,7 @@ export class NavigationComponent implements OnInit {
     private studentService: StudentService,
     private teacherService: TeacherService,
     private searchService: SearchService,
-    private translationService: TranslationService,
-    private translateService: TranslateService
+    public translationService: TranslationService
   ) {}
 
   ngOnInit() {
@@ -70,7 +69,7 @@ export class NavigationComponent implements OnInit {
       switchMap(value => this.determineSearchLogic(value ?? ''))
     );
 
-    this.translateService.onLangChange.subscribe(() => {
+    this.translate.onLangChange.subscribe(() => {
       this.updatePlaceholder();
     });
   }
@@ -96,16 +95,16 @@ export class NavigationComponent implements OnInit {
   private updatePlaceholder(): void {
     switch (this.currentSearchType) {
       case 'student':
-        this.placeholder = 'navigation.search.student';
+        this.placeholderKey = 'NAV.SEARCH.PLACEHOLDER_STUDENT';
         break;
       case 'group':
-        this.placeholder = 'navigation.search.group';
+        this.placeholderKey = 'NAV.SEARCH.PLACEHOLDER_GROUP';
         break;
       case 'teacher':
-        this.placeholder = 'navigation.search.teacher';
+        this.placeholderKey = 'NAV.SEARCH.PLACEHOLDER_TEACHER';
         break;
       default:
-        this.placeholder = 'navigation.search.default';
+        this.placeholderKey = 'NAV.SEARCH.PLACEHOLDER_GENERIC';
     }
   }
 
@@ -172,7 +171,15 @@ export class NavigationComponent implements OnInit {
   }
 
   changeLanguage(lang: string) {
-    this.translationService.changeLanguage(lang);
+    this.translationService.useLanguage(lang);
+  }
+
+  toggleLanguage(): void {
+    this.translationService.toggleLanguage();
+  }
+
+  get currentLanguage(): string {
+    return this.translationService.currentLanguage;
   }
 
   logout() {

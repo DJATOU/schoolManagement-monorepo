@@ -1,254 +1,122 @@
 {
-  "common": {
-    "firstName": "Prénom",
-    "lastName": "Nom",
-    "gender": "Sexe",
-    "genderMale": "Masculin",
-    "genderFemale": "Féminin",
-    "phoneNumber": "Numéro de téléphone",
-    "dateOfBirth": "Date de naissance",
-    "level": "Niveau",
-    "description": "Description",
-    "submit": "Soumettre",
-    "clear": "Effacer",
-    "cancel": "Annuler",
-    "confirm": "Confirmer",
-    "ok": "OK"
+  "COMMON": {
+    "CLEAR": "Effacer",
+    "SUBMIT": "Soumettre",
+    "REQUIRED_MESSAGE": "Les champs marqués d'un astérisque (*) sont obligatoires.",
+    "FIRST_NAME": "Prénom",
+    "LAST_NAME": "Nom",
+    "GENDER": "Sexe",
+    "MALE": "Masculin",
+    "FEMALE": "Féminin",
+    "UPLOAD_PHOTO": "Télécharger une photo",
+    "NO_FILE_SELECTED": "Aucun fichier sélectionné",
+    "CHOOSE_IMAGE": "Choisir une image",
+    "EMAIL": "Email",
+    "PHONE": "Numéro de téléphone",
+    "BIRTHDATE": "Date de naissance",
+    "BIRTHPLACE": "Lieu de naissance",
+    "LEVEL": "Niveau",
+    "SCHOOL": "Établissement",
+    "DESCRIPTION": "Description"
   },
-  "navigation": {
-    "menu": "Menu",
-    "tabs": {
-      "students": "Élèves",
-      "groups": "Groupes",
-      "teachers": "Professeurs"
-    },
-    "search": {
-      "student": "Rechercher un élève...",
-      "group": "Rechercher un groupe...",
-      "teacher": "Rechercher un professeur...",
-      "default": "Rechercher..."
-    },
-    "clear": "Effacer",
-    "role": {
-      "admin": "Administrateur"
-    },
-    "theme": "Mode sombre/clair",
-    "language": "Langue",
-    "languages": {
-      "fr": "Français",
-      "en": "Anglais"
-    },
-    "settings": "Paramètres",
-    "logout": "Déconnexion"
+  "LANGUAGE": {
+    "FRENCH": "Français",
+    "ENGLISH": "Anglais",
+    "TOGGLE": "Changer la langue (actuelle: {{value}})"
   },
-  "sideMenu": {
-    "title": "School Manager",
-    "subtitle": "Navigation principale",
-    "enrollment": {
-      "title": "Inscription",
-      "students": "Étudiants",
-      "teachers": "Enseignants",
-      "groups": "Groupes"
+  "NAV": {
+    "MENU": "Menu",
+    "TABS": {
+      "STUDENTS": "Élèves",
+      "GROUPS": "Groupes",
+      "TEACHERS": "Professeurs"
     },
-    "finance": {
-      "title": "Gestion Financière",
-      "payments": "Paiements",
-      "fees": "Frais",
-      "discounts": "Réductions"
+    "SEARCH": {
+      "PLACEHOLDER_STUDENT": "Rechercher un élève...",
+      "PLACEHOLDER_GROUP": "Rechercher un groupe...",
+      "PLACEHOLDER_TEACHER": "Rechercher un professeur...",
+      "PLACEHOLDER_GENERIC": "Rechercher..."
     },
-    "academics": {
-      "title": "Suivi Académique",
-      "attendance": "Présences",
-      "sessions": "Sessions",
-      "calendar": "Calendrier",
-      "series": "Séries",
-      "catchUps": "Rattrapages",
-      "transfers": "Transferts"
+    "USER": {
+      "ROLE": "Administrateur"
     },
-    "resources": {
-      "title": "Ressources Académiques",
-      "levels": "Niveaux",
-      "rooms": "Salles",
-      "subjects": "Matières",
-      "groupTypes": "Types de Groupes",
-      "pricing": "Tarification"
+    "ACTIONS": {
+      "TOGGLE_THEME": "Mode sombre/clair",
+      "SETTINGS": "Paramètres",
+      "LOGOUT": "Déconnexion"
     }
   },
-  "studentForm": {
-    "title": "Formulaire d'inscription étudiant",
-    "requiredFields": "Les champs marqués d'un astérisque (*) sont obligatoires.",
-    "personalInfo": {
-      "title": "Informations personnelles",
-      "photo": "Télécharger une photo",
-      "noFile": "Aucun fichier sélectionné",
-      "chooseImage": "Choisir une image"
-    },
-    "contactInfo": {
-      "title": "Informations de contact",
-      "placeOfBirth": "Lieu de naissance"
-    },
-    "academicInfo": {
-      "title": "Informations académiques",
-      "school": "Établissement",
-      "averageScore": "Moyenne"
-    }
+  "SIDE_MENU": {
+    "BRAND_TITLE": "School Manager",
+    "BRAND_SUBTITLE": "Navigation principale",
+    "REGISTRATION": "Inscription",
+    "STUDENTS": "Étudiants",
+    "TEACHERS": "Enseignants",
+    "GROUPS": "Groupes",
+    "FINANCIAL_MANAGEMENT": "Gestion Financière",
+    "PAYMENTS": "Paiements",
+    "FEES": "Frais",
+    "DISCOUNTS": "Réductions",
+    "ACADEMIC_TRACKING": "Suivi Académique",
+    "ATTENDANCE": "Présences",
+    "SESSIONS": "Sessions",
+    "CALENDAR": "Calendrier",
+    "SERIES": "Séries",
+    "CATCH_UPS": "Rattrapages",
+    "TRANSFERS": "Transferts",
+    "ACADEMIC_RESOURCES": "Ressources Académiques",
+    "LEVELS": "Niveaux",
+    "ROOMS": "Salles",
+    "SUBJECTS": "Matières",
+    "GROUP_TYPES": "Types de Groupes",
+    "PRICING": "Tarification"
   },
-  "summary": {
-    "title": "Résumé"
+  "DATATABLE": {
+    "PRINT": "Imprimer",
+    "CREATE": "Créer",
+    "DELETE": "Supprimer",
+    "EDIT": "Éditer",
+    "VIEW": "Voir",
+    "FILTER": "Filtrer",
+    "FILTER_PLACEHOLDER": "Texte",
+    "PRIMARY_INFORMATION": "Informations fondamentales",
+    "OTHER_INFORMATION": "Autres informations",
+    "INFORMATION": "Informations",
+    "DISABLE_SUCCESS": "Éléments désactivés avec succès.",
+    "DISABLE_ERROR": "Erreur lors de la désactivation des éléments."
   },
-  "groupForm": {
-    "title": "Formulaire d'inscription du groupe",
-    "requiredFields": "Les champs marqués d'un astérisque (*) sont obligatoires.",
-    "tabs": {
-      "basicDetails": "Détails de base",
-      "additionalDetails": "Détails supplémentaires"
-    },
-    "fields": {
-      "name": "Nom",
-      "uploadPhoto": "Télécharger une photo",
-      "noFile": "Aucun fichier sélectionné",
-      "chooseImage": "Choisir une image",
-      "groupType": "Type de groupe",
-      "level": "Niveau",
-      "subject": "Matière",
-      "sessionNumberPerSerie": "Nombre de sessions par série",
-      "price": "Prix",
-      "teacher": "Enseignant"
-    },
-    "actions": {
-      "save": "Enregistrer le groupe"
-    },
-    "messages": {
-      "createdWithPhoto": "Groupe créé avec succès avec photo.",
-      "photoUploadFailed": "Groupe créé mais le téléchargement de la photo a échoué.",
-      "created": "Groupe créé avec succès.",
-      "createError": "Erreur lors de la création du groupe.",
-      "invalid": "Le formulaire n'est pas valide."
-    }
+  "CONFIRMATION_DIALOG": {
+    "TITLE": "Dialogue de confirmation",
+    "MESSAGE": "Voulez-vous vraiment supprimer ces éléments?",
+    "CONFIRM": "Oui, supprimer",
+    "CANCEL": "Non, annuler"
   },
-  "dashboard": {
-    "subscribeStudents": "Inscrire des étudiants",
-    "subscribeProfessors": "Inscrire des professeurs",
-    "subscribeGroups": "Inscrire des groupes",
-    "subscribeAttendance": "Enregistrer les présences",
-    "subscribeSession": "Programmer une session",
-    "subscribePayment": "Enregistrer un paiement"
-  },
-  "messages": {
-    "levelsError": "Erreur lors du chargement des niveaux.",
-    "invalidForm": "Le formulaire n'est pas valide ou le fichier n'est pas sélectionné.",
-    "studentCreated": "Étudiant créé avec succès.",
-    "studentCreateError": "Erreur lors de la création de l'étudiant."
-  },
-  "sessionForm": {
-    "title": "Formulaire d'enregistrement de session",
-    "tabs": {
-      "details": "Détails de la session",
-      "timing": "Programmation",
-      "identifiers": "Identifiants"
+  "STUDENT_FORM": {
+    "TITLE": "Formulaire d'inscription étudiant",
+    "TABS": {
+      "PERSONAL": "Informations personnelles",
+      "CONTACT": "Informations de contact",
+      "ACADEMIC": "Informations académiques"
     },
-    "fields": {
-      "title": "Titre",
-      "sessionType": "Type de session",
-      "feedbackLink": "Lien de feedback",
-      "sessionDateStart": "Date de début",
-      "sessionDateEnd": "Date de fin",
-      "sessionTimeStart": "Heure de début",
-      "sessionTimeEnd": "Heure de fin",
-      "chooseDate": "Choisir une date",
-      "selectTime": "Sélectionner l'heure",
-      "group": "Groupe",
-      "room": "Salle",
-      "teacher": "Enseignant"
-    },
-    "actions": {
-      "save": "Enregistrer la session"
-    },
-    "messages": {
-      "created": "Session créée avec succès.",
-      "invalid": "Le formulaire n'est pas valide."
-    }
+    "AVERAGE": "Moyenne"
   },
-  "payment": {
-    "dialog": {
-      "title": "Ajouter un paiement",
-      "fields": {
-        "group": "Groupe",
-        "catchUp": "Rattrapage",
-        "sessionSeries": "Série de sessions",
-        "amount": "Montant",
-        "paymentMethod": "Méthode de paiement",
-        "description": "Description"
-      },
-      "methods": {
-        "cash": "Espèces",
-        "cheque": "Chèque",
-        "card": "Carte bancaire",
-        "other": "Autre"
-      },
-      "messages": {
-        "selectSeries": "Veuillez sélectionner une série avant de poursuivre.",
-        "unknownSeries": "Série inconnue",
-        "overpayCatchUp": "Le montant payé dépasse le coût total des sessions de rattrapage ({{sessions}}) de {{surplus}} DA. Le paiement ne peut pas être effectué."
-      },
-      "notes": {
-        "catchUp": "Rattrapage : paiement par session assistée"
-      }
+  "TEACHER_FORM": {
+    "TITLE": "Formulaire d'inscription des enseignants",
+    "TABS": {
+      "BASIC": "Informations de base",
+      "CONTACT": "Coordonnées",
+      "PROFESSIONAL": "Détails professionnels",
+      "OTHER": "Autres informations"
     },
-    "history": {
-      "fields": {
-        "groups": "Groupes",
-        "series": "Séries"
-      },
-      "catchUpNotice": {
-        "title": "⚠️ RATTRAPAGE : Paiement par session assistée uniquement",
-        "description": "Pour un étudiant en rattrapage, seules les sessions auxquelles il a assisté sont facturées."
-      },
-      "labels": {
-        "status": "Statut",
-        "totalCatchUp": "Montant total (sessions assistées)",
-        "total": "Montant total série",
-        "paid": "Montant payé",
-        "remaining": "Reste à payer",
-        "catchUpPrefix": "Rattrapage -",
-        "cash": "Espèces",
-        "noDescription": "Aucune description"
-      },
-      "table": {
-        "session": "Session",
-        "paymentDate": "Date de paiement",
-        "amountPaid": "Montant payé",
-        "paymentStatus": "Statut du paiement",
-        "empty": "Aucun paiement trouvé"
-      },
-      "status": {
-        "paid": "Payée",
-        "partiallyPaid": "Partiellement payée",
-        "unpaid": "Non payée"
-      },
-      "actions": {
-        "print": "Imprimer"
-      },
-      "pdf": {
-        "title": "Historique des paiements",
-        "student": "Étudiant",
-        "date": "Date",
-        "catchUpOnly": "⚠️ RATTRAPAGE : Paiement par session assistée uniquement",
-        "details": "Détails des paiements",
-        "studentSignature": "Signature étudiant : ________________________",
-        "adminSignature": "Signature de l'Administration : ________________________",
-        "page": "Page",
-        "of": "sur"
-      }
-    }
-  },
-  "calendar": {
-    "buttons": {
-      "today": "Aujourd'hui",
-      "month": "Mois",
-      "week": "Semaine",
-      "day": "Jour",
-      "list": "Liste"
-    }
+    "ADDRESS": "Adresse",
+    "CITY": "Ville",
+    "SPECIALIZATION": "Spécialisation",
+    "QUALIFICATIONS": "Qualifications",
+    "EXPERIENCE": "Années d'expérience",
+    "NATIONALITY": "Nationalité",
+    "MARITAL_STATUS": "Statut matrimonial",
+    "SINGLE": "Célibataire",
+    "MARRIED": "Marié",
+    "COMMUNICATION": "Préférences de communication"
   }
 }
