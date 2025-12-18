@@ -15,7 +15,7 @@ import { SearchService } from '../../services/SearchService ';
 import { MatTooltip } from '@angular/material/tooltip';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDividerModule } from '@angular/material/divider';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { TranslationService } from '../../services/translation.service';
 
 @Component({
@@ -57,7 +57,8 @@ export class NavigationComponent implements OnInit {
     private studentService: StudentService,
     private teacherService: TeacherService,
     private searchService: SearchService,
-    public translationService: TranslationService
+    public translationService: TranslationService,
+    private translate: TranslateService
   ) {}
 
   ngOnInit() {
