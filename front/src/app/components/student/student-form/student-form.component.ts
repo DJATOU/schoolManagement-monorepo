@@ -17,7 +17,7 @@ import { Level } from '../../../models/level/level';
 import { LevelService } from '../../../services/level.service';
 import { StudentService } from '../services/student.service';
 import { SummaryDialogComponent } from '../../summary-dialog/summary-dialog.component';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-student',
@@ -48,7 +48,6 @@ import { TranslateModule } from '@ngx-translate/core';
   styleUrls: ['./student-form.component.scss'],
   providers: [
     StudentService,
-    TranslateService,
     { provide: DateAdapter, useClass: NativeDateAdapter },
     { provide: MAT_DATE_LOCALE, useValue: 'us-US' },
     {
