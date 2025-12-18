@@ -118,5 +118,167 @@
     "SINGLE": "Single",
     "MARRIED": "Married",
     "COMMUNICATION": "Communication preferences"
+  },
+  "common": {
+    "clear": "Clear",
+    "description": "Description",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "ok": "OK"
+  },
+  "navigation": {
+    "language": "Language"
+  },
+  "dashboard": {
+    "subscribeStudents": "Registered students",
+    "subscribeProfessors": "Registered teachers",
+    "subscribeGroups": "Created groups",
+    "subscribeAttendance": "Attendance recorded",
+    "subscribeSession": "Planned sessions",
+    "subscribePayment": "Processed payments"
+  },
+  "sessionForm": {
+    "title": "Session creation form",
+    "tabs": {
+      "details": "Session details",
+      "timing": "Schedule",
+      "identifiers": "Identifiers"
+    },
+    "fields": {
+      "title": "Title",
+      "sessionType": "Session type",
+      "feedbackLink": "Feedback link",
+      "sessionDateStart": "Start date",
+      "chooseDate": "Choose a date",
+      "sessionTimeStart": "Start time",
+      "selectTime": "Select a time",
+      "sessionDateEnd": "End date",
+      "sessionTimeEnd": "End time",
+      "group": "Group",
+      "room": "Room",
+      "teacher": "Teacher"
+    },
+    "actions": {
+      "save": "Save session"
+    },
+    "messages": {
+      "created": "Session created successfully!",
+      "invalid": "Please fill in all required fields correctly."
+    }
+  },
+  "groupForm": {
+    "title": "Group creation form",
+    "requiredFields": "Fields marked with an asterisk (*) are required.",
+    "tabs": {
+      "basicDetails": "Basic details",
+      "additionalDetails": "Additional details"
+    },
+    "fields": {
+      "name": "Group name",
+      "uploadPhoto": "Upload a photo",
+      "noFile": "No file selected",
+      "chooseImage": "Choose an image",
+      "groupType": "Group type",
+      "level": "Level",
+      "subject": "Subject",
+      "sessionNumberPerSerie": "Sessions per series",
+      "price": "Price",
+      "teacher": "Teacher"
+    },
+    "actions": {
+      "save": "Save group"
+    },
+    "messages": {
+      "createdWithPhoto": "Group created successfully with a photo.",
+      "photoUploadFailed": "Group created but photo upload failed.",
+      "created": "Group created successfully!",
+      "createError": "An error occurred while creating the group.",
+      "invalid": "Please complete all required fields."
+    }
+  },
+  "summary": {
+    "title": "Summary"
+  },
+  "payment": {
+    "dialog": {
+      "title": "Add a payment",
+      "fields": {
+        "group": "Group",
+        "catchUp": "Catch-up",
+        "sessionSeries": "Session series",
+        "amount": "Amount paid",
+        "paymentMethod": "Payment method",
+        "description": "Description"
+      },
+      "methods": {
+        "cash": "Cash",
+        "cheque": "Cheque",
+        "card": "Bank card",
+        "other": "Other"
+      },
+      "messages": {
+        "selectSeries": "Please select a session series before confirming.",
+        "unknownSeries": "Unknown series",
+        "overpayCatchUp": "The amount paid exceeds the total for {{sessions}} catch-up session(s) by {{surplus}} DA. Payment cannot be processed."
+      },
+      "notes": {
+        "catchUp": "Catch-up session calculation"
+      }
+    },
+    "history": {
+      "fields": {
+        "groups": "Groups",
+        "series": "Series"
+      },
+      "catchUpNotice": {
+        "title": "Catch-up series",
+        "description": "Only sessions marked as catch-up are shown in this series."
+      },
+      "labels": {
+        "status": "Status",
+        "totalCatchUp": "Total (catch-up)",
+        "total": "Total",
+        "paid": "Paid",
+        "remaining": "Remaining",
+        "catchUpPrefix": "Catch-up",
+        "cash": "Cash",
+        "noDescription": "No description"
+      },
+      "status": {
+        "paid": "Paid",
+        "partiallyPaid": "Partially paid",
+        "unpaid": "Unpaid"
+      },
+      "table": {
+        "session": "Session",
+        "paymentDate": "Payment date",
+        "amountPaid": "Amount paid",
+        "paymentStatus": "Payment status",
+        "empty": "No payment history available"
+      },
+      "actions": {
+        "print": "Export PDF"
+      },
+      "pdf": {
+        "title": "Payment history",
+        "student": "Student",
+        "date": "Date",
+        "catchUpOnly": "Catch-up sessions only",
+        "details": "Details",
+        "studentSignature": "Student signature",
+        "adminSignature": "Administration signature",
+        "page": "Page",
+        "of": "of"
+      }
+    }
+  },
+  "calendar": {
+    "buttons": {
+      "today": "Today",
+      "month": "Month",
+      "week": "Week",
+      "day": "Day",
+      "list": "List"
+    }
   }
 }
