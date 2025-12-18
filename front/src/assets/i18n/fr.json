@@ -118,5 +118,167 @@
     "SINGLE": "Célibataire",
     "MARRIED": "Marié",
     "COMMUNICATION": "Préférences de communication"
+  },
+  "common": {
+    "clear": "Effacer",
+    "description": "Description",
+    "cancel": "Annuler",
+    "confirm": "Confirmer",
+    "ok": "OK"
+  },
+  "navigation": {
+    "language": "Langue"
+  },
+  "dashboard": {
+    "subscribeStudents": "Étudiants inscrits",
+    "subscribeProfessors": "Enseignants inscrits",
+    "subscribeGroups": "Groupes créés",
+    "subscribeAttendance": "Présences enregistrées",
+    "subscribeSession": "Sessions planifiées",
+    "subscribePayment": "Paiements traités"
+  },
+  "sessionForm": {
+    "title": "Formulaire de création de session",
+    "tabs": {
+      "details": "Détails de la session",
+      "timing": "Planification",
+      "identifiers": "Identifiants"
+    },
+    "fields": {
+      "title": "Titre",
+      "sessionType": "Type de session",
+      "feedbackLink": "Lien de feedback",
+      "sessionDateStart": "Date de début",
+      "chooseDate": "Choisissez une date",
+      "sessionTimeStart": "Heure de début",
+      "selectTime": "Sélectionnez une heure",
+      "sessionDateEnd": "Date de fin",
+      "sessionTimeEnd": "Heure de fin",
+      "group": "Groupe",
+      "room": "Salle",
+      "teacher": "Enseignant"
+    },
+    "actions": {
+      "save": "Enregistrer la session"
+    },
+    "messages": {
+      "created": "Session créée avec succès !",
+      "invalid": "Veuillez remplir correctement tous les champs obligatoires."
+    }
+  },
+  "groupForm": {
+    "title": "Formulaire de création de groupe",
+    "requiredFields": "Les champs marqués d'un astérisque (*) sont obligatoires.",
+    "tabs": {
+      "basicDetails": "Informations de base",
+      "additionalDetails": "Détails supplémentaires"
+    },
+    "fields": {
+      "name": "Nom du groupe",
+      "uploadPhoto": "Télécharger une photo",
+      "noFile": "Aucun fichier sélectionné",
+      "chooseImage": "Choisir une image",
+      "groupType": "Type de groupe",
+      "level": "Niveau",
+      "subject": "Matière",
+      "sessionNumberPerSerie": "Sessions par série",
+      "price": "Prix",
+      "teacher": "Enseignant"
+    },
+    "actions": {
+      "save": "Enregistrer le groupe"
+    },
+    "messages": {
+      "createdWithPhoto": "Groupe créé avec succès avec une photo.",
+      "photoUploadFailed": "Groupe créé mais l'envoi de la photo a échoué.",
+      "created": "Groupe créé avec succès !",
+      "createError": "Une erreur est survenue lors de la création du groupe.",
+      "invalid": "Veuillez compléter tous les champs obligatoires."
+    }
+  },
+  "summary": {
+    "title": "Résumé"
+  },
+  "payment": {
+    "dialog": {
+      "title": "Ajouter un paiement",
+      "fields": {
+        "group": "Groupe",
+        "catchUp": "Rattrapage",
+        "sessionSeries": "Série de sessions",
+        "amount": "Montant payé",
+        "paymentMethod": "Méthode de paiement",
+        "description": "Description"
+      },
+      "methods": {
+        "cash": "Espèces",
+        "cheque": "Chèque",
+        "card": "Carte bancaire",
+        "other": "Autre"
+      },
+      "messages": {
+        "selectSeries": "Veuillez sélectionner une série de sessions avant de confirmer.",
+        "unknownSeries": "Série inconnue",
+        "overpayCatchUp": "Le montant payé dépasse le total pour {{sessions}} session(s) de rattrapage de {{surplus}} DA. Le paiement ne peut pas être effectué."
+      },
+      "notes": {
+        "catchUp": "Calcul pour les sessions de rattrapage"
+      }
+    },
+    "history": {
+      "fields": {
+        "groups": "Groupes",
+        "series": "Séries"
+      },
+      "catchUpNotice": {
+        "title": "Série de rattrapage",
+        "description": "Seules les sessions marquées comme rattrapage sont affichées pour cette série."
+      },
+      "labels": {
+        "status": "Statut",
+        "totalCatchUp": "Total (rattrapage)",
+        "total": "Total",
+        "paid": "Payé",
+        "remaining": "Restant",
+        "catchUpPrefix": "Rattrapage",
+        "cash": "Espèces",
+        "noDescription": "Aucune description"
+      },
+      "status": {
+        "paid": "Payé",
+        "partiallyPaid": "Partiellement payé",
+        "unpaid": "Non payé"
+      },
+      "table": {
+        "session": "Session",
+        "paymentDate": "Date de paiement",
+        "amountPaid": "Montant payé",
+        "paymentStatus": "Statut du paiement",
+        "empty": "Aucun historique de paiement disponible"
+      },
+      "actions": {
+        "print": "Exporter en PDF"
+      },
+      "pdf": {
+        "title": "Historique des paiements",
+        "student": "Étudiant",
+        "date": "Date",
+        "catchUpOnly": "Sessions de rattrapage uniquement",
+        "details": "Détails",
+        "studentSignature": "Signature de l'étudiant",
+        "adminSignature": "Signature de l'administration",
+        "page": "Page",
+        "of": "sur"
+      }
+    }
+  },
+  "calendar": {
+    "buttons": {
+      "today": "Aujourd'hui",
+      "month": "Mois",
+      "week": "Semaine",
+      "day": "Jour",
+      "list": "Liste"
+    }
   }
 }
