@@ -2,20 +2,49 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 16px;
+  margin-bottom: 24px;
+  gap: 16px;
 
   h1 {
+    margin: 0 0 4px 0;
+    font-size: 28px;
+    font-weight: 500;
+    color: #333;
+  }
+
+  p {
     margin: 0;
+    color: #666;
+    font-size: 14px;
+  }
+
+  button {
+    white-space: nowrap;
   }
 }
 
 .filters-card {
-  margin-bottom: 16px;
+  margin-bottom: 24px;
+
+  mat-card-header {
+    margin-bottom: 16px;
+  }
+
+  mat-card-title {
+    font-size: 18px;
+    font-weight: 500;
+    color: #333;
+  }
 
   .filters-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 12px;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 16px;
+    margin-bottom: 16px;
+
+    mat-form-field {
+      width: 100%;
+    }
   }
 
   .filter-actions {
@@ -23,18 +52,22 @@
     gap: 12px;
     align-items: center;
     flex-wrap: wrap;
-    margin-top: 8px;
+    padding-top: 8px;
 
     button {
       display: flex;
       align-items: center;
       gap: 8px;
-      padding: 0 16px;
-      min-width: 120px;
+      padding: 0 20px;
+      min-width: 140px;
+      height: 40px;
       white-space: nowrap;
 
       mat-icon {
         margin: 0;
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
       }
 
       span {
@@ -50,15 +83,85 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 12px;
+    margin-bottom: 16px;
+    padding: 16px 16px 0;
+
+    h2 {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 500;
+      color: #333;
+    }
+
+    mat-chip {
+      font-weight: 500;
+    }
   }
 
   .table-wrapper {
     overflow: auto;
+    max-width: 100%;
   }
 
   table {
     width: 100%;
+    min-width: 900px;
+
+    th {
+      font-weight: 600;
+      font-size: 13px;
+      color: #333;
+      background-color: #f5f5f5;
+    }
+
+    td {
+      font-size: 13px;
+    }
+
+    .mat-column-id {
+      max-width: 60px;
+      text-align: center;
+    }
+
+    .mat-column-student {
+      min-width: 150px;
+      font-weight: 500;
+    }
+
+    .mat-column-group {
+      min-width: 150px;
+    }
+
+    .mat-column-series {
+      min-width: 180px;
+    }
+
+    .mat-column-session {
+      min-width: 180px;
+    }
+
+    .mat-column-amount {
+      min-width: 120px;
+      text-align: right;
+
+      strong {
+        color: #2e7d32;
+        font-size: 14px;
+      }
+    }
+
+    .mat-column-status {
+      min-width: 110px;
+      text-align: center;
+    }
+
+    .mat-column-dateCreation {
+      min-width: 140px;
+    }
+
+    .mat-column-actions {
+      min-width: 180px;
+    }
   }
 
   .actions-header,
@@ -66,12 +169,28 @@
     text-align: center;
   }
 
-  .actions-cell button {
-    margin: 0 4px;
+  .actions-cell {
+    button {
+      margin: 0 2px;
 
-    &.mat-mdc-icon-button.mat-success {
-      color: #4caf50;
+      &.mat-mdc-icon-button.mat-success {
+        color: #4caf50;
+      }
     }
+
+    .deleted-label {
+      color: #999;
+      font-size: 11px;
+      font-style: italic;
+      display: inline-block;
+      padding: 4px 8px;
+      background-color: #f5f5f5;
+      border-radius: 4px;
+    }
+  }
+
+  mat-paginator {
+    border-top: 1px solid #e0e0e0;
   }
 }
 
@@ -79,45 +198,86 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 24px;
-  gap: 12px;
+  justify-content: center;
+  padding: 48px 24px;
+  gap: 16px;
+
+  mat-progress-spinner {
+    margin-bottom: 8px;
+  }
+
+  p {
+    margin: 0;
+    color: #666;
+    font-size: 14px;
+  }
+}
+
+// Responsive design
+@media (max-width: 1024px) {
+  .filters-card .filters-grid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  }
 }
 
 @media (max-width: 768px) {
   .header {
     flex-direction: column;
     align-items: flex-start;
-    gap: 8px;
+    gap: 12px;
+
+    button {
+      width: 100%;
+    }
   }
 
   .filters-card {
+    .filters-grid {
+      grid-template-columns: 1fr;
+    }
+
     .filter-actions {
       width: 100%;
+      flex-direction: column;
 
       button {
-        flex: 1;
-        min-width: auto;
+        width: 100%;
         justify-content: center;
       }
     }
   }
 
   .table-card {
-    table {
-      min-width: 600px;
+    mat-card-content {
+      padding: 8px;
+    }
+
+    .table-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 12px 8px 0;
     }
   }
 }
 
 @media (max-width: 480px) {
-  .filters-card {
-    .filter-actions {
-      flex-direction: column;
-      width: 100%;
+  .header h1 {
+    font-size: 22px;
+  }
 
-      button {
-        width: 100%;
-      }
+  .filters-card mat-card-title {
+    font-size: 16px;
+  }
+
+  .table-card {
+    .table-header h2 {
+      font-size: 18px;
+    }
+
+    table {
+      min-width: 800px;
+      font-size: 12px;
     }
   }
 }

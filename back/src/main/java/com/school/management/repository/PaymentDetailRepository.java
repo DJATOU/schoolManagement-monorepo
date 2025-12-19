@@ -107,4 +107,46 @@ public interface PaymentDetailRepository extends JpaRepository<PaymentDetailEnti
     @Query("SELECT COALESCE(SUM(pd.amountPaid), 0) FROM PaymentDetailEntity pd " +
             "WHERE pd.payment.student.id = :studentId AND pd.payment.sessionSeries.id = :sessionSeriesId")
     Double sumAmountByStudentAndSeries(@Param("studentId") Long studentId, @Param("sessionSeriesId") Long sessionSeriesId);
+
+    /**
+     * Search query with complete data for Payment Management UI
+     * Uses DTO projection to fetch all related data in one query
+     * Filters by createdAt (dateCreation) instead of paymentDate
+     */
+    @Query("SELECT new com.school.management.dto.PaymentDetailSearchDTO(" +
+            "pd.id, " +
+            "p.student.firstName, " +
+            "p.student.lastName, " +
+            "p.student.id, " +
+            "p.group.name, " +
+            "p.group.id, " +
+            "p.sessionSeries.name, " +
+            "p.sessionSeries.id, " +
+            "pd.session.title, " +
+            "pd.session.id, " +
+            "pd.amountPaid, " +
+            "pd.active, " +
+            "pd.permanentlyDeleted, " +
+            "pd.dateCreation, " +
+            "pd.paymentDate, " +
+            "p.id, " +
+            "p.status, " +
+            "pd.isCatchUp" +
+            ") FROM PaymentDetailEntity pd " +
+            "JOIN pd.payment p " +
+            "LEFT JOIN pd.session s " +
+            "WHERE (:studentId IS NULL OR p.student.id = :studentId) " +
+            "AND (:groupId IS NULL OR p.group.id = :groupId) " +
+            "AND (:sessionSeriesId IS NULL OR p.sessionSeries.id = :sessionSeriesId) " +
+            "AND (:active IS NULL OR pd.active = :active) " +
+            "AND (CAST(:dateFrom AS timestamp) IS NULL OR pd.dateCreation >= :dateFrom) " +
+            "AND (CAST(:dateTo AS timestamp) IS NULL OR pd.dateCreation <= :dateTo)")
+    Page<com.school.management.dto.PaymentDetailSearchDTO> searchPaymentDetailsWithCompleteData(
+            @Param("studentId") Long studentId,
+            @Param("groupId") Long groupId,
+            @Param("sessionSeriesId") Long sessionSeriesId,
+            @Param("active") Boolean active,
+            @Param("dateFrom") java.util.Date dateFrom,
+            @Param("dateTo") java.util.Date dateTo,
+            Pageable pageable);
 }

@@ -25,15 +25,23 @@ import { finalize } from 'rxjs';
 
 interface PaymentDetailView {
   id: number;
-  studentName: string;
+  studentFirstName: string;
+  studentLastName: string;
+  studentId: number;
   groupName: string;
+  groupId: number;
   seriesName?: string;
+  seriesId?: number;
+  sessionName?: string;
+  sessionId?: number;
   amountPaid: number;
   active: boolean;
   permanentlyDeleted?: boolean;
-  dateCreation?: string;
+  dateCreation?: Date;
+  paymentDate?: Date;
   paymentId?: number;
-  sessionId?: number;
+  paymentStatus?: string;
+  isCatchUp?: boolean;
 }
 
 @Component({
@@ -64,7 +72,7 @@ interface PaymentDetailView {
   ]
 })
 export class PaymentManagementComponent implements OnInit {
-  displayedColumns: string[] = ['id', 'student', 'group', 'series', 'amount', 'active', 'dateCreation', 'actions'];
+  displayedColumns: string[] = ['id', 'student', 'group', 'series', 'session', 'amount', 'status', 'dateCreation', 'actions'];
   dataSource = new MatTableDataSource<PaymentDetailView>([]);
   filterForm: FormGroup;
 
@@ -91,8 +99,8 @@ export class PaymentManagementComponent implements OnInit {
       groupId: [null],
       sessionSeriesId: [null],
       active: [null],
-      dateFrom: [null],
-      dateTo: [null]
+      dateFrom: [null],  // Payment creation date (start)
+      dateTo: [null]     // Payment creation date (end)
     });
   }
 
@@ -289,5 +297,23 @@ export class PaymentManagementComponent implements OnInit {
   exportToCSV(): void {
     // TODO: Implémenter l'export CSV
     window.alert('Export CSV à venir');
+  }
+
+  getStudentFullName(detail: PaymentDetailView): string {
+    return `${detail.studentFirstName} ${detail.studentLastName}`;
+  }
+
+  getStatusLabel(detail: PaymentDetailView): string {
+    if (detail.permanentlyDeleted) {
+      return 'Supprimé';
+    }
+    return detail.active ? 'Actif' : 'Inactif';
+  }
+
+  getStatusColor(detail: PaymentDetailView): string {
+    if (detail.permanentlyDeleted) {
+      return 'warn';
+    }
+    return detail.active ? 'primary' : 'accent';
   }
 }

@@ -1,6 +1,7 @@
 package com.school.management.controller;
 
 import com.school.management.dto.PaymentDetailAuditDTO;
+import com.school.management.dto.PaymentDetailSearchDTO;
 import com.school.management.dto.PaymentDetailUpdateDTO;
 import com.school.management.persistance.PaymentDetailEntity;
 import com.school.management.service.payment.PaymentDetailAdminService;
@@ -48,7 +49,10 @@ public class PaymentDetailAdminController {
     ) {
         Sort sortOrder = Sort.by(Sort.Direction.fromString(direction), sort);
         Pageable pageable = PageRequest.of(page, size, sortOrder);
-        Page<PaymentDetailEntity> result = paymentDetailAdminService.getAllPaymentDetailsWithFilters(
+
+        // Use the new search method with complete data (student, group, series, session)
+        // This uses DTO projection to avoid lazy loading issues
+        Page<PaymentDetailSearchDTO> result = paymentDetailAdminService.searchPaymentDetailsWithCompleteData(
                 studentId, groupId, sessionSeriesId, active, dateFrom, dateTo, pageable);
 
         Map<String, Object> response = new HashMap<>();

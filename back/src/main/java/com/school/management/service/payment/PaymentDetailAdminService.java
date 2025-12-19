@@ -1,5 +1,6 @@
 package com.school.management.service.payment;
 
+import com.school.management.dto.PaymentDetailSearchDTO;
 import com.school.management.dto.PaymentDetailUpdateDTO;
 import com.school.management.persistance.PaymentDetailEntity;
 import com.school.management.persistance.PaymentEntity;
@@ -41,6 +42,23 @@ public class PaymentDetailAdminService {
                                                                      Date dateTo,
                                                                      Pageable pageable) {
         return paymentDetailRepository.findAllWithFilters(studentId, groupId, sessionSeriesId, active, dateFrom, dateTo, pageable);
+    }
+
+    /**
+     * Search payment details with complete data for Payment Management UI
+     * Uses DTO projection to include student, group, series, and session information
+     * Filters by dateCreation (createdAt) instead of paymentDate
+     */
+    @Transactional(readOnly = true)
+    public Page<PaymentDetailSearchDTO> searchPaymentDetailsWithCompleteData(Long studentId,
+                                                                              Long groupId,
+                                                                              Long sessionSeriesId,
+                                                                              Boolean active,
+                                                                              Date dateFrom,
+                                                                              Date dateTo,
+                                                                              Pageable pageable) {
+        return paymentDetailRepository.searchPaymentDetailsWithCompleteData(
+                studentId, groupId, sessionSeriesId, active, dateFrom, dateTo, pageable);
     }
 
     @Transactional(readOnly = true)
