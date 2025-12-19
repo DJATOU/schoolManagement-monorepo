@@ -1,9 +1,10 @@
 package com.school.management.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.*;
 
+import java.sql.Timestamp;
 import java.time.LocalDateTime;
-import java.util.Date;
 
 /**
  * DTO for Payment Management Search Results
@@ -37,8 +38,12 @@ public class PaymentDetailSearchDTO {
     private Double amountPaid;
     private Boolean active;
     private Boolean permanentlyDeleted;
-    private Date dateCreation;
-    private Date paymentDate;
+
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    private LocalDateTime dateCreation;
+
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    private Timestamp paymentDate;
 
     // Payment parent information
     private Long paymentId;
@@ -50,8 +55,9 @@ public class PaymentDetailSearchDTO {
     /**
      * Constructor matching the JPQL query field order and types
      * IMPORTANT: This constructor must match EXACTLY the order and types from Hibernate
-     * dateCreation comes as LocalDateTime from BaseEntity
-     * paymentDate comes as Date from PaymentDetailEntity
+     * Based on error message, Hibernate returns:
+     * - dateCreation as LocalDateTime (from BaseEntity)
+     * - paymentDate as Timestamp (from PaymentDetailEntity)
      */
     public PaymentDetailSearchDTO(
             Long id,
@@ -68,7 +74,7 @@ public class PaymentDetailSearchDTO {
             Boolean active,
             Boolean permanentlyDeleted,
             LocalDateTime dateCreation,
-            Date paymentDate,
+            Timestamp paymentDate,
             Long paymentId,
             String paymentStatus,
             Boolean isCatchUp
@@ -86,8 +92,7 @@ public class PaymentDetailSearchDTO {
         this.amountPaid = amountPaid;
         this.active = active;
         this.permanentlyDeleted = permanentlyDeleted;
-        // Convert LocalDateTime to Date for frontend compatibility
-        this.dateCreation = dateCreation != null ? java.sql.Timestamp.valueOf(dateCreation) : null;
+        this.dateCreation = dateCreation;
         this.paymentDate = paymentDate;
         this.paymentId = paymentId;
         this.paymentStatus = paymentStatus;
