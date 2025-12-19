@@ -125,19 +125,16 @@ public class StudentHistoryService {
                 .sorted(Comparator.comparing(SessionEntity::getSessionTimeStart))
                 .toList();
 
-        // NOUVEAU: Filtrer d'abord les sessions selon la date d'inscription
-        List<SessionEntity> eligibleSessions = filterSessionsAfterEnrollment(allSessions, enrollmentDate);
-
-        // CORRECTION: Pour les étudiants OFFICIELLEMENT INSCRITS au groupe,
-        // afficher TOUTES les sessions éligibles (même sans attendance/paiement)
-        // Pour les sessions de rattrapage, afficher UNIQUEMENT celles avec attendance
+        // CORRECTION: Pour l'HISTORIQUE COMPLET, afficher toutes les sessions du groupe
+        // Le filtrage par date d'inscription s'applique UNIQUEMENT pour le calcul du coût
         List<SessionEntity> filteredSessions;
         if (isOfficial) {
-            // Étudiant inscrit au groupe => afficher toutes les sessions après inscription
-            filteredSessions = eligibleSessions;
+            // Étudiant inscrit au groupe => afficher TOUTES les sessions de la série
+            // (même celles avant l'inscription, pour voir l'historique complet)
+            filteredSessions = allSessions;
         } else {
             // Rattrapage => afficher uniquement les sessions où l'étudiant a une attendance active
-            filteredSessions = eligibleSessions.stream()
+            filteredSessions = allSessions.stream()
                     .filter(session -> session.getAttendances().stream()
                             .anyMatch(a -> a.getStudent().getId().equals(student.getId()) && a.isActive()))
                     .toList();
@@ -148,11 +145,14 @@ public class StudentHistoryService {
             return null;  // => la série n'apparaîtra pas dans le PDF
         }
 
+        // NOUVEAU: Pour le CALCUL DU COÛT, filtrer par date d'inscription
+        List<SessionEntity> eligibleSessionsForCost = filterSessionsAfterEnrollment(allSessions, enrollmentDate);
+
         // NOUVEAU: Calculer le coût total en fonction du type de groupe
         double totalCostForStudent;
         if (isOfficial) {
-            // Pour les groupes officiels : coût basé sur toutes les sessions éligibles (après inscription)
-            totalCostForStudent = calculateTotalCostForStudent(group, eligibleSessions);
+            // Pour les groupes officiels : coût basé sur les sessions après inscription
+            totalCostForStudent = calculateTotalCostForStudent(group, eligibleSessionsForCost);
         } else {
             // Pour les sessions de rattrapage : coût basé UNIQUEMENT sur les sessions
             // où l'étudiant est PRÉSENT avec paiement COMPLÉTÉ
