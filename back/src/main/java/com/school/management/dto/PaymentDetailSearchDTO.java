@@ -2,6 +2,8 @@ package com.school.management.dto;
 
 import lombok.*;
 
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
 import java.util.Date;
 
 /**
@@ -48,7 +50,9 @@ public class PaymentDetailSearchDTO {
 
     /**
      * Constructor matching the JPQL query field order and types
-     * IMPORTANT: This constructor must match EXACTLY the order in the repository query
+     * IMPORTANT: This constructor must match EXACTLY the order and types from Hibernate
+     * dateCreation comes as LocalDateTime from BaseEntity
+     * paymentDate comes as Timestamp from PaymentDetailEntity
      */
     public PaymentDetailSearchDTO(
             Long id,
@@ -64,8 +68,8 @@ public class PaymentDetailSearchDTO {
             Double amountPaid,
             Boolean active,
             Boolean permanentlyDeleted,
-            Date dateCreation,
-            Date paymentDate,
+            LocalDateTime dateCreation,
+            Timestamp paymentDate,
             Long paymentId,
             String paymentStatus,
             Boolean isCatchUp
@@ -83,7 +87,8 @@ public class PaymentDetailSearchDTO {
         this.amountPaid = amountPaid;
         this.active = active;
         this.permanentlyDeleted = permanentlyDeleted;
-        this.dateCreation = dateCreation;
+        // Convert LocalDateTime to Date for frontend compatibility
+        this.dateCreation = dateCreation != null ? java.sql.Timestamp.valueOf(dateCreation) : null;
         this.paymentDate = paymentDate;
         this.paymentId = paymentId;
         this.paymentStatus = paymentStatus;
