@@ -107,6 +107,23 @@ public class PaymentDistributionService {
                 );
             }
 
+            // CRITICAL: Ignore PaymentDetails from CANCELLED payments
+            if ("CANCELLED".equals(detail.getPayment().getStatus())) {
+                LOGGER.debug("Ignoring PaymentDetail from CANCELLED payment for session {}", session.getId());
+                // Treat as if no detail exists - will create new one below
+                double amountForThisSession = Math.min(pricePerSession, remaining);
+                PaymentDetailEntity newDetail = PaymentDetailEntity.builder()
+                        .payment(payment)
+                        .session(session)
+                        .amountPaid(amountForThisSession)
+                        .build();
+                paymentDetailRepository.save(newDetail);
+                remaining -= amountForThisSession;
+                LOGGER.debug("Created new PaymentDetail for session {} (ignored CANCELLED) - amount: {}",
+                        session.getId(), amountForThisSession);
+                return remaining;
+            }
+
             // Only consider the payment if it's ACTIVE
             // If inactive (but not permanently deleted), treat it as if it doesn't exist (create new one)
             if (detail.getActive() != null && detail.getActive()) {
@@ -217,10 +234,11 @@ public class PaymentDistributionService {
         List<PaymentDetailEntity> details = paymentDetailRepository
                 .findByPayment_StudentIdAndSession_SessionSeriesId(studentId, sessionSeriesId);
 
-        // IMPORTANT: Only count ACTIVE PaymentDetails
+        // IMPORTANT: Only count ACTIVE PaymentDetails AND ignore CANCELLED payments
         // This allows re-payment after cancellation/deactivation
         return details.stream()
                 .filter(detail -> detail.getActive() != null && detail.getActive())
+                .filter(detail -> !"CANCELLED".equals(detail.getPayment().getStatus()))
                 .mapToDouble(PaymentDetailEntity::getAmountPaid)
                 .sum();
     }

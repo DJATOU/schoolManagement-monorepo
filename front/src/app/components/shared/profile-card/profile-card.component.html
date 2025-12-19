@@ -1,4 +1,17 @@
 <mat-card class="app-entity-card profile-card">
+  <!-- Indicateur de statut de paiement (en haut à droite) -->
+  <div class="payment-status-indicator" *ngIf="paymentStatus && profileType === 'student' && paymentStatus.paymentStatus !== 'NA'">
+    <mat-chip
+      [class.status-good]="paymentStatus.paymentStatus === 'GOOD'"
+      [class.status-late]="paymentStatus.paymentStatus === 'LATE'"
+      [matTooltip]="getPaymentTooltip()"
+      [matTooltipDisabled]="paymentStatus.paymentStatus !== 'LATE'"
+      matTooltipClass="payment-tooltip">
+      <mat-icon>{{ getPaymentIcon() }}</mat-icon>
+      {{ getPaymentLabel() }}
+    </mat-chip>
+  </div>
+
   <div class="app-entity-card__body profile-card-content" (click)="navigateToProfile()">
     <div class="app-entity-card__avatar profile-photo">
       <img [src]="profilePhotoUrl" alt="Photo de profil">

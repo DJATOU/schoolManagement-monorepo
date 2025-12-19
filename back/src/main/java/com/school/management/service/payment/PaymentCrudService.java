@@ -54,15 +54,15 @@ public class PaymentCrudService {
     }
 
     /**
-     * Récupère tous les paiements avec pagination.
+     * Récupère tous les paiements ACTIFS (non CANCELLED) avec pagination.
      *
      * @param pageable les paramètres de pagination
-     * @return une page de paiements
+     * @return une page de paiements actifs
      */
     @Transactional(readOnly = true)
     public Page<PaymentEntity> getAllPaymentsPaginated(Pageable pageable) {
-        LOGGER.debug("Fetching all payments - page: {}, size: {}", pageable.getPageNumber(), pageable.getPageSize());
-        return paymentRepository.findAll(pageable);
+        LOGGER.debug("Fetching all active payments (excluding CANCELLED) - page: {}, size: {}", pageable.getPageNumber(), pageable.getPageSize());
+        return paymentRepository.findAllActive(pageable);
     }
 
     /**
@@ -121,44 +121,44 @@ public class PaymentCrudService {
     }
 
     /**
-     * Récupère tous les paiements d'un étudiant, triés par date décroissante.
+     * Récupère tous les paiements ACTIFS (non CANCELLED) d'un étudiant, triés par date décroissante.
      *
      * @param studentId l'ID de l'étudiant
-     * @return la liste des paiements de l'étudiant
+     * @return la liste des paiements actifs de l'étudiant
      */
     @Transactional(readOnly = true)
     public List<PaymentEntity> getAllPaymentsForStudent(Long studentId) {
-        LOGGER.debug("Fetching all payments for student: {}", studentId);
-        return paymentRepository.findAllByStudentIdOrderByPaymentDateDesc(studentId);
+        LOGGER.debug("Fetching active payments (excluding CANCELLED) for student: {}", studentId);
+        return paymentRepository.findActiveByStudentIdOrderByPaymentDateDesc(studentId);
     }
 
     /**
-     * Récupère tous les paiements d'un étudiant avec pagination.
+     * Récupère tous les paiements ACTIFS (non CANCELLED) d'un étudiant avec pagination.
      *
      * @param studentId l'ID de l'étudiant
      * @param pageable les paramètres de pagination
-     * @return une page de paiements
+     * @return une page de paiements actifs
      */
     @Transactional(readOnly = true)
     public Page<PaymentEntity> getAllPaymentsForStudentPaginated(Long studentId, Pageable pageable) {
-        LOGGER.debug("Fetching payments for student: {} - page: {}, size: {}",
+        LOGGER.debug("Fetching active payments (excluding CANCELLED) for student: {} - page: {}, size: {}",
             studentId, pageable.getPageNumber(), pageable.getPageSize());
-        return paymentRepository.findAllByStudentId(studentId, pageable);
+        return paymentRepository.findActiveByStudentId(studentId, pageable);
     }
 
     /**
-     * Récupère l'historique des paiements pour une série.
+     * Récupère l'historique des paiements ACTIFS (non CANCELLED) pour une série.
      *
      * @param studentId l'ID de l'étudiant
      * @param sessionSeriesId l'ID de la série de sessions
-     * @return la liste des paiements sous forme de DTOs
+     * @return la liste des paiements actifs sous forme de DTOs
      */
     @Transactional(readOnly = true)
     public List<PaymentDTO> getPaymentHistoryForSeries(Long studentId, Long sessionSeriesId) {
-        LOGGER.info("Fetching payment history for student: {} and series: {}", studentId, sessionSeriesId);
+        LOGGER.info("Fetching active payment history (excluding CANCELLED) for student: {} and series: {}", studentId, sessionSeriesId);
         List<PaymentEntity> payments = paymentRepository
-            .findAllByStudentIdAndSessionSeriesId(studentId, sessionSeriesId);
-        LOGGER.debug("Found {} payments", payments.size());
+            .findAllActiveByStudentIdAndSessionSeriesId(studentId, sessionSeriesId);
+        LOGGER.debug("Found {} active payments", payments.size());
 
         return payments.stream()
             .map(this::convertToDto)
@@ -168,28 +168,29 @@ public class PaymentCrudService {
     /**
      * Récupère les détails de paiement pour une série.
      *
-     * IMPORTANT: Ne retourne que les PaymentDetails ACTIFS pour éviter d'afficher
-     * les paiements désactivés dans l'historique de l'étudiant.
+     * IMPORTANT: Ne retourne que les PaymentDetails ACTIFS ET non CANCELLED pour éviter d'afficher
+     * les paiements désactivés ou annulés dans l'historique de l'étudiant.
      *
      * @param studentId l'ID de l'étudiant
      * @param sessionSeriesId l'ID de la série de sessions
-     * @return la liste des détails de paiement actifs
+     * @return la liste des détails de paiement actifs et non annulés
      */
     @Transactional(readOnly = true)
     public List<PaymentDetailDTO> getPaymentDetailsForSeries(Long studentId, Long sessionSeriesId) {
-        LOGGER.info("Fetching payment details for student: {} and series: {}", studentId, sessionSeriesId);
+        LOGGER.info("Fetching active payment details (excluding CANCELLED) for student: {} and series: {}", studentId, sessionSeriesId);
         List<PaymentDetailEntity> details = paymentDetailRepository
             .findByPayment_StudentIdAndSession_SessionSeriesId(studentId, sessionSeriesId);
         LOGGER.debug("Found {} payment details (before filtering)", details.size());
 
-        // IMPORTANT: Filter only ACTIVE payment details
-        // Inactive payments should not appear in student payment history
+        // IMPORTANT: Filter only ACTIVE payment details AND exclude CANCELLED payments
+        // Inactive payments and CANCELLED payments should not appear in student payment history
         List<PaymentDetailDTO> activeDetails = details.stream()
             .filter(detail -> detail.getActive() != null && detail.getActive())
+            .filter(detail -> !"CANCELLED".equals(detail.getPayment().getStatus()))
             .map(this::convertToPaymentDetailDto)
             .toList();
 
-        LOGGER.debug("Returning {} active payment details", activeDetails.size());
+        LOGGER.debug("Returning {} active payment details (excluding CANCELLED)", activeDetails.size());
         return activeDetails;
     }
 

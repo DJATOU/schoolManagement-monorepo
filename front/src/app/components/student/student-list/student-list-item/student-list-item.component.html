@@ -10,7 +10,21 @@
         (keyup.enter)="navigateToStudent(student)"
         (keyup.space)="navigateToStudent(student)"
       >
-        <h4>{{ student.firstName }} {{ student.lastName }}</h4>
+        <h4>
+          {{ student.firstName }} {{ student.lastName }}
+          <!-- Indicateur de statut de paiement (inline avec le nom) -->
+          <mat-chip
+            *ngIf="paymentStatus && paymentStatus.paymentStatus !== 'NA'"
+            [class.status-good]="paymentStatus.paymentStatus === 'GOOD'"
+            [class.status-late]="paymentStatus.paymentStatus === 'LATE'"
+            [matTooltip]="getPaymentTooltip()"
+            [matTooltipDisabled]="paymentStatus.paymentStatus !== 'LATE'"
+            matTooltipClass="payment-tooltip"
+            class="payment-status-chip">
+            <mat-icon>{{ getPaymentIcon() }}</mat-icon>
+            {{ getPaymentLabel() }}
+          </mat-chip>
+        </h4>
         <p>{{ student.email }}</p>
       </div>
       <div class="student-actions">

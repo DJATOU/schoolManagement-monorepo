@@ -1,5 +1,6 @@
 .profile-card {
   cursor: default;
+  position: relative; // Pour positionner l'indicateur en absolu
 }
 
 .profile-card-content {
@@ -35,4 +36,82 @@
     text-align: left;
   }
 }
-  
+
+// ===== Indicateur de statut de paiement =====
+.payment-status-indicator {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 10;
+
+  mat-chip {
+    font-size: 12px;
+    min-height: 28px;
+    padding: 4px 8px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    cursor: help; // Indique qu'un tooltip est disponible
+
+    mat-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+    }
+
+    // Statut "À jour" (vert)
+    &.status-good {
+      background-color: #4caf50;
+      color: white;
+
+      mat-icon {
+        color: white;
+      }
+    }
+
+    // Statut "En retard" (rouge)
+    &.status-late {
+      background-color: #f44336;
+      color: white;
+
+      mat-icon {
+        color: white;
+      }
+
+      // Animation de pulsation pour attirer l'attention
+      animation: pulse-warning 2s ease-in-out infinite;
+    }
+
+    // Statut "Non applicable" (gris)
+    &.status-na {
+      background-color: #9e9e9e;
+      color: white;
+
+      mat-icon {
+        color: white;
+      }
+    }
+  }
+}
+
+// Animation de pulsation pour le statut en retard
+@keyframes pulse-warning {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scale(1.05);
+  }
+}
+
+// Style personnalisé pour le tooltip
+::ng-deep .payment-tooltip {
+  white-space: pre-line; // Pour respecter les retours à la ligne (\n)
+  font-size: 13px;
+  line-height: 1.5;
+  max-width: 350px;
+  background-color: rgba(0, 0, 0, 0.95);
+}

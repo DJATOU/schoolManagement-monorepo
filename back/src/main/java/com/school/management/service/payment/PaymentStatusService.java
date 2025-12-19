@@ -174,6 +174,9 @@ public class PaymentStatusService {
     /**
      * Récupère le statut de paiement pour toutes les sessions d'une série.
      *
+     * IMPORTANT: Retourne UNIQUEMENT les sessions où l'étudiant a une fiche de présence
+     * (attendance record) ou est lié via un rattrapage (catch-up).
+     *
      * @param studentId l'ID de l'étudiant
      * @param series la série de sessions
      * @return la liste des statuts de paiement par session
@@ -183,11 +186,48 @@ public class PaymentStatusService {
         List<SessionEntity> sessions = sessionRepository.findBySessionSeries(series);
 
         for (SessionEntity session : sessions) {
-            boolean isOverdue = isPaymentOverdueForSession(studentId, session.getId());
+            // CRITIQUE: Ne retourner que les sessions où l'étudiant a une fiche de présence
+            AttendanceEntity attendance = attendanceRepository
+                .findBySessionIdAndStudentId(session.getId(), studentId)
+                .orElse(null);
+
+            // Si pas de fiche de présence, ignorer cette session
+            if (attendance == null) {
+                continue;
+            }
+
+            // Calculer le montant dû pour cette session
+            double sessionPrice = session.getGroup().getPrice().getPrice();
+            boolean isPresent = attendance.getIsPresent() != null && attendance.getIsPresent();
+            boolean isPaidEvenIfAbsent = false;  // TODO: Implémenter la logique "absence payable"
+
+            // La session est payable si l'étudiant est présent OU si absence est payable
+            boolean isPayable = isPresent || isPaidEvenIfAbsent;
+            double amountDue = isPayable ? sessionPrice : 0.0;
+
+            // Calculer le montant payé pour cette session
+            // IMPORTANT: Ignorer les paiements CANCELLED
+            List<PaymentDetailEntity> details = paymentDetailRepository
+                .findByPayment_StudentIdAndSessionId(studentId, session.getId());
+
+            double amountPaid = details.stream()
+                .filter(detail -> detail.getActive() &&
+                       (detail.getPermanentlyDeleted() == null || !detail.getPermanentlyDeleted()) &&
+                       !"CANCELLED".equals(detail.getPayment().getStatus()))
+                .mapToDouble(PaymentDetailEntity::getAmountPaid)
+                .sum();
+
+            // Déterminer si en retard
+            boolean isOverdue = amountDue > 0 && amountPaid < amountDue;
+
             result.add(new SessionPaymentStatus(
                 session.getId(),
                 session.getTitle(),
-                isOverdue
+                isOverdue,
+                isPresent,
+                isPaidEvenIfAbsent,
+                amountDue,
+                amountPaid
             ));
         }
 
@@ -210,7 +250,9 @@ public class PaymentStatusService {
 
         double sessionCost = session.getGroup().getPrice().getPrice();
 
+        // IMPORTANT: Ignorer les paiements CANCELLED
         double totalPaidForSession = details.stream()
+            .filter(detail -> !"CANCELLED".equals(detail.getPayment().getStatus()))
             .mapToDouble(PaymentDetailEntity::getAmountPaid)
             .sum();
 

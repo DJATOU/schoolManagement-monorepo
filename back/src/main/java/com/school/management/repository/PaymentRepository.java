@@ -21,7 +21,7 @@ public interface PaymentRepository extends JpaRepository<PaymentEntity, Long> {
 
     Optional<PaymentEntity> findByStudentIdAndGroupIdAndSessionSeriesId(Long studentId, Long groupId, Long sessionSeriesId);
 
-    @Query("SELECT p.amountPaid FROM PaymentEntity p WHERE p.student.id = :studentId AND p.sessionSeries.id = :sessionSeriesId")
+    @Query("SELECT p.amountPaid FROM PaymentEntity p WHERE p.student.id = :studentId AND p.sessionSeries.id = :sessionSeriesId AND p.status != 'CANCELLED'")
     Double findAmountPaidForStudentAndSeries(@Param("studentId") Long studentId, @Param("sessionSeriesId") Long sessionSeriesId);
 
     @Query("SELECT p FROM PaymentEntity p WHERE p.student.id = :studentId AND p.sessionSeries.id = :sessionSeriesId")
@@ -29,4 +29,39 @@ public interface PaymentRepository extends JpaRepository<PaymentEntity, Long> {
 
     // NOUVELLE MÉTHODE AJOUTÉE
     Optional<PaymentEntity> findByStudentIdAndSessionSeriesId(Long studentId, Long sessionSeriesId);
+
+    /**
+     * Trouve un paiement ACTIF (non CANCELLED) pour un étudiant et une série.
+     * Permet de créer un nouveau paiement même si un paiement CANCELLED existe.
+     * Retourne un Optional pour la recherche d'un paiement unique.
+     */
+    @Query("SELECT p FROM PaymentEntity p WHERE p.student.id = :studentId AND p.sessionSeries.id = :sessionSeriesId AND p.status != 'CANCELLED'")
+    Optional<PaymentEntity> findActiveByStudentIdAndSessionSeriesId(@Param("studentId") Long studentId, @Param("sessionSeriesId") Long sessionSeriesId);
+
+    /**
+     * Trouve tous les paiements ACTIFS (non CANCELLED) pour un étudiant et une série.
+     * Utilisé pour l'historique des paiements d'une série.
+     */
+    @Query("SELECT p FROM PaymentEntity p WHERE p.student.id = :studentId AND p.sessionSeries.id = :sessionSeriesId AND p.status != 'CANCELLED' ORDER BY p.paymentDate DESC")
+    List<PaymentEntity> findAllActiveByStudentIdAndSessionSeriesId(@Param("studentId") Long studentId, @Param("sessionSeriesId") Long sessionSeriesId);
+
+    /**
+     * Trouve tous les paiements ACTIFS (non CANCELLED) pour un étudiant.
+     * Utilisé pour l'historique et les calculs.
+     */
+    @Query("SELECT p FROM PaymentEntity p WHERE p.student.id = :studentId AND p.status != 'CANCELLED' ORDER BY p.paymentDate DESC")
+    List<PaymentEntity> findActiveByStudentIdOrderByPaymentDateDesc(@Param("studentId") Long studentId);
+
+    /**
+     * Trouve tous les paiements ACTIFS (non CANCELLED) pour un étudiant avec pagination.
+     */
+    @Query("SELECT p FROM PaymentEntity p WHERE p.student.id = :studentId AND p.status != 'CANCELLED' ORDER BY p.paymentDate DESC")
+    Page<PaymentEntity> findActiveByStudentId(@Param("studentId") Long studentId, Pageable pageable);
+
+    /**
+     * Trouve tous les paiements ACTIFS (non CANCELLED) avec pagination.
+     * Utilisé pour la gestion des paiements (ne pas afficher les CANCELLED par défaut).
+     */
+    @Query("SELECT p FROM PaymentEntity p WHERE p.status != 'CANCELLED' ORDER BY p.paymentDate DESC")
+    Page<PaymentEntity> findAllActive(Pageable pageable);
 }

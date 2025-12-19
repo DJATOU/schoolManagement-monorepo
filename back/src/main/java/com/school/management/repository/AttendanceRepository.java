@@ -10,11 +10,15 @@ import org.springframework.stereotype.Repository;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface AttendanceRepository extends JpaRepository<AttendanceEntity, Long> {
 
     long countByStudentIdAndSessionSeriesIdAndIsPresent(Long studentId, Long sessionSeriesId, boolean isPresent);
+
+    @Query("SELECT a FROM AttendanceEntity a WHERE a.session.id = :sessionId AND a.student.id = :studentId AND a.active = true ORDER BY a.id DESC LIMIT 1")
+    Optional<AttendanceEntity> findBySessionIdAndStudentId(@Param("sessionId") Long sessionId, @Param("studentId") Long studentId);
 
     List<SessionEntity> findByStudentIdAndIsPresent(Long studentId, boolean b);
 

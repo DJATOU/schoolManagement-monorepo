@@ -150,21 +150,16 @@ public class PaymentProcessingService {
 
     private PaymentEntity getOrCreateSeriesPayment(StudentEntity student, GroupEntity group,
                                                    Long sessionSeriesId, double attendedSessionsCost) {
-        return paymentRepository.findByStudentIdAndSessionSeriesId(student.getId(), sessionSeriesId)
+        // IMPORTANT: Utiliser findActive... pour ignorer les paiements CANCELLED
+        // Cela permet de créer un nouveau paiement même si un paiement CANCELLED existe
+        return paymentRepository.findActiveByStudentIdAndSessionSeriesId(student.getId(), sessionSeriesId)
                 .map(existingPayment -> {
-                    // CRITICAL: Empêcher tout paiement sur un Payment CANCELLED
-                    if ("CANCELLED".equals(existingPayment.getStatus())) {
-                        throw new IllegalStateException(
-                            "Cannot process payment for student " + student.getId() +
-                            " on series " + sessionSeriesId +
-                            ". This payment was CANCELLED (all payment details were permanently deleted). " +
-                            "Payment ID: " + existingPayment.getId()
-                        );
-                    }
+                    LOGGER.info("Using existing active payment {} for student {} and series {}",
+                            existingPayment.getId(), student.getId(), sessionSeriesId);
                     return existingPayment;
                 })
                 .orElseGet(() -> {
-                    LOGGER.info("Creating new payment for student {} and series {}",
+                    LOGGER.info("Creating new payment for student {} and series {} (no active payment found, CANCELLED payments are ignored)",
                             student.getId(), sessionSeriesId);
 
                     SessionSeriesEntity sessionSeries = sessionSeriesRepository.findById(sessionSeriesId)
