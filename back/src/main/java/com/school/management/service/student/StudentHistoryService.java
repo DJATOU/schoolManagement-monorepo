@@ -98,13 +98,19 @@ public class StudentHistoryService {
         dto.setSeriesId(series.getId());
         dto.setSeriesName(series.getName());
 
-        // IMPORTANT: Charger tous les payment details pour cette série et cet étudiant en une seule requête
+        // IMPORTANT: Charger tous les payment details ACTIFS (non CANCELLED) pour cette série et cet étudiant en une seule requête
         // Cela évite le problème de lazy loading et améliore les performances
         List<PaymentDetailEntity> paymentDetailsForSeries = paymentDetailRepository
                 .findByPayment_StudentIdAndSession_SessionSeriesId(student.getId(), series.getId());
 
+        // FILTRER les paiements CANCELLED
+        List<PaymentDetailEntity> activePaymentDetails = paymentDetailsForSeries.stream()
+                .filter(pd -> pd.getActive() != null && pd.getActive())
+                .filter(pd -> !"CANCELLED".equals(pd.getPayment().getStatus()))
+                .toList();
+
         // Créer une map sessionId -> PaymentDetail pour un accès rapide
-        Map<Long, PaymentDetailEntity> paymentDetailMap = paymentDetailsForSeries.stream()
+        Map<Long, PaymentDetailEntity> paymentDetailMap = activePaymentDetails.stream()
                 .collect(Collectors.toMap(
                         pd -> pd.getSession().getId(),
                         pd -> pd,
@@ -122,14 +128,15 @@ public class StudentHistoryService {
         // NOUVEAU: Filtrer d'abord les sessions selon la date d'inscription
         List<SessionEntity> eligibleSessions = filterSessionsAfterEnrollment(allSessions, enrollmentDate);
 
-        // 1) Filtre sessions où l'étudiant a AU MOINS un attendance OU un paiement
+        // 1) Filtre sessions où l'étudiant a AU MOINS un attendance OU un paiement ACTIF (non CANCELLED)
+        // IMPORTANT: Utiliser paymentDetailMap au lieu de session.getPaymentDetails() pour avoir les paiements actifs
         List<SessionEntity> relevantSessions = eligibleSessions.stream()
                 .filter(session -> {
                     boolean hasAttendance = session.getAttendances().stream()
                             .anyMatch(a -> a.getStudent().getId().equals(student.getId()) && a.isActive());
-                    boolean hasPayment = session.getPaymentDetails().stream()
-                            .anyMatch(pd -> pd.getPayment().getStudent().getId().equals(student.getId()));
-                    return hasAttendance || hasPayment;
+                    // Utiliser la map pré-chargée qui contient UNIQUEMENT les paiements actifs (non CANCELLED)
+                    boolean hasActivePayment = paymentDetailMap.containsKey(session.getId());
+                    return hasAttendance || hasActivePayment;
                 })
                 .toList();
 
@@ -299,6 +306,8 @@ public class StudentHistoryService {
         return series.getSessions().stream()
                 .flatMap(session -> session.getPaymentDetails().stream())
                 .filter(pd -> pd.getPayment().getStudent().getId().equals(student.getId()))
+                .filter(pd -> pd.getActive() != null && pd.getActive())
+                .filter(pd -> !"CANCELLED".equals(pd.getPayment().getStatus()))
                 .mapToDouble(PaymentDetailEntity::getAmountPaid)
                 .sum();
     }

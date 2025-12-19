@@ -222,7 +222,7 @@ export class PdfGeneratorService {
             } else {
               // sessions présentes => distinguer rattrapage ou normal
               // Test : si toutes les sessions sont catchUpSession = true => rattrapage
-              const allAreCatchUp = series.sessions.every(s => s.catchUpSession === true);
+              const allAreCatchUp = series.sessions.every(s => s.catchUpSession);
 
               if (allAreCatchUp) {
                 // Affichage "Session de rattrapage"
@@ -278,6 +278,9 @@ export class PdfGeneratorService {
 
   private getSessionsTable(sessions: SessionHistoryDTO[]): Content {
 
+    // IMPORTANT: Filtrer les sessions avec paiement CANCELLED
+    const activeSessions = sessions.filter(session => session.paymentStatus !== 'CANCELLED');
+
     const body: any[] = [];
 
     // Définir la ligne d'en-tête
@@ -294,8 +297,8 @@ export class PdfGeneratorService {
 
     body.push(headerRow);
 
-    // Ajouter les lignes de données avec couleurs
-    sessions.forEach(session => {
+    // Ajouter les lignes de données avec couleurs (sans les CANCELLED)
+    activeSessions.forEach(session => {
       const fillColor = this.getFillColorForAttendance(session);
 
       const sessionTitle = session.catchUpSession
@@ -303,7 +306,7 @@ export class PdfGeneratorService {
       : session.sessionName || 'N/A';
 
       // Gestion de la justification
-    let justificationText = '';
+    let justificationText: string;
     if (session.attendanceStatus?.toLowerCase() === 'absent') {
       justificationText = session.isJustified ? 'Oui' : 'Non';
     } else {

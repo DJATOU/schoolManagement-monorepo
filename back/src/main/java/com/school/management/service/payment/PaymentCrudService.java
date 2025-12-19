@@ -18,7 +18,6 @@ import java.util.List;
 
 /**
  * Service CRUD de base pour les paiements.
- *
  * Responsabilités:
  * - Créer, lire, mettre à jour, supprimer des paiements
  * - Récupérer les paiements d'un étudiant
@@ -230,6 +229,7 @@ public class PaymentCrudService {
             .amountPaid(detail.getAmountPaid())
             .remainingBalance(detail.getSession().getGroup().getPrice().getPrice() - detail.getAmountPaid())
             .isCatchUp(detail.getIsCatchUp())
+            .paymentStatus(detail.getPayment().getStatus())
             .build();
     }
 

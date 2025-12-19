@@ -9,4 +9,5 @@ export interface PaymentDetail  {
   sessionPrice: number; // Prix de la session (à ajouter pour faciliter le calcul du statut)
   status?: string;
   isCatchUp?: boolean;
+  paymentStatus?: string; // Statut du paiement parent (pour filtrer CANCELLED)
 }

@@ -12,13 +12,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
  * Service responsable du calcul des statuts de paiement.
- *
  * Calcule si les paiements sont en retard, le montant dû, etc.
  * pour les étudiants, groupes, et séries de sessions.
  *
@@ -107,7 +107,6 @@ public class PaymentStatusService {
 
     /**
      * Vérifie si un étudiant est en retard de paiement pour une série.
-     *
      * Calcule le montant dû basé sur les sessions auxquelles l'étudiant a assisté,
      * et compare avec le montant payé.
      *
@@ -136,9 +135,9 @@ public class PaymentStatusService {
     }
 
     /**
-     * Récupère le statut de paiement détaillé pour un étudiant.
-     *
+     * Récupère le statut de paiement détaillé pour un étudiant
      * Retourne le statut pour chaque groupe, série et session.
+     * IMPORTANT: Inclut AUSSI les groupes où l'étudiant a des sessions de rattrapage.
      *
      * @param studentId l'ID de l'étudiant
      * @return la liste des statuts de paiement par groupe
@@ -148,32 +147,57 @@ public class PaymentStatusService {
         LOGGER.info("Fetching payment status for student: {}", studentId);
 
         List<GroupPaymentStatus> groupStatuses = new ArrayList<>();
-        List<GroupEntity> groups = groupRepository.findByStudents_Id(studentId);
 
-        for (GroupEntity group : groups) {
+        // 1) Groupes officiels de l'étudiant
+        List<GroupEntity> officialGroups = groupRepository.findByStudents_Id(studentId);
+
+        // 2) Groupes où l'étudiant a des sessions de rattrapage
+        List<AttendanceEntity> catchUpAttendances = attendanceRepository
+            .findByStudentIdAndIsCatchUp(studentId, true);
+
+        List<GroupEntity> catchUpGroups = catchUpAttendances.stream()
+            .filter(a -> a.isActive() && a.getIsPresent() != null && a.getIsPresent())
+            .map(AttendanceEntity::getGroup)
+            .distinct()
+            .toList();
+
+        // 3) Fusionner les deux listes (Set pour éviter doublons)
+        Set<GroupEntity> allGroups = new HashSet<>(officialGroups);
+        allGroups.addAll(catchUpGroups);
+
+        LOGGER.debug("Student {} - Official groups: {}, Catch-up groups: {}, Total unique: {}",
+            studentId, officialGroups.size(), catchUpGroups.size(), allGroups.size());
+
+        for (GroupEntity group : allGroups) {
             List<SeriesPaymentStatus> seriesStatuses = new ArrayList<>();
             List<SessionSeriesEntity> seriesList = sessionSeriesRepository.findByGroupId(group.getId());
 
             for (SessionSeriesEntity series : seriesList) {
                 List<SessionPaymentStatus> sessionStatuses = getSessionPaymentStatuses(studentId, series);
-                seriesStatuses.add(new SeriesPaymentStatus(series.getId(), sessionStatuses));
+
+                // Ne pas ajouter les séries vides (sans sessions pour cet étudiant)
+                if (!sessionStatuses.isEmpty()) {
+                    seriesStatuses.add(new SeriesPaymentStatus(series.getId(), sessionStatuses));
+                }
             }
 
-            groupStatuses.add(new GroupPaymentStatus(
-                group.getId(),
-                group.getName(),
-                seriesStatuses
-            ));
+            // Ne pas ajouter les groupes vides (sans séries pour cet étudiant)
+            if (!seriesStatuses.isEmpty()) {
+                groupStatuses.add(new GroupPaymentStatus(
+                    group.getId(),
+                    group.getName(),
+                    seriesStatuses
+                ));
+            }
         }
 
-        LOGGER.info("Found {} groups for student {}", groupStatuses.size(), studentId);
+        LOGGER.info("Found {} groups with sessions for student {}", groupStatuses.size(), studentId);
 
         return groupStatuses;
     }
 
     /**
      * Récupère le statut de paiement pour toutes les sessions d'une série.
-     *
      * IMPORTANT: Retourne UNIQUEMENT les sessions où l'étudiant a une fiche de présence
      * (attendance record) ou est lié via un rattrapage (catch-up).
      *

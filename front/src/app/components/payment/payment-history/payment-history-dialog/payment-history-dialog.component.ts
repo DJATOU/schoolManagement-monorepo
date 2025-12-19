@@ -155,14 +155,18 @@ export class PaymentHistoryDialogComponent implements OnInit {
             totalSessions = this.sessionSeries.find(series => series.id === this.selectedSeries)?.totalSessions ?? 0;
           }
 
+          // IMPORTANT: Filtrer les paiements CANCELLED
+          const activePaymentDetails = (paymentDetails || [])
+            .filter(detail => detail.paymentStatus !== 'CANCELLED');
+
           this.seriesTotal = totalSessions * sessionPrice;
-          this.seriesPaid = (paymentDetails || [])
+          this.seriesPaid = activePaymentDetails
             .filter(detail => !this.isCatchUpSeries || detail.isCatchUp)
             .reduce((acc, payment) => acc + (payment.amountPaid || 0), 0);
           this.seriesRemaining = this.seriesTotal - this.seriesPaid;
           this.seriesStatus = this.getSeriesStatus();
 
-          this.loadSessionPaymentDetails(sessionPrice, paymentDetails || []);
+          this.loadSessionPaymentDetails(sessionPrice, activePaymentDetails);
         },
         error: (error: Error) => {
           console.error('Error loading payment history data:', error);
