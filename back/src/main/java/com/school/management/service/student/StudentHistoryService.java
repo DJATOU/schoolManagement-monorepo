@@ -128,31 +128,22 @@ public class StudentHistoryService {
         // NOUVEAU: Filtrer d'abord les sessions selon la date d'inscription
         List<SessionEntity> eligibleSessions = filterSessionsAfterEnrollment(allSessions, enrollmentDate);
 
-        // 1) Filtre sessions où l'étudiant a AU MOINS un attendance OU un paiement ACTIF (non CANCELLED)
-        // IMPORTANT: Utiliser paymentDetailMap au lieu de session.getPaymentDetails() pour avoir les paiements actifs
-        List<SessionEntity> relevantSessions = eligibleSessions.stream()
-                .filter(session -> {
-                    boolean hasAttendance = session.getAttendances().stream()
-                            .anyMatch(a -> a.getStudent().getId().equals(student.getId()) && a.isActive());
-                    // Utiliser la map pré-chargée qui contient UNIQUEMENT les paiements actifs (non CANCELLED)
-                    boolean hasActivePayment = paymentDetailMap.containsKey(session.getId());
-                    return hasAttendance || hasActivePayment;
-                })
-                .toList();
-
-        // 2) Si le groupe est "officiel", on garde le relevantSessions
-        //    Sinon, on re-filtre pour ne conserver que ceux où l'étudiant a réellement un attendance (rattrapage)
+        // CORRECTION: Pour les étudiants OFFICIELLEMENT INSCRITS au groupe,
+        // afficher TOUTES les sessions éligibles (même sans attendance/paiement)
+        // Pour les sessions de rattrapage, afficher UNIQUEMENT celles avec attendance
         List<SessionEntity> filteredSessions;
         if (isOfficial) {
-            filteredSessions = relevantSessions;
+            // Étudiant inscrit au groupe => afficher toutes les sessions après inscription
+            filteredSessions = eligibleSessions;
         } else {
-            filteredSessions = relevantSessions.stream()
+            // Rattrapage => afficher uniquement les sessions où l'étudiant a une attendance active
+            filteredSessions = eligibleSessions.stream()
                     .filter(session -> session.getAttendances().stream()
                             .anyMatch(a -> a.getStudent().getId().equals(student.getId()) && a.isActive()))
                     .toList();
         }
 
-        // 3) Si le résultat est VIDE => on ne retourne pas cette série (on renvoie null)
+        // Si le résultat est VIDE => on ne retourne pas cette série (on renvoie null)
         if (filteredSessions.isEmpty()) {
             return null;  // => la série n'apparaîtra pas dans le PDF
         }
