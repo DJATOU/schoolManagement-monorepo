@@ -16,7 +16,8 @@ import java.util.stream.Collectors;
 /**
  * Mapper MapStruct pour convertir entre StudentEntity et StudentDTO.
  *
- * REFACTORÉ Phase 1 : Utilise maintenant MappingContext au lieu de ApplicationContextProvider
+ * REFACTORÉ Phase 1 : Utilise maintenant MappingContext au lieu de
+ * ApplicationContextProvider
  * pour résoudre les dépendances (Level, Tutor).
  *
  * @author Claude Code
@@ -42,21 +43,28 @@ public interface StudentMapper {
      * NÉCESSITE MappingContext pour résoudre les relations.
      *
      * @param studentDto le DTO source
-     * @param context contexte contenant les repositories nécessaires
+     * @param context    contexte contenant les repositories nécessaires
      * @return l'entité hydratée
      */
     @Mapping(source = "tutorId", target = "tutor", qualifiedByName = "idToTutor")
     @Mapping(target = "groups", ignore = true)
     @Mapping(target = "attendances", ignore = true)
     @Mapping(source = "levelId", target = "level", qualifiedByName = "loadLevelEntity")
+    @Mapping(target = "createdBy", ignore = true)
+    @Mapping(target = "dateCreation", ignore = true)
+    @Mapping(target = "dateUpdate", ignore = true)
+    @Mapping(target = "description", ignore = true)
+    @Mapping(target = "updatedBy", ignore = true)
+    @Mapping(target = "address", ignore = true)
+    @Mapping(target = "communicationPreference", ignore = true)
     StudentEntity studentDTOToStudent(StudentDTO studentDto, @Context MappingContext context);
 
     /**
      * Met à jour une entité existante avec les données du DTO.
      * Ignore les champs techniques (id, active).
      *
-     * @param dto le DTO source avec les nouvelles valeurs
-     * @param entity l'entité cible à mettre à jour
+     * @param dto     le DTO source avec les nouvelles valeurs
+     * @param entity  l'entité cible à mettre à jour
      * @param context contexte pour résoudre les relations
      */
     @Mapping(target = "id", ignore = true)
@@ -65,6 +73,13 @@ public interface StudentMapper {
     @Mapping(target = "groups", ignore = true)
     @Mapping(target = "attendances", ignore = true)
     @Mapping(source = "levelId", target = "level", qualifiedByName = "loadLevelEntity")
+    @Mapping(target = "createdBy", ignore = true)
+    @Mapping(target = "dateCreation", ignore = true)
+    @Mapping(target = "dateUpdate", ignore = true)
+    @Mapping(target = "description", ignore = true)
+    @Mapping(target = "updatedBy", ignore = true)
+    @Mapping(target = "address", ignore = true)
+    @Mapping(target = "communicationPreference", ignore = true)
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     void updateStudentFromDTO(StudentDTO dto, @MappingTarget StudentEntity entity, @Context MappingContext context);
 
@@ -78,15 +93,15 @@ public interface StudentMapper {
             return Collections.emptySet();
         }
         return groups.stream()
-            .map(GroupEntity::getId)
-            .collect(Collectors.toSet());
+                .map(GroupEntity::getId)
+                .collect(Collectors.toSet());
     }
 
     /**
      * Résout un TutorEntity depuis son ID en utilisant le MappingContext.
      * Remplace l'ancien accès via ApplicationContextProvider.
      *
-     * @param id l'ID du tuteur
+     * @param id      l'ID du tuteur
      * @param context contexte contenant TutorRepository
      * @return l'entité TutorEntity ou null si id est null
      * @throws ResourceNotFoundException si le tuteur n'existe pas
@@ -98,15 +113,15 @@ public interface StudentMapper {
         }
 
         return context.getTutorRepository()
-            .findById(id)
-            .orElseThrow(() -> new ResourceNotFoundException("Tutor", id));
+                .findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Tutor", id));
     }
 
     /**
      * Résout un LevelEntity depuis son ID en utilisant le MappingContext.
      * Remplace l'ancien accès via ApplicationContextProvider.
      *
-     * @param id l'ID du niveau
+     * @param id      l'ID du niveau
      * @param context contexte contenant LevelRepository
      * @return l'entité LevelEntity ou null si id est null
      * @throws ResourceNotFoundException si le niveau n'existe pas
@@ -118,7 +133,7 @@ public interface StudentMapper {
         }
 
         return context.getLevelRepository()
-            .findById(id)
-            .orElseThrow(() -> new ResourceNotFoundException("Level", id));
+                .findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Level", id));
     }
 }

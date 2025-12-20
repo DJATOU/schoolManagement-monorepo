@@ -7,6 +7,7 @@ import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 public class RoomService {
@@ -23,13 +24,14 @@ public class RoomService {
     }
 
     public RoomEntity getRoomById(Long id) {
-        return roomRepository.findById(id)
+        return roomRepository.findById(Objects.requireNonNull(id))
                 .orElseThrow(() -> new RuntimeException("Room not found")); // Customize this exception
     }
 
     public RoomEntity createRoom(RoomEntity room) {
-        return roomRepository.save(room);
+        return roomRepository.save(Objects.requireNonNull(room));
     }
+
     @Transactional
     public RoomEntity updateRoom(Long id, RoomEntity updatedRoom) {
         RoomEntity existingRoom = getRoomById(id);
@@ -39,11 +41,11 @@ public class RoomService {
         return roomRepository.save(existingRoom);
     }
 
-
-    /*public void deleteRoom(Long id) {
-        roomRepository.deleteById(id);
-    }*/
-
+    /*
+     * public void deleteRoom(Long id) {
+     * roomRepository.deleteById(id);
+     * }
+     */
 
     public void disableRooms(long id) {
         RoomEntity room = getRoomById(id);

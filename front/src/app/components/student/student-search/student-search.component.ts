@@ -1,9 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
 import { StudentService } from '../services/student.service';
 import { Student } from '../domain/student';
 import { StudentCardComponent } from '../student-card/student-card.component';
 import { StudentListComponent } from '../student-list/student-list.component';
-import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
+import { MatPaginatorModule, PageEvent, MatPaginator } from '@angular/material/paginator';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { SearchService } from '../../../services/SearchService ';
@@ -12,6 +12,22 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { FadeInDirective } from '../../shared/FadeInDirective';
 import { ViewToggleComponent } from '../../shared/view-toggle/view-toggle.component';
 import { ListHeaderComponent } from '../../shared/list-header/list-header.component';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatSelectModule } from '@angular/material/select';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { FormsModule } from '@angular/forms';
+import { GroupService } from '../../../services/group.service';
+import { LevelService } from '../../../services/level.service';
+import { StudentPaymentStatusService } from '../../../services/student-payment-status.service';
+import { Group } from '../../../models/group/group';
+import { Level } from '../../../models/level/level';
+import { forkJoin, of } from 'rxjs';
+import { catchError, map } from 'rxjs/operators';
+
+interface StudentWithPayment extends Student {
+  paymentStatus?: 'GOOD' | 'LATE' | 'NA';
+}
 
 @Component({
   selector: 'app-student-search',
@@ -21,46 +37,168 @@ import { ListHeaderComponent } from '../../shared/list-header/list-header.compon
   imports: [
     CommonModule, MatPaginatorModule, StudentCardComponent,
     StudentListComponent, StudentListItemComponent, MatProgressSpinnerModule,
-    FadeInDirective, ViewToggleComponent, ListHeaderComponent
+    FadeInDirective, ViewToggleComponent, ListHeaderComponent,
+    MatButtonModule, MatIconModule, MatSelectModule,
+    MatFormFieldModule, FormsModule
   ]
 })
-export class StudentSearchComponent implements OnInit {
+export class StudentSearchComponent implements OnInit, OnDestroy, AfterViewInit {
   viewMode: 'card' | 'list' = 'card';
-  students: Student[] = [];
-  allStudents: Student[] = []; // Keep original list for filtering
-  filteredStudents: Student[] = [];
-  currentPageStudents: Student[] = [];
+  students: StudentWithPayment[] = [];
+  allStudents: StudentWithPayment[] = [];
+  filteredStudents: StudentWithPayment[] = [];
+  currentPageStudents: StudentWithPayment[] = [];
   totalStudents: number = 0;
   pageSize: number = 8;
-  pageSizeOptions: number[] = [8, 12, 16, 20];
+  currentPageIndex: number = 0;
+  pageSizeOptions: number[] = [8, 12, 16, 20, 24];
   isLoading = true;
+
+  // Filter states
   showLateOnly = false;
+  selectedGroupId: number | null = null;
+  selectedLevelId: number | null = null;
+  filtersVisible = false;
+
+  // Filter options
+  groups: Group[] = [];
+  levels: Level[] = [];
+
+  // Late payment counter
+  latePaymentCount: number = 0;
+
+  @ViewChild('contentArea') contentArea!: ElementRef;
+  @ViewChild('topPaginator') topPaginator!: MatPaginator;
+  @ViewChild('bottomPaginator') bottomPaginator!: MatPaginator;
+
+  private resizeObserver?: ResizeObserver;
 
   constructor(
     private studentService: StudentService,
     private searchService: SearchService,
-    private router: Router
+    private router: Router,
+    private groupService: GroupService,
+    private levelService: LevelService,
+    private paymentStatusService: StudentPaymentStatusService
   ) { }
 
   ngOnInit(): void {
     this.pageSize = this.getSmartPageSize();
     this.listenToSearchEvents();
+    this.loadFilterOptions();
     this.loadAllStudents();
   }
 
+  ngAfterViewInit(): void {
+    this.setupDynamicPageSize();
+  }
+
+  ngOnDestroy(): void {
+    if (this.resizeObserver) {
+      this.resizeObserver.disconnect();
+    }
+  }
+
   /**
-   * Smart page size calculation based on screen width
-   * Very large screens (≥1600px): 20 items
-   * Large screens (≥1200px): 16 items
-   * Medium screens (≥900px): 12 items
-   * Small screens (<900px): 8 items
+   * Smart page size calculation based on screen dimensions
+   * Uses actual container measurements when available
    */
   private getSmartPageSize(): number {
-    const width = window.innerWidth;
-    if (width >= 1600) return 20;
-    if (width >= 1200) return 16;
-    if (width >= 900) return 12;
-    return 8;
+    const columns = this.getColumnCount();
+    const rows = this.getRowCount();
+    return Math.max(columns, rows * columns);
+  }
+
+  /**
+   * Get number of rows that fit in available height
+   */
+  private getRowCount(): number {
+    // Card height from global styles: min 13rem (208px) + gap 16px = ~224px per row
+    const cardRowHeight = 224;
+    const height = window.innerHeight;
+
+    // Subtract: header(64) + topbar(~100) + footer(~60) + container padding(48)
+    const usedHeight = 272;
+    const availableHeight = height - usedHeight;
+
+    return Math.max(1, Math.floor(availableHeight / cardRowHeight));
+  }
+
+  /**
+   * Setup dynamic page size calculation based on available height
+   */
+  private setupDynamicPageSize(): void {
+    if (!this.contentArea) return;
+
+    this.resizeObserver = new ResizeObserver(() => {
+      this.calculateDynamicPageSize();
+    });
+
+    this.resizeObserver.observe(this.contentArea.nativeElement);
+  }
+
+  /**
+   * Calculate page size dynamically using actual container dimensions
+   */
+  private calculateDynamicPageSize(): void {
+    if (!this.contentArea) return;
+
+    const containerHeight = this.contentArea.nativeElement.clientHeight;
+    const containerWidth = this.contentArea.nativeElement.clientWidth;
+
+    // Card dimensions based on CSS
+    const cardMinWidth = 280; // from grid minmax
+    const cardHeight = 208; // min-height 13rem
+    const gap = 16;
+
+    // Calculate actual columns from container width
+    const columns = Math.max(1, Math.floor((containerWidth + gap) / (cardMinWidth + gap)));
+
+    // Calculate actual rows from container height
+    const rows = Math.max(1, Math.floor(containerHeight / (cardHeight + gap)));
+
+    const itemsPerPage = rows * columns;
+
+    // Update page size if different and valid
+    if (itemsPerPage !== this.pageSize && itemsPerPage > 0) {
+      this.pageSize = itemsPerPage;
+      this.updatePageStudents();
+    }
+  }
+
+  /**
+   * Get number of columns based on container/screen width
+   * Matches CSS grid auto-fill minmax(280px, 1fr)
+   */
+  private getColumnCount(): number {
+    if (this.viewMode === 'list') return 1;
+
+    // If we have the container, use its actual width
+    if (this.contentArea?.nativeElement) {
+      const containerWidth = this.contentArea.nativeElement.clientWidth;
+      const cardMinWidth = 280;
+      const gap = 16;
+      return Math.max(1, Math.floor((containerWidth + gap) / (cardMinWidth + gap)));
+    }
+
+    // Fallback based on window width (accounting for sidebar ~240px)
+    const width = window.innerWidth - 300; // Approximate sidebar + padding
+    const cardMinWidth = 280;
+    const gap = 16;
+    return Math.max(1, Math.floor((width + gap) / (cardMinWidth + gap)));
+  }
+
+  /**
+   * Load filter options (groups and levels)
+   */
+  private loadFilterOptions(): void {
+    this.groupService.getGroups().subscribe(groups => {
+      this.groups = groups;
+    });
+
+    this.levelService.getLevels().subscribe(levels => {
+      this.levels = levels;
+    });
   }
 
   listenToSearchEvents(): void {
@@ -78,9 +216,8 @@ export class StudentSearchComponent implements OnInit {
         if (students.length === 1) {
           this.router.navigate(['/student', students[0].id]);
         } else {
-          this.allStudents = students;
-          this.applyFilters();
-          this.isLoading = false;
+          this.allStudents = students as StudentWithPayment[];
+          this.loadPaymentStatuses();
         }
       });
     }
@@ -89,46 +226,122 @@ export class StudentSearchComponent implements OnInit {
   loadAllStudents(): void {
     this.isLoading = true;
     this.studentService.getStudents().subscribe(students => {
-      this.allStudents = students;
-      this.applyFilters();
+      this.allStudents = students as StudentWithPayment[];
+      this.loadPaymentStatuses();
+    });
+  }
+
+  /**
+   * Load payment statuses for all students
+   */
+  private loadPaymentStatuses(): void {
+    const statusRequests = this.allStudents.map(student =>
+      this.paymentStatusService.getStudentPaymentStatus(student.id!).pipe(
+        map(status => ({ studentId: student.id, status: status.paymentStatus as 'GOOD' | 'LATE' | 'NA' })),
+        catchError(() => of({ studentId: student.id, status: 'NA' as const }))
+      )
+    );
+
+    forkJoin(statusRequests).subscribe(results => {
+      results.forEach(result => {
+        const student = this.allStudents.find(s => s.id === result.studentId);
+        if (student) {
+          student.paymentStatus = result.status;
+        }
+      });
+
+      this.applyAllFilters();
       this.isLoading = false;
     });
   }
 
   /**
-   * Apply late payment filter if active
-   * NOTE: This currently requires payment status to be included in student data
-   * For now, this filter is disabled until backend support is added
+   * Apply all active filters
    */
-  private applyFilters(): void {
-    // TODO: Implement late filter when paymentStatus is available in Student model
-    // if (this.showLateOnly) {
-    //   this.filteredStudents = this.allStudents.filter(s => s.paymentStatus === 'LATE');
-    // } else {
-    this.filteredStudents = [...this.allStudents];
-    // }
+  private applyAllFilters(): void {
+    let filtered = [...this.allStudents];
+
+    // Filter by late payment
+    if (this.showLateOnly) {
+      filtered = filtered.filter(s => s.paymentStatus === 'LATE');
+    }
+
+    // Filter by group
+    if (this.selectedGroupId) {
+      filtered = filtered.filter(s => s.groupIds?.includes(this.selectedGroupId!));
+    }
+
+    // Filter by level
+    if (this.selectedLevelId) {
+      filtered = filtered.filter(s => s.levelId === this.selectedLevelId);
+    }
+
+    this.filteredStudents = filtered;
+    this.latePaymentCount = this.allStudents.filter(s => s.paymentStatus === 'LATE').length;
+    this.currentPageIndex = 0;
     this.updatePageStudents();
   }
 
-  /**
-   * Handle late payment filter toggle
-   * Currently disabled - requires backend support
-   */
   onLateFilterChange(showLateOnly: boolean): void {
     this.showLateOnly = showLateOnly;
-    // TODO: Enable when backend provides payment status in student list
-    // this.applyFilters();
+    this.applyAllFilters();
+  }
+
+  onGroupFilterChange(): void {
+    this.applyAllFilters();
+  }
+
+  onLevelFilterChange(): void {
+    this.applyAllFilters();
+  }
+
+  toggleFilters(): void {
+    this.filtersVisible = !this.filtersVisible;
+  }
+
+  clearGroupFilter(): void {
+    this.selectedGroupId = null;
+    this.applyAllFilters();
+  }
+
+  clearLevelFilter(): void {
+    this.selectedLevelId = null;
+    this.applyAllFilters();
+  }
+
+  getActiveFiltersCount(): number {
+    let count = 0;
+    if (this.selectedGroupId) count++;
+    if (this.selectedLevelId) count++;
+    return count;
+  }
+
+  getGroupName(groupId: number): string {
+    return this.groups.find(g => g.id === groupId)?.name || '';
+  }
+
+  getLevelName(levelId: number): string {
+    return this.levels.find(l => l.id === levelId)?.name || '';
   }
 
   changePage(event: PageEvent): void {
-    const startIndex = event.pageIndex * event.pageSize;
-    const endIndex = startIndex + event.pageSize;
-    this.currentPageStudents = this.filteredStudents.slice(startIndex, endIndex);
+    this.currentPageIndex = event.pageIndex;
     this.pageSize = event.pageSize;
+
+    // Synchronize both paginators
+    if (this.topPaginator && this.topPaginator.pageIndex !== event.pageIndex) {
+      this.topPaginator.pageIndex = event.pageIndex;
+    }
+    if (this.bottomPaginator && this.bottomPaginator.pageIndex !== event.pageIndex) {
+      this.bottomPaginator.pageIndex = event.pageIndex;
+    }
+
+    this.updatePageStudents();
   }
 
   changeViewMode(mode: 'card' | 'list'): void {
     this.viewMode = mode;
+    this.calculateDynamicPageSize();
   }
 
   /**
@@ -136,6 +349,62 @@ export class StudentSearchComponent implements OnInit {
    */
   private updatePageStudents(): void {
     this.totalStudents = this.filteredStudents.length;
-    this.currentPageStudents = this.filteredStudents.slice(0, this.pageSize);
+    const startIndex = this.currentPageIndex * this.pageSize;
+    const endIndex = startIndex + this.pageSize;
+    this.currentPageStudents = this.filteredStudents.slice(startIndex, endIndex);
+  }
+
+  /**
+   * Get page range label for compact pagination
+   */
+  getPageRangeLabel(): string {
+    if (this.totalStudents === 0) return '0 sur 0';
+    const startIndex = this.currentPageIndex * this.pageSize + 1;
+    const endIndex = Math.min((this.currentPageIndex + 1) * this.pageSize, this.totalStudents);
+    return `${startIndex}-${endIndex} sur ${this.totalStudents}`;
+  }
+
+  /**
+   * Navigate to previous page
+   */
+  previousPage(): void {
+    if (this.currentPageIndex > 0) {
+      const event: PageEvent = {
+        pageIndex: this.currentPageIndex - 1,
+        pageSize: this.pageSize,
+        length: this.totalStudents
+      };
+      this.changePage(event);
+    }
+  }
+
+  /**
+   * Navigate to next page
+   */
+  nextPage(): void {
+    const maxPage = Math.ceil(this.totalStudents / this.pageSize) - 1;
+    if (this.currentPageIndex < maxPage) {
+      const event: PageEvent = {
+        pageIndex: this.currentPageIndex + 1,
+        pageSize: this.pageSize,
+        length: this.totalStudents
+      };
+      this.changePage(event);
+    }
+  }
+
+  /**
+   * Check if previous page button should be disabled
+   */
+  isPreviousDisabled(): boolean {
+    return this.currentPageIndex === 0;
+  }
+
+  /**
+   * Check if next page button should be disabled
+   */
+  isNextDisabled(): boolean {
+    const maxPage = Math.ceil(this.totalStudents / this.pageSize) - 1;
+    return this.currentPageIndex >= maxPage;
   }
 }

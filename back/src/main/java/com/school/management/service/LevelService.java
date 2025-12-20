@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 @Service
@@ -28,24 +29,24 @@ public class LevelService {
     @Transactional(readOnly = true)
     public Optional<LevelEntity> findById(Long id) {
         try {
-            return levelRepository.findById(id);
+            return levelRepository.findById(Objects.requireNonNull(id));
         } catch (DataAccessException e) {
             throw new CustomServiceException("Error fetching level with ID " + id, e);
         }
     }
 
     public LevelEntity createLevel(LevelEntity level) {
-        return levelRepository.save(level);
+        return levelRepository.save(Objects.requireNonNull(level));
     }
 
     public LevelEntity updateLevel(Long id, LevelEntity level) {
-        LevelEntity levelToUpdate = levelRepository.findById(id).orElseThrow();
+        LevelEntity levelToUpdate = levelRepository.findById(Objects.requireNonNull(id)).orElseThrow();
         levelToUpdate.setName(level.getName());
         return levelRepository.save(levelToUpdate);
     }
 
     public void disableLevels(Long id) {
-        levelRepository.findById(id).ifPresent(level -> {
+        levelRepository.findById(Objects.requireNonNull(id)).ifPresent(level -> {
             level.setActive(false);
             levelRepository.save(level);
         });

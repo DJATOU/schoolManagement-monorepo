@@ -42,7 +42,7 @@ public class FileManagementService {
      *
      * @param file le fichier à uploader
      * @return le nom du fichier sauvegardé
-     * @throws IOException si l'upload échoue
+     * @throws IOException              si l'upload échoue
      * @throws IllegalArgumentException si la validation échoue
      */
     public String uploadFile(MultipartFile file) throws IOException {
@@ -63,7 +63,7 @@ public class FileManagementService {
      *
      * @param filename le nom du fichier à récupérer
      * @return la ressource correspondant au fichier
-     * @throws IOException si le fichier n'existe pas ou n'est pas accessible
+     * @throws IOException       si le fichier n'existe pas ou n'est pas accessible
      * @throws SecurityException si le nom de fichier n'est pas sécurisé
      */
     public Resource getFile(String filename) throws IOException {
@@ -101,6 +101,7 @@ public class FileManagementService {
      * supprimé si l'opération échoue.
      *
      * Exemple d'utilisation:
+     * 
      * <pre>
      * FileUploadResult result = fileManagementService.uploadWithRollback(file);
      * if (result.isSuccess()) {
@@ -127,33 +128,15 @@ public class FileManagementService {
             return FileUploadResult.failure(e.getMessage());
 
         } catch (IOException e) {
-            // Erreur d'upload
+            // Erreur d'upload - savedFileName is null here since uploadFile() threw before
+            // returning
             LOGGER.error("File upload failed: {}", e.getMessage(), e);
-
-            // Tentative de cleanup si le fichier a été partiellement sauvegardé
-            if (savedFileName != null) {
-                try {
-                    deleteFile(savedFileName);
-                    LOGGER.info("Rollback successful: deleted {}", savedFileName);
-                } catch (IOException deleteEx) {
-                    LOGGER.error("Failed to rollback file: {}", savedFileName, deleteEx);
-                }
-            }
-
             return FileUploadResult.failure("File upload failed: " + e.getMessage());
 
         } catch (Exception e) {
-            // Erreur inattendue
+            // Erreur inattendue - savedFileName is null here since uploadFile() threw
+            // before returning
             LOGGER.error("Unexpected error during file upload", e);
-
-            if (savedFileName != null) {
-                try {
-                    deleteFile(savedFileName);
-                } catch (IOException deleteEx) {
-                    LOGGER.error("Failed to rollback file: {}", savedFileName, deleteEx);
-                }
-            }
-
             return FileUploadResult.failure("Unexpected error: " + e.getMessage());
         }
     }
@@ -191,9 +174,9 @@ public class FileManagementService {
          */
         public static FileUploadResult success(String filename) {
             return FileUploadResult.builder()
-                .success(true)
-                .filename(filename)
-                .build();
+                    .success(true)
+                    .filename(filename)
+                    .build();
         }
 
         /**
@@ -204,9 +187,9 @@ public class FileManagementService {
          */
         public static FileUploadResult failure(String errorMessage) {
             return FileUploadResult.builder()
-                .success(false)
-                .errorMessage(errorMessage)
-                .build();
+                    .success(false)
+                    .errorMessage(errorMessage)
+                    .build();
         }
     }
 }

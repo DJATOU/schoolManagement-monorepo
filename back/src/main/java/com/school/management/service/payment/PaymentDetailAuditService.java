@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -20,11 +21,11 @@ public class PaymentDetailAuditService {
     }
 
     public void logAction(Long paymentDetailId,
-                          String action,
-                          String performedBy,
-                          String oldValue,
-                          String newValue,
-                          String reason) {
+            String action,
+            String performedBy,
+            String oldValue,
+            String newValue,
+            String reason) {
         PaymentDetailAuditEntity audit = PaymentDetailAuditEntity.builder()
                 .paymentDetailId(paymentDetailId)
                 .action(action)
@@ -33,7 +34,7 @@ public class PaymentDetailAuditService {
                 .newValue(newValue)
                 .reason(reason)
                 .build();
-        paymentDetailAuditRepository.save(audit);
+        paymentDetailAuditRepository.save(Objects.requireNonNull(audit));
     }
 
     public List<PaymentDetailAuditDTO> getAuditHistory(Long paymentDetailId) {

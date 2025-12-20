@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Objects;
 
 @Service
 public class PricingService {
@@ -22,19 +23,19 @@ public class PricingService {
     }
 
     public PricingEntity createPricing(PricingEntity pricing) {
-        return pricingRepository.save(pricing);
+        return pricingRepository.save(Objects.requireNonNull(pricing));
     }
 
     public PricingEntity updatePricing(Long id, PricingEntity pricing) {
-        PricingEntity pricingToUpdate = pricingRepository.findById(id).orElseThrow();
+        PricingEntity pricingToUpdate = pricingRepository.findById(Objects.requireNonNull(id)).orElseThrow();
         pricingToUpdate.setPrice(pricing.getPrice());
         return pricingRepository.save(pricingToUpdate);
     }
 
-
     public PricingEntity getPricingById(Long id) {
-        return pricingRepository.findById(id).orElse(null);
+        return pricingRepository.findById(Objects.requireNonNull(id)).orElse(null);
     }
+
     public void disablePricings(long id) {
         PricingEntity pricing = pricingRepository.findById(id).orElseThrow();
         pricing.setActive(false);

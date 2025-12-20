@@ -29,6 +29,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * Controller REST pour la gestion des paiements.
@@ -88,11 +89,12 @@ public class PaymentController {
         LOGGER.info("Creating payment for student: {}", paymentDto.getStudentId());
 
         // Note: Pour utiliser PaymentMapper.toEntity, il faut un MappingContext
-        // Pour l'instant, on utilise directement le service qui ne nécessite pas de mapper
+        // Pour l'instant, on utilise directement le service qui ne nécessite pas de
+        // mapper
         // TODO: Créer un MappingContext dans PaymentCrudService si nécessaire
 
         PaymentEntity savedPayment = paymentCrudService.createPayment(
-            paymentMapper.toEntity(paymentDto, null) // TODO: passer le mapping context
+                paymentMapper.toEntity(paymentDto, null) // TODO: passer le mapping context
         );
 
         return new ResponseEntity<>(paymentMapper.toDto(savedPayment), HttpStatus.CREATED);
@@ -101,7 +103,7 @@ public class PaymentController {
     /**
      * Met à jour partiellement un paiement (PATCH).
      *
-     * @param id l'ID du paiement
+     * @param id      l'ID du paiement
      * @param updates les champs à mettre à jour
      * @return le paiement mis à jour
      */
@@ -142,7 +144,7 @@ public class PaymentController {
      * PHASE 2: Endpoint paginé.
      *
      * @param studentId l'ID de l'étudiant
-     * @param pageable paramètres de pagination
+     * @param pageable  paramètres de pagination
      * @return une page de paiements de l'étudiant
      */
     @GetMapping("/student/{studentId}")
@@ -151,7 +153,7 @@ public class PaymentController {
             @PageableDefault(size = 20, sort = "paymentDate") Pageable pageable) {
 
         LOGGER.info("Fetching payments for student: {} - page: {}, size: {}",
-            studentId, pageable.getPageNumber(), pageable.getPageSize());
+                studentId, pageable.getPageNumber(), pageable.getPageSize());
 
         Page<PaymentEntity> payments = paymentCrudService.getAllPaymentsForStudentPaginated(studentId, pageable);
         Page<PaymentDTO> paymentDTOs = payments.map(paymentMapper::toDto);
@@ -178,7 +180,8 @@ public class PaymentController {
      *
      * PHASE 2: Utilise PaymentProcessingService au lieu du service monolithique.
      *
-     * Le montant est distribué sur toutes les sessions de la série en ordre chronologique.
+     * Le montant est distribué sur toutes les sessions de la série en ordre
+     * chronologique.
      *
      * @param paymentDto les informations du paiement
      * @return le paiement traité
@@ -186,16 +189,15 @@ public class PaymentController {
     @PostMapping("/process")
     public ResponseEntity<PaymentDTO> processPayment(@Valid @RequestBody PaymentDTO paymentDto) {
         LOGGER.info("Processing payment - student: {}, group: {}, series: {}, amount: {}",
-            paymentDto.getStudentId(), paymentDto.getGroupId(),
-            paymentDto.getSessionSeriesId(), paymentDto.getAmountPaid());
+                paymentDto.getStudentId(), paymentDto.getGroupId(),
+                paymentDto.getSessionSeriesId(), paymentDto.getAmountPaid());
 
         // PHASE 2: Utilise PaymentProcessingService
         PaymentEntity processedPayment = paymentProcessingService.processPayment(
-            paymentDto.getStudentId(),
-            paymentDto.getGroupId(),
-            paymentDto.getSessionSeriesId(),
-            paymentDto.getAmountPaid()
-        );
+                paymentDto.getStudentId(),
+                paymentDto.getGroupId(),
+                paymentDto.getSessionSeriesId(),
+                paymentDto.getAmountPaid());
 
         PaymentDTO responseDto = paymentMapper.toDto(processedPayment);
         return ResponseEntity.ok(responseDto);
@@ -206,19 +208,19 @@ public class PaymentController {
      *
      * PHASE 2: Utilise PaymentProcessingService.processCatchUpPayment.
      *
-     * @param paymentDto les informations du paiement (studentId, sessionId, amountPaid)
+     * @param paymentDto les informations du paiement (studentId, sessionId,
+     *                   amountPaid)
      * @return le paiement traité
      */
     @PostMapping("/process/catch-up")
     public ResponseEntity<PaymentDTO> processCatchUpPayment(@Valid @RequestBody PaymentDTO paymentDto) {
         LOGGER.info("Processing catch-up payment - student: {}, session: {}, amount: {}",
-            paymentDto.getStudentId(), paymentDto.getSessionId(), paymentDto.getAmountPaid());
+                paymentDto.getStudentId(), paymentDto.getSessionId(), paymentDto.getAmountPaid());
 
         PaymentEntity processedPayment = paymentProcessingService.processCatchUpPayment(
-            paymentDto.getStudentId(),
-            paymentDto.getSessionId(),
-            paymentDto.getAmountPaid()
-        );
+                paymentDto.getStudentId(),
+                paymentDto.getSessionId(),
+                paymentDto.getAmountPaid());
 
         PaymentDTO responseDto = paymentMapper.toDto(processedPayment);
         return ResponseEntity.ok(responseDto);
@@ -243,7 +245,8 @@ public class PaymentController {
     }
 
     /**
-     * Récupère les sessions auxquelles un étudiant a assisté mais qu'il n'a pas payées.
+     * Récupère les sessions auxquelles un étudiant a assisté mais qu'il n'a pas
+     * payées.
      *
      * PHASE 2: Utilise PaymentStatusService.
      *
@@ -257,8 +260,8 @@ public class PaymentController {
         // PHASE 2: Utilise PaymentStatusService
         List<SessionEntity> unpaidSessions = paymentStatusService.getUnpaidAttendedSessions(studentId);
         List<SessionDTO> sessionDTOs = unpaidSessions.stream()
-            .map(sessionMapper::sessionEntityToSessionDto)
-            .toList();
+                .map(sessionMapper::sessionEntityToSessionDto)
+                .toList();
 
         return ResponseEntity.ok(sessionDTOs);
     }
@@ -289,7 +292,7 @@ public class PaymentController {
      *
      * PHASE 2: Utilise PaymentCrudService.
      *
-     * @param studentId l'ID de l'étudiant
+     * @param studentId       l'ID de l'étudiant
      * @param sessionSeriesId l'ID de la série de sessions
      * @return la liste des détails de paiement
      */
@@ -301,7 +304,8 @@ public class PaymentController {
         LOGGER.info("Fetching payment details for student: {} and series: {}", studentId, sessionSeriesId);
 
         // PHASE 2: Utilise PaymentCrudService
-        List<PaymentDetailDTO> paymentDetails = paymentCrudService.getPaymentDetailsForSeries(studentId, sessionSeriesId);
+        List<PaymentDetailDTO> paymentDetails = paymentCrudService.getPaymentDetailsForSeries(studentId,
+                sessionSeriesId);
 
         return ResponseEntity.ok(paymentDetails);
     }
@@ -311,7 +315,7 @@ public class PaymentController {
      *
      * PHASE 2: Utilise PaymentCrudService.
      *
-     * @param studentId l'ID de l'étudiant
+     * @param studentId       l'ID de l'étudiant
      * @param sessionSeriesId l'ID de la série de sessions
      * @return l'historique des paiements
      */
@@ -341,6 +345,6 @@ public class PaymentController {
         Map<String, String> errorResponse = new HashMap<>();
         errorResponse.put("message", ex.getMessage());
 
-        return new ResponseEntity<>(errorResponse, ex.getStatus());
+        return new ResponseEntity<>(errorResponse, Objects.requireNonNull(ex.getStatus()));
     }
 }

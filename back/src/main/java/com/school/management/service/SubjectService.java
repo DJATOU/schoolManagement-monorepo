@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Objects;
 
 @Service
 public class SubjectService {
@@ -24,11 +25,11 @@ public class SubjectService {
 
     // create a new subject
     public SubjectEntity createSubject(SubjectEntity subject) {
-        return subjectRepository.save(subject);
+        return subjectRepository.save(Objects.requireNonNull(subject));
     }
 
     public SubjectEntity updateSubject(Long id, SubjectEntity subject) {
-        SubjectEntity subjectToUpdate = subjectRepository.findById(id).orElseThrow();
+        SubjectEntity subjectToUpdate = subjectRepository.findById(Objects.requireNonNull(id)).orElseThrow();
         subjectToUpdate.setName(subject.getName());
         return subjectRepository.save(subjectToUpdate);
     }

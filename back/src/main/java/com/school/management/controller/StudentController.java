@@ -31,6 +31,7 @@ import java.net.MalformedURLException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -248,12 +249,12 @@ public class StudentController {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
             }
 
-            Resource resource = new UrlResource(filePath.toUri());
+            Resource resource = new UrlResource(Objects.requireNonNull(filePath.toUri()));
 
             if (resource.exists() && resource.isReadable()) {
                 MediaType mediaType = getMediaTypeForFileName(fileName);
                 return ResponseEntity.ok()
-                        .contentType(mediaType)
+                        .contentType(Objects.requireNonNull(mediaType))
                         .body(resource);
             } else {
                 return ResponseEntity.notFound().build();
@@ -347,7 +348,7 @@ public class StudentController {
 
             Resource photo = fileManagementService.getFile(student.getPhoto());
             return ResponseEntity.ok()
-                    .contentType(MediaType.IMAGE_JPEG)
+                    .contentType(Objects.requireNonNull(MediaType.IMAGE_JPEG))
                     .body(photo);
         } catch (Exception e) {
             LOGGER.error("Failed to get photo for student {}: {}", id, e.getMessage(), e);

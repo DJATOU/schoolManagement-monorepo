@@ -7,8 +7,6 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -18,7 +16,8 @@ public interface AttendanceRepository extends JpaRepository<AttendanceEntity, Lo
     long countByStudentIdAndSessionSeriesIdAndIsPresent(Long studentId, Long sessionSeriesId, boolean isPresent);
 
     @Query("SELECT a FROM AttendanceEntity a WHERE a.session.id = :sessionId AND a.student.id = :studentId AND a.active = true ORDER BY a.id DESC LIMIT 1")
-    Optional<AttendanceEntity> findBySessionIdAndStudentId(@Param("sessionId") Long sessionId, @Param("studentId") Long studentId);
+    Optional<AttendanceEntity> findBySessionIdAndStudentId(@Param("sessionId") Long sessionId,
+            @Param("studentId") Long studentId);
 
     List<SessionEntity> findByStudentIdAndIsPresent(Long studentId, boolean b);
 
@@ -26,8 +25,8 @@ public interface AttendanceRepository extends JpaRepository<AttendanceEntity, Lo
     boolean existsByStudentIdAndSessionId(@Param("studentId") Long studentId, @Param("sessionId") Long sessionId);
 
     @Query("SELECT CASE WHEN COUNT(a) > 0 THEN TRUE ELSE FALSE END FROM AttendanceEntity a WHERE a.student.id = :studentId AND a.session.id = :sessionId AND a.active = true")
-    boolean existsByStudentIdAndSessionIdAndActiveTrue(@Param("studentId") Long studentId, @Param("sessionId") Long sessionId);
-
+    boolean existsByStudentIdAndSessionIdAndActiveTrue(@Param("studentId") Long studentId,
+            @Param("sessionId") Long sessionId);
 
     @Query("SELECT a FROM AttendanceEntity a WHERE a.session.id = :sessionId")
     List<AttendanceEntity> findBySessionId(@Param("sessionId") Long sessionId);
@@ -44,4 +43,3 @@ public interface AttendanceRepository extends JpaRepository<AttendanceEntity, Lo
 
     List<AttendanceEntity> findByStudentIdAndActiveTrue(Long studentId);
 }
-

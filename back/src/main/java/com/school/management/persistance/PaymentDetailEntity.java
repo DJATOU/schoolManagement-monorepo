@@ -14,7 +14,7 @@ import java.util.Date;
 @NoArgsConstructor
 @AllArgsConstructor
 @SuperBuilder
-@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+@JsonIgnoreProperties({ "hibernateLazyInitializer", "handler" })
 public class PaymentDetailEntity extends BaseEntity {
 
     @Id
@@ -37,6 +37,7 @@ public class PaymentDetailEntity extends BaseEntity {
     private Date paymentDate; // La date du paiement
 
     @Column(name = "is_catch_up")
+    @Builder.Default
     private Boolean isCatchUp = false;
 
     /**
@@ -45,6 +46,7 @@ public class PaymentDetailEntity extends BaseEntity {
      * - false/null: Suppression temporaire ou désactivation (peut être réactivé)
      */
     @Column(name = "permanently_deleted")
+    @Builder.Default
     private Boolean permanentlyDeleted = false;
 
     @Override

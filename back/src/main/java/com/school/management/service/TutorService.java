@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Objects;
 
 @Service
 public class TutorService {
@@ -22,22 +23,22 @@ public class TutorService {
     }
 
     public TutorEntity getTutorById(Long id) {
-        return tutorRepository.findById(id)
+        return tutorRepository.findById(Objects.requireNonNull(id))
                 .orElseThrow(() -> new RuntimeException("Tutor not found")); // Customize this exception
     }
 
     public TutorEntity createTutor(TutorEntity tutor) {
-        return tutorRepository.save(tutor);
+        return tutorRepository.save(Objects.requireNonNull(tutor));
     }
 
     public TutorEntity updateTutor(Long id) {
         TutorEntity existingTutor = getTutorById(id);
         // Update properties of existingTutor using values from tutor
-        return tutorRepository.save(existingTutor);
+        return tutorRepository.save(Objects.requireNonNull(existingTutor));
     }
 
     public void deleteTutor(Long id) {
-        tutorRepository.deleteById(id);
+        tutorRepository.deleteById(Objects.requireNonNull(id));
     }
 
     // Additional methods as needed...

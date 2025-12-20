@@ -5,9 +5,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-import org.springframework.boot.autoconfigure.domain.EntityScan;
 
-import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.Set;
 
@@ -18,7 +16,7 @@ import java.util.Set;
 @NoArgsConstructor
 @AllArgsConstructor
 @SuperBuilder
-@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+@JsonIgnoreProperties({ "hibernateLazyInitializer", "handler" })
 public class SessionSeriesEntity extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -39,7 +37,7 @@ public class SessionSeriesEntity extends BaseEntity {
 
     @OneToMany(mappedBy = "sessionSeries")
     @JsonIgnore
-    private Set<SessionEntity> sessions ;
+    private Set<SessionEntity> sessions;
 
     @Temporal(TemporalType.TIMESTAMP)
     @Column(name = "serie_time_start")
@@ -50,4 +48,3 @@ public class SessionSeriesEntity extends BaseEntity {
     private Date serieTimeEnd;
     // ... autres champs et méthodes ...
 }
-

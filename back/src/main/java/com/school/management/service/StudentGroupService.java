@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -33,9 +34,9 @@ public class StudentGroupService {
 
     @Autowired
     public StudentGroupService(StudentGroupRepository studentGroupRepository,
-                               StudentRepository studentRepository,
-                               GroupRepository groupRepository,
-                               GroupMapper groupMapper){
+            StudentRepository studentRepository,
+            GroupRepository groupRepository,
+            GroupMapper groupMapper) {
         this.studentGroupRepository = studentGroupRepository;
         this.studentRepository = studentRepository;
         this.groupRepository = groupRepository;
@@ -54,10 +55,11 @@ public class StudentGroupService {
     }
 
     public void addGroupsToStudent(StudentGroupDTO studentGroupDto) {
-        StudentEntity student = studentRepository.findById(studentGroupDto.getStudentId())
-                .orElseThrow(() -> new EntityNotFoundException("Student not found with id: " + studentGroupDto.getStudentId()));
+        StudentEntity student = studentRepository.findById(Objects.requireNonNull(studentGroupDto.getStudentId()))
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Student not found with id: " + studentGroupDto.getStudentId()));
 
-        List<GroupEntity> groups = groupRepository.findAllById(studentGroupDto.getGroupIds());
+        List<GroupEntity> groups = groupRepository.findAllById(Objects.requireNonNull(studentGroupDto.getGroupIds()));
 
         if (groups.size() != studentGroupDto.getGroupIds().size()) {
             throw new EntityNotFoundException("One or more groups not found");
@@ -70,11 +72,12 @@ public class StudentGroupService {
                 StudentGroupEntity studentGroup = StudentGroupEntity.builder()
                         .student(student)
                         .group(group)
-                        .dateAssigned(studentGroupDto.getDateAssigned() != null ? studentGroupDto.getDateAssigned() : new Date())
+                        .dateAssigned(studentGroupDto.getDateAssigned() != null ? studentGroupDto.getDateAssigned()
+                                : new Date())
                         .createdBy(studentGroupDto.getAssignedBy())
                         .description(studentGroupDto.getDescription())
                         .build();
-                studentGroupRepository.save(studentGroup);
+                studentGroupRepository.save(Objects.requireNonNull(studentGroup));
             } else {
                 alreadyAssociatedGroups.add(group);
             }
@@ -84,15 +87,18 @@ public class StudentGroupService {
             List<String> alreadyAssociatedGroupNames = alreadyAssociatedGroups.stream()
                     .map(GroupEntity::getName)
                     .toList();
-            throw new GroupAlreadyAssociatedException("Groups already associated with student", alreadyAssociatedGroupNames);
+            throw new GroupAlreadyAssociatedException("Groups already associated with student",
+                    alreadyAssociatedGroupNames);
         }
     }
 
     public void addStudentsToGroup(StudentGroupDTO studentGroupDto) {
-        GroupEntity group = groupRepository.findById(studentGroupDto.getGroupId())
-                .orElseThrow(() -> new EntityNotFoundException("Group not found with id: " + studentGroupDto.getGroupId()));
+        GroupEntity group = groupRepository.findById(Objects.requireNonNull(studentGroupDto.getGroupId()))
+                .orElseThrow(
+                        () -> new EntityNotFoundException("Group not found with id: " + studentGroupDto.getGroupId()));
 
-        List<StudentEntity> students = studentRepository.findAllById(studentGroupDto.getStudentIds());
+        List<StudentEntity> students = studentRepository
+                .findAllById(Objects.requireNonNull(studentGroupDto.getStudentIds()));
         if (students.size() != studentGroupDto.getStudentIds().size()) {
             throw new EntityNotFoundException("One or more students not found");
         }
@@ -103,12 +109,13 @@ public class StudentGroupService {
                 StudentGroupEntity studentGroup = StudentGroupEntity.builder()
                         .student(student)
                         .group(group)
-                        .dateAssigned(studentGroupDto.getDateAssigned() != null ? studentGroupDto.getDateAssigned() : new Date())
+                        .dateAssigned(studentGroupDto.getDateAssigned() != null ? studentGroupDto.getDateAssigned()
+                                : new Date())
                         .createdBy(studentGroupDto.getAssignedBy())
                         .description(studentGroupDto.getDescription())
                         .build();
 
-                studentGroupRepository.save(studentGroup);
+                studentGroupRepository.save(Objects.requireNonNull(studentGroup));
                 existingStudents.add(student); // Ajout de l'étudiant aux étudiants existants du groupe
             }
         });
@@ -132,8 +139,10 @@ public class StudentGroupService {
     // In `StudentGroupService.java`
     @Transactional
     public void removeStudentFromGroup(Long groupId, Long studentId) {
-        StudentGroupEntity studentGroup = studentGroupRepository.findByGroupIdAndStudentIdAndActiveTrue(groupId, studentId)
-                .orElseThrow(() -> new EntityNotFoundException("StudentGroup not found for groupId " + groupId + " and studentId " + studentId));
+        StudentGroupEntity studentGroup = studentGroupRepository
+                .findByGroupIdAndStudentIdAndActiveTrue(groupId, studentId)
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "StudentGroup not found for groupId " + groupId + " and studentId " + studentId));
         studentGroup.setActive(false);
         studentGroupRepository.save(studentGroup);
     }

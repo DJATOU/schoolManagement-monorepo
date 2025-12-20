@@ -1,36 +1,110 @@
-<div class="page-header">
-  <app-list-header [count]="totalStudents" [entityName]="'students'" [filterLabel]="'Show late payments only'"
-    (filterChange)="onLateFilterChange($event)">
-  </app-list-header>
+<div class="student-search-container">
+  <!-- TOPBAR (sticky) -->
+  <div class="topbar">
+    <div class="topbar-main">
+      <app-list-header [count]="totalStudents" [entityName]="'students'"
+        [filterLabel]="'Afficher uniquement les retards'" [lateCount]="latePaymentCount"
+        (filterChange)="onLateFilterChange($event)">
+      </app-list-header>
 
-  <app-view-toggle [viewMode]="viewMode" (viewModeChange)="changeViewMode($event)">
-  </app-view-toggle>
+      <div class="topbar-actions">
+        <button mat-button class="filter-button" (click)="toggleFilters()">
+          <mat-icon>filter_list</mat-icon>
+          Filtres
+          <span class="filter-count" *ngIf="getActiveFiltersCount() > 0">{{ getActiveFiltersCount() }}</span>
+        </button>
+
+        <app-view-toggle [viewMode]="viewMode" (viewModeChange)="changeViewMode($event)">
+        </app-view-toggle>
+      </div>
+    </div>
+
+    <!-- Filter chips when filters are hidden -->
+    <div class="filter-chips" *ngIf="!filtersVisible && getActiveFiltersCount() > 0">
+      <div class="filter-tag" *ngIf="selectedGroupId">
+        <span>Groupe: {{ getGroupName(selectedGroupId) }}</span>
+        <button mat-icon-button (click)="clearGroupFilter()" class="remove-filter">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+      <div class="filter-tag" *ngIf="selectedLevelId">
+        <span>Niveau: {{ getLevelName(selectedLevelId) }}</span>
+        <button mat-icon-button (click)="clearLevelFilter()" class="remove-filter">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+    </div>
+
+    <!-- FILTER PANEL (overlay) -->
+    <div class="filter-panel-backdrop" *ngIf="filtersVisible" (click)="toggleFilters()"></div>
+    <div class="filter-panel" [class.visible]="filtersVisible">
+      <div class="filter-panel-header">
+        <h3>Filtres</h3>
+        <button mat-icon-button (click)="toggleFilters()">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+
+      <div class="filter-panel-content">
+        <mat-form-field appearance="outline" class="filter-field">
+          <mat-label>Groupe</mat-label>
+          <mat-select [(ngModel)]="selectedGroupId" (selectionChange)="onGroupFilterChange()">
+            <mat-option [value]="null">Tous les groupes</mat-option>
+            <mat-option *ngFor="let group of groups" [value]="group.id">
+              {{ group.name }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="filter-field">
+          <mat-label>Niveau</mat-label>
+          <mat-select [(ngModel)]="selectedLevelId" (selectionChange)="onLevelFilterChange()">
+            <mat-option [value]="null">Tous les niveaux</mat-option>
+            <mat-option *ngFor="let level of levels" [value]="level.id">
+              {{ level.name }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+    </div>
+  </div>
+
+
+
+  <!-- CONTENT (scrollable) -->
+  <div class="content-area" #contentArea>
+    <ng-container *ngIf="!isLoading && filteredStudents.length > 0">
+      <div class="student-view" [ngClass]="viewMode === 'card' ? 'cards-grid' : 'list-view'">
+        <ng-container *ngIf="viewMode === 'card'">
+          <app-student-card *ngFor="let student of currentPageStudents" [student]="student"
+            class="fade-in"></app-student-card>
+        </ng-container>
+        <ng-container *ngIf="viewMode === 'list'">
+          <app-student-list-item *ngFor="let student of currentPageStudents" [student]="student"
+            class="fade-in"></app-student-list-item>
+        </ng-container>
+      </div>
+    </ng-container>
+
+    <ng-container *ngIf="isLoading">
+      <div class="loading-state">
+        <mat-spinner></mat-spinner>
+        <p>Chargement des étudiants...</p>
+      </div>
+    </ng-container>
+
+    <ng-container *ngIf="!isLoading && filteredStudents.length === 0">
+      <div class="empty-state">
+        <mat-icon class="empty-icon">person_off</mat-icon>
+        <p>Aucun étudiant trouvé.</p>
+      </div>
+    </ng-container>
+  </div>
+
+  <!-- FOOTER (sticky) -->
+  <div class="footer" *ngIf="!isLoading && filteredStudents.length > 0">
+    <mat-paginator #bottomPaginator [length]="totalStudents" [pageSize]="pageSize" [pageSizeOptions]="pageSizeOptions"
+      [pageIndex]="currentPageIndex" (page)="changePage($event)" showFirstLastButtons>
+    </mat-paginator>
+  </div>
 </div>
-
-<ng-container *ngIf="!isLoading && filteredStudents.length > 0; else loadingOrEmptyState">
-  <div class="cards-section">
-    <div class="student-view" [ngClass]="viewMode === 'card' ? 'cards-grid' : 'list-view'">
-      <ng-container *ngIf="viewMode === 'card'">
-        <app-student-card *ngFor="let student of currentPageStudents" [student]="student"
-          class="fade-in"></app-student-card>
-      </ng-container>
-      <ng-container *ngIf="viewMode === 'list'">
-        <app-student-list-item *ngFor="let student of currentPageStudents" [student]="student"
-          class="fade-in"></app-student-list-item>
-      </ng-container>
-    </div>
-
-    <div class="paginator-wrapper">
-      <mat-paginator [length]="totalStudents" [pageSize]="pageSize" [pageSizeOptions]="pageSizeOptions"
-        (page)="changePage($event)">
-      </mat-paginator>
-    </div>
-  </div>
-</ng-container>
-
-<ng-template #loadingOrEmptyState>
-  <div class="empty-state">
-    <p *ngIf="isLoading">Loading students...</p>
-    <p *ngIf="!isLoading">No students found.</p>
-  </div>
-</ng-template>

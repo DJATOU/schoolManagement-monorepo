@@ -9,7 +9,7 @@ import com.school.management.persistance.SessionEntity;
 import com.school.management.persistance.TeacherEntity;
 import com.school.management.repository.*;
 import com.school.management.service.exception.CustomServiceException;
-import com.school.management.service.payment.PaymentDetailDeactivationService;  // ← AJOUTÉ
+import com.school.management.service.payment.PaymentDetailDeactivationService; // ← AJOUTÉ
 import com.school.management.service.util.CommonSpecifications;
 import com.school.management.shared.mapper.MappingContext;
 import jakarta.annotation.PostConstruct;
@@ -21,7 +21,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
-import java.sql.Timestamp;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
@@ -46,8 +45,8 @@ public class SessionService {
     private final SessionMapper sessionMapper;
 
     // ========== NOUVELLES DÉPENDANCES AJOUTÉES ==========
-    private final PaymentDetailDeactivationService paymentDetailDeactivationService;  // ← AJOUTÉ
-    private final AttendanceService attendanceService;  // ← AJOUTÉ
+    private final PaymentDetailDeactivationService paymentDetailDeactivationService; // ← AJOUTÉ
+    private final AttendanceService attendanceService; // ← AJOUTÉ
 
     // MappingContext pour SessionMapper
     private MappingContext mappingContext;
@@ -61,8 +60,8 @@ public class SessionService {
             RoomRepository roomRepository,
             TeacherRepository teacherRepository,
             SessionSeriesRepository sessionSeriesRepository,
-            PaymentDetailDeactivationService paymentDetailDeactivationService,  // ← AJOUTÉ
-            AttendanceService attendanceService) {  // ← AJOUTÉ
+            PaymentDetailDeactivationService paymentDetailDeactivationService, // ← AJOUTÉ
+            AttendanceService attendanceService) { // ← AJOUTÉ
         this.sessionRepository = sessionRepository;
         this.patchService = patchService;
         this.groupRepository = groupRepository;
@@ -70,12 +69,13 @@ public class SessionService {
         this.roomRepository = roomRepository;
         this.teacherRepository = teacherRepository;
         this.sessionSeriesRepository = sessionSeriesRepository;
-        this.paymentDetailDeactivationService = paymentDetailDeactivationService;  // ← AJOUTÉ
-        this.attendanceService = attendanceService;  // ← AJOUTÉ
+        this.paymentDetailDeactivationService = paymentDetailDeactivationService; // ← AJOUTÉ
+        this.attendanceService = attendanceService; // ← AJOUTÉ
     }
 
     /**
-     * PHASE 1 REFACTORING: Initialise le MappingContext après injection des dépendances
+     * PHASE 1 REFACTORING: Initialise le MappingContext après injection des
+     * dépendances
      */
     @PostConstruct
     private void initMappingContext() {
@@ -86,8 +86,7 @@ public class SessionService {
                 groupRepository,
                 sessionSeriesRepository,
                 null,
-                sessionRepository
-        );
+                sessionRepository);
         LOGGER.debug("MappingContext initialized for SessionService");
     }
 
@@ -107,11 +106,11 @@ public class SessionService {
     }
 
     public Optional<SessionEntity> getSessionById(Long id) {
-        return sessionRepository.findById(id);
+        return sessionRepository.findById(Objects.requireNonNull(id));
     }
 
     public SessionEntity createSession(SessionEntity session) {
-        return sessionRepository.save(session);
+        return sessionRepository.save(Objects.requireNonNull(session));
     }
 
     public SessionEntity updateSession(Long sessionId, Map<String, Object> updates) {
@@ -125,13 +124,13 @@ public class SessionService {
         patchService.applyPatch(session, updates);
 
         // Sauvegarder l'entité session mise à jour
-        return sessionRepository.save(session);
+        return sessionRepository.save(Objects.requireNonNull(session));
     }
 
     private void updateEntityRelations(SessionEntity session, Map<String, Object> updates) {
         if (updates.containsKey(GROUPID)) {
             Long groupId = extractId(updates.get(GROUPID));
-            GroupEntity group = groupRepository.findById(groupId)
+            GroupEntity group = groupRepository.findById(Objects.requireNonNull(groupId))
                     .orElseThrow(() -> new EntityNotFoundException("Group not found with ID: " + groupId));
             session.setGroup(group);
             updates.remove(GROUPID);
@@ -139,7 +138,7 @@ public class SessionService {
 
         if (updates.containsKey(ROOMID)) {
             Long roomId = extractId(updates.get(ROOMID));
-            RoomEntity room = roomRepository.findById(roomId)
+            RoomEntity room = roomRepository.findById(Objects.requireNonNull(roomId))
                     .orElseThrow(() -> new EntityNotFoundException("Room not found with ID: " + roomId));
             session.setRoom(room);
             updates.remove(ROOMID);
@@ -147,7 +146,7 @@ public class SessionService {
 
         if (updates.containsKey(TEACHERID)) {
             Long teacherId = extractId(updates.get(TEACHERID));
-            TeacherEntity teacher = teacherRepository.findById(teacherId)
+            TeacherEntity teacher = teacherRepository.findById(Objects.requireNonNull(teacherId))
                     .orElseThrow(() -> new EntityNotFoundException("Teacher not found with ID: " + teacherId));
             session.setTeacher(teacher);
             updates.remove(TEACHERID);
@@ -176,7 +175,6 @@ public class SessionService {
         }
     }
 
-
     private Long extractId(Object idObj) {
         if (idObj == null) {
             return null;
@@ -189,7 +187,7 @@ public class SessionService {
     }
 
     public void deleteSession(Long id) {
-        sessionRepository.deleteById(id);
+        sessionRepository.deleteById(Objects.requireNonNull(id));
     }
 
     public List<SessionEntity> findSessionsByCriteria(SessionSearchCriteriaDTO criteria) {
@@ -209,14 +207,14 @@ public class SessionService {
 
     @Transactional
     public SessionEntity markSessionAsFinished(Long sessionId) {
-        SessionEntity session = sessionRepository.findById(sessionId)
+        SessionEntity session = sessionRepository.findById(Objects.requireNonNull(sessionId))
                 .orElseThrow(() -> new CustomServiceException(SESSION_NOT_FOUND_MESSAGE + sessionId));
         session.setIsFinished(true);
         return sessionRepository.save(session);
     }
 
     public SessionEntity markSessionAsUnfinished(Long sessionId) {
-        SessionEntity session = sessionRepository.findById(sessionId)
+        SessionEntity session = sessionRepository.findById(Objects.requireNonNull(sessionId))
                 .orElseThrow(() -> new CustomServiceException(SESSION_NOT_FOUND_MESSAGE + sessionId));
         session.setIsFinished(false);
         return sessionRepository.save(session);
@@ -227,7 +225,8 @@ public class SessionService {
     }
 
     public List<SessionDTO> findSessionsInRange(LocalDateTime start, LocalDateTime end) {
-        return sessionRepository.findBySessionTimeStartBetween(start, end).stream().map(sessionMapper::sessionEntityToSessionDto)
+        return sessionRepository.findBySessionTimeStartBetween(start, end).stream()
+                .map(sessionMapper::sessionEntityToSessionDto)
                 .toList();
     }
 
@@ -235,13 +234,13 @@ public class SessionService {
         return sessionRepository.findByGroupIdAndSessionTimeStartBetween(groupId, start, end);
     }
 
-    public List<SessionDTO> findByGroupIdAndSessionTimeStartBetween(Long groupId, LocalDateTime start, LocalDateTime end) {
+    public List<SessionDTO> findByGroupIdAndSessionTimeStartBetween(Long groupId, LocalDateTime start,
+            LocalDateTime end) {
         return sessionRepository.findByGroupIdAndSessionTimeStartBetween(groupId, start, end)
                 .stream()
                 .map(sessionMapper::sessionEntityToSessionDto)
                 .toList();
     }
-
 
     // ========== NOUVELLES MÉTHODES AJOUTÉES ==========
 
@@ -251,7 +250,8 @@ public class SessionService {
      * IMPORTANT : Cette méthode désactive :
      * 1. La session elle-même (session.active = false)
      * 2. Toutes les attendances associées (attendance.active = false)
-     * 3. Tous les PaymentDetails associés (paymentDetail.active = false)  ← CRITIQUE !
+     * 3. Tous les PaymentDetails associés (paymentDetail.active = false) ← CRITIQUE
+     * !
      *
      * POURQUOI C'EST IMPORTANT :
      * Si vous ne désactivez pas les PaymentDetails, ils continuent à être comptés
@@ -268,7 +268,7 @@ public class SessionService {
         LOGGER.info("Deactivating session: {}", sessionId);
 
         // 1. Désactiver la session
-        SessionEntity session = sessionRepository.findById(sessionId)
+        SessionEntity session = sessionRepository.findById(Objects.requireNonNull(sessionId))
                 .orElseThrow(() -> new CustomServiceException(SESSION_NOT_FOUND_MESSAGE + sessionId));
 
         session.setActive(false);
@@ -299,7 +299,7 @@ public class SessionService {
         LOGGER.info("Reactivating session: {}", sessionId);
 
         // 1. Réactiver la session
-        SessionEntity session = sessionRepository.findById(sessionId)
+        SessionEntity session = sessionRepository.findById(Objects.requireNonNull(sessionId))
                 .orElseThrow(() -> new CustomServiceException(SESSION_NOT_FOUND_MESSAGE + sessionId));
 
         session.setActive(true);

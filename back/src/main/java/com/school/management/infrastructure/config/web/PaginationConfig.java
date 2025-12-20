@@ -5,6 +5,7 @@ import org.springframework.data.web.PageableHandlerMethodArgumentResolver;
 import org.springframework.data.web.config.EnableSpringDataWebSupport;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.lang.NonNull;
 
 import java.util.List;
 
@@ -18,10 +19,11 @@ import java.util.List;
  * - Index de page: commence à 0
  *
  * Usage dans les controllers:
+ * 
  * <pre>
- * @GetMapping
+ * &#64;GetMapping
  * public ResponseEntity<PageResponse<StudentDTO>> getAll(
- *     @PageableDefault(size = 20, sort = "lastName") Pageable pageable) {
+ *         @PageableDefault(size = 20, sort = "lastName") Pageable pageable) {
  *     Page<Student> students = studentService.findAll(pageable);
  *     return ResponseEntity.ok(PageResponse.of(students.map(mapper::toDTO)));
  * }
@@ -50,13 +52,12 @@ public class PaginationConfig implements WebMvcConfigurer {
      * - oneIndexedParameters: false (commence à 0, pas à 1)
      */
     @Override
-    public void addArgumentResolvers(List<HandlerMethodArgumentResolver> resolvers) {
+    public void addArgumentResolvers(@NonNull List<HandlerMethodArgumentResolver> resolvers) {
         PageableHandlerMethodArgumentResolver resolver = new PageableHandlerMethodArgumentResolver();
 
         // Pagination par défaut si non spécifiée
         resolver.setFallbackPageable(
-            org.springframework.data.domain.PageRequest.of(0, 20)
-        );
+                org.springframework.data.domain.PageRequest.of(0, 20));
 
         // Limite maximale de taille de page (évite les requêtes trop larges)
         resolver.setMaxPageSize(100);

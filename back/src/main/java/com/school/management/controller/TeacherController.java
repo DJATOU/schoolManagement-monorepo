@@ -21,6 +21,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Objects;
 
 @RestController
 @RequestMapping("/api/teachers")
@@ -36,7 +37,7 @@ public class TeacherController {
 
     @Autowired
     public TeacherController(TeacherService teacherService, TeacherMapper teacherMapper,
-                           FileManagementService fileManagementService) {
+            FileManagementService fileManagementService) {
         this.teacherService = teacherService;
         this.teacherMapper = teacherMapper;
         this.fileManagementService = fileManagementService;
@@ -65,7 +66,8 @@ public class TeacherController {
     }
 
     @GetMapping("/fullname")
-    public ResponseEntity<List<TeacherEntity>> getTeachersByFullName(@RequestParam String firstName, @RequestParam String lastName) {
+    public ResponseEntity<List<TeacherEntity>> getTeachersByFullName(@RequestParam String firstName,
+            @RequestParam String lastName) {
         return ResponseEntity.ok(teacherService.findByFirstNameAndLastName(firstName, lastName));
     }
 
@@ -76,8 +78,9 @@ public class TeacherController {
 
     @PostMapping("/createTeacher")
     public ResponseEntity<?> createTeacher(@Valid @ModelAttribute TeacherDTO teacherDto,
-                                           @RequestParam("file") MultipartFile file) {
-        // PHASE 1 REFACTORING: Utilise FileManagementService au lieu de gérer les fichiers directement
+            @RequestParam("file") MultipartFile file) {
+        // PHASE 1 REFACTORING: Utilise FileManagementService au lieu de gérer les
+        // fichiers directement
         // Upload du fichier avec rollback automatique en cas d'erreur
         FileManagementService.FileUploadResult uploadResult = fileManagementService.uploadWithRollback(file);
 
@@ -113,7 +116,8 @@ public class TeacherController {
 
     @Transactional(readOnly = true)
     @GetMapping("/searchByNames")
-    public ResponseEntity<List<TeacherDTO>> getTeachersByFirstNameAndOrLastName(@RequestParam(required = false) String search) {
+    public ResponseEntity<List<TeacherDTO>> getTeachersByFirstNameAndOrLastName(
+            @RequestParam(required = false) String search) {
         List<TeacherDTO> teachers = teacherService.searchTeachersByNameStartingWithDTO(search);
         return ResponseEntity.ok(teachers);
     }
@@ -127,7 +131,8 @@ public class TeacherController {
 
     /**
      * PHASE 3A: Upload photo pour un enseignant
-     * @param id ID de l'enseignant
+     * 
+     * @param id   ID de l'enseignant
      * @param file Fichier photo
      * @return Nom du fichier uploadé
      */
@@ -146,6 +151,7 @@ public class TeacherController {
 
     /**
      * PHASE 3A: Récupère la photo d'un enseignant
+     * 
      * @param id ID de l'enseignant
      * @return Resource contenant la photo
      */
@@ -154,7 +160,7 @@ public class TeacherController {
         try {
             Resource photo = teacherService.getPhoto(id);
             return ResponseEntity.ok()
-                    .contentType(MediaType.IMAGE_JPEG)
+                    .contentType(Objects.requireNonNull(MediaType.IMAGE_JPEG))
                     .body(photo);
         } catch (IOException e) {
             LOGGER.error("Failed to get photo for teacher {}: {}", id, e.getMessage(), e);
@@ -162,4 +168,3 @@ public class TeacherController {
         }
     }
 }
-

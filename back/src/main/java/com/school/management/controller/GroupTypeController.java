@@ -7,7 +7,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.lang.NonNull;
 import java.util.List;
+import java.util.Objects;
 
 @RestController
 @RequestMapping("/api/grouptypes")
@@ -28,7 +30,7 @@ public class GroupTypeController {
 
     // Get a single group type by ID
     @GetMapping("/{id}")
-    public ResponseEntity<GroupTypeEntity> getGroupTypeById(@PathVariable Long id) {
+    public ResponseEntity<GroupTypeEntity> getGroupTypeById(@PathVariable @NonNull Long id) {
         return groupTypeRepository.findById(id)
                 .map(ResponseEntity::ok)
                 .orElse(new ResponseEntity<>(HttpStatus.NOT_FOUND));
@@ -37,14 +39,15 @@ public class GroupTypeController {
     // Create a new group type
     @PostMapping
     public ResponseEntity<GroupTypeEntity> createGroupType(@Valid @RequestBody GroupTypeEntity groupType) {
-        GroupTypeEntity savedGroupType = groupTypeRepository.save(groupType);
+        GroupTypeEntity savedGroupType = groupTypeRepository.save(Objects.requireNonNull(groupType));
         return new ResponseEntity<>(savedGroupType, HttpStatus.CREATED);
     }
 
     // Update an existing group type
     @PutMapping("/{id}")
-    public ResponseEntity<GroupTypeEntity> updateGroupType(@PathVariable Long id, @Valid @RequestBody GroupTypeEntity groupTypeDetails) {
-        return groupTypeRepository.findById(id)
+    public ResponseEntity<GroupTypeEntity> updateGroupType(@PathVariable Long id,
+            @Valid @RequestBody GroupTypeEntity groupTypeDetails) {
+        return groupTypeRepository.findById(Objects.requireNonNull(id))
                 .map(groupType -> {
                     groupType.setName(groupTypeDetails.getName());
                     groupType.setSize(groupTypeDetails.getSize());
@@ -53,18 +56,22 @@ public class GroupTypeController {
                 })
                 .orElse(new ResponseEntity<>(HttpStatus.NOT_FOUND));
     }
-/*
-    // Delete a group type
-    @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteGroupType(@PathVariable Long id) {
-        return groupTypeRepository.findById(id)
-                .map(groupType -> {
-                    groupTypeRepository.delete(groupType);
-                    return ResponseEntity.noContent().build(); // Returns ResponseEntity<HttpStatus>
-                })
-                .orElse(ResponseEntity.notFound().build()); // Also returns ResponseEntity<HttpStatus>
-    }
-*/
+
+    /*
+     * // Delete a group type
+     * 
+     * @DeleteMapping("/{id}")
+     * public ResponseEntity<?> deleteGroupType(@PathVariable Long id) {
+     * return groupTypeRepository.findById(id)
+     * .map(groupType -> {
+     * groupTypeRepository.delete(groupType);
+     * return ResponseEntity.noContent().build(); // Returns
+     * ResponseEntity<HttpStatus>
+     * })
+     * .orElse(ResponseEntity.notFound().build()); // Also returns
+     * ResponseEntity<HttpStatus>
+     * }
+     */
     @DeleteMapping("disable/{id_list}")
     public ResponseEntity<Boolean> disableGroupType(@PathVariable String id_list) {
         System.out.println("Request recieved: " + id_list);
@@ -77,4 +84,3 @@ public class GroupTypeController {
         return ResponseEntity.ok(true);
     }
 }
-

@@ -19,6 +19,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 @RestController
 @RequestMapping("/api/payment-details")
@@ -29,7 +30,7 @@ public class PaymentDetailAdminController {
 
     @Autowired
     public PaymentDetailAdminController(PaymentDetailAdminService paymentDetailAdminService,
-                                        PaymentDetailAuditService paymentDetailAuditService) {
+            PaymentDetailAuditService paymentDetailAuditService) {
         this.paymentDetailAdminService = paymentDetailAdminService;
         this.paymentDetailAuditService = paymentDetailAuditService;
     }
@@ -45,12 +46,13 @@ public class PaymentDetailAdminController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "id") String sort,
-            @RequestParam(defaultValue = "DESC") String direction
-    ) {
-        Sort sortOrder = Sort.by(Sort.Direction.fromString(direction), sort);
+            @RequestParam(defaultValue = "DESC") String direction) {
+        Sort sortOrder = Sort.by(Objects.requireNonNull(Sort.Direction.fromString(direction)),
+                Objects.requireNonNull(sort, "sort parameter cannot be null"));
         Pageable pageable = PageRequest.of(page, size, sortOrder);
 
-        // Use the new search method with complete data (student, group, series, session)
+        // Use the new search method with complete data (student, group, series,
+        // session)
         // This uses DTO projection to avoid lazy loading issues
         Page<PaymentDetailSearchDTO> result = paymentDetailAdminService.searchPaymentDetailsWithCompleteData(
                 studentId, groupId, sessionSeriesId, active, dateFrom, dateTo, pageable);
@@ -67,15 +69,15 @@ public class PaymentDetailAdminController {
 
     @PatchMapping("/{id}")
     public ResponseEntity<PaymentDetailEntity> updatePaymentDetail(@PathVariable Long id,
-                                                                   @RequestHeader("X-Admin-Name") String adminName,
-                                                                   @RequestBody PaymentDetailUpdateDTO updateDTO) {
+            @RequestHeader("X-Admin-Name") String adminName,
+            @RequestBody PaymentDetailUpdateDTO updateDTO) {
         return ResponseEntity.ok(paymentDetailAdminService.updatePaymentDetail(id, updateDTO, adminName));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Map<String, String>> deletePaymentDetail(@PathVariable Long id,
-                                                                   @RequestHeader("X-Admin-Name") String adminName,
-                                                                   @RequestBody Map<String, String> requestBody) {
+            @RequestHeader("X-Admin-Name") String adminName,
+            @RequestBody Map<String, String> requestBody) {
         String reason = requestBody.get("reason");
         paymentDetailAdminService.deletePaymentDetail(id, reason, adminName);
         Map<String, String> response = new HashMap<>();
@@ -95,8 +97,8 @@ public class PaymentDetailAdminController {
 
     @PostMapping("/{id}/reactivate")
     public ResponseEntity<PaymentDetailEntity> reactivatePaymentDetail(@PathVariable Long id,
-                                                                        @RequestHeader("X-Admin-Name") String adminName,
-                                                                        @RequestBody Map<String, String> requestBody) {
+            @RequestHeader("X-Admin-Name") String adminName,
+            @RequestBody Map<String, String> requestBody) {
         String reason = requestBody.get("reason");
         return ResponseEntity.ok(paymentDetailAdminService.reactivatePaymentDetail(id, reason, adminName));
     }

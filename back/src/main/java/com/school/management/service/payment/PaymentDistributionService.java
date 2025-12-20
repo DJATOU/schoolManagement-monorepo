@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 @Service
@@ -82,8 +83,7 @@ public class PaymentDistributionService {
             if (surplus > 0) {
                 throw new CustomServiceException(
                         "Le paiement a été complété. Le montant excédentaire de " + surplus + " euros sera remboursé.",
-                        HttpStatus.OK
-                );
+                        HttpStatus.OK);
             }
         }
 
@@ -91,7 +91,7 @@ public class PaymentDistributionService {
     }
 
     private double distributeToSession(PaymentEntity payment, SessionEntity session,
-                                       double pricePerSession, double remaining) {
+            double pricePerSession, double remaining) {
         Optional<PaymentDetailEntity> existingDetail = paymentDetailRepository
                 .findByPaymentIdAndSessionId(payment.getId(), session.getId());
 
@@ -101,10 +101,9 @@ public class PaymentDistributionService {
             // CRITICAL: Check if payment was permanently deleted (irreversible)
             if (detail.getPermanentlyDeleted() != null && detail.getPermanentlyDeleted()) {
                 throw new IllegalStateException(
-                    "Cannot create a new payment for session " + session.getId() +
-                    ". This session had a payment that was permanently deleted (irreversible). " +
-                    "Payment detail ID: " + detail.getId()
-                );
+                        "Cannot create a new payment for session " + session.getId() +
+                                ". This session had a payment that was permanently deleted (irreversible). " +
+                                "Payment detail ID: " + detail.getId());
             }
 
             // CRITICAL: Ignore PaymentDetails from CANCELLED payments
@@ -117,7 +116,7 @@ public class PaymentDistributionService {
                         .session(session)
                         .amountPaid(amountForThisSession)
                         .build();
-                paymentDetailRepository.save(newDetail);
+                paymentDetailRepository.save(Objects.requireNonNull(newDetail));
                 remaining -= amountForThisSession;
                 LOGGER.debug("Created new PaymentDetail for session {} (ignored CANCELLED) - amount: {}",
                         session.getId(), amountForThisSession);
@@ -125,7 +124,8 @@ public class PaymentDistributionService {
             }
 
             // Only consider the payment if it's ACTIVE
-            // If inactive (but not permanently deleted), treat it as if it doesn't exist (create new one)
+            // If inactive (but not permanently deleted), treat it as if it doesn't exist
+            // (create new one)
             if (detail.getActive() != null && detail.getActive()) {
                 double alreadyPaid = detail.getAmountPaid();
                 double stillOwed = pricePerSession - alreadyPaid;
@@ -148,7 +148,7 @@ public class PaymentDistributionService {
                         .session(session)
                         .amountPaid(amountForThisSession)
                         .build();
-                paymentDetailRepository.save(newDetail);
+                paymentDetailRepository.save(Objects.requireNonNull(newDetail));
                 remaining -= amountForThisSession;
 
                 LOGGER.debug("Created new ACTIVE PaymentDetail for session {} - amount: {}",
@@ -161,7 +161,7 @@ public class PaymentDistributionService {
                     .session(session)
                     .amountPaid(amountForThisSession)
                     .build();
-            paymentDetailRepository.save(newDetail);
+            paymentDetailRepository.save(Objects.requireNonNull(newDetail));
             remaining -= amountForThisSession;
 
             LOGGER.debug("Created new PaymentDetail for session {} - amount: {}",
@@ -221,10 +221,10 @@ public class PaymentDistributionService {
         if (newTotal > expectedCost) {
             double surplus = newTotal - expectedCost;
             throw new CustomServiceException(
-                    String.format("Le montant payé dépasse le coût total (%d sessions) de %.2f DA. Le paiement ne peut pas être effectué.",
-                            (int)(expectedCost / group.getPrice().getPrice()), surplus),
-                    HttpStatus.BAD_REQUEST
-            );
+                    String.format(
+                            "Le montant payé dépasse le coût total (%d sessions) de %.2f DA. Le paiement ne peut pas être effectué.",
+                            (int) (expectedCost / group.getPrice().getPrice()), surplus),
+                    HttpStatus.BAD_REQUEST);
         }
 
         return true;

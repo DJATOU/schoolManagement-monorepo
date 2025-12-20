@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.lang.NonNull;
 
 import java.util.List;
 import java.util.Optional;
@@ -35,5 +36,6 @@ public interface StudentRepository extends JpaRepository<StudentEntity, Long> {
     StudentEntity findStudentWithAllData(@Param("studentId") Long studentId);
 
     @EntityGraph(value = "Student.withAllData", type = EntityGraph.EntityGraphType.LOAD)
-    Optional<StudentEntity> findById(Long id);
+    @NonNull
+    Optional<StudentEntity> findById(@NonNull Long id);
 }

@@ -62,12 +62,12 @@ public class ImageController {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
             }
 
-            Resource resource = new UrlResource(file.toUri());
+            Resource resource = new UrlResource(java.util.Objects.requireNonNull(file.toUri()));
 
             if (resource.exists() && resource.isReadable()) {
                 MediaType mediaType = getMediaTypeForFileName(filename);
                 return ResponseEntity.ok()
-                        .contentType(mediaType)
+                        .contentType(java.util.Objects.requireNonNull(mediaType))
                         .cacheControl(CacheControl.maxAge(7, TimeUnit.DAYS).cachePublic())
                         .body(resource);
             } else {

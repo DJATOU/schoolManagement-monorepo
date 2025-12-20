@@ -6,11 +6,17 @@
 
 .profile-card {
   cursor: default;
-  position: relative; // Pour positionner l'indicateur en absolu
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%; // Use natural height from parent grid
 }
 
 .profile-card-content {
-  flex-grow: 1;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 
   &:hover {
     .profile-name {
@@ -29,6 +35,8 @@
 
 .card-actions {
   width: 100%;
+  margin-top: auto; // Push to bottom
+  padding: 0.5rem !important; // Reduce padding for square cards
 }
 
 @media (max-width: 600px) {
@@ -46,19 +54,20 @@
 // ===== Indicateur de statut de paiement =====
 .payment-status-indicator {
   position: absolute;
-  top: 8px;
-  right: 8px;
+  top: 6px;
+  right: 6px;
   z-index: 10;
 
   mat-chip {
-    font-size: 12px;
-    min-height: 28px;
-    padding: 4px 8px;
-    font-weight: 500;
+    font-size: 11px;
+    min-height: 24px;
+    padding: 2px 6px;
+    font-weight: 600;
     display: flex;
     align-items: center;
-    gap: 4px;
-    cursor: help; // Indique qu'un tooltip est disponible
+    gap: 3px;
+    cursor: help;
+    border-radius: 12px; // Indique qu'un tooltip est disponible
 
     mat-icon {
       font-size: 16px;

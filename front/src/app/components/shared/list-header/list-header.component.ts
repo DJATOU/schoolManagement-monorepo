@@ -4,14 +4,15 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
 @Component({
-    selector: 'app-list-header',
-    standalone: true,
-    imports: [CommonModule, MatSlideToggleModule, FormsModule],
-    template: `
+  selector: 'app-list-header',
+  standalone: true,
+  imports: [CommonModule, MatSlideToggleModule, FormsModule],
+  template: `
     <div class="list-header">
       <div class="summary">
         <span class="count">{{ count }}</span>
         <span class="label">{{ entityName }}</span>
+        <span class="late-count" *ngIf="lateCount > 0">• Retards: {{ lateCount }}</span>
       </div>
       
       <mat-slide-toggle
@@ -23,7 +24,7 @@ import { FormsModule } from '@angular/forms';
       </mat-slide-toggle>
     </div>
   `,
-    styles: [`
+  styles: [`
     .list-header {
       display: flex;
       justify-content: space-between;
@@ -51,6 +52,13 @@ import { FormsModule } from '@angular/forms';
       text-transform: lowercase;
     }
 
+    .late-count {
+      font-size: 0.875rem;
+      color: #ef4444;
+      font-weight: 600;
+      margin-left: 0.5rem;
+    }
+
     .quick-filter {
       font-size: 0.875rem;
     }
@@ -73,14 +81,15 @@ import { FormsModule } from '@angular/forms';
   `]
 })
 export class ListHeaderComponent {
-    @Input() count: number = 0;
-    @Input() entityName: string = 'items';
-    @Input() filterLabel?: string;
-    @Output() filterChange = new EventEmitter<boolean>();
+  @Input() count: number = 0;
+  @Input() entityName: string = 'items';
+  @Input() filterLabel?: string;
+  @Input() lateCount: number = 0;
+  @Output() filterChange = new EventEmitter<boolean>();
 
-    filterActive: boolean = false;
+  filterActive: boolean = false;
 
-    onFilterChange(): void {
-        this.filterChange.emit(this.filterActive);
-    }
+  onFilterChange(): void {
+    this.filterChange.emit(this.filterActive);
+  }
 }

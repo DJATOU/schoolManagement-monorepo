@@ -5,9 +5,7 @@ import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.pdmodel.font.PDFont;
-import org.apache.pdfbox.pdmodel.font.PDType1Font;
 import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
-import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayInputStream;
@@ -29,7 +27,8 @@ public class PdfGeneratorService {
 
     // Méthode addText existante modifiée pour prendre en charge l'arabe
     // Méthode addText originale
-    public void addText(PDPageContentStream contentStream, String text, float x, float y, PDFont font, int fontSize) throws IOException {
+    public void addText(PDPageContentStream contentStream, String text, float x, float y, PDFont font, int fontSize)
+            throws IOException {
         contentStream.setFont(font, fontSize);
         contentStream.beginText();
         contentStream.newLineAtOffset(x, y);
@@ -38,7 +37,8 @@ public class PdfGeneratorService {
     }
 
     // Surcharge de addText pour le texte arabe avec gestion de l'alignement
-    public void addText(PDPageContentStream contentStream, String text, float x, float y, PDFont font, int fontSize, boolean isArabic) throws IOException {
+    public void addText(PDPageContentStream contentStream, String text, float x, float y, PDFont font, int fontSize,
+            boolean isArabic) throws IOException {
         contentStream.setFont(font, fontSize);
         contentStream.beginText();
 
@@ -55,7 +55,8 @@ public class PdfGeneratorService {
         contentStream.endText();
     }
 
-    public void addImage(PDPageContentStream contentStream, PDDocument document, byte[] imageBytes, float x, float y, float width, float height) throws IOException {
+    public void addImage(PDPageContentStream contentStream, PDDocument document, byte[] imageBytes, float x, float y,
+            float width, float height) throws IOException {
         PDImageXObject image;
         try (ByteArrayInputStream inputStream = new ByteArrayInputStream(imageBytes)) {
             image = PDImageXObject.createFromByteArray(document, imageBytes, "logo");
@@ -70,4 +71,3 @@ public class PdfGeneratorService {
         return new ByteArrayInputStream(out.toByteArray());
     }
 }
-

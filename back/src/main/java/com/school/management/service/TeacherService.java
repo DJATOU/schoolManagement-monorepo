@@ -25,6 +25,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 @Service
@@ -41,9 +42,9 @@ public class TeacherService {
 
     @Autowired
     public TeacherService(TeacherRepository teacherRepository,
-                         TeacherMapper teacherMapper,
-                         ImageUrlService imageUrlService,
-                         FileManagementService fileManagementService) {
+            TeacherMapper teacherMapper,
+            ImageUrlService imageUrlService,
+            FileManagementService fileManagementService) {
         this.teacherRepository = teacherRepository;
         this.teacherMapper = teacherMapper;
         this.imageUrlService = imageUrlService;
@@ -52,7 +53,7 @@ public class TeacherService {
 
     @Transactional
     public TeacherEntity save(TeacherEntity teacher) {
-        return teacherRepository.save(teacher);
+        return teacherRepository.save(Objects.requireNonNull(teacher));
     }
 
     public List<TeacherEntity> getAllTeachers() {
@@ -73,11 +74,11 @@ public class TeacherService {
     }
 
     public TeacherEntity createTeacher(TeacherEntity teacher) {
-        return teacherRepository.save(teacher);
+        return teacherRepository.save(Objects.requireNonNull(teacher));
     }
 
     public TeacherEntity updateTeacher(Long id, TeacherEntity teacher) {
-        TeacherEntity teacherToUpdate = teacherRepository.findById(id).orElseThrow();
+        TeacherEntity teacherToUpdate = teacherRepository.findById(Objects.requireNonNull(id)).orElseThrow();
         teacherToUpdate.setFirstName(teacher.getFirstName());
         teacherToUpdate.setLastName(teacher.getLastName());
         teacherToUpdate.setEmail(teacher.getEmail());
@@ -101,8 +102,7 @@ public class TeacherService {
                     TeacherDTO dto = teacherMapper.teacherToTeacherDTO(entity);
                     // Utiliser ImageUrlService pour générer l'URL de manière centralisée
                     String photoUrl = imageUrlService.getTeacherPhotoUrl(
-                            imageUrlService.extractFilename(entity.getPhoto())
-                    );
+                            imageUrlService.extractFilename(entity.getPhoto()));
                     dto.setPhoto(photoUrl);
                     return dto;
                 })
@@ -140,14 +140,14 @@ public class TeacherService {
     @Transactional(readOnly = true)
     public Optional<TeacherEntity> findById(Long id) {
         try {
-            return teacherRepository.findById(id);
+            return teacherRepository.findById(Objects.requireNonNull(id));
         } catch (DataAccessException e) {
             throw new CustomServiceException("Error fetching teacher with ID " + id, e);
         }
     }
 
     public void desactivateTeacher(Long id) {
-        teacherRepository.findById(id).ifPresent(teacher -> {
+        teacherRepository.findById(Objects.requireNonNull(id)).ifPresent(teacher -> {
             teacher.setActive(false);
             teacherRepository.save(teacher);
         });
@@ -155,8 +155,9 @@ public class TeacherService {
 
     /**
      * PHASE 3A: Upload photo pour un enseignant
+     * 
      * @param teacherId ID de l'enseignant
-     * @param file Fichier photo à uploader
+     * @param file      Fichier photo à uploader
      * @return Le nom du fichier uploadé
      * @throws IOException Si erreur d'upload
      */
@@ -164,7 +165,7 @@ public class TeacherService {
     public String uploadPhoto(Long teacherId, MultipartFile file) throws IOException {
         LOGGER.info("Uploading photo for teacher ID: {}", teacherId);
 
-        TeacherEntity teacher = teacherRepository.findById(teacherId)
+        TeacherEntity teacher = teacherRepository.findById(Objects.requireNonNull(teacherId))
                 .orElseThrow(() -> new CustomServiceException("Teacher not found with id: " + teacherId));
 
         // Supprimer l'ancienne photo si elle existe
@@ -195,6 +196,7 @@ public class TeacherService {
 
     /**
      * PHASE 3A: Récupère la photo d'un enseignant
+     * 
      * @param teacherId ID de l'enseignant
      * @return Resource contenant la photo
      * @throws IOException Si erreur de lecture
@@ -203,7 +205,7 @@ public class TeacherService {
     public Resource getPhoto(Long teacherId) throws IOException {
         LOGGER.debug("Fetching photo for teacher ID: {}", teacherId);
 
-        TeacherEntity teacher = teacherRepository.findById(teacherId)
+        TeacherEntity teacher = teacherRepository.findById(Objects.requireNonNull(teacherId))
                 .orElseThrow(() -> new CustomServiceException("Teacher not found with id: " + teacherId));
 
         if (teacher.getPhoto() == null || teacher.getPhoto().isEmpty()) {
@@ -213,4 +215,3 @@ public class TeacherService {
         return fileManagementService.getFile(teacher.getPhoto());
     }
 }
-

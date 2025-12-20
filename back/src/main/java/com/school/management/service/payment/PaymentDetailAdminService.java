@@ -26,8 +26,8 @@ public class PaymentDetailAdminService {
 
     @Autowired
     public PaymentDetailAdminService(PaymentDetailRepository paymentDetailRepository,
-                                     PaymentRepository paymentRepository,
-                                     PaymentDetailAuditService paymentDetailAuditService) {
+            PaymentRepository paymentRepository,
+            PaymentDetailAuditService paymentDetailAuditService) {
         this.paymentDetailRepository = paymentDetailRepository;
         this.paymentRepository = paymentRepository;
         this.paymentDetailAuditService = paymentDetailAuditService;
@@ -35,35 +35,37 @@ public class PaymentDetailAdminService {
 
     @Transactional(readOnly = true)
     public Page<PaymentDetailEntity> getAllPaymentDetailsWithFilters(Long studentId,
-                                                                     Long groupId,
-                                                                     Long sessionSeriesId,
-                                                                     Boolean active,
-                                                                     Date dateFrom,
-                                                                     Date dateTo,
-                                                                     Pageable pageable) {
-        return paymentDetailRepository.findAllWithFilters(studentId, groupId, sessionSeriesId, active, dateFrom, dateTo, pageable);
+            Long groupId,
+            Long sessionSeriesId,
+            Boolean active,
+            Date dateFrom,
+            Date dateTo,
+            Pageable pageable) {
+        return paymentDetailRepository.findAllWithFilters(studentId, groupId, sessionSeriesId, active, dateFrom, dateTo,
+                pageable);
     }
 
     /**
      * Search payment details with complete data for Payment Management UI
-     * Uses DTO projection to include student, group, series, and session information
+     * Uses DTO projection to include student, group, series, and session
+     * information
      * Filters by dateCreation (createdAt) instead of paymentDate
      */
     @Transactional(readOnly = true)
     public Page<PaymentDetailSearchDTO> searchPaymentDetailsWithCompleteData(Long studentId,
-                                                                              Long groupId,
-                                                                              Long sessionSeriesId,
-                                                                              Boolean active,
-                                                                              Date dateFrom,
-                                                                              Date dateTo,
-                                                                              Pageable pageable) {
+            Long groupId,
+            Long sessionSeriesId,
+            Boolean active,
+            Date dateFrom,
+            Date dateTo,
+            Pageable pageable) {
         return paymentDetailRepository.searchPaymentDetailsWithCompleteData(
                 studentId, groupId, sessionSeriesId, active, dateFrom, dateTo, pageable);
     }
 
     @Transactional(readOnly = true)
     public PaymentDetailEntity getPaymentDetail(Long id) {
-        return paymentDetailRepository.findById(id)
+        return paymentDetailRepository.findById(Objects.requireNonNull(id))
                 .orElseThrow(() -> new RuntimeException("Payment detail not found with id: " + id));
     }
 
@@ -71,7 +73,7 @@ public class PaymentDetailAdminService {
     public PaymentDetailEntity updatePaymentDetail(Long id, PaymentDetailUpdateDTO updateDTO, String adminName) {
         validateReason(updateDTO.getReason());
 
-        PaymentDetailEntity detail = paymentDetailRepository.findById(id)
+        PaymentDetailEntity detail = paymentDetailRepository.findById(Objects.requireNonNull(id))
                 .orElseThrow(() -> new RuntimeException("Payment detail not found with id: " + id));
 
         String oldValue = buildValueString(detail);
@@ -84,7 +86,7 @@ public class PaymentDetailAdminService {
         }
 
         String newValue = buildValueString(detail);
-        paymentDetailRepository.save(detail);
+        paymentDetailRepository.save(Objects.requireNonNull(detail));
 
         paymentDetailAuditService.logAction(id, "MODIFIED", adminName, oldValue, newValue, updateDTO.getReason());
         recalculatePayment(detail.getPayment().getId());
@@ -96,7 +98,7 @@ public class PaymentDetailAdminService {
     public void deletePaymentDetail(Long id, String reason, String adminName) {
         validateReason(reason);
 
-        PaymentDetailEntity detail = paymentDetailRepository.findById(id)
+        PaymentDetailEntity detail = paymentDetailRepository.findById(Objects.requireNonNull(id))
                 .orElseThrow(() -> new RuntimeException("Payment detail not found with id: " + id));
 
         String oldValue = buildValueString(detail);
@@ -112,7 +114,7 @@ public class PaymentDetailAdminService {
     public PaymentDetailEntity reactivatePaymentDetail(Long id, String reason, String adminName) {
         validateReason(reason);
 
-        PaymentDetailEntity detail = paymentDetailRepository.findById(id)
+        PaymentDetailEntity detail = paymentDetailRepository.findById(Objects.requireNonNull(id))
                 .orElseThrow(() -> new RuntimeException("Payment detail not found with id: " + id));
 
         if (detail.getActive() != null && detail.getActive()) {
@@ -121,7 +123,8 @@ public class PaymentDetailAdminService {
 
         // IMPORTANT: Empêcher la réactivation des suppressions définitives
         if (detail.getPermanentlyDeleted() != null && detail.getPermanentlyDeleted()) {
-            throw new IllegalStateException("Cannot reactivate a permanently deleted payment detail. This deletion is irreversible.");
+            throw new IllegalStateException(
+                    "Cannot reactivate a permanently deleted payment detail. This deletion is irreversible.");
         }
 
         String oldValue = buildValueString(detail);
@@ -136,7 +139,7 @@ public class PaymentDetailAdminService {
 
     @Transactional
     public void recalculatePayment(Long paymentId) {
-        PaymentEntity payment = paymentRepository.findById(paymentId)
+        PaymentEntity payment = paymentRepository.findById(Objects.requireNonNull(paymentId))
                 .orElseThrow(() -> new RuntimeException("Payment not found with id: " + paymentId));
 
         // Récupérer TOUS les PaymentDetails (actifs et inactifs)
@@ -144,9 +147,8 @@ public class PaymentDetailAdminService {
 
         // Vérifier si tous les PaymentDetails ont été définitivement supprimés
         boolean allPermanentlyDeleted = !allDetails.isEmpty() &&
-                allDetails.stream().allMatch(detail ->
-                    detail.getPermanentlyDeleted() != null && detail.getPermanentlyDeleted()
-                );
+                allDetails.stream()
+                        .allMatch(detail -> detail.getPermanentlyDeleted() != null && detail.getPermanentlyDeleted());
 
         // Calculer le total payé (uniquement les actifs)
         double totalPaid = allDetails.stream()
@@ -159,7 +161,8 @@ public class PaymentDetailAdminService {
         payment.setAmountPaid(totalPaid);
 
         double expectedAmount = 0;
-        if (payment.getGroup() != null && payment.getGroup().getPrice() != null && payment.getGroup().getPrice().getPrice() != null) {
+        if (payment.getGroup() != null && payment.getGroup().getPrice() != null
+                && payment.getGroup().getPrice().getPrice() != null) {
             double pricePerSession = payment.getGroup().getPrice().getPrice();
             int sessions = 1;
             if (payment.getSessionSeries() != null && payment.getSessionSeries().getTotalSessions() > 0) {
@@ -169,7 +172,8 @@ public class PaymentDetailAdminService {
         }
 
         // LOGIQUE DE STATUT:
-        // 1. Si tous les paiements ont été définitivement supprimés → CANCELLED (annulé)
+        // 1. Si tous les paiements ont été définitivement supprimés → CANCELLED
+        // (annulé)
         // 2. Sinon si totalPaid = 0 → PENDING
         // 3. Sinon si totalPaid >= expectedAmount → COMPLETED
         // 4. Sinon → IN_PROGRESS
