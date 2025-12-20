@@ -51,7 +51,8 @@ public class StudentController {
 
     @Autowired
     public StudentController(StudentService studentService, StudentMapper studentMapper, GroupMapper groupMapper,
-                             StudentHistoryService studentHistoryService, FileManagementService fileManagementService, StudentPayableGroupsService studentPayableGroupsService) {
+            StudentHistoryService studentHistoryService, FileManagementService fileManagementService,
+            StudentPayableGroupsService studentPayableGroupsService) {
         this.studentService = studentService;
         this.studentMapper = studentMapper;
         this.groupMapper = groupMapper;
@@ -60,28 +61,38 @@ public class StudentController {
         this.studentPayableGroupsService = studentPayableGroupsService;
     }
 
-
     @PostMapping("/createStudent")
-    public ResponseEntity<Object> createStudent(@Valid @ModelAttribute StudentDTO studentDto,
-                                           @RequestParam("file") MultipartFile file) {
-        // PHASE 1 REFACTORING: Utilise FileManagementService au lieu de gérer les fichiers directement
-        // Upload du fichier avec rollback automatique en cas d'erreur
-        FileManagementService.FileUploadResult uploadResult = fileManagementService.uploadWithRollback(file);
+    public ResponseEntity<Object> createStudent(
+            @Valid @ModelAttribute StudentDTO studentDto,
+            @RequestParam(value = "file", required = false) MultipartFile file) { // ← MODIFIÉ : required = false
 
-        if (!uploadResult.isSuccess()) {
-            LOGGER.warn("File upload failed: {}", uploadResult.getErrorMessage());
-            return ResponseEntity.badRequest().body(uploadResult.getErrorMessage());
+        // Vérifier si un fichier est fourni
+        if (file != null && !file.isEmpty()) {
+            // PHASE 1 REFACTORING: Utilise FileManagementService au lieu de gérer les
+            // fichiers directement
+            // Upload du fichier avec rollback automatique en cas d'erreur
+            FileManagementService.FileUploadResult uploadResult = fileManagementService.uploadWithRollback(file);
+
+            if (!uploadResult.isSuccess()) {
+                LOGGER.warn("File upload failed: {}", uploadResult.getErrorMessage());
+                return ResponseEntity.badRequest().body(uploadResult.getErrorMessage());
+            }
+
+            // Stocker le nom du fichier dans le DTO
+            studentDto.setPhoto(uploadResult.getFilename());
+            LOGGER.info("Photo uploaded: {}", uploadResult.getFilename());
+        } else {
+            // Pas de photo fournie
+            studentDto.setPhoto(null);
+            LOGGER.info("No photo provided for student");
         }
 
         try {
-            // Stocker le nom du fichier dans le DTO
-            studentDto.setPhoto(uploadResult.getFilename());
-
             // Sauvegarder l'étudiant en base de données avec MappingContext
             StudentEntity student = studentMapper.studentDTOToStudent(studentDto, studentService.getMappingContext());
             StudentEntity savedStudent = studentService.save(student);
 
-            LOGGER.info("Student created successfully with photo: {}", uploadResult.getFilename());
+            LOGGER.info("Student created successfully with ID: {}", savedStudent.getId());
             return ResponseEntity.ok(studentMapper.studentToStudentDTO(savedStudent));
 
         } catch (Exception e) {
@@ -108,7 +119,6 @@ public class StudentController {
         return ResponseEntity.ok(studentMapper.studentToStudentDTO(updatedStudent));
     }
 
-
     @Transactional(readOnly = true)
     @GetMapping
     public ResponseEntity<List<StudentDTO>> getAllStudents() {
@@ -117,7 +127,6 @@ public class StudentController {
                 .toList();
         return ResponseEntity.ok(students);
     }
-
 
     @Transactional(readOnly = true)
     @GetMapping("/search")
@@ -128,7 +137,8 @@ public class StudentController {
             @RequestParam(required = false) Long groupId,
             @RequestParam(required = false) String establishment) {
 
-        List<StudentEntity> students = studentService.searchStudents(firstName, lastName, level, groupId, establishment);
+        List<StudentEntity> students = studentService.searchStudents(firstName, lastName, level, groupId,
+                establishment);
         List<StudentDTO> studentDTOs = students.stream()
                 .map(studentMapper::studentToStudentDTO)
                 .toList();
@@ -143,7 +153,6 @@ public class StudentController {
 
         return ResponseEntity.ok(studentDto);
     }
-
 
     @GetMapping("/groups/{groupId}")
     public ResponseEntity<List<StudentDTO>> getStudentsByGroupId(@PathVariable Long groupId) {
@@ -162,8 +171,6 @@ public class StudentController {
         return ResponseEntity.ok(students);
     }
 
-
-
     @GetMapping("/establishments/{establishment}")
     public ResponseEntity<List<StudentDTO>> getStudentsByEstablishment(@PathVariable String establishment) {
         List<StudentDTO> students = studentService.findByEstablishment(establishment).stream()
@@ -171,9 +178,11 @@ public class StudentController {
                 .toList();
         return ResponseEntity.ok(students);
     }
+
     @Transactional(readOnly = true)
     @GetMapping("/firstnames/{firstName}/lastnames/{lastName}")
-    public ResponseEntity<List<StudentDTO>> getStudentsByFirstNameAndLastName(@PathVariable String firstName, @PathVariable String lastName) {
+    public ResponseEntity<List<StudentDTO>> getStudentsByFirstNameAndLastName(@PathVariable String firstName,
+            @PathVariable String lastName) {
         List<StudentDTO> students = studentService.findByFirstNameAndLastName(firstName, lastName).stream()
                 .map(studentMapper::studentToStudentDTO)
                 .toList();
@@ -182,10 +191,12 @@ public class StudentController {
 
     @Transactional(readOnly = true)
     @GetMapping("/searchByNames")
-    public ResponseEntity<List<StudentDTO>> getStudentsByFirstNameAndOrLastName(@RequestParam(required = false) String search) {
+    public ResponseEntity<List<StudentDTO>> getStudentsByFirstNameAndOrLastName(
+            @RequestParam(required = false) String search) {
         List<StudentDTO> students = studentService.searchStudentsByNameStartingWithDTO(search);
         return ResponseEntity.ok(students);
     }
+
     @Transactional(readOnly = true)
     @GetMapping("/lastnames/{lastName}")
     public ResponseEntity<List<StudentDTO>> getStudentsByLastName(@PathVariable String lastName) {
@@ -268,8 +279,6 @@ public class StudentController {
         return lastDot > 0 ? filename.substring(lastDot + 1) : "";
     }
 
-
-
     @GetMapping("/{studentId}/full-history")
     public ResponseEntity<StudentFullHistoryDTO> getStudentFullHistory(@PathVariable Long studentId) {
         StudentFullHistoryDTO fullHistory = studentHistoryService.getStudentFullHistory(studentId);
@@ -278,7 +287,8 @@ public class StudentController {
 
     /**
      * PHASE 3A: Upload photo pour un étudiant
-     * @param id ID de l'étudiant
+     * 
+     * @param id   ID de l'étudiant
      * @param file Fichier photo
      * @return Nom du fichier uploadé
      */
@@ -321,6 +331,7 @@ public class StudentController {
 
     /**
      * PHASE 3A: Récupère la photo d'un étudiant
+     * 
      * @param id ID de l'étudiant
      * @return Resource contenant la photo
      */
@@ -350,7 +361,7 @@ public class StudentController {
      * LOGIQUE :
      * - Groupes FIXES (student_groups avec active=true) : TOUJOURS retournés
      * - Groupes RATTRAPAGE (attendances sans student_groups) :
-     *   Retournés UNIQUEMENT si au moins une attendance.active = true
+     * Retournés UNIQUEMENT si au moins une attendance.active = true
      *
      * UTILISATION :
      * Appelé par le frontend lors de l'ouverture du dialogue de paiement

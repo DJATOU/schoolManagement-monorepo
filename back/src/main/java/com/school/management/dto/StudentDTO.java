@@ -8,6 +8,8 @@ import lombok.experimental.SuperBuilder;
 import java.util.Date;
 import java.util.Set;
 
+import org.springframework.format.annotation.DateTimeFormat;
+
 @Getter
 @Setter
 @NoArgsConstructor
@@ -33,6 +35,7 @@ public class StudentDTO {
     private String phoneNumber;
 
     @NotNull(message = "Date of birth is required")
+    @DateTimeFormat(pattern = "yyyy-MM-dd")
     private Date dateOfBirth;
 
     private String placeOfBirth;
@@ -54,6 +57,5 @@ public class StudentDTO {
     private Double averageScore;
 
     private Boolean active; // Ajouter ce champ
-
 
 }

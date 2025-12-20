@@ -1,3 +1,9 @@
+// Host element must be block and full width for grid layout
+:host {
+  display: block;
+  width: 100%;
+}
+
 .profile-card {
   cursor: default;
   position: relative; // Pour positionner l'indicateur en absolu
@@ -97,10 +103,13 @@
 
 // Animation de pulsation pour le statut en retard
 @keyframes pulse-warning {
-  0%, 100% {
+
+  0%,
+  100% {
     opacity: 1;
     transform: scale(1);
   }
+
   50% {
     opacity: 0.85;
     transform: scale(1.05);

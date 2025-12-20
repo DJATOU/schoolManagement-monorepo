@@ -1,46 +1,30 @@
+// Main wrapper - fills all available space in mat-sidenav-content
 .shared-layout-container {
-  display: flex;
-  flex-direction: column;
-  flex-grow: 1;
-  max-width: 100%;
+  display: block;
   width: 100%;
-  margin: 0 auto;
-  padding: 0 clamp(24px, 6vw, 104px);
+  min-height: 100%;
   background-color: #f5f6fa;
   box-sizing: border-box;
-  overflow: auto;
-}
-
-.app-main-container {
-  max-width: 1360px;
-  margin: 0 auto;
   padding: 24px 32px;
-  box-sizing: border-box;
+}
+
+// Content container - takes full available width
+.app-main-container {
+  display: block;
   width: 100%;
+  box-sizing: border-box;
 }
 
-@media (max-width: 1200px) {
+// Tablet responsive padding
+@media (max-width: 1024px) {
   .shared-layout-container {
-    padding: 0 32px;
-  }
-}
-
-@media (max-width: 768px) {
-  .app-main-container {
     padding: 20px 24px;
   }
-
-  .shared-layout-container {
-    padding: 0 24px;
-  }
 }
 
+// Mobile responsive padding
 @media (max-width: 600px) {
-  .app-main-container {
-    padding: 16px 16px;
-  }
-
   .shared-layout-container {
-    padding: 0;
+    padding: 16px 16px;
   }
 }

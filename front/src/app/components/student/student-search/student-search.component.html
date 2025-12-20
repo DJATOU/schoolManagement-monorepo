@@ -1,35 +1,28 @@
-<mat-toolbar class="view-toggle-toolbar">
-  <button mat-button
-          [class.active]="viewMode === 'card'"
-          (click)="changeViewMode('card')">
-    <mat-icon>view_comfy</mat-icon>
-    Grid
-  </button>
-  <button mat-button
-          [class.active]="viewMode === 'list'"
-          (click)="changeViewMode('list')">
-    <mat-icon>view_list</mat-icon>
-    List
-  </button>
-</mat-toolbar>
+<div class="page-header">
+  <app-list-header [count]="totalStudents" [entityName]="'students'" [filterLabel]="'Show late payments only'"
+    (filterChange)="onLateFilterChange($event)">
+  </app-list-header>
+
+  <app-view-toggle [viewMode]="viewMode" (viewModeChange)="changeViewMode($event)">
+  </app-view-toggle>
+</div>
 
 <ng-container *ngIf="!isLoading && filteredStudents.length > 0; else loadingOrEmptyState">
   <div class="cards-section">
-    <div class="student-view"
-         [ngClass]="viewMode === 'card' ? 'cards-grid' : 'list-view'">
+    <div class="student-view" [ngClass]="viewMode === 'card' ? 'cards-grid' : 'list-view'">
       <ng-container *ngIf="viewMode === 'card'">
-        <app-student-card *ngFor="let student of currentPageStudents" [student]="student" class="fade-in"></app-student-card>
+        <app-student-card *ngFor="let student of currentPageStudents" [student]="student"
+          class="fade-in"></app-student-card>
       </ng-container>
       <ng-container *ngIf="viewMode === 'list'">
-        <app-student-list-item *ngFor="let student of currentPageStudents" [student]="student" class="fade-in"></app-student-list-item>
+        <app-student-list-item *ngFor="let student of currentPageStudents" [student]="student"
+          class="fade-in"></app-student-list-item>
       </ng-container>
     </div>
 
     <div class="paginator-wrapper">
-      <mat-paginator [length]="totalStudents"
-                     [pageSize]="pageSize"
-                     [pageSizeOptions]="pageSizeOptions"
-                     (page)="changePage($event)">
+      <mat-paginator [length]="totalStudents" [pageSize]="pageSize" [pageSizeOptions]="pageSizeOptions"
+        (page)="changePage($event)">
       </mat-paginator>
     </div>
   </div>
