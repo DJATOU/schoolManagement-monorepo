@@ -45,38 +45,24 @@
 }
 
 // Main scrollable content area (mat-sidenav-content)
+// CRITICAL: overflow hidden here - pages handle their own scroll
 .content-area {
   display: flex;
   flex-direction: column;
   flex: 1;
   min-width: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: hidden; // Pages handle their own scroll
   background: linear-gradient(109.6deg, rgb(148, 233, 194) 11.2%, rgb(224, 235, 186) 91.1%);
-
-  // Subtle scrollbar
-  scrollbar-width: thin;
-  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
-
-  &::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background-color: rgba(0, 0, 0, 0.2);
-    border-radius: 3px;
-  }
 }
 
-// Ensure shared-layout-container fills the content area
+// Ensure shared-layout-container fills the content area with FIXED height
 app-shared-layout-container {
-  display: block;
+  display: flex;
+  flex-direction: column;
   width: 100%;
-  min-height: 100%;
+  height: 100%;
+  flex: 1;
+  min-height: 0;
 }
 
 // Form container adjustments (for form pages)

@@ -146,8 +146,8 @@ export class StudentSearchComponent implements OnInit, OnDestroy, AfterViewInit 
     const containerHeight = this.contentArea.nativeElement.clientHeight;
     const containerWidth = this.contentArea.nativeElement.clientWidth;
 
-    // Card dimensions based on CSS
-    const cardMinWidth = 280; // from grid minmax
+    // Card dimensions based on CSS - MUST MATCH SCSS minmax(220px, 1fr)
+    const cardMinWidth = 220; // from grid minmax
     const cardHeight = 208; // min-height 13rem
     const gap = 16;
 
@@ -176,14 +176,14 @@ export class StudentSearchComponent implements OnInit, OnDestroy, AfterViewInit 
     // If we have the container, use its actual width
     if (this.contentArea?.nativeElement) {
       const containerWidth = this.contentArea.nativeElement.clientWidth;
-      const cardMinWidth = 280;
+      const cardMinWidth = 220; // Match SCSS minmax(220px, 1fr)
       const gap = 16;
       return Math.max(1, Math.floor((containerWidth + gap) / (cardMinWidth + gap)));
     }
 
     // Fallback based on window width (accounting for sidebar ~240px)
     const width = window.innerWidth - 300; // Approximate sidebar + padding
-    const cardMinWidth = 280;
+    const cardMinWidth = 220; // Match SCSS
     const gap = 16;
     return Math.max(1, Math.floor((width + gap) / (cardMinWidth + gap)));
   }
