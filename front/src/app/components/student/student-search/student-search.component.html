@@ -8,6 +8,14 @@
       </app-list-header>
 
       <div class="topbar-actions">
+        <!-- COMPACT PAGINATOR -->
+        <div class="compact-paginator" *ngIf="!isLoading && filteredStudents.length > 0">
+          <mat-paginator #topPaginator [length]="totalStudents" [pageSize]="pageSize"
+            [pageSizeOptions]="pageSizeOptions" [pageIndex]="currentPageIndex" (page)="changePage($event)"
+            showFirstLastButtons>
+          </mat-paginator>
+        </div>
+
         <button mat-button class="filter-button" (click)="toggleFilters()">
           <mat-icon>filter_list</mat-icon>
           Filtres
@@ -71,18 +79,29 @@
 
 
 
-  <!-- CONTENT (scrollable) -->
-  <div class="content-area" #contentArea>
-    <ng-container *ngIf="!isLoading && filteredStudents.length > 0">
+  <!-- CONTENT (scrollable with infinite scroll) -->
+  <div class="content-area" #contentArea (scroll)="onScroll($event)">
+    <ng-container *ngIf="!isLoading && displayedStudents.length > 0">
       <div class="student-view" [ngClass]="viewMode === 'card' ? 'cards-grid' : 'list-view'">
         <ng-container *ngIf="viewMode === 'card'">
-          <app-student-card *ngFor="let student of currentPageStudents" [student]="student"
+          <app-student-card *ngFor="let student of displayedStudents" [student]="student"
             class="fade-in"></app-student-card>
         </ng-container>
         <ng-container *ngIf="viewMode === 'list'">
-          <app-student-list-item *ngFor="let student of currentPageStudents" [student]="student"
+          <app-student-list-item *ngFor="let student of displayedStudents" [student]="student"
             class="fade-in"></app-student-list-item>
         </ng-container>
+      </div>
+
+      <!-- Loading indicator for infinite scroll -->
+      <div class="loading-more" *ngIf="isLoadingMore">
+        <mat-spinner diameter="32"></mat-spinner>
+        <span>Chargement...</span>
+      </div>
+
+      <!-- End of list indicator -->
+      <div class="end-of-list" *ngIf="!hasMoreData && displayedStudents.length > 0">
+        <span>Tous les étudiants affichés ({{displayedStudents.length}})</span>
       </div>
     </ng-container>
 
@@ -99,12 +118,5 @@
         <p>Aucun étudiant trouvé.</p>
       </div>
     </ng-container>
-  </div>
-
-  <!-- FOOTER (sticky) -->
-  <div class="footer" *ngIf="!isLoading && filteredStudents.length > 0">
-    <mat-paginator #bottomPaginator [length]="totalStudents" [pageSize]="pageSize" [pageSizeOptions]="pageSizeOptions"
-      [pageIndex]="currentPageIndex" (page)="changePage($event)" showFirstLastButtons>
-    </mat-paginator>
   </div>
 </div>

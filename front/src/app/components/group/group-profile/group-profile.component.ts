@@ -37,7 +37,7 @@ import { EditGroupDialogComponent } from '../edit-group-dialog/edit-group-dialog
     ProfileListItemComponent,
     StudentListComponent,
     StudentListComponent
-]
+  ]
 })
 export class GroupProfileComponent implements OnInit {
   group: Group | null = null;
@@ -47,6 +47,13 @@ export class GroupProfileComponent implements OnInit {
   loadingStudents = true;
   loadingSeries = true;
   groupPhotoUrl: string = '';
+  avatarColor: string = '#6366f1';
+
+  // Colors for avatar backgrounds
+  private avatarColors = [
+    '#6366f1', '#8b5cf6', '#ec4899', '#ef4444', '#f97316',
+    '#eab308', '#22c55e', '#14b8a6', '#06b6d4', '#3b82f6'
+  ];
 
   constructor(
     private groupService: GroupService,
@@ -54,7 +61,7 @@ export class GroupProfileComponent implements OnInit {
     private route: ActivatedRoute,
     private dialog: MatDialog,
     private snackBar: MatSnackBar,
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     const groupId = this.getGroupIdFromRoute();
@@ -65,6 +72,34 @@ export class GroupProfileComponent implements OnInit {
     }
   }
 
+  /**
+   * Get initials from group name (max 2 characters)
+   */
+  getInitials(): string {
+    const name = this.group?.name || '';
+    const words = name.trim().split(/\s+/);
+    if (words.length >= 2) {
+      return (words[0][0] + words[1][0]).toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  }
+
+  /**
+   * Set avatar color based on group name
+   */
+  private setAvatarColor(): void {
+    const name = this.group?.name || '';
+    const hash = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    this.avatarColor = this.avatarColors[hash % this.avatarColors.length];
+  }
+
+  /**
+   * Handle image load error - clear URL to show initials
+   */
+  onImageError(): void {
+    this.groupPhotoUrl = '';
+  }
+
   private getGroupIdFromRoute(): number | null {
     const id = this.route.snapshot.paramMap.get('id');
     return id ? +id : null;
@@ -73,8 +108,9 @@ export class GroupProfileComponent implements OnInit {
   private loadGroupData(groupId: number): void {
     this.groupService.getGroupDetailsById(groupId).subscribe({
       next: (group) => {
-        console.log('Group details:', group);  // Log pour vérifier les données reçues
+        console.log('Group details:', group);
         this.group = group;
+        this.setAvatarColor();
         // Générer l'URL de la photo si elle existe
         if (this.group?.photo) {
           this.groupPhotoUrl = this.groupService.getGroupPhotoUrl(this.group.id!);
@@ -87,7 +123,7 @@ export class GroupProfileComponent implements OnInit {
       }
     });
   }
-  
+
 
   private loadStudents(groupId: number): void {
     this.groupService.getStudentsByGroupId(groupId).subscribe({
@@ -102,7 +138,7 @@ export class GroupProfileComponent implements OnInit {
       }
     });
   }
-  
+
 
   private loadSeries(groupId: number): void {
     this.groupService.getSeriesByGroupId(groupId).subscribe({
@@ -199,13 +235,13 @@ export class GroupProfileComponent implements OnInit {
     });
   }
 
-  
+
   onPrint() {
-   
+
   }
 
-  onDisable(){
-    
+  onDisable() {
+
   }
 
   removeStudentFromGroup(student: Student): void {
@@ -248,7 +284,7 @@ export class GroupProfileComponent implements OnInit {
       }
     });
   }
-  
+
   showSuccessMessage(message: string): void {
     // Implémentez la logique pour afficher un message de succès
     console.log(message);
@@ -258,5 +294,5 @@ export class GroupProfileComponent implements OnInit {
     // Implémentez la logique pour afficher un message d'erreur
     console.error(message);
   }
-  
+
 }

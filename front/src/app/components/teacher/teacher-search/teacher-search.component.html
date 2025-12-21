@@ -1,39 +1,63 @@
-<div class="page-header">
-  <app-list-header [count]="totalTeachers" [entityName]="'teachers'" [filterLabel]="'Show with groups only'"
-    (filterChange)="onHasGroupsFilterChange($event)">
-  </app-list-header>
+<div class="teacher-search-container">
+  <!-- TOPBAR (sticky) -->
+  <div class="topbar">
+    <div class="topbar-main">
+      <app-list-header [count]="totalTeachers" [entityName]="'teachers'" [filterLabel]="'Show with groups only'"
+        (filterChange)="onHasGroupsFilterChange($event)">
+      </app-list-header>
 
-  <app-view-toggle [viewMode]="viewMode" (viewModeChange)="changeViewMode($event)">
-  </app-view-toggle>
+      <div class="topbar-actions">
+        <!-- COMPACT PAGINATOR -->
+        <div class="compact-paginator" *ngIf="!isLoading && filteredTeachers.length > 0">
+          <mat-paginator [length]="totalTeachers" [pageSize]="pageSize" [pageSizeOptions]="pageSizeOptions"
+            [pageIndex]="currentPageIndex" (page)="changePage($event)" showFirstLastButtons>
+          </mat-paginator>
+        </div>
+
+        <app-view-toggle [viewMode]="viewMode" (viewModeChange)="changeViewMode($event)">
+        </app-view-toggle>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONTENT (scrollable with infinite scroll) -->
+  <div class="content-area" #contentArea (scroll)="onScroll($event)">
+    <ng-container *ngIf="!isLoading && displayedTeachers.length > 0">
+      <div class="teacher-view" [ngClass]="viewMode === 'card' ? 'cards-grid' : 'list-view'">
+        <ng-container *ngIf="viewMode === 'card'">
+          <app-teacher-card *ngFor="let teacher of displayedTeachers" [teacher]="teacher"
+            class="fade-in"></app-teacher-card>
+        </ng-container>
+        <ng-container *ngIf="viewMode === 'list'">
+          <app-teacher-list *ngFor="let teacher of displayedTeachers" [teacher]="teacher"
+            class="fade-in"></app-teacher-list>
+        </ng-container>
+      </div>
+
+      <!-- Loading indicator for infinite scroll -->
+      <div class="loading-more" *ngIf="isLoadingMore">
+        <mat-spinner diameter="32"></mat-spinner>
+        <span>Chargement...</span>
+      </div>
+
+      <!-- End of list indicator -->
+      <div class="end-of-list" *ngIf="!hasMoreData && displayedTeachers.length > 0">
+        <span>Tous les enseignants affichés ({{displayedTeachers.length}})</span>
+      </div>
+    </ng-container>
+
+    <ng-container *ngIf="isLoading">
+      <div class="loading-state">
+        <mat-spinner></mat-spinner>
+        <p>Chargement des enseignants...</p>
+      </div>
+    </ng-container>
+
+    <ng-container *ngIf="!isLoading && filteredTeachers.length === 0">
+      <div class="empty-state">
+        <mat-icon class="empty-icon">person_off</mat-icon>
+        <p>Aucun enseignant trouvé.</p>
+      </div>
+    </ng-container>
+  </div>
 </div>
-
-<ng-container *ngIf="!isLoading && filteredTeachers.length > 0; else loadingOrEmptyState">
-  <div class="cards-section">
-    <div class="teacher-view" [ngClass]="viewMode === 'card' ? 'cards-grid' : 'list-view'">
-      <ng-container *ngIf="viewMode === 'card'">
-        <app-teacher-card *ngFor="let teacher of currentPageTeachers" [teacher]="teacher"
-          class="fade-in"></app-teacher-card>
-      </ng-container>
-      <ng-container *ngIf="viewMode === 'list'">
-        <app-teacher-list *ngFor="let teacher of currentPageTeachers" [teacher]="teacher"
-          class="fade-in"></app-teacher-list>
-      </ng-container>
-    </div>
-
-    <div class="paginator-wrapper">
-      <mat-paginator [length]="totalTeachers" [pageSize]="pageSize" [pageSizeOptions]="pageSizeOptions"
-        (page)="changePage($event)">
-      </mat-paginator>
-    </div>
-  </div>
-</ng-container>
-
-<ng-template #loadingOrEmptyState>
-  <div *ngIf="isLoading" class="loading-container">
-    <mat-spinner></mat-spinner>
-  </div>
-  <div *ngIf="!isLoading && filteredTeachers.length === 0" class="empty-state">
-    <mat-icon class="empty-icon">person_off</mat-icon>
-    <p>Aucun enseignant trouvé.</p>
-  </div>
-</ng-template>

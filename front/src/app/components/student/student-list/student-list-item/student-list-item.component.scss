@@ -1,28 +1,19 @@
-/* Variables de couleur */
-$primary-color: #3f51b5; // Indigo
-$accent-color: #e91e63; // Rose
-$edit-color: #4caf50; // Vert pour Modifier
-$disable-color: #f44336; // Rouge pour Désactiver
-$print-color: #ff9800; // Orange pour Imprimer
-$history-color: #9c27b0; // Violet pour Historique de Paiement
-$text-color: #7f8c8d; // Gris pour le texte
-$border-color: #e0e0e0;
-
+/* ===== MODERN LIST ITEM DESIGN ===== */
 .student-card {
   display: flex;
   width: 100%;
-  padding: 1.5rem;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  border-radius: 10px;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  padding: 0;
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  transition: all 0.25s ease;
   cursor: pointer;
-  background-color: #fff;
-  border: 1px solid $border-color;
+  overflow: hidden;
 
   &:hover {
+    border-color: #6366f1;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
     transform: translateX(4px);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-    border-color: $primary-color;
   }
 }
 
@@ -30,148 +21,246 @@ $border-color: #e0e0e0;
   display: flex;
   align-items: center;
   width: 100%;
-  justify-content: space-between;
-  gap: 1.5rem;
+  padding: 16px 20px;
+  gap: 20px;
 }
 
 .student-avatar {
-  width: 70px;
-  height: 70px;
-  border-radius: 50%;
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
   object-fit: cover;
-  border: 3px solid $border-color;
+  border: 2px solid #e2e8f0;
   flex-shrink: 0;
+  transition: all 0.2s ease;
+
+  .student-card:hover & {
+    border-color: #6366f1;
+    transform: scale(1.05);
+  }
 }
 
 .student-details {
   display: flex;
   flex-direction: column;
   flex-grow: 1;
-  gap: 0.5rem;
+  gap: 4px;
   cursor: pointer;
-
-  &:hover h4 {
-    color: $primary-color;
-  }
+  min-width: 0; // Allow text truncation
 
   h4 {
     margin: 0;
     font-weight: 600;
-    font-size: 1.25rem;
-    color: #333;
+    font-size: 15px;
+    color: #1e293b;
     transition: color 0.2s ease;
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 8px;
     flex-wrap: wrap;
+  }
+
+  &:hover h4 {
+    color: #6366f1;
   }
 
   p {
     margin: 0;
-    font-size: 1rem;
-    color: $text-color;
+    font-size: 13px;
+    color: #64748b;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }
 
 .student-actions {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 4px;
   flex-shrink: 0;
+  padding-right: 8px;
 
   button {
-    transition: transform 0.2s ease, background-color 0.3s ease;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
 
     &:hover:not([disabled]) {
-      transform: scale(1.1);
+      background: #6366f1;
+      border-color: #6366f1;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(99, 102, 241, 0.3);
+
+      mat-icon {
+        color: white !important;
+      }
     }
 
     &[disabled] {
-      opacity: 0.4;
+      opacity: 0.3;
       cursor: not-allowed;
+      background: #f1f5f9;
     }
 
     mat-icon {
-      font-size: 24px;
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+      color: #64748b;
+      transition: color 0.2s ease;
     }
 
-    /* Couleur spécifique pour le bouton disable */
     &.disable-button {
-      color: $disable-color;
+      &:hover:not([disabled]) {
+        background: #ef4444;
+        border-color: #ef4444;
+
+        mat-icon {
+          color: white !important;
+        }
+      }
+    }
+
+    // Email button
+    &[color="primary"] mat-icon {
+      color: #3b82f6;
+    }
+
+    // Phone button
+    &[color="accent"] mat-icon {
+      color: #10b981;
+    }
+
+    // Disable button
+    &.disable-button mat-icon {
+      color: #ef4444;
     }
   }
 }
 
-// ===== Indicateur de statut de paiement (inline) =====
+// ===== PAYMENT STATUS CHIP (COMPACT) =====
 .payment-status-chip {
   font-size: 11px !important;
-  min-height: 24px !important;
-  padding: 2px 6px !important;
-  font-weight: 500;
-  display: inline-flex;
+  min-height: 20px !important;
+  height: 20px !important;
+  padding: 0 8px !important;
+  font-weight: 600;
+  display: inline-flex !important;
   align-items: center;
   gap: 4px;
   cursor: help;
-  vertical-align: middle;
+  border-radius: 10px !important;
 
   mat-icon {
-    font-size: 14px;
-    width: 14px;
-    height: 14px;
-    line-height: 14px;
+    font-size: 14px !important;
+    width: 14px !important;
+    height: 14px !important;
+    line-height: 14px !important;
+    margin: 0 !important;
   }
 
-  // Statut "À jour" (vert)
+  // Status "À jour" (green)
   &.status-good {
-    background-color: #4caf50 !important;
+    background-color: #10b981 !important;
     color: white !important;
 
     mat-icon {
-      color: white;
+      color: white !important;
     }
   }
 
-  // Statut "En retard" (rouge)
+  // Status "En retard" (red with pulse)
   &.status-late {
-    background-color: #f44336 !important;
+    background-color: #ef4444 !important;
     color: white !important;
-
-    mat-icon {
-      color: white;
-    }
-
-    // Animation de pulsation pour attirer l'attention
     animation: pulse-warning 2s ease-in-out infinite;
+
+    mat-icon {
+      color: white !important;
+    }
   }
 
-  // Statut "Non applicable" (gris)
+  // Status "Non applicable" (gray)
   &.status-na {
-    background-color: #9e9e9e !important;
+    background-color: #94a3b8 !important;
     color: white !important;
 
     mat-icon {
-      color: white;
+      color: white !important;
     }
   }
 }
 
-// Animation de pulsation pour le statut en retard
+// Pulse animation for late payments
 @keyframes pulse-warning {
-  0%, 100% {
+
+  0%,
+  100% {
     opacity: 1;
-    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
   }
+
   50% {
-    opacity: 0.85;
-    transform: scale(1.05);
+    opacity: 0.9;
+    box-shadow: 0 0 0 4px rgba(239, 68, 68, 0);
   }
 }
 
-// Style personnalisé pour le tooltip
+// Payment tooltip styling
 ::ng-deep .payment-tooltip {
   white-space: pre-line;
   font-size: 13px;
-  line-height: 1.5;
+  line-height: 1.6;
   max-width: 350px;
-  background-color: rgba(0, 0, 0, 0.95);
+  background-color: rgba(0, 0, 0, 0.95) !important;
+  padding: 12px 16px;
+  border-radius: 8px;
+}
+
+// Responsive adjustments
+@media (max-width: 768px) {
+  .student-info {
+    padding: 12px 16px;
+    gap: 12px;
+  }
+
+  .student-avatar {
+    width: 48px;
+    height: 48px;
+  }
+
+  .student-details {
+    h4 {
+      font-size: 14px;
+    }
+
+    p {
+      font-size: 12px;
+    }
+  }
+
+  .student-actions {
+    gap: 2px;
+
+    button {
+      width: 32px;
+      height: 32px;
+
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+      }
+    }
+  }
+}
+
+@media (max-width: 500px) {
+  .student-actions button:not(:first-child):not(:last-child) {
+    display: none; // Hide middle buttons on very small screens
+  }
 }

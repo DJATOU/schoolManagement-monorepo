@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ElementRef, ViewChild } from '@angular/core';
 import { TeacherService } from '../../../services/teacher.service';
 import { Teacher } from '../../../models/teacher/teacher';
 import { TeacherCardComponent } from '../teacher-card/teacher-card.component';
@@ -27,14 +27,24 @@ import { FadeInDirective } from '../../shared/FadeInDirective';
 export class TeacherSearchComponent implements OnInit {
   viewMode: 'card' | 'list' = 'card';
   teachers: Teacher[] = [];
-  allTeachers: Teacher[] = []; // Keep original list for filtering
+  allTeachers: Teacher[] = [];
   filteredTeachers: Teacher[] = [];
   currentPageTeachers: Teacher[] = [];
+
+  // Infinite scroll state
+  displayedTeachers: Teacher[] = [];
+  itemsPerLoad: number = 10;
+  isLoadingMore: boolean = false;
+  hasMoreData: boolean = true;
+  currentPageIndex: number = 0;
+
   totalTeachers: number = 0;
   pageSize: number = 8;
   pageSizeOptions: number[] = [8, 12, 16, 20];
   isLoading = true;
   showWithGroupsOnly = false;
+
+  @ViewChild('contentArea') contentArea!: ElementRef;
 
   constructor(
     private teacherService: TeacherService,
@@ -99,6 +109,8 @@ export class TeacherSearchComponent implements OnInit {
     } else {
       this.filteredTeachers = [...this.allTeachers];
     }
+    this.currentPageIndex = 0;
+    this.initializeDisplayedTeachers();
     this.updatePageTeachers();
   }
 
@@ -127,5 +139,53 @@ export class TeacherSearchComponent implements OnInit {
   private updatePageTeachers(): void {
     this.totalTeachers = this.filteredTeachers.length;
     this.currentPageTeachers = this.filteredTeachers.slice(0, this.pageSize);
+  }
+
+  /**
+   * Handle scroll event for infinite scroll
+   */
+  onScroll(event: Event): void {
+    const element = event.target as HTMLElement;
+    const scrollPosition = element.scrollTop + element.clientHeight;
+    const scrollHeight = element.scrollHeight;
+
+    const threshold = 200;
+    const isNearBottom = scrollHeight - scrollPosition < threshold;
+
+    if (isNearBottom && !this.isLoadingMore && this.hasMoreData) {
+      this.loadMoreTeachers();
+    }
+  }
+
+  /**
+   * Load more teachers for infinite scroll
+   */
+  private loadMoreTeachers(): void {
+    if (this.isLoadingMore || !this.hasMoreData) return;
+
+    this.isLoadingMore = true;
+
+    setTimeout(() => {
+      const currentLength = this.displayedTeachers.length;
+      const nextBatch = this.filteredTeachers.slice(
+        currentLength,
+        currentLength + this.itemsPerLoad
+      );
+
+      if (nextBatch.length > 0) {
+        this.displayedTeachers = [...this.displayedTeachers, ...nextBatch];
+      }
+
+      this.hasMoreData = this.displayedTeachers.length < this.filteredTeachers.length;
+      this.isLoadingMore = false;
+    }, 300);
+  }
+
+  /**
+   * Initialize displayed teachers with first batch
+   */
+  private initializeDisplayedTeachers(): void {
+    this.displayedTeachers = this.filteredTeachers.slice(0, this.itemsPerLoad);
+    this.hasMoreData = this.filteredTeachers.length > this.itemsPerLoad;
   }
 }

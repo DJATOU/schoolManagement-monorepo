@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ElementRef, ViewChild } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -46,17 +46,27 @@ import { ListHeaderComponent } from '../../shared/list-header/list-header.compon
 export class GroupSearchComponent implements OnInit {
   searchForm!: FormGroup;
   groups: Group[] = [];
-  allGroups: Group[] = []; // Keep original list for filtering
+  allGroups: Group[] = [];
   levels: Level[] = [];
   groupTypes: GroupType[] = [];
   filteredGroups: Group[] = [];
   currentPageGroups: Group[] = [];
+
+  // Infinite scroll state
+  displayedGroups: Group[] = [];
+  itemsPerLoad: number = 10;
+  isLoadingMore: boolean = false;
+  hasMoreData: boolean = true;
+  currentPageIndex: number = 0;
+
   totalGroups: number = 0;
   pageSize: number = 8;
   pageSizeOptions: number[] = [8, 12, 16, 20];
   viewMode: 'card' | 'list' = 'card';
   isLoading = true;
   showActiveOnly = false;
+
+  @ViewChild('contentArea') contentArea!: ElementRef;
 
   constructor(
     private fb: FormBuilder,
@@ -134,6 +144,8 @@ export class GroupSearchComponent implements OnInit {
     } else {
       this.filteredGroups = [...this.allGroups];
     }
+    this.currentPageIndex = 0;
+    this.initializeDisplayedGroups();
     this.updatePageGroups();
   }
 
@@ -159,5 +171,53 @@ export class GroupSearchComponent implements OnInit {
   private updatePageGroups(): void {
     this.totalGroups = this.filteredGroups.length;
     this.currentPageGroups = this.filteredGroups.slice(0, this.pageSize);
+  }
+
+  /**
+   * Handle scroll event for infinite scroll
+   */
+  onScroll(event: Event): void {
+    const element = event.target as HTMLElement;
+    const scrollPosition = element.scrollTop + element.clientHeight;
+    const scrollHeight = element.scrollHeight;
+
+    const threshold = 200;
+    const isNearBottom = scrollHeight - scrollPosition < threshold;
+
+    if (isNearBottom && !this.isLoadingMore && this.hasMoreData) {
+      this.loadMoreGroups();
+    }
+  }
+
+  /**
+   * Load more groups for infinite scroll
+   */
+  private loadMoreGroups(): void {
+    if (this.isLoadingMore || !this.hasMoreData) return;
+
+    this.isLoadingMore = true;
+
+    setTimeout(() => {
+      const currentLength = this.displayedGroups.length;
+      const nextBatch = this.filteredGroups.slice(
+        currentLength,
+        currentLength + this.itemsPerLoad
+      );
+
+      if (nextBatch.length > 0) {
+        this.displayedGroups = [...this.displayedGroups, ...nextBatch];
+      }
+
+      this.hasMoreData = this.displayedGroups.length < this.filteredGroups.length;
+      this.isLoadingMore = false;
+    }, 300);
+  }
+
+  /**
+   * Initialize displayed groups with first batch
+   */
+  private initializeDisplayedGroups(): void {
+    this.displayedGroups = this.filteredGroups.slice(0, this.itemsPerLoad);
+    this.hasMoreData = this.filteredGroups.length > this.itemsPerLoad;
   }
 }

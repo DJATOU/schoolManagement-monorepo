@@ -2,12 +2,12 @@
   <mat-card-content>
     <div class="group-info" (click)="navigateToGroupProfile()">
       <div class="group-avatar">
-        <img *ngIf="groupPhotoUrl; else groupIcon"
-             [src]="groupPhotoUrl"
-             alt="Photo du groupe"
-             class="group-photo" />
-        <ng-template #groupIcon>
-          <mat-icon class="default-icon">group</mat-icon>
+        <img *ngIf="groupPhotoUrl; else groupInitials" [src]="groupPhotoUrl" alt="Photo du groupe" class="group-photo"
+          (error)="onImageError()" />
+        <ng-template #groupInitials>
+          <div class="initials-avatar" [style.background-color]="avatarColor">
+            {{ getInitials() }}
+          </div>
         </ng-template>
       </div>
       <div class="group-details">

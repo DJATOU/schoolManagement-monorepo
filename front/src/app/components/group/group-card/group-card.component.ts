@@ -26,15 +26,23 @@ export class GroupCardComponent implements OnInit {
   type: string = 'Unknown Type';
   groupPhotoUrl: string = '';
   isFlipped: boolean = false;
+  avatarColor: string = '#6366f1';
+
+  // Colors for avatar backgrounds
+  private avatarColors = [
+    '#6366f1', '#8b5cf6', '#ec4899', '#ef4444', '#f97316',
+    '#eab308', '#22c55e', '#14b8a6', '#06b6d4', '#3b82f6'
+  ];
 
   constructor(
     private router: Router,
     private groupService: GroupService
-  ) {}
-  
+  ) { }
+
   ngOnInit(): void {
     this.setLevelAndType();
     this.setPhotoUrl();
+    this.setAvatarColor();
   }
 
   private setLevelAndType(): void {
@@ -52,6 +60,25 @@ export class GroupCardComponent implements OnInit {
     }
   }
 
+  private setAvatarColor(): void {
+    // Generate consistent color based on group name
+    const name = this.group.name || '';
+    const hash = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    this.avatarColor = this.avatarColors[hash % this.avatarColors.length];
+  }
+
+  /**
+   * Get initials from group name (max 2 characters)
+   */
+  getInitials(): string {
+    const name = this.group.name || '';
+    const words = name.trim().split(/\s+/);
+    if (words.length >= 2) {
+      return (words[0][0] + words[1][0]).toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  }
+
   navigateToGroupProfile(): void {
     this.router.navigate(['/group', this.group.id]);
   }
@@ -59,5 +86,12 @@ export class GroupCardComponent implements OnInit {
   toggleFlip(event: Event): void {
     event.stopPropagation();
     this.isFlipped = !this.isFlipped;
+  }
+
+  /**
+   * Handle image error - fallback to initials
+   */
+  onImageError(): void {
+    this.groupPhotoUrl = ''; // Clear URL to show initials
   }
 }

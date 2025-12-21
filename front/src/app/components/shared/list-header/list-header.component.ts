@@ -29,53 +29,60 @@ import { FormsModule } from '@angular/forms';
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 0.75rem 0;
-      margin-bottom: 1rem;
-      border-bottom: 1px solid #e5e7eb;
+      padding: 0;
+      gap: 1rem;
     }
 
     .summary {
       display: flex;
       align-items: baseline;
-      gap: 0.5rem;
+      gap: 0.375rem;
     }
 
     .count {
-      font-size: 1.5rem;
-      font-weight: 600;
+      font-size: 1.25rem;
+      font-weight: 700;
       color: #0f172a;
     }
 
     .label {
-      font-size: 0.875rem;
-      color: #6b7280;
+      font-size: 0.8125rem;
+      color: #64748b;
       text-transform: lowercase;
     }
 
     .late-count {
-      font-size: 0.875rem;
+      font-size: 0.8125rem;
       color: #ef4444;
       font-weight: 600;
       margin-left: 0.5rem;
+      padding: 2px 8px;
+      background: #fef2f2;
+      border-radius: 10px;
     }
 
     .quick-filter {
-      font-size: 0.875rem;
+      font-size: 0.8125rem;
     }
 
-    ::ng-deep .quick-filter .mat-slide-toggle-label {
+    ::ng-deep .quick-filter .mdc-form-field {
+      font-size: 0.8125rem;
+    }
+
+    ::ng-deep .quick-filter .mdc-label {
       font-weight: 500;
+      color: #475569;
     }
 
     @media (max-width: 600px) {
       .list-header {
         flex-direction: column;
         align-items: flex-start;
-        gap: 0.75rem;
+        gap: 0.5rem;
       }
 
       .count {
-        font-size: 1.25rem;
+        font-size: 1.125rem;
       }
     }
   `]

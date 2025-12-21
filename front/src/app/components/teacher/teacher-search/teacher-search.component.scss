@@ -1,31 +1,150 @@
 // Import shared page layout styles
 @import '../../../../styles/page-layout';
 
-// View toggle toolbar
-.view-toggle-toolbar {
+// ===== MAIN CONTAINER =====
+.teacher-search-container {
   display: flex;
-  justify-content: flex-end;
-  gap: 0.5rem;
-  background-color: transparent;
-  padding: 0;
-  margin-bottom: 1.5rem;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
 
-  button {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    border-radius: 8px;
-    transition: all 0.2s ease;
+// ===== TOPBAR (fixed at top) =====
+.topbar {
+  flex: 0 0 auto;
+  background: white;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 12px 16px;
+  z-index: 10;
+}
 
-    &.active {
-      background-color: rgba(59, 130, 246, 0.1);
-      color: #3b82f6;
+.topbar-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+// ===== COMPACT PAGINATOR IN TOPBAR =====
+.compact-paginator {
+  display: flex;
+  align-items: center;
+  background: #f8fafc;
+  border-radius: 10px;
+  padding: 4px 8px;
+  border: 1px solid #e2e8f0;
+
+  mat-paginator {
+    background: transparent;
+
+    ::ng-deep {
+      .mat-mdc-paginator-container {
+        min-height: 32px;
+        padding: 0;
+        background: transparent;
+        justify-content: flex-end;
+        gap: 6px;
+        display: flex;
+        align-items: center;
+      }
+
+      .mat-mdc-paginator-page-size {
+        display: none;
+      }
+
+      .mat-mdc-paginator-range-label {
+        font-size: 12px;
+        font-weight: 600;
+        color: #475569;
+        padding: 0;
+        margin: 0;
+      }
+
+      .mat-mdc-paginator-range-actions {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        margin-left: 8px;
+      }
+
+      .mat-mdc-icon-button {
+        width: 28px;
+        height: 28px;
+        line-height: 28px;
+        border-radius: 8px;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        &:not([disabled]) {
+          background: white;
+          border: 1px solid #e2e8f0;
+
+          &:hover {
+            background: #6366f1;
+            border-color: #6366f1;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 6px rgba(99, 102, 241, 0.3);
+
+            .mat-icon,
+            .mat-mdc-paginator-icon {
+              color: white !important;
+              fill: white !important;
+            }
+          }
+        }
+
+        &[disabled] {
+          opacity: 0.3;
+        }
+
+        .mat-icon,
+        .mat-mdc-paginator-icon {
+          color: #64748b;
+          fill: #64748b;
+          font-size: 18px;
+          width: 18px !important;
+          height: 18px !important;
+          flex-shrink: 0;
+        }
+      }
     }
+  }
+
+  @media (max-width: 500px) {
+    display: none;
   }
 }
 
-// List view styles (vertical stack)
+// ===== CONTENT AREA (scrollable) =====
+.content-area {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 16px;
+  min-height: 100px;
+  scroll-behavior: smooth;
+}
+
+// ===== CARDS GRID =====
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
+  width: 100%;
+}
+
+// ===== LIST VIEW =====
 .list-view {
   display: flex;
   flex-direction: column;
@@ -33,38 +152,48 @@
   width: 100%;
 }
 
-// Ensure cards and list items are full width
-app-teacher-card,
-app-teacher-list {
-  width: 100%;
-}
-
-// Paginator styles
-mat-paginator {
-  display: flex !important;
-  justify-content: center;
+// ===== INFINITE SCROLL INDICATORS =====
+.loading-more {
+  display: flex;
   align-items: center;
-  padding: 1rem 0;
-  border-top: 1px solid #e5e7eb;
-  background-color: transparent;
-  min-height: 56px;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px;
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 500;
 
-  @media (max-width: 768px) {
-    flex-wrap: wrap;
-    padding: 0.75rem 0;
+  mat-spinner {
+    ::ng-deep circle {
+      stroke: #6366f1;
+    }
   }
 }
 
-// Loading state
-.loading-container {
+.end-of-list {
   display: flex;
   justify-content: center;
-  align-items: center;
-  min-height: 400px;
-  padding: 3rem;
+  padding: 20px;
+  color: #94a3b8;
+  font-size: 13px;
+  font-weight: 500;
+  border-top: 1px solid #e2e8f0;
+  margin-top: 16px;
 }
 
-// Empty state
+// ===== LOADING STATE =====
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  padding: 3rem;
+  gap: 16px;
+  color: #64748b;
+}
+
+// ===== EMPTY STATE =====
 .empty-state {
   display: flex;
   flex-direction: column;
@@ -88,4 +217,10 @@ mat-paginator {
     margin: 0;
     font-weight: 400;
   }
+}
+
+// ===== CARDS AND LIST ITEMS FULL WIDTH =====
+app-teacher-card,
+app-teacher-list {
+  width: 100%;
 }

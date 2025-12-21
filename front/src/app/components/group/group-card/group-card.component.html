@@ -1,9 +1,12 @@
 <mat-card class="app-entity-card group-card" (click)="navigateToGroupProfile()">
   <div class="app-entity-card__body profile-card-content">
     <div class="app-entity-card__avatar profile-photo">
-      <img *ngIf="groupPhotoUrl; else groupIcon" [src]="groupPhotoUrl" alt="Photo du groupe" class="group-photo">
-      <ng-template #groupIcon>
-        <mat-icon class="default-icon">group</mat-icon>
+      <img *ngIf="groupPhotoUrl; else groupInitials" [src]="groupPhotoUrl" alt="Photo du groupe" class="group-photo"
+        (error)="onImageError()">
+      <ng-template #groupInitials>
+        <div class="initials-avatar" [style.background-color]="avatarColor">
+          {{ getInitials() }}
+        </div>
       </ng-template>
     </div>
     <div class="profile-info">

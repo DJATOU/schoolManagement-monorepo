@@ -48,6 +48,13 @@ export class StudentSearchComponent implements OnInit, OnDestroy, AfterViewInit 
   allStudents: StudentWithPayment[] = [];
   filteredStudents: StudentWithPayment[] = [];
   currentPageStudents: StudentWithPayment[] = [];
+
+  // Infinite scroll state
+  displayedStudents: StudentWithPayment[] = [];
+  itemsPerLoad: number = 10; // Reduced for better testing with small dataset
+  isLoadingMore: boolean = false;
+  hasMoreData: boolean = true;
+
   totalStudents: number = 0;
   pageSize: number = 8;
   currentPageIndex: number = 0;
@@ -299,7 +306,8 @@ export class StudentSearchComponent implements OnInit, OnDestroy, AfterViewInit 
     this.filteredStudents = filtered;
     this.latePaymentCount = this.allStudents.filter(s => s.paymentStatus === 'LATE').length;
     this.currentPageIndex = 0;
-    this.updatePageStudents();
+    this.initializeDisplayedStudents(); // Initialize infinite scroll
+    this.updatePageStudents(); // Also update paginated view for paginator
   }
 
   onLateFilterChange(showLateOnly: boolean): void {
@@ -372,6 +380,9 @@ export class StudentSearchComponent implements OnInit, OnDestroy, AfterViewInit 
     const startIndex = this.currentPageIndex * this.pageSize;
     const endIndex = startIndex + this.pageSize;
     this.currentPageStudents = this.filteredStudents.slice(startIndex, endIndex);
+    // Sync displayedStudents with current page for consistent display
+    this.displayedStudents = this.currentPageStudents;
+    this.hasMoreData = false; // Within a page, no infinite scroll needed
   }
 
   /**
@@ -427,4 +438,56 @@ export class StudentSearchComponent implements OnInit, OnDestroy, AfterViewInit 
     const maxPage = Math.ceil(this.totalStudents / this.pageSize) - 1;
     return this.currentPageIndex >= maxPage;
   }
+
+  /**
+   * Handle scroll event for infinite scroll
+   */
+  onScroll(event: Event): void {
+    const element = event.target as HTMLElement;
+    const scrollPosition = element.scrollTop + element.clientHeight;
+    const scrollHeight = element.scrollHeight;
+
+    // Load more when within 200px of bottom
+    const threshold = 200;
+    const isNearBottom = scrollHeight - scrollPosition < threshold;
+
+    if (isNearBottom && !this.isLoadingMore && this.hasMoreData) {
+      this.loadMoreStudents();
+    }
+  }
+
+  /**
+   * Load more students for infinite scroll
+   */
+  private loadMoreStudents(): void {
+    if (this.isLoadingMore || !this.hasMoreData) return;
+
+    this.isLoadingMore = true;
+
+    // Simulate async loading with timeout for smooth UX
+    setTimeout(() => {
+      const currentLength = this.displayedStudents.length;
+      const nextBatch = this.filteredStudents.slice(
+        currentLength,
+        currentLength + this.itemsPerLoad
+      );
+
+      if (nextBatch.length > 0) {
+        this.displayedStudents = [...this.displayedStudents, ...nextBatch];
+      }
+
+      // Check if there's more data
+      this.hasMoreData = this.displayedStudents.length < this.filteredStudents.length;
+      this.isLoadingMore = false;
+    }, 300); // Small delay for better UX
+  }
+
+  /**
+   * Initialize displayed students with first batch
+   */
+  private initializeDisplayedStudents(): void {
+    // Just call updatePageStudents for consistent pagination
+    this.updatePageStudents();
+  }
 }
+

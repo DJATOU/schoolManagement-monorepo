@@ -1,41 +1,42 @@
-<mat-card class="app-entity-card profile-card">
-  <!-- Indicateur de statut de paiement (en haut à droite) -->
-  <div class="payment-status-indicator" *ngIf="paymentStatus && profileType === 'student' && paymentStatus.paymentStatus !== 'NA'">
-    <mat-chip
-      [class.status-good]="paymentStatus.paymentStatus === 'GOOD'"
-      [class.status-late]="paymentStatus.paymentStatus === 'LATE'"
-      [matTooltip]="getPaymentTooltip()"
-      [matTooltipDisabled]="paymentStatus.paymentStatus !== 'LATE'"
-      matTooltipClass="payment-tooltip">
+<mat-card class="profile-card">
+  <!-- Status chip (top right) -->
+  <div class="status-badge" *ngIf="paymentStatus && profileType === 'student' && paymentStatus.paymentStatus !== 'NA'">
+    <mat-chip [class.status-good]="paymentStatus.paymentStatus === 'GOOD'"
+      [class.status-late]="paymentStatus.paymentStatus === 'LATE'" [matTooltip]="getPaymentTooltip()"
+      [matTooltipDisabled]="paymentStatus.paymentStatus !== 'LATE'" matTooltipClass="payment-tooltip">
       <mat-icon>{{ getPaymentIcon() }}</mat-icon>
       {{ getPaymentLabel() }}
     </mat-chip>
   </div>
 
-  <div class="app-entity-card__body profile-card-content" (click)="navigateToProfile()">
-    <div class="app-entity-card__avatar profile-photo">
-      <img [src]="profilePhotoUrl" alt="Photo de profil">
+  <!-- Main content: clickable -->
+  <div class="card-content" (click)="navigateToProfile()">
+    <!-- Avatar -->
+    <div class="card-avatar">
+      <img *ngIf="profilePhotoUrl && !hasImageError; else initialsTemplate" [src]="profilePhotoUrl"
+        alt="Photo de profil" (error)="onImageError($event)">
+      <ng-template #initialsTemplate>
+        <div class="initials-avatar" [style.background-color]="avatarColor">
+          {{ getInitials() }}
+        </div>
+      </ng-template>
     </div>
-    <div class="profile-info">
-      <mat-card-title class="app-entity-card__title profile-name">{{ profile.firstName }} {{ profile.lastName }}</mat-card-title>
-      <mat-card-subtitle class="app-entity-card__subtitle profile-subtitle">{{ profile.subtitle }}</mat-card-subtitle>
+
+    <!-- Name and subtitle -->
+    <div class="card-info">
+      <span class="card-name">{{ profile.firstName }} {{ profile.lastName }}</span>
+      <span class="card-subtitle">{{ profile.subtitle }}</span>
     </div>
   </div>
-  <mat-card-actions class="app-entity-card__actions card-actions">
-    <button mat-icon-button
-            class="contact-button email-button"
-            (click)="sendEmail($event)"
-            [disabled]="!profile.email"
-            matTooltip="Envoyer un email"
-            color="primary">
+
+  <!-- Actions -->
+  <mat-card-actions class="card-actions">
+    <button mat-icon-button class="action-btn" (click)="sendEmail($event)" [disabled]="!profile.email"
+      matTooltip="Envoyer un email">
       <mat-icon>email</mat-icon>
     </button>
-    <button mat-icon-button
-            class="contact-button phone-button"
-            (click)="callPhone($event)"
-            [disabled]="!profile.phoneNumber"
-            matTooltip="Ouvrir WhatsApp"
-            color="accent">
+    <button mat-icon-button class="action-btn" (click)="callPhone($event)" [disabled]="!profile.phoneNumber"
+      matTooltip="Ouvrir WhatsApp">
       <mat-icon>phone</mat-icon>
     </button>
   </mat-card-actions>

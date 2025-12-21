@@ -3,12 +3,12 @@
     <mat-card-header>
       <div class="header-container">
         <div class="group-info-header">
-          <div class="group-photo-container" *ngIf="group.photo; else groupIcon">
-            <img [src]="groupPhotoUrl" alt="Photo du groupe" class="group-photo">
+          <div class="group-photo-container" *ngIf="groupPhotoUrl; else groupInitials">
+            <img [src]="groupPhotoUrl" alt="Photo du groupe" class="group-photo" (error)="onImageError()">
           </div>
-          <ng-template #groupIcon>
-            <div class="group-icon-container">
-              <mat-icon class="group-icon">group</mat-icon>
+          <ng-template #groupInitials>
+            <div class="group-initials-container" [style.background-color]="avatarColor">
+              {{ getInitials() }}
             </div>
           </ng-template>
           <div class="group-name-type">
@@ -17,10 +17,12 @@
           </div>
         </div>
         <div class="header-buttons">
-          <button mat-icon-button class="edit-button" (click)="onEditGroup()" aria-label="Modifier le groupe" matTooltip="Modifier le groupe">
+          <button mat-icon-button class="edit-button" (click)="onEditGroup()" aria-label="Modifier le groupe"
+            matTooltip="Modifier le groupe">
             <mat-icon>edit</mat-icon>
           </button>
-          <button mat-icon-button class="delete-button" (click)="onDisable()" aria-label="Supprimer le groupe" matTooltip="Supprimer le groupe">
+          <button mat-icon-button class="delete-button" (click)="onDisable()" aria-label="Supprimer le groupe"
+            matTooltip="Supprimer le groupe">
             <mat-icon>block</mat-icon>
           </button>
         </div>
@@ -59,11 +61,8 @@
       </mat-expansion-panel-header>
       <div class="student-list-container">
         <!-- Mise à jour pour afficher le bouton "Supprimer" -->
-        <app-student-list
-          [students]="students"
-          [showDeleteButton]="true"
-          (deleteStudent)="removeStudentFromGroup($event)"
-        ></app-student-list>
+        <app-student-list [students]="students" [showDeleteButton]="true"
+          (deleteStudent)="removeStudentFromGroup($event)"></app-student-list>
       </div>
     </mat-expansion-panel>
 

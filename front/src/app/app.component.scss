@@ -29,6 +29,7 @@
 .sidenav-container {
   flex: 1;
   height: 100%;
+  min-height: 0; // Critical for nested flex
   margin: 0;
   padding: 0;
 }
@@ -51,7 +52,8 @@
   flex-direction: column;
   flex: 1;
   min-width: 0;
-  overflow: hidden; // Pages handle their own scroll
+  min-height: 0; // Critical for nested flex height
+  overflow: hidden;
   background: linear-gradient(109.6deg, rgb(148, 233, 194) 11.2%, rgb(224, 235, 186) 91.1%);
 }
 

@@ -1,4 +1,5 @@
-// Main wrapper - fills all available space with FIXED height
+// Main wrapper - fills all available space
+// Contains the centered content box on large screens
 .shared-layout-container {
   display: flex;
   flex-direction: column;
@@ -8,30 +9,75 @@
   min-height: 0;
   background-color: #f5f6fa;
   box-sizing: border-box;
+  overflow: hidden;
+  // Add padding for spacing from edges
   padding: 24px 32px;
-  overflow: hidden; // Pages handle their own layout
+
+  // On extra large screens: center the content
+  @media (min-width: 1600px) {
+    align-items: center;
+    padding: 24px 40px;
+  }
+
+  @media (min-width: 1920px) {
+    padding: 24px 48px;
+  }
 }
 
-// Content container - takes full available space
+// Content container - max-width + centered
 .app-main-container {
   display: flex;
   flex-direction: column;
   flex: 1;
   width: 100%;
+  max-width: 1400px; // Reasonable max for content
   min-height: 0;
   box-sizing: border-box;
+
+  // On extra large screens
+  @media (min-width: 1920px) {
+    max-width: 1600px;
+  }
+
+  @media (min-width: 2400px) {
+    max-width: 1800px;
+  }
 }
 
 // Tablet responsive padding
 @media (max-width: 1024px) {
   .shared-layout-container {
-    padding: 20px 24px;
+    padding: 12px 20px;
+  }
+
+  .app-main-container {
+    max-width: none;
   }
 }
 
 // Mobile responsive padding
 @media (max-width: 600px) {
   .shared-layout-container {
-    padding: 16px 16px;
+    padding: 8px 12px;
+  }
+}
+
+// Retina/HiDPI displays with limited viewport (MacBook Pro 14", 16")
+// At 100% zoom, these displays have limited vertical space
+@media (max-height: 1000px) {
+  .shared-layout-container {
+    padding: 8px 20px;
+  }
+}
+
+@media (max-height: 800px) {
+  .shared-layout-container {
+    padding: 6px 16px;
+  }
+}
+
+@media (max-height: 700px) {
+  .shared-layout-container {
+    padding: 4px 12px;
   }
 }
