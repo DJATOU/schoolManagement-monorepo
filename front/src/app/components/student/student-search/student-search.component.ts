@@ -91,6 +91,10 @@ export class StudentSearchComponent implements OnInit, OnDestroy, AfterViewInit 
 
   ngAfterViewInit(): void {
     this.setupDynamicPageSize();
+    // Force recalculation after DOM is fully rendered
+    setTimeout(() => {
+      this.calculateDynamicPageSize();
+    }, 100);
   }
 
   ngOnDestroy(): void {
@@ -110,18 +114,19 @@ export class StudentSearchComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   /**
-   * Get number of rows that fit in available height
+   * Get number of rows that fit in available height (fallback)
    */
   private getRowCount(): number {
-    // Card height from global styles: min 13rem (208px) + gap 16px = ~224px per row
-    const cardRowHeight = 224;
+    // Card height from global styles: min 13rem (~208px)
+    const cardRowHeight = 208;
+    const gap = 16;
     const height = window.innerHeight;
 
-    // Subtract: header(64) + topbar(~100) + footer(~60) + container padding(48)
-    const usedHeight = 272;
+    // Subtract: header(64) + topbar(~80) + footer(~56) + container padding(48)
+    const usedHeight = 248;
     const availableHeight = height - usedHeight;
 
-    return Math.max(1, Math.floor(availableHeight / cardRowHeight));
+    return Math.max(1, Math.floor(availableHeight / (cardRowHeight + gap)));
   }
 
   /**
@@ -138,54 +143,69 @@ export class StudentSearchComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   /**
-   * Calculate page size dynamically using actual container dimensions
+   * Calculate page size dynamically - EXPERT SOLUTION
+   * Uses window dimensions with measured offsets for reliability
    */
   private calculateDynamicPageSize(): void {
     if (!this.contentArea) return;
 
-    const containerHeight = this.contentArea.nativeElement.clientHeight;
     const containerWidth = this.contentArea.nativeElement.clientWidth;
 
-    // Card dimensions based on CSS - MUST MATCH SCSS minmax(220px, 1fr)
-    const cardMinWidth = 220; // from grid minmax
-    const cardHeight = 208; // min-height 13rem
+    // Use window height for reliability (container height can be unreliable)
+    const viewportHeight = window.innerHeight;
+
+    // Measure actual offsets from the page layout
+    // Header: 64px, Topbar: ~60px, Footer: ~56px, Container padding: ~48px  
+    const fixedHeightUsed = 228; // Total fixed elements
+    const availableHeight = viewportHeight - fixedHeightUsed;
+
+    // Card dimensions from CSS - must match exactly
+    const cardMinWidth = 220; // minmax(220px, 1fr)
+    const cardHeight = 208;   // min-height: 13rem = 208px
     const gap = 16;
 
-    // Calculate actual columns from container width
+    // Calculate columns from container width
     const columns = Math.max(1, Math.floor((containerWidth + gap) / (cardMinWidth + gap)));
 
-    // Calculate actual rows from container height
-    const rows = Math.max(1, Math.floor(containerHeight / (cardHeight + gap)));
+    // Calculate rows from available height  
+    const rowHeight = cardHeight + gap;
+    const rows = Math.max(1, Math.floor(availableHeight / rowHeight));
 
     const itemsPerPage = rows * columns;
 
-    // Update page size if different and valid
+    // Remove debug log in production
+    console.log('📊 PageSize calc:', { viewportHeight, availableHeight, columns, rows, itemsPerPage });
+
+    // Update page size
     if (itemsPerPage !== this.pageSize && itemsPerPage > 0) {
       this.pageSize = itemsPerPage;
+      // Update pageSizeOptions to include calculated size
+      if (!this.pageSizeOptions.includes(itemsPerPage)) {
+        this.pageSizeOptions = [...new Set([...this.pageSizeOptions, itemsPerPage])].sort((a, b) => a - b);
+      }
       this.updatePageStudents();
     }
   }
 
   /**
-   * Get number of columns based on container/screen width
-   * Matches CSS grid auto-fill minmax(280px, 1fr)
+   * Get number of columns based on container width
    */
   private getColumnCount(): number {
     if (this.viewMode === 'list') return 1;
 
-    // If we have the container, use its actual width
+    // Use container width if available
     if (this.contentArea?.nativeElement) {
       const containerWidth = this.contentArea.nativeElement.clientWidth;
-      const cardMinWidth = 220; // Match SCSS minmax(220px, 1fr)
+      const cardMinWidth = 220;
       const gap = 16;
       return Math.max(1, Math.floor((containerWidth + gap) / (cardMinWidth + gap)));
     }
 
-    // Fallback based on window width (accounting for sidebar ~240px)
-    const width = window.innerWidth - 300; // Approximate sidebar + padding
-    const cardMinWidth = 220; // Match SCSS
+    // Fallback: use window width minus sidebar
+    const availableWidth = window.innerWidth - 300;
+    const cardMinWidth = 220;
     const gap = 16;
-    return Math.max(1, Math.floor((width + gap) / (cardMinWidth + gap)));
+    return Math.max(1, Math.floor((availableWidth + gap) / (cardMinWidth + gap)));
   }
 
   /**

@@ -47,7 +47,9 @@ public class PaymentDetailAdminController {
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "id") String sort,
             @RequestParam(defaultValue = "DESC") String direction) {
-        Sort sortOrder = Sort.by(Objects.requireNonNull(Sort.Direction.fromString(direction)),
+        Sort sortOrder = Sort.by(
+                Objects.requireNonNull(Sort.Direction
+                        .fromString(Objects.requireNonNull(direction, "direction parameter cannot be null"))),
                 Objects.requireNonNull(sort, "sort parameter cannot be null"));
         Pageable pageable = PageRequest.of(page, size, sortOrder);
 
