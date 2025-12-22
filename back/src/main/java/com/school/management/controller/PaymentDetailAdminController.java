@@ -42,7 +42,7 @@ public class PaymentDetailAdminController {
             @RequestParam(required = false, name = "sessionSeriesId") Long sessionSeriesId,
             @RequestParam(required = false) Boolean active,
             @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") Date dateFrom,
-            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") Date dateTo,
+            @RequestParam(required = false) Long levelId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "id") String sort,
@@ -57,7 +57,7 @@ public class PaymentDetailAdminController {
         // session)
         // This uses DTO projection to avoid lazy loading issues
         Page<PaymentDetailSearchDTO> result = paymentDetailAdminService.searchPaymentDetailsWithCompleteData(
-                studentId, groupId, sessionSeriesId, active, dateFrom, dateTo, pageable);
+                studentId, groupId, sessionSeriesId, active, dateFrom, levelId, pageable);
 
         Map<String, Object> response = new HashMap<>();
         response.put("content", result.getContent());

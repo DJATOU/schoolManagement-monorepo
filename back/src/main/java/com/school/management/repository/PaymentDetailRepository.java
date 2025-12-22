@@ -141,13 +141,13 @@ public interface PaymentDetailRepository
                         "AND (:sessionSeriesId IS NULL OR p.sessionSeries.id = :sessionSeriesId) " +
                         "AND (:active IS NULL OR pd.active = :active) " +
                         "AND (CAST(:dateFrom AS timestamp) IS NULL OR pd.dateCreation >= :dateFrom) " +
-                        "AND (CAST(:dateTo AS timestamp) IS NULL OR pd.dateCreation <= :dateTo)")
+                        "AND (:levelId IS NULL OR p.student.level.id = :levelId)")
         Page<com.school.management.dto.PaymentDetailSearchDTO> searchPaymentDetailsWithCompleteData(
                         @Param("studentId") Long studentId,
                         @Param("groupId") Long groupId,
                         @Param("sessionSeriesId") Long sessionSeriesId,
                         @Param("active") Boolean active,
                         @Param("dateFrom") java.util.Date dateFrom,
-                        @Param("dateTo") java.util.Date dateTo,
+                        @Param("levelId") Long levelId,
                         Pageable pageable);
 }

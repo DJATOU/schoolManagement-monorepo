@@ -1,9 +1,34 @@
+// Host element must fill parent
+:host {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+}
+
+// Scrollable page container
+.page-container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 24px;
+  box-sizing: border-box;
+
+  @media (max-width: 1600px) {
+    zoom: 0.9;
+  }
+}
+
 .header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 24px;
   gap: 16px;
+  flex-shrink: 0;
 
   h1 {
     margin: 0 0 4px 0;

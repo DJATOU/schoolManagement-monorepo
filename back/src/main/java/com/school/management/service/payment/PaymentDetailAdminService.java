@@ -57,10 +57,10 @@ public class PaymentDetailAdminService {
             Long sessionSeriesId,
             Boolean active,
             Date dateFrom,
-            Date dateTo,
+            Long levelId,
             Pageable pageable) {
         return paymentDetailRepository.searchPaymentDetailsWithCompleteData(
-                studentId, groupId, sessionSeriesId, active, dateFrom, dateTo, pageable);
+                studentId, groupId, sessionSeriesId, active, dateFrom, levelId, pageable);
     }
 
     @Transactional(readOnly = true)

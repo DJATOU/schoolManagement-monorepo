@@ -21,6 +21,7 @@ import { API_BASE_URL } from '../../../app.config';
 import { GroupService } from '../../../services/group.service';
 import { EditPaymentDetailDialogComponent } from './dialogs/edit-payment-detail-dialog.component';
 import { PaymentDetailHistoryDialogComponent } from './dialogs/payment-detail-history-dialog.component';
+import { LevelService } from '../../../services/level.service';
 import { finalize } from 'rxjs';
 
 interface PaymentDetailView {
@@ -79,6 +80,7 @@ export class PaymentManagementComponent implements OnInit {
   groups: any[] = [];
   students: any[] = [];
   series: any[] = [];
+  levels: any[] = [];
 
   isLoading = false;
   totalElements = 0;
@@ -92,6 +94,7 @@ export class PaymentManagementComponent implements OnInit {
     private http: HttpClient,
     private dialog: MatDialog,
     private groupService: GroupService,
+    private levelService: LevelService,
     private snackBar: MatSnackBar
   ) {
     this.filterForm = this.fb.group({
@@ -99,8 +102,8 @@ export class PaymentManagementComponent implements OnInit {
       groupId: [null],
       sessionSeriesId: [null],
       active: [null],
-      dateFrom: [null],  // Payment creation date (start)
-      dateTo: [null]     // Payment creation date (end)
+      dateFrom: [null],
+      levelId: [null]
     });
   }
 
@@ -192,6 +195,7 @@ export class PaymentManagementComponent implements OnInit {
     this.groupService.getGroups().subscribe(groups => this.groups = groups || []);
     this.http.get<any[]>(`${API_BASE_URL}/api/students`).subscribe(students => this.students = students || []);
     this.http.get<any[]>(`${API_BASE_URL}/api/series`).subscribe(series => this.series = series || []);
+    this.levelService.getLevels().subscribe(levels => this.levels = levels || []);
   }
 
   onPageChange(event: PageEvent): void {
