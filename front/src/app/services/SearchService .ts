@@ -6,7 +6,7 @@ export class SearchService {
   private searchSubject = new BehaviorSubject<string>('');
 
   setSearch(query: string) {
-    console.log(query+"ddddddddddddddddddddddddddddddddddddd");
+    console.log(query + "ddd222");
     this.searchSubject.next(query);
   }
 
