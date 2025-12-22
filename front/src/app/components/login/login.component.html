@@ -1,0 +1,54 @@
+<div class="login-container">
+  <div class="login-card">
+    <div class="login-header">
+      <h1>School Management</h1>
+      <p>Connectez-vous à votre compte</p>
+    </div>
+
+    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
+      <div class="form-group">
+        <label for="username">Nom d'utilisateur</label>
+        <input
+          type="text"
+          id="username"
+          formControlName="username"
+          class="form-control"
+          [class.is-invalid]="submitted && f['username'].errors"
+          placeholder="Entrez votre nom d'utilisateur"
+        />
+        <div *ngIf="submitted && f['username'].errors" class="invalid-feedback">
+          <div *ngIf="f['username'].errors['required']">Le nom d'utilisateur est requis</div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="password">Mot de passe</label>
+        <input
+          type="password"
+          id="password"
+          formControlName="password"
+          class="form-control"
+          [class.is-invalid]="submitted && f['password'].errors"
+          placeholder="Entrez votre mot de passe"
+        />
+        <div *ngIf="submitted && f['password'].errors" class="invalid-feedback">
+          <div *ngIf="f['password'].errors['required']">Le mot de passe est requis</div>
+        </div>
+      </div>
+
+      <div *ngIf="error" class="alert alert-danger">
+        {{ error }}
+      </div>
+
+      <button type="submit" class="btn-login" [disabled]="loading">
+        <span *ngIf="loading" class="spinner"></span>
+        <span *ngIf="!loading">Se connecter</span>
+        <span *ngIf="loading">Connexion en cours...</span>
+      </button>
+    </form>
+
+    <div class="login-footer">
+      <p>Vous n'avez pas de compte ? Contactez l'administrateur</p>
+    </div>
+  </div>
+</div>
