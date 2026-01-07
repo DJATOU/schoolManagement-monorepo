@@ -3,13 +3,18 @@
   <mat-dialog-content>
     <!-- Photo Preview et Upload -->
     <div class="photo-section" *ngIf="photoPreview">
-      <img [src]="photoPreview" alt="Photo enseignant" class="photo-preview" />
+      <img [src]="photoPreview" alt="Enseignant" class="photo-preview" />
+      <button type="button" mat-icon-button color="warn" class="clear-photo-btn" (click)="clearPhoto()"
+        matTooltip="Supprimer la photo">
+        <mat-icon>delete</mat-icon>
+      </button>
     </div>
 
     <mat-form-field appearance="fill" class="full-width photo-field">
       <mat-label>Photo de l'enseignant</mat-label>
       <div class="upload-container">
-        <input matInput readonly [value]="selectedFile?.name" placeholder="Aucun fichier sélectionné" class="upload-input">
+        <input matInput readonly [value]="selectedFile?.name" placeholder="Aucun fichier sélectionné"
+          class="upload-input">
         <button type="button" mat-raised-button color="accent" (click)="photoInput.click()" class="upload-button">
           <mat-icon>add_a_photo</mat-icon> Choisir une image
         </button>

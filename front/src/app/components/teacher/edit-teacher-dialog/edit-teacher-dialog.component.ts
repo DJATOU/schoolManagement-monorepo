@@ -10,6 +10,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { TeacherService } from '../../../services/teacher.service';
 
 @Component({
@@ -25,7 +26,8 @@ import { TeacherService } from '../../../services/teacher.service';
     MatSelectModule,
     MatDatepickerModule,
     MatNativeDateModule,
-    MatIconModule
+    MatIconModule,
+    MatTooltipModule
   ],
   templateUrl: './edit-teacher-dialog.component.html',
   styleUrls: ['./edit-teacher-dialog.component.scss']
@@ -34,13 +36,14 @@ export class EditTeacherDialogComponent implements OnInit {
   editTeacherForm!: FormGroup;
   selectedFile: File | null = null;
   photoPreview: string | null = null;
+  shouldClearPhoto: boolean = false;
 
   constructor(
     public dialogRef: MatDialogRef<EditTeacherDialogComponent>,
     @Inject(MAT_DIALOG_DATA) public data: { teacher: Teacher },
     private fb: FormBuilder,
     private teacherService: TeacherService
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     // Convertir dateOfBirth en objet Date si c'est une chaîne
@@ -80,7 +83,14 @@ export class EditTeacherDialogComponent implements OnInit {
         this.photoPreview = e.target?.result as string;
       };
       reader.readAsDataURL(this.selectedFile);
+      this.shouldClearPhoto = false;
     }
+  }
+
+  clearPhoto(): void {
+    this.selectedFile = null;
+    this.photoPreview = null;
+    this.shouldClearPhoto = true;
   }
 
   onCancel(): void {
@@ -102,6 +112,6 @@ export class EditTeacherDialogComponent implements OnInit {
     };
 
     console.log('Updated teacher:', updatedTeacher);
-    this.dialogRef.close({ teacher: updatedTeacher, file: this.selectedFile });
+    this.dialogRef.close({ teacher: updatedTeacher, file: this.selectedFile, clearPhoto: this.shouldClearPhoto });
   }
 }

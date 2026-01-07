@@ -36,7 +36,15 @@ export class TeacherProfileComponent implements OnInit {
   teacher: Teacher | undefined;
   loading = true;
   groupForm: FormGroup;
-  teacherPhotoUrl: string = ''; 
+  teacherPhotoUrl: string = '';
+  hasImageError: boolean = false;
+  avatarColor: string = '#6366f1';
+
+  // Colors for avatar backgrounds
+  private readonly avatarColors = [
+    '#6366f1', '#8b5cf6', '#ec4899', '#ef4444', '#f97316',
+    '#eab308', '#22c55e', '#14b8a6', '#06b6d4', '#3b82f6'
+  ];
 
   constructor(
     private route: ActivatedRoute,
@@ -62,11 +70,39 @@ export class TeacherProfileComponent implements OnInit {
     this.teacherService.getTeacher(id).subscribe((teacher) => {
       this.teacher = teacher;
       this.loading = false;
-          // Générer l'URL complète de la photo en utilisant les variables d'environnement
-          if (this.teacher?.photo) {
-            this.teacherPhotoUrl = `${environment.apiUrl}${environment.imagesPath}${this.teacher.photo}`;
-          }
+      // Générer l'URL complète de la photo en utilisant les variables d'environnement
+      if (this.teacher?.photo) {
+        this.teacherPhotoUrl = `${environment.apiUrl}${environment.imagesPath}${this.teacher.photo}`;
+      }
+      this.setAvatarColor();
     });
+  }
+
+  /**
+   * Get initials from first and last name (max 2 characters)
+   */
+  getInitials(): string {
+    const firstName = this.teacher?.firstName || '';
+    const lastName = this.teacher?.lastName || '';
+    const firstInitial = firstName.charAt(0).toUpperCase();
+    const lastInitial = lastName.charAt(0).toUpperCase();
+    return firstInitial + lastInitial || 'XX';
+  }
+
+  /**
+   * Set avatar color based on teacher name
+   */
+  private setAvatarColor(): void {
+    const name = `${this.teacher?.firstName || ''}${this.teacher?.lastName || ''}`;
+    const hash = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    this.avatarColor = this.avatarColors[hash % this.avatarColors.length];
+  }
+
+  /**
+   * Handle image load error - fallback to initials
+   */
+  onImageError(): void {
+    this.hasImageError = true;
   }
 
   onEdit(): void {
@@ -109,13 +145,13 @@ export class TeacherProfileComponent implements OnInit {
   onDisable(): void {
     // Confirmation dialog to disable student
     this.dialog.open(ConfirmationDialogComponent, {
-      data:{
+      data: {
         title: "Suppression d'un enseignant",
         message: 'Voulez-vous vraiment supprimer cet enseignant?',
         confirmText: 'Yes, delete',
         cancelText: 'No, cancel',
         confirmColor: 'warn'
-      } 
+      }
     }).afterClosed().subscribe((result: boolean) => {
       if (result) {
         this.teacherService.disableTeacher(this.teacher!.id || -1).subscribe({
@@ -129,7 +165,7 @@ export class TeacherProfileComponent implements OnInit {
           }
         });
       }
-      else{
+      else {
         console.log('Operation canceled.');
       }
     });

@@ -78,26 +78,34 @@ public class TeacherController {
 
     @PostMapping("/createTeacher")
     public ResponseEntity<?> createTeacher(@Valid @ModelAttribute TeacherDTO teacherDto,
-            @RequestParam("file") MultipartFile file) {
-        // PHASE 1 REFACTORING: Utilise FileManagementService au lieu de gérer les
-        // fichiers directement
-        // Upload du fichier avec rollback automatique en cas d'erreur
-        FileManagementService.FileUploadResult uploadResult = fileManagementService.uploadWithRollback(file);
+            @RequestParam(value = "file", required = false) MultipartFile file) {
 
-        if (!uploadResult.isSuccess()) {
-            LOGGER.warn("File upload failed: {}", uploadResult.getErrorMessage());
-            return ResponseEntity.badRequest().body(uploadResult.getErrorMessage());
+        String photoFilename = null;
+
+        // Upload only if file is provided
+        if (file != null && !file.isEmpty()) {
+            // PHASE 1 REFACTORING: Utilise FileManagementService au lieu de gérer les
+            // fichiers directement
+            // Upload du fichier avec rollback automatique en cas d'erreur
+            FileManagementService.FileUploadResult uploadResult = fileManagementService.uploadWithRollback(file);
+
+            if (!uploadResult.isSuccess()) {
+                LOGGER.warn("File upload failed: {}", uploadResult.getErrorMessage());
+                return ResponseEntity.badRequest().body(uploadResult.getErrorMessage());
+            }
+            photoFilename = uploadResult.getFilename();
         }
 
         try {
-            // Stocker le nom du fichier dans le DTO
-            teacherDto.setPhoto(uploadResult.getFilename());
+            // Stocker le nom du fichier dans le DTO (null si pas de photo)
+            teacherDto.setPhoto(photoFilename);
 
             // Sauvegarder le professeur en base de données
             TeacherEntity teacher = teacherMapper.teacherDTOToTeacher(teacherDto);
             TeacherEntity savedTeacher = teacherService.save(teacher);
 
-            LOGGER.info("Teacher created successfully with photo: {}", uploadResult.getFilename());
+            LOGGER.info("Teacher created successfully{}",
+                    photoFilename != null ? " with photo: " + photoFilename : " without photo");
             return ResponseEntity.ok(teacherMapper.teacherToTeacherDTO(savedTeacher));
 
         } catch (Exception e) {

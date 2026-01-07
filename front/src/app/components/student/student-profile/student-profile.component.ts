@@ -54,6 +54,14 @@ export class StudentProfileComponent implements OnInit {
   groupForm: FormGroup;
   loading = true;
   studentPhotoUrl: string = '';
+  hasImageError: boolean = false;
+  avatarColor: string = '#6366f1';
+
+  // Colors for avatar backgrounds
+  private avatarColors = [
+    '#6366f1', '#8b5cf6', '#ec4899', '#ef4444', '#f97316',
+    '#eab308', '#22c55e', '#14b8a6', '#06b6d4', '#3b82f6'
+  ];
 
   constructor(
     private route: ActivatedRoute,
@@ -98,6 +106,7 @@ export class StudentProfileComponent implements OnInit {
         if (this.student?.photo) {
           this.studentPhotoUrl = `${environment.apiUrl}${environment.imagesPath}${this.student.photo}`;
         }
+        this.setAvatarColor();
         console.log('Student photo URL:', this.studentPhotoUrl);  // Vérifier l'URL générée
 
         this.loading = false;
@@ -139,6 +148,33 @@ export class StudentProfileComponent implements OnInit {
     this.loading = false;
   }
 
+  /**
+   * Get initials from first and last name (max 2 characters)
+   */
+  getInitials(): string {
+    const firstName = this.student?.firstName || '';
+    const lastName = this.student?.lastName || '';
+    const firstInitial = firstName.charAt(0).toUpperCase();
+    const lastInitial = lastName.charAt(0).toUpperCase();
+    return firstInitial + lastInitial || 'XX';
+  }
+
+  /**
+   * Set avatar color based on student name
+   */
+  private setAvatarColor(): void {
+    const name = `${this.student?.firstName || ''}${this.student?.lastName || ''}`;
+    const hash = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    this.avatarColor = this.avatarColors[hash % this.avatarColors.length];
+  }
+
+  /**
+   * Handle image load error - fallback to initials
+   */
+  onImageError(): void {
+    this.hasImageError = true;
+  }
+
   private loadStudentGroups(): void {
     if (this.student?.id !== undefined) {
       this.studentService.getGroupsForStudent(this.student.id).subscribe({
@@ -153,7 +189,7 @@ export class StudentProfileComponent implements OnInit {
     }
   }
 
-  
+
 
   private loadAllGroups(): void {
     this.groupService.getGroups().subscribe({
@@ -234,7 +270,7 @@ export class StudentProfileComponent implements OnInit {
       this.showError('Invalid student');
       return;
     }
-  
+
     // Charger la liste "fixe + rattrapage" avant d'ouvrir la dialog
     this.groupService.getGroupsForPayment(this.student.id).subscribe({
       next: (allGroups) => {
@@ -242,7 +278,7 @@ export class StudentProfileComponent implements OnInit {
           this.showError('No group available for payment');
           return;
         }
-  
+
         // Ouvrir la dialog en passant cette liste élargie :
         const dialogRef = this.dialog.open(PaymentDialogComponent, {
           width: '400px',
@@ -251,7 +287,7 @@ export class StudentProfileComponent implements OnInit {
             groups: allGroups  // => contiendra fixes + rattrapage
           }
         });
-  
+
         dialogRef.afterClosed().subscribe(result => {
           if (result) {
             this.submitPayment(result);
@@ -264,29 +300,29 @@ export class StudentProfileComponent implements OnInit {
       }
     });
   }
-  
+
 
   openGroupDialog(): void {
     console.log('All groups:', this.allGroups);
 
     // Filtrer tous les groupes correspondant au niveau de l'étudiant
     const groupsForLevel = this.allGroups.filter(group => group.levelId === this.studentLevelId);
-    
+
     if (groupsForLevel.length === 0) {
-        // Aucun groupe disponible pour le niveau de l'étudiant
-        this.showErrorMessage('Aucun groupe disponible pour ce niveau.');
-        return;
+      // Aucun groupe disponible pour le niveau de l'étudiant
+      this.showErrorMessage('Aucun groupe disponible pour ce niveau.');
+      return;
     }
 
     // Filtrer pour exclure les groupes déjà ajoutés à l'étudiant
     const possibleGroups = groupsForLevel.filter(group =>
       !this.studentGroups.some(studentGroup => studentGroup.id === group.id)
     );
-    
+
     if (possibleGroups.length === 0) {
-        // Tous les groupes de ce niveau ont déjà été ajoutés à l'étudiant
-        this.showErrorMessage('Tous les groupes de ce niveau ont déjà été ajoutés à cet étudiant.');
-        return;
+      // Tous les groupes de ce niveau ont déjà été ajoutés à l'étudiant
+      this.showErrorMessage('Tous les groupes de ce niveau ont déjà été ajoutés à cet étudiant.');
+      return;
     }
 
     console.log('Possible groups for level:', possibleGroups);
@@ -356,7 +392,7 @@ export class StudentProfileComponent implements OnInit {
   onDisable(): void {
     // Confirmation dialog to disable student
     this.dialog.open(ConfirmationDialogComponent, {
-      data:{
+      data: {
         title: "Suppression d'un étudiant",
         message: 'Voulez-vous vraiment supprimer cet étudiant?',
         confirmText: 'Yes, delete',
@@ -376,7 +412,7 @@ export class StudentProfileComponent implements OnInit {
           }
         });
       }
-      else{
+      else {
         console.log('Operation canceled.');
       }
     });

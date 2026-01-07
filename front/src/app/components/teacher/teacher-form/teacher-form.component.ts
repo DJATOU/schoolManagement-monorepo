@@ -138,7 +138,7 @@ export class TeacherFormComponent implements OnInit {
       this.selectedFile = target.files[0];
     }
   }
-  
+
 
   flattenFormData(data: any, parentKey: string = ''): { label: string, value: any }[] {
     let result: { label: string, value: any }[] = [];
@@ -201,7 +201,7 @@ export class TeacherFormComponent implements OnInit {
       }
     } else {
       // MODE CRÉATION
-      if (this.teacherForm.valid && this.selectedFile) {
+      if (this.teacherForm.valid) {
         const formData = {
           basicInformation: this.teacherForm.get('basicInformation')?.value,
           contactInformation: this.teacherForm.get('contactInformation')?.value,
@@ -247,12 +247,12 @@ export class TeacherFormComponent implements OnInit {
           }
         });
       } else {
-        console.warn('The form is not valid or the file is not selected.');
-        this.showErrorMessage('The form is not valid or the file is not selected.');
+        console.warn('The form is not valid.');
+        this.showErrorMessage('The form is not valid.');
       }
     }
   }
-  
+
 
   onClearForm(): void {
     this.teacherForm.reset();

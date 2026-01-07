@@ -6,6 +6,9 @@
 .photo-section {
   text-align: center;
   margin-bottom: 20px;
+  position: relative;
+  display: inline-block;
+  width: 100%;
 
   .photo-preview {
     max-width: 200px;
@@ -13,6 +16,15 @@
     border-radius: 8px;
     object-fit: cover;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  }
+
+  .clear-photo-btn {
+    position: absolute;
+    top: 0;
+    right: calc(50% - 110px);
+    background-color: rgba(255, 255, 255, 0.9);
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   }
 }
 

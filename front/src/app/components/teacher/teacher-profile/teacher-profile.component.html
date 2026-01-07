@@ -4,7 +4,13 @@
       <div class="header-container">
         <div class="teacher-info-header">
           <div class="teacher-photo-container">
-            <img [src]="teacherPhotoUrl" alt="Photo de l'Enseignant" class="teacher-photo">
+            <img *ngIf="teacherPhotoUrl && !hasImageError; else teacherInitials" [src]="teacherPhotoUrl"
+              alt="Enseignant" class="teacher-photo" (error)="onImageError()">
+            <ng-template #teacherInitials>
+              <div class="teacher-initials" [style.background-color]="avatarColor">
+                {{ getInitials() }}
+              </div>
+            </ng-template>
           </div>
           <div class="teacher-name-specialization">
             <mat-card-title>{{ teacher?.firstName }} {{ teacher?.lastName }}</mat-card-title>
@@ -12,10 +18,12 @@
           </div>
         </div>
         <div class="header-buttons">
-          <button mat-icon-button class="edit-button" (click)="onEdit()" aria-label="Modifier" matTooltip="Modifier le profil">
+          <button mat-icon-button class="edit-button" (click)="onEdit()" aria-label="Modifier"
+            matTooltip="Modifier le profil">
             <mat-icon>edit</mat-icon>
           </button>
-          <button mat-icon-button class="disable-button" (click)="onDisable()" aria-label="Supprimer" matTooltip="Supprimer le compte">
+          <button mat-icon-button class="disable-button" (click)="onDisable()" aria-label="Supprimer"
+            matTooltip="Supprimer le compte">
             <mat-icon>delete</mat-icon>
           </button>
         </div>

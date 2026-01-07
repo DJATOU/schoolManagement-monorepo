@@ -27,7 +27,7 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
     MatFormFieldModule,
     MatInputModule,
     MatDatepickerModule,
-    
+
     MatNativeDateModule,
     RouterModule,
     MatStepperModule,
@@ -78,7 +78,7 @@ export class StudentFormComponent implements OnInit {
     public dialog: MatDialog,
     private snackBar: MatSnackBar,
     private translate: TranslateService
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     this.initializeForm();
@@ -157,6 +157,10 @@ export class StudentFormComponent implements OnInit {
         const value = group.get(key)?.value;
         if (key === 'level') {
           formDataToSubmit.append('levelId', value);
+        } else if (key === 'dateOfBirth' && value instanceof Date) {
+          // Format date as yyyy-MM-dd for backend
+          const formattedDate = this.formatDateForBackend(value);
+          formDataToSubmit.append(key, formattedDate);
         } else {
           formDataToSubmit.append(key, value);
         }
@@ -164,6 +168,13 @@ export class StudentFormComponent implements OnInit {
     });
 
     return formDataToSubmit;
+  }
+
+  private formatDateForBackend(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 
   private flattenFormData(data: any, parentKey: string = ''): { label: string; value: any }[] {

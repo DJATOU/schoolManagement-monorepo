@@ -4,7 +4,13 @@
       <div class="header-container">
         <div class="student-info-header">
           <div class="student-photo-container">
-            <img [src]="studentPhotoUrl" alt="Photo de l'étudiant" class="student-photo">
+            <img *ngIf="studentPhotoUrl && !hasImageError; else studentInitials" [src]="studentPhotoUrl"
+              alt="Photo de l'étudiant" class="student-photo" (error)="onImageError()">
+            <ng-template #studentInitials>
+              <div class="student-initials" [style.background-color]="avatarColor">
+                {{ getInitials() }}
+              </div>
+            </ng-template>
           </div>
           <div class="student-name-level">
             <mat-card-title>{{ student?.firstName }} {{ student?.lastName }}</mat-card-title>
@@ -12,22 +18,27 @@
           </div>
         </div>
         <div class="header-buttons">
-          <button mat-icon-button class="edit-button" (click)="onEdit()" aria-label="Modifier" matTooltip="Modifier le profil">
+          <button mat-icon-button class="edit-button" (click)="onEdit()" aria-label="Modifier"
+            matTooltip="Modifier le profil">
             <mat-icon>edit</mat-icon>
           </button>
-          <button mat-icon-button class="disable-button" (click)="onDisable()" aria-label="Désactiver" matTooltip="Désactiver le compte">
+          <button mat-icon-button class="disable-button" (click)="onDisable()" aria-label="Désactiver"
+            matTooltip="Désactiver le compte">
             <mat-icon>block</mat-icon>
           </button>
-      
-          <button mat-icon-button class="payment-history-button" (click)="openPaymentHistoryDialog()" aria-label="Historique des paiements" matTooltip="Voir l'historique des paiements">
+
+          <button mat-icon-button class="payment-history-button" (click)="openPaymentHistoryDialog()"
+            aria-label="Historique des paiements" matTooltip="Voir l'historique des paiements">
             <mat-icon>account_balance_wallet</mat-icon>
           </button>
-          <button mat-icon-button class="attendance-history-button" (click)="openAttendanceHistoryDialog()" aria-label="Historique de présence" matTooltip="Voir l'historique de présence">
+          <button mat-icon-button class="attendance-history-button" (click)="openAttendanceHistoryDialog()"
+            aria-label="Historique de présence" matTooltip="Voir l'historique de présence">
             <mat-icon>fact_check</mat-icon>
           </button>
-          <button mat-icon-button class="full-history-button" (click)="generateFullHistoryPdf()" aria-label="Historique complet" matTooltip="Voir l'historique complet">
+          <button mat-icon-button class="full-history-button" (click)="generateFullHistoryPdf()"
+            aria-label="Historique complet" matTooltip="Voir l'historique complet">
             <mat-icon>print</mat-icon>
-          </button>         
+          </button>
         </div>
       </div>
     </mat-card-header>
@@ -65,10 +76,8 @@
       </mat-expansion-panel-header>
       <div class="group-cards-scroll">
         <div class="group-cards">
-          <app-group-card *ngFor="let group of studentGroups"
-                          [group]="group"
-                          [levels]="levels"
-                          [groupTypes]="allGroupTypes">
+          <app-group-card *ngFor="let group of studentGroups" [group]="group" [levels]="levels"
+            [groupTypes]="allGroupTypes">
           </app-group-card>
         </div>
       </div>

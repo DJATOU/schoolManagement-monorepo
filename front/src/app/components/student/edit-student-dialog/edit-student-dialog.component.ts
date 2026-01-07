@@ -13,6 +13,7 @@ import { Level } from '../../../models/level/level';
 import { MatSelectModule } from '@angular/material/select';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 @Component({
   selector: 'app-edit-student-dialog',
@@ -27,7 +28,8 @@ import { MatNativeDateModule } from '@angular/material/core';
     MatSelectModule,
     MatDatepickerModule,
     MatNativeDateModule,
-    MatIconModule
+    MatIconModule,
+    MatTooltipModule
   ],
   templateUrl: './edit-student-dialog.component.html',
   styleUrls: ['./edit-student-dialog.component.scss']
@@ -37,6 +39,7 @@ export class EditStudentDialogComponent implements OnInit {
   levels: Level[] = [];
   selectedFile: File | null = null;
   photoPreview: string | null = null;
+  shouldClearPhoto: boolean = false;
 
   constructor(
     public dialogRef: MatDialogRef<EditStudentDialogComponent>,
@@ -44,7 +47,7 @@ export class EditStudentDialogComponent implements OnInit {
     private fb: FormBuilder,
     private levelService: LevelService,
     private studentService: StudentService
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     // Convertir dateOfBirth en objet Date si c'est une chaîne de caractères
@@ -85,7 +88,14 @@ export class EditStudentDialogComponent implements OnInit {
         this.photoPreview = e.target?.result as string;
       };
       reader.readAsDataURL(this.selectedFile);
+      this.shouldClearPhoto = false; // Si on selectionne une nouvelle photo, on ne supprime plus
     }
+  }
+
+  clearPhoto(): void {
+    this.selectedFile = null;
+    this.photoPreview = null;
+    this.shouldClearPhoto = true; // Flag pour indiquer qu'on veut supprimer la photo
   }
 
   loadLevels(): void {
@@ -121,6 +131,6 @@ export class EditStudentDialogComponent implements OnInit {
     });
 
     console.log('Updated student:', updatedStudent);
-    this.dialogRef.close({ student: updatedStudent, file: this.selectedFile });
+    this.dialogRef.close({ student: updatedStudent, file: this.selectedFile, clearPhoto: this.shouldClearPhoto });
   }
 }
