@@ -102,13 +102,24 @@
         <ng-container matColumnDef="student">
           <th mat-header-cell *matHeaderCellDef> Étudiant </th>
           <td mat-cell *matCellDef="let element">
-            {{getStudentFullName(element)}}
+            <a [href]="'/student/' + element.studentId" target="_blank" class="table-link"
+              matTooltip="Ouvrir la fiche étudiant">
+              {{getStudentFullName(element)}}
+              <mat-icon class="open-icon">open_in_new</mat-icon>
+            </a>
           </td>
         </ng-container>
 
         <ng-container matColumnDef="group">
           <th mat-header-cell *matHeaderCellDef> Groupe </th>
-          <td mat-cell *matCellDef="let element"> {{element.groupName || '-'}} </td>
+          <td mat-cell *matCellDef="let element">
+            <a *ngIf="element.groupId" [href]="'/group/' + element.groupId" target="_blank" class="table-link"
+              matTooltip="Ouvrir la fiche groupe">
+              {{element.groupName}}
+              <mat-icon class="open-icon">open_in_new</mat-icon>
+            </a>
+            <span *ngIf="!element.groupId">-</span>
+          </td>
         </ng-container>
 
         <ng-container matColumnDef="series">
@@ -119,9 +130,7 @@
         <ng-container matColumnDef="session">
           <th mat-header-cell *matHeaderCellDef> Session </th>
           <td mat-cell *matCellDef="let element">
-            <span [matTooltip]="element.sessionName || 'Aucune session'" matTooltipPosition="above">
-              {{element.sessionName || '-'}}
-            </span>
+            {{element.sessionName || '-'}}
           </td>
         </ng-container>
 
