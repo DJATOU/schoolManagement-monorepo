@@ -2,12 +2,13 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { Room } from '../models/room/room';
+import { environment } from '../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class RoomService {
-  private apiUrl = 'http://localhost:8080/api/rooms';
+  private apiUrl = `${environment.apiUrl}/api/rooms`;
 
   constructor(private http: HttpClient) { }
 
@@ -22,7 +23,7 @@ export class RoomService {
   updateRoom(id: number, Room: Room): Observable<Room> {
     return this.http.put<Room>(`${this.apiUrl}/${id}`, Room);
   }
-  
+
   disableRooms(id_list: Number[]): Observable<boolean> {
     return this.http.delete<boolean>(`${this.apiUrl}/disable/${id_list}`);
   }
@@ -30,5 +31,5 @@ export class RoomService {
   getRoom(id: number): Observable<Room> {
     return this.http.get<Room>(`${this.apiUrl}/${id}`);
   }
-  
+
 }

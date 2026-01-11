@@ -2,12 +2,13 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { Pricing } from '../models/pricing/pricing';
+import { environment } from '../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class PricingService {
-  private apiUrl = 'http://localhost:8080/api/pricings';
+  private apiUrl = `${environment.apiUrl}/api/pricings`;
 
   constructor(private http: HttpClient) { }
 
@@ -22,7 +23,7 @@ export class PricingService {
   updatePricing(id: number, pricing: Pricing): Observable<Pricing> {
     return this.http.put<Pricing>(`${this.apiUrl}/${id}`, pricing);
   }
-  
+
   disablePricings(id_list: Number[]): Observable<boolean> {
     return this.http.delete<boolean>(`${this.apiUrl}/disable/${id_list}`);
   }

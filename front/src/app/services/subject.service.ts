@@ -1,13 +1,14 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable} from 'rxjs';
+import { Observable } from 'rxjs';
 import { Subject } from '../models/subject/subject';
+import { environment } from '../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class SubjectService {
-  private apiUrl = 'http://localhost:8080/api/subjects';
+  private apiUrl = `${environment.apiUrl}/api/subjects`;
 
   constructor(private http: HttpClient) { }
 
@@ -22,7 +23,7 @@ export class SubjectService {
   updateSubject(id: number, subject: Subject): Observable<Subject> {
     return this.http.put<Subject>(`${this.apiUrl}/${id}`, subject);
   }
-  
+
   disableSubjects(id_list: Number[]): Observable<boolean> {
     return this.http.delete<boolean>(`${this.apiUrl}/disable/${id_list}`);
   }
