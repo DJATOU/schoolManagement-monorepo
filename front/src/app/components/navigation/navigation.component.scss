@@ -104,13 +104,19 @@
       padding: 0 12px;
       height: 40px;
       box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-      transition: all 0.3s ease;
+      transition: border-radius 0.15s ease, box-shadow 0.2s ease;
       position: relative;
       overflow: hidden;
 
       &:focus-within {
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        transform: translateY(-1px);
+      }
+
+      // Quand l'autocomplete est ouvert : la barre et le panneau forment un seul bloc
+      &.search-field--open {
+        border-radius: 22px 22px 0 0;
+        box-shadow: 0 -2px 12px rgba(15, 23, 42, 0.08);
+        transform: none;
       }
 
       .search-prefix {
@@ -246,6 +252,10 @@
     border-radius: 12px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     max-height: 300px;
+
+    &.nav-autocomplete-panel {
+      margin-top: 0; // collé à la barre de recherche
+    }
 
     .mat-mdc-option {
       font-size: 14px;

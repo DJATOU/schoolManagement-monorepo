@@ -7,5 +7,7 @@ export interface PaymentDetail  {
   description: string; // Description du paiement
   paymentDate: Date; // Date du paiement
   sessionPrice: number; // Prix de la session (à ajouter pour faciliter le calcul du statut)
-  status?: string; 
+  status?: string;
+  isCatchUp?: boolean;
+  paymentStatus?: string; // Statut du paiement parent (pour filtrer CANCELLED)
 }

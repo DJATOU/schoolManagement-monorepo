@@ -1,9 +1,14 @@
-/* Styles pour le group-selector-toolbar */
+// Sélecteur de groupe — pensé pour s'intégrer dans la toolbar du calendrier.
+// Le rendu fin (overlay du panel + override Material) est complété dans
+// calendar.component.scss (ViewEncapsulation.None) car le champ est injecté
+// dynamiquement dans le DOM de FullCalendar.
+
+:host {
+  display: inline-flex;
+  align-items: center;
+}
+
 .group-selector-toolbar {
-  display: inline-block;
-  vertical-align: middle;
-  margin-left: 1rem;
-  height: 2rem; /* Ajustez la hauteur pour qu'elle corresponde aux autres boutons */
-  line-height: 2.5rem; /* Pour centrer verticalement le contenu */
-  margin-top: -0.5rem; /* Ajustez la marge supérieure selon vos besoins */
+  display: inline-flex;
+  align-items: center;
 }

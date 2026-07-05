@@ -26,15 +26,23 @@ export class GroupListComponent implements OnInit {
   groupPhotoUrl: string = '';
   level: string = '';
   type: string = '';
+  avatarColor: string = '#6366f1';
+
+  // Colors for avatar backgrounds
+  private avatarColors = [
+    '#6366f1', '#8b5cf6', '#ec4899', '#ef4444', '#f97316',
+    '#eab308', '#22c55e', '#14b8a6', '#06b6d4', '#3b82f6'
+  ];
 
   constructor(
     private router: Router,
     private groupService: GroupService
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     this.setPhotoUrl();
     this.setLevelAndType();
+    this.setAvatarColor();
   }
 
   private setPhotoUrl(): void {
@@ -51,9 +59,34 @@ export class GroupListComponent implements OnInit {
     this.type = foundType ? foundType.name : 'Unknown';
   }
 
+  private setAvatarColor(): void {
+    const name = this.group.name || '';
+    const hash = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    this.avatarColor = this.avatarColors[hash % this.avatarColors.length];
+  }
+
+  /**
+   * Get initials from group name (max 2 characters)
+   */
+  getInitials(): string {
+    const name = this.group.name || '';
+    const words = name.trim().split(/\s+/);
+    if (words.length >= 2) {
+      return (words[0][0] + words[1][0]).toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  }
+
   navigateToGroupProfile(): void {
     if (this.group.id) {
       this.router.navigate(['/group', this.group.id]);
     }
+  }
+
+  /**
+   * Handle image error - fallback to initials
+   */
+  onImageError(): void {
+    this.groupPhotoUrl = '';
   }
 }

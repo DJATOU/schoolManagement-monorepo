@@ -164,4 +164,50 @@ public class SessionController {
     }
 
 
+    // ========== NOUVEAUX ENDPOINTS AJOUTÉS ==========
+
+    /**
+     * Désactive une session et tous ses éléments associés.
+     *
+     * IMPORTANT : Cet endpoint désactive :
+     * - La session (session.active = false)
+     * - Les attendances (attendance.active = false)
+     * - Les PaymentDetails (paymentDetail.active = false)  ← CRITIQUE !
+     *
+     * UTILISATION DEPUIS LE FRONTEND :
+     * PATCH /api/sessions/{sessionId}/deactivate
+     *
+     * POURQUOI UTILISER CET ENDPOINT :
+     * Si vous utilisez simplement PATCH /api/sessions/{id} avec {active: false},
+     * les PaymentDetails restent actifs et causent l'erreur de paiement.
+     *
+     * @param sessionId l'ID de la session à désactiver
+     * @return 204 No Content
+     */
+    @PatchMapping("/{sessionId}/deactivate")
+    public ResponseEntity<Void> deactivateSession(@PathVariable Long sessionId) {
+        logger.info("Received request to deactivate session: {}", sessionId);
+        sessionService.deactivateSession(sessionId);
+        logger.info("Session {} successfully deactivated", sessionId);
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Réactive une session et tous ses éléments associés.
+     *
+     * Utilisez cet endpoint pour annuler une dévalidation.
+     *
+     * UTILISATION DEPUIS LE FRONTEND :
+     * PATCH /api/sessions/{sessionId}/reactivate
+     *
+     * @param sessionId l'ID de la session à réactiver
+     * @return 204 No Content
+     */
+    @PatchMapping("/{sessionId}/reactivate")
+    public ResponseEntity<Void> reactivateSession(@PathVariable Long sessionId) {
+        logger.info("Received request to reactivate session: {}", sessionId);
+        sessionService.reactivateSession(sessionId);
+        logger.info("Session {} successfully reactivated", sessionId);
+        return ResponseEntity.noContent().build();
+    }
 }

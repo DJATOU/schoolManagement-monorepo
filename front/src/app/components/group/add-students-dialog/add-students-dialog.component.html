@@ -1,0 +1,51 @@
+<h2 mat-dialog-title class="dialog-title">
+  <mat-icon>group_add</mat-icon>
+  Ajouter des étudiants
+  <span class="count-badge" *ngIf="selectedIds.size > 0">{{ selectedIds.size }}</span>
+</h2>
+
+<mat-dialog-content>
+  <mat-form-field appearance="outline" class="search-field" subscriptSizing="dynamic">
+    <mat-icon matPrefix>search</mat-icon>
+    <input matInput [(ngModel)]="searchTerm" (ngModelChange)="applySearch()"
+      placeholder="Rechercher un étudiant...">
+  </mat-form-field>
+
+  <div class="list-toolbar" *ngIf="!loading && filtered.length > 0">
+    <mat-checkbox [checked]="allFilteredSelected" (change)="toggleSelectAll()">
+      Tout sélectionner ({{ filtered.length }})
+    </mat-checkbox>
+  </div>
+
+  <div class="students-list" *ngIf="!loading; else loadingTpl">
+    <div *ngFor="let s of filtered" class="student-row" [class.selected]="isSelected(s.id)"
+      (click)="toggle(s.id)">
+      <mat-checkbox [checked]="isSelected(s.id)" (click)="$event.stopPropagation()"
+        (change)="toggle(s.id)"></mat-checkbox>
+      <div class="row-avatar">{{ getInitials(s) }}</div>
+      <div class="row-info">
+        <span class="row-name">{{ s.firstName }} {{ s.lastName }}</span>
+        <span class="row-email">{{ s.email }}</span>
+      </div>
+    </div>
+
+    <div class="empty" *ngIf="filtered.length === 0">
+      <mat-icon>person_off</mat-icon>
+      <span>Aucun étudiant disponible</span>
+    </div>
+  </div>
+
+  <ng-template #loadingTpl>
+    <div class="loading">
+      <mat-spinner diameter="36"></mat-spinner>
+    </div>
+  </ng-template>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="onCancel()">Annuler</button>
+  <button mat-flat-button color="primary" (click)="onConfirm()" [disabled]="selectedIds.size === 0">
+    <mat-icon>add</mat-icon>
+    Ajouter {{ selectedIds.size > 0 ? '(' + selectedIds.size + ')' : '' }}
+  </button>
+</mat-dialog-actions>

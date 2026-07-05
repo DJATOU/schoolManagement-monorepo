@@ -1,19 +1,22 @@
-<mat-card class="group-card">
+<mat-card class="group-card" (click)="navigateToGroupProfile()">
   <mat-card-content>
-    <div class="group-info" (click)="navigateToGroupProfile()">
+    <div class="group-info">
       <div class="group-avatar">
-        <img *ngIf="groupPhotoUrl; else groupIcon"
-             [src]="groupPhotoUrl"
-             alt="Photo du groupe"
-             class="group-photo" />
-        <ng-template #groupIcon>
-          <mat-icon class="default-icon">group</mat-icon>
+        <img *ngIf="groupPhotoUrl; else groupInitials" [src]="groupPhotoUrl" alt="Photo du groupe" class="group-photo"
+          (error)="onImageError()" />
+        <ng-template #groupInitials>
+          <div class="initials-avatar" [style.background-color]="avatarColor">
+            {{ getInitials() }}
+          </div>
         </ng-template>
       </div>
       <div class="group-details">
         <h4>{{ group.name || 'Unknown Group' }}</h4>
-        <p><strong>Niveau:</strong> {{ level }}</p>
-        <p><strong>Type:</strong> {{ type }}</p>
+        <p class="group-subtitle-mobile">{{ level }} · {{ type }}</p>
+      </div>
+      <div class="group-meta">
+        <span class="meta-chip"><mat-icon>school</mat-icon>{{ level }}</span>
+        <span class="meta-chip"><mat-icon>category</mat-icon>{{ type }}</span>
       </div>
     </div>
   </mat-card-content>

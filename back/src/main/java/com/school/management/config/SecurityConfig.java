@@ -16,8 +16,8 @@ import java.util.List;
 @EnableWebSecurity
 public class SecurityConfig {
 
-    // Default: localhost + Vercel
-    @Value("${cors.allowed.origins:http://localhost:4200,https://school-management-monorepo.vercel.app}")
+    // Default: localhost + Vercel (main + preview branches)
+    @Value("${cors.allowed.origins:http://localhost:4200,https://school-management-monorepo.vercel.app,https://school-management-monorepo-*.vercel.app}")
     private String allowedOrigins;
 
     @Bean
@@ -26,9 +26,9 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(request -> {
                     CorsConfiguration config = new CorsConfiguration();
 
-                    // Origins
+                    // Origins - utiliser setAllowedOriginPatterns pour supporter les wildcards
                     List<String> origins = Arrays.asList(allowedOrigins.split(","));
-                    config.setAllowedOrigins(origins);
+                    config.setAllowedOriginPatterns(origins);
 
                     // Methods
                     config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
@@ -43,7 +43,7 @@ public class SecurityConfig {
                 }))
                 .authorizeHttpRequests(authz -> authz
                         .requestMatchers(
-                                "/api/v1/aith/**",      // (ptit typo ici, tu voulais sans doute /auth/**)
+                                "/api/v1/aith/**", // (ptit typo ici, tu voulais sans doute /auth/**)
                                 "v2/api-docs",
                                 "/v3/api-docs",
                                 "/v3/api-docs/**",
@@ -53,10 +53,9 @@ public class SecurityConfig {
                                 "/configuration/security",
                                 "swagger-ui/**",
                                 "/webjars/**",
-                                "/swagger-ui.html"
-                        ).permitAll()
-                        .anyRequest().permitAll()
-                )
+                                "/swagger-ui.html")
+                        .permitAll()
+                        .anyRequest().permitAll())
                 .csrf(AbstractHttpConfigurer::disable);
 
         return http.build();

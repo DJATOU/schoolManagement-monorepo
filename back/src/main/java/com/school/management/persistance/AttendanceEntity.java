@@ -40,5 +40,6 @@ public class AttendanceEntity extends BaseEntity {
     private Boolean isJustified;
 
     @Column(name = "is_catch_up")
+    @Builder.Default
     private Boolean isCatchUp = false;
 }

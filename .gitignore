@@ -1,0 +1,12 @@
+# IDE files
+.idea/
+
+# Upload files
+uploads/
+
+# Debug artifacts
+back/jarcheck/
+
+# System files
+.DS_Store
+Thumbs.db

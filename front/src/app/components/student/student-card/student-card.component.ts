@@ -5,6 +5,8 @@ import { MatButtonModule } from '@angular/material/button';
 import { Student } from '../domain/student';
 import { ProfileCardComponent } from '../../shared/profile-card/profile-card.component';
 import { LevelService } from '../../../services/level.service';
+import { StudentPaymentStatusService } from '../../../services/student-payment-status.service';
+import { StudentPaymentStatus } from '../../../models/student-payment-status';
 
 @Component({
   selector: 'app-student-card',
@@ -18,12 +20,17 @@ export class StudentCardComponent implements OnInit {
 
   profile: any;
   levelName: string | undefined = '';
+  paymentStatus?: StudentPaymentStatus;
 
-  constructor(private levelService: LevelService) {}
+  constructor(
+    private levelService: LevelService,
+    private paymentStatusService: StudentPaymentStatusService
+  ) {}
 
   ngOnInit(): void {
     console.log('Student object:', this.student);
     this.getLevelName();
+    this.loadPaymentStatus();
   }
 
   private getLevelName(): void {
@@ -66,5 +73,24 @@ export class StudentCardComponent implements OnInit {
       console.error('Student input is not properly defined or does not have an ID:', this.student);
     }
   }
-  
+
+  /**
+   * Charge le statut de paiement de l'étudiant
+   */
+  private loadPaymentStatus(): void {
+    if (this.student && this.student.id) {
+      this.paymentStatusService.getStudentPaymentStatus(this.student.id).subscribe({
+        next: (status) => {
+          this.paymentStatus = status;
+          console.log('Payment status loaded:', status);
+        },
+        error: (error) => {
+          console.error('Error loading payment status:', error);
+          // En cas d'erreur, ne pas afficher d'indicateur
+          this.paymentStatus = undefined;
+        }
+      });
+    }
+  }
+
 }

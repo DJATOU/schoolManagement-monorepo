@@ -1,4 +1,5 @@
 import { Component, Input } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { MatCard, MatCardActions, MatCardContent, MatCardHeader, MatCardSubtitle, MatCardTitle } from '@angular/material/card';
 import { MatIcon } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
@@ -9,7 +10,7 @@ import { environment } from '../../../../environments/environment';  // Import d
 @Component({
   selector: 'app-profile-list-item',
   standalone: true,
-  imports: [MatListModule, MatIcon, MatCard, MatCardHeader, MatCardTitle, MatCardContent, MatCardActions, MatCardSubtitle, MatButtonModule, MatTooltipModule],
+  imports: [CommonModule, MatListModule, MatIcon, MatCard, MatCardHeader, MatCardTitle, MatCardContent, MatCardActions, MatCardSubtitle, MatButtonModule, MatTooltipModule],
   templateUrl: './profile-list-item.component.html',
   styleUrls: ['./profile-list-item.component.scss']
 })
@@ -18,16 +19,48 @@ export class ProfileListItemComponent {
   @Input() profileType: 'student' | 'teacher' = 'student';  // Peut être étendu à d'autres types de profils
 
   profilePhotoUrl: string = '';  // Variable pour stocker l'URL complète de la photo
+  hasImageError: boolean = false;
+  avatarColor: string = '#6366f1';
+
+  // Palette d'avatars (cohérente avec profile-card / student-list-item)
+  private avatarColors = [
+    '#6366f1', '#8b5cf6', '#ec4899', '#ef4444', '#f97316',
+    '#eab308', '#22c55e', '#14b8a6', '#06b6d4', '#3b82f6'
+  ];
 
   ngOnInit() {
-    console.log(this.profile);
+    this.setAvatarColor();
 
-    // Générer dynamiquement l'URL complète de la photo
+    // Générer l'URL de la photo seulement si elle existe.
+    // Sinon on affiche les initiales colorées (pas d'image cassée).
     if (this.profile?.photo) {
       this.profilePhotoUrl = `${environment.apiUrl}${environment.imagesPath}${this.profile.photo}`;
-    } else {
-      this.profilePhotoUrl = 'assets/default-avatar.png';  // Utiliser une image par défaut si aucune photo n'est disponible
     }
+  }
+
+  /**
+   * Initiales du profil (max 2 caractères) pour l'avatar par défaut.
+   */
+  getInitials(): string {
+    const firstInitial = (this.profile?.firstName || '').charAt(0).toUpperCase();
+    const lastInitial = (this.profile?.lastName || '').charAt(0).toUpperCase();
+    return (firstInitial + lastInitial) || 'XX';
+  }
+
+  /**
+   * Couleur d'avatar déterministe basée sur le nom.
+   */
+  private setAvatarColor(): void {
+    const name = `${this.profile?.firstName || ''}${this.profile?.lastName || ''}`;
+    const hash = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    this.avatarColor = this.avatarColors[hash % this.avatarColors.length];
+  }
+
+  /**
+   * Fallback initiales si l'image ne charge pas.
+   */
+  onImageError(): void {
+    this.hasImageError = true;
   }
 
   /**

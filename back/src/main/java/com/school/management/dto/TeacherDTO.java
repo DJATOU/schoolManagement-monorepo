@@ -36,19 +36,18 @@ public class TeacherDTO {
     @NotNull(message = "Date of birth is required")
     private Date dateOfBirth;
 
-    @NotBlank(message = "Place of birth is required")
     private String placeOfBirth;
 
     // Les champs supplémentaires
-    @NotBlank(message = "Address is required")
     private String address;
+
+    private String city;
 
     private String communicationPreference;
 
-    private String specialization;
+    private String nationality;
 
-    @NotBlank(message = "Qualifications are required")
-    private String qualifications;
+    private String specialization;
 
     @Min(0)
     private Integer yearsOfExperience;

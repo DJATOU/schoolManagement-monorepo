@@ -147,6 +147,21 @@ export class PaymentService {
   }
 
   /**
+   * Traite un paiement de rattrapage ciblé sur une session
+   *
+   * Backend: PaymentController.processCatchUpPayment()
+   * Endpoint: POST /api/payments/process/catch-up
+   *
+   * @param payment Données du paiement (studentId, sessionId, amountPaid)
+   * @returns Observable<Payment>
+   */
+  processCatchUpPayment(payment: Payment): Observable<Payment> {
+    return this.http.post<Payment>(`${this.baseUrl}/process/catch-up`, payment).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  /**
    * Crée un paiement de base
    *
    * Backend: PaymentController.createPayment()

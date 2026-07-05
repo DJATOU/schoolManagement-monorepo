@@ -1,56 +1,48 @@
 /* Styles pour les boutons individuels */
-.submit-button {
-  flex: 1; /* Les boutons prendront une taille égale */
+.submit-button,
+button.submit-button.mat-mdc-raised-button {
+  flex: 1;
   padding: 10px 30px;
-  font-size: 16px;
-  border-radius: 20px;
-  background: linear-gradient(to right, rgb(182, 244, 146), rgb(51, 139, 147));
-  color: white;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  font-size: 15px;
+  font-weight: 600;
+  border-radius: 10px;
+  background: #6366f1 !important;
+  color: #fff !important;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
   cursor: pointer;
-  transition: background-color 0.3s, box-shadow 0.3s, transform 0.2s;
+  transition: background-color 0.25s, box-shadow 0.25s, transform 0.2s;
 }
 
-.submit-button:hover {
-  background-color: #1b5e20; /* Couleur survol */
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+.submit-button:hover,
+button.submit-button.mat-mdc-raised-button:hover {
+  background: #4f46e5 !important;
+  box-shadow: 0 6px 16px rgba(99, 102, 241, 0.4);
   transform: translateY(-2px);
-}
-
-.submit-button:focus,
-.submit-button:active {
-  outline: none;
-  background-color: #004d40; /* Couleur active */
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
 }
 
 .submit-button:active {
   transform: translateY(1px);
 }
 
-.clear-button {
-  flex: 1; /* Les boutons prendront une taille égale */
+.clear-button,
+button.clear-button.mat-mdc-raised-button {
+  flex: 1;
   padding: 10px 30px;
-  font-size: 16px;
-  border-radius: 20px;
-  background-color: #c0ca33; /* Couleur secondaire (jaune foncé) */
-  color: white;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  font-size: 15px;
+  font-weight: 600;
+  border-radius: 10px;
+  background: #f1f5f9 !important;
+  color: #475569 !important;
+  border: 1px solid #e2e8f0;
+  box-shadow: none !important;
   cursor: pointer;
-  transition: background-color 0.3s, box-shadow 0.3s, transform 0.2s;
+  transition: background-color 0.25s, box-shadow 0.25s, transform 0.2s;
 }
 
-.clear-button:hover {
-  background-color: #afb42b; /* Couleur survol */
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+.clear-button:hover,
+button.clear-button.mat-mdc-raised-button:hover {
+  background: #e2e8f0 !important;
   transform: translateY(-2px);
-}
-
-.clear-button:focus,
-.clear-button:active {
-  outline: none;
-  background-color: #9e9d24; /* Couleur active */
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
 }
 
 .clear-button:active {
@@ -64,33 +56,82 @@
   gap: 1rem; /* Espacement entre les boutons */
 }
 
-/* Style for the upload container */
-.upload-container {
+/* ===== Champ d'upload photo (propre, hors mat-form-field) ===== */
+.photo-upload {
   display: flex;
   align-items: center;
-  gap: 10px;
-  }
-  
-  /* Style for the upload input */
-  .upload-input {
+  gap: 14px;
+  padding: 14px;
+  border: 1.5px dashed #cbd5e1;
+  border-radius: 12px;
+  background: #f8fafc;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.photo-upload:hover {
+  border-color: #6366f1;
+  background: #eef2ff;
+}
+
+.photo-upload .photo-preview {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  object-fit: cover;
+  border: 1px solid #e2e8f0;
+  flex-shrink: 0;
+  background: #fff;
+}
+
+.photo-upload .photo-placeholder {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #eef2ff;
+  color: #6366f1;
+  flex-shrink: 0;
+}
+
+.photo-upload .photo-placeholder mat-icon {
+  font-size: 28px;
+  width: 28px;
+  height: 28px;
+}
+
+.photo-upload .photo-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
   flex: 1;
-  }
-  
-  /* Style for the upload button */
-  .upload-button {
-  padding: 8px 16px;
-  background-color: #007bff;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
-  }
-  
-  .upload-button:hover {
-  background-color: #0056b3;
-  }
-  
-  .upload-button mat-icon {
-  margin-right: 8px;
-  }
+}
+
+.photo-upload .photo-info .photo-label {
+  font-weight: 600;
+  color: #1e293b;
+  font-size: 0.9rem;
+}
+
+.photo-upload .photo-info .photo-filename {
+  font-size: 0.8rem;
+  color: #64748b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.photo-upload .photo-choose-btn {
+  flex-shrink: 0;
+  border-radius: 9px;
+  color: #6366f1;
+  border: 1px solid #c7d2fe;
+  background: #fff;
+  font-weight: 600;
+}
+
+.photo-upload .photo-choose-btn mat-icon {
+  margin-right: 4px;
+}

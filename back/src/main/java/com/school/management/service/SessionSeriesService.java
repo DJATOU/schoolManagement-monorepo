@@ -13,6 +13,7 @@ import com.school.management.persistance.SessionSeriesEntity;
 import com.school.management.repository.SessionSeriesRepository;
 
 import java.util.List;
+import java.util.Objects;
 
 @Service
 public class SessionSeriesService {
@@ -27,15 +28,17 @@ public class SessionSeriesService {
     private MappingContext mappingContext;
 
     @Autowired
-    public SessionSeriesService(SessionSeriesRepository sessionSeriesRepository, SessionSeriesMapper sessionSeriesMapper,
-                              GroupRepository groupRepository) {
+    public SessionSeriesService(SessionSeriesRepository sessionSeriesRepository,
+            SessionSeriesMapper sessionSeriesMapper,
+            GroupRepository groupRepository) {
         this.sessionSeriesRepository = sessionSeriesRepository;
         this.sessionSeriesMapper = sessionSeriesMapper;
         this.groupRepository = groupRepository;
     }
 
     /**
-     * PHASE 1 REFACTORING: Initialise le MappingContext après injection des dépendances
+     * PHASE 1 REFACTORING: Initialise le MappingContext après injection des
+     * dépendances
      */
     @PostConstruct
     private void initMappingContext() {
@@ -43,8 +46,7 @@ public class SessionSeriesService {
                 null, null, null, null, null, null, null,
                 groupRepository,
                 sessionSeriesRepository,
-                null, null
-        );
+                null, null);
         LOGGER.debug("MappingContext initialized for SessionSeriesService");
     }
 
@@ -60,12 +62,12 @@ public class SessionSeriesService {
     }
 
     public SessionSeriesEntity getSessionSeriesById(Long id) {
-        return sessionSeriesRepository.findById(id)
+        return sessionSeriesRepository.findById(Objects.requireNonNull(id))
                 .orElseThrow(() -> new RuntimeException("Session series not found"));
     }
 
     public SessionSeriesEntity createOrUpdateSessionSeries(SessionSeriesEntity sessionSeries) {
-        return sessionSeriesRepository.save(sessionSeries);
+        return sessionSeriesRepository.save(Objects.requireNonNull(sessionSeries));
     }
 
     public List<SessionSeriesDto> getSeriesByGroupId(Long groupId) {
@@ -79,7 +81,6 @@ public class SessionSeriesService {
                 .map(sessionSeriesMapper::toDto)
                 .toList();
     }
-
 
     // Ajoutez d'autres méthodes personnalisées ici selon les besoins
 }

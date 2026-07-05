@@ -1,75 +1,73 @@
+// Main app wrapper - takes full viewport
 .all-content {
   display: flex;
   flex-direction: column;
   height: 100vh;
+  width: 100%;
   margin: 0;
   padding: 0;
   overflow: hidden;
 }
 
+// Navigation bar at top
 .app-navigation {
   height: 64px;
-  flex: none;
+  flex-shrink: 0;
 }
 
+// Main container below navigation
 .main-container {
   display: flex;
   flex: 1;
   width: 100%;
+  min-height: 0;
   margin: 0;
   padding: 0;
 }
 
+// Sidenav container - Material sidenav wrapper
 .sidenav-container {
-  display: flex;
   flex: 1;
-  height: calc(100vh - 64px);
+  height: 100%;
+  min-height: 0; // Critical for nested flex
   margin: 0;
   padding: 0;
-  overflow: hidden;
 }
 
+// Sidebar styles
 .sidenav {
   width: 250px;
   background: linear-gradient(109.6deg, rgb(148, 233, 194) 11.2%, rgb(224, 235, 186) 91.1%);
   color: black;
-  margin: 0;
-  padding: 0;
 }
 
 .mat-list-item {
   color: black;
 }
 
+// Main scrollable content area (mat-sidenav-content)
+// CRITICAL: overflow hidden here - pages handle their own scroll
 .content-area {
   display: flex;
   flex-direction: column;
-  flex-grow: 1;
-  overflow-y: auto;
-  padding: 0;
-  background: linear-gradient(109.6deg, rgb(148, 233, 194) 11.2%, rgb(224, 235, 186) 91.1%);
-  margin: 0;
-  align-items: stretch;
-}
-
-.main-content {
-  display: flex;
-  flex-direction: column;
   flex: 1;
-  width: 100%;
-  margin: 0;
-  padding: 0;
-  align-items: stretch;
+  min-width: 0;
+  min-height: 0; // Critical for nested flex height
+  overflow: hidden;
+  background: linear-gradient(109.6deg, rgb(148, 233, 194) 11.2%, rgb(224, 235, 186) 91.1%);
 }
 
+// Ensure shared-layout-container fills the content area with FIXED height
 app-shared-layout-container {
   display: flex;
   flex-direction: column;
-  flex-grow: 1;
-  overflow-y: auto;
+  width: 100%;
+  height: 100%;
+  flex: 1;
+  min-height: 0;
 }
 
-/* Specific form-container adjustments */
+// Form container adjustments (for form pages)
 .form-container {
   display: flex;
   flex-direction: column;
@@ -81,8 +79,6 @@ app-shared-layout-container {
   border-radius: 8px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   background-color: white;
-  flex-grow: 1; /* Ensure it takes up all available space */
-  overflow-y: auto; /* Enable vertical scrolling */
 }
 
 .button-container {
@@ -90,21 +86,4 @@ app-shared-layout-container {
   justify-content: space-between;
   padding-top: 20px;
   background-color: white;
-}
-
-
-// Media queries for responsive design
-@media (max-width: 1500px) {
-  mat-sidenav-container{
-   // zoom:0.96;
-  }
-
-
-  app-shared-layout-container {
-    zoom: 0.85;
-    display: flex;
-    flex-direction: column;
-    flex-grow: 1;
-    overflow-y: auto;
-  }
 }

@@ -1,0 +1,5 @@
+// Host element must be block and full width for grid layout
+:host {
+    display: block;
+    width: 100%;
+}

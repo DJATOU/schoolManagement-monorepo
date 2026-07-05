@@ -1,0 +1,352 @@
+// ============================================================
+//  PROFILS (étudiant / enseignant / groupe) — design partagé
+//  Même structure indigo partout ; seule la teinte de l'en-tête
+//  change selon le type d'entité.
+// ============================================================
+
+$pf-accent: #6366f1;
+$pf-accent-dark: #4f46e5;
+$pf-accent-soft: #eef2ff;
+$pf-ink: #1e293b;
+$pf-muted: #64748b;
+$pf-border: #e2e8f0;
+$pf-danger: #ef4444;
+
+.pf-container {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 20px 20px 48px;
+  box-sizing: border-box;
+}
+
+.pf-card {
+  width: 100%;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid $pf-border;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+  padding: 0 !important;
+}
+
+// ===== EN-TÊTE =====
+.pf-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 22px 26px;
+  flex-wrap: wrap;
+  background: linear-gradient(135deg, #6366f1 0%, #818cf8 100%); // défaut (étudiant)
+
+  &.pf-header--teacher {
+    background: linear-gradient(135deg, #0ea5e9 0%, #38bdf8 100%); // cyan/bleu
+  }
+
+  &.pf-header--group {
+    background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%); // violet
+  }
+}
+
+.pf-identity {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  min-width: 0;
+}
+
+.pf-avatar {
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, 0.7);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  flex-shrink: 0;
+
+  &.pf-avatar--square {
+    border-radius: 20px;
+  }
+
+  img {
+    width: 100%;
+    height: 100%;
+    border-radius: inherit;
+    object-fit: cover;
+  }
+
+  .pf-initials {
+    width: 100%;
+    height: 100%;
+    border-radius: inherit;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    font-weight: 700;
+    color: #fff;
+    text-transform: uppercase;
+  }
+}
+
+.pf-titles {
+  min-width: 0;
+
+  .pf-name {
+    margin: 0;
+    font-size: 26px;
+    font-weight: 700;
+    color: #fff;
+    line-height: 1.2;
+  }
+
+  .pf-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 8px;
+    padding: 4px 12px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 20px;
+    color: #fff;
+    font-size: 0.85rem;
+    font-weight: 600;
+
+    mat-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+    }
+  }
+}
+
+.pf-header-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+
+  .pf-hb {
+    width: 42px;
+    height: 42px;
+    border-radius: 11px;
+    background: rgba(255, 255, 255, 0.18);
+    color: #fff;
+    transition: all 0.2s ease;
+
+    &:hover {
+      background: #fff;
+      transform: translateY(-2px);
+    }
+
+    mat-icon {
+      font-size: 21px;
+      width: 21px;
+      height: 21px;
+    }
+
+    &.pf-hb-edit:hover mat-icon { color: $pf-accent; }
+    &.pf-hb-payment:hover mat-icon { color: #0ea5e9; }
+    &.pf-hb-attendance:hover mat-icon { color: #10b981; }
+    &.pf-hb-print:hover mat-icon { color: #f59e0b; }
+    &.pf-hb-danger:hover { background: #fee2e2; }
+    &.pf-hb-danger:hover mat-icon { color: $pf-danger; }
+  }
+}
+
+// ===== CORPS =====
+.pf-body {
+  padding: 24px 26px;
+}
+
+.pf-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 28px;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+}
+
+.pf-section {
+  min-width: 0;
+}
+
+.pf-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 14px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid $pf-accent-soft;
+  font-size: 1rem;
+  font-weight: 700;
+  color: $pf-accent-dark;
+
+  mat-icon {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+    color: $pf-accent;
+  }
+}
+
+.pf-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 0;
+  border-bottom: 1px solid #f1f5f9;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    color: $pf-muted;
+    flex-shrink: 0;
+  }
+
+  .pf-label {
+    color: $pf-muted;
+    font-size: 0.85rem;
+    font-weight: 500;
+    width: 150px;
+    flex-shrink: 0;
+  }
+
+  .pf-value {
+    color: $pf-ink;
+    font-size: 0.9rem;
+    font-weight: 600;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &.pf-row--block {
+    flex-direction: column;
+    align-items: flex-start;
+
+    .pf-value {
+      white-space: normal;
+      font-weight: 500;
+    }
+  }
+}
+
+// ===== ACTIONS =====
+.pf-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid $pf-border;
+  flex-wrap: wrap;
+
+  button {
+    border-radius: 10px;
+    font-weight: 600;
+    padding: 0 18px;
+    height: 42px;
+
+    mat-icon {
+      margin-right: 6px;
+      font-size: 19px;
+      width: 19px;
+      height: 19px;
+    }
+  }
+
+  .pf-action-primary {
+    background: $pf-accent;
+    color: #fff;
+    &:hover { background: $pf-accent-dark; }
+  }
+
+  .pf-action-secondary {
+    color: $pf-accent;
+    border: 1px solid #c7d2fe;
+    &:hover { background: $pf-accent-soft; }
+  }
+
+  @media (max-width: 600px) {
+    button { flex: 1; }
+  }
+}
+
+// ===== ACCORDÉON / LISTES =====
+.pf-accordion {
+  width: 100%;
+
+  .mat-expansion-panel {
+    border-radius: 14px !important;
+    border: 1px solid $pf-border;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.05) !important;
+    overflow: hidden;
+    margin-bottom: 12px;
+  }
+
+  .mat-expansion-panel-header {
+    height: 56px;
+  }
+
+  .mat-panel-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 700;
+    color: $pf-ink;
+
+    mat-icon { color: $pf-accent; }
+  }
+
+  .pf-cards-scroll {
+    max-height: 420px;
+    overflow-y: auto;
+    padding: 6px 4px;
+  }
+
+  .pf-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 14px;
+  }
+
+  .pf-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 32px;
+    color: $pf-muted;
+
+    mat-icon {
+      font-size: 40px;
+      width: 40px;
+      height: 40px;
+      color: #cbd5e1;
+    }
+  }
+}
+
+// ===== SPINNER =====
+.pf-spinner {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 70vh;
+
+  mat-progress-spinner {
+    width: 70px !important;
+    height: 70px !important;
+  }
+}

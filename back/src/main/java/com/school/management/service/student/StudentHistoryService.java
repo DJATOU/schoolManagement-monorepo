@@ -20,18 +20,21 @@ public class StudentHistoryService {
     private final StudentRepository studentRepository;
     private final AttendanceRepository attendanceRepository;
     private final StudentGroupRepository studentGroupRepository;
+    private final com.school.management.repository.PaymentDetailRepository paymentDetailRepository;
 
     public StudentHistoryService(StudentRepository studentRepository,
-                                AttendanceRepository attendanceRepository,
-                                StudentGroupRepository studentGroupRepository) {
+            AttendanceRepository attendanceRepository,
+            StudentGroupRepository studentGroupRepository,
+            com.school.management.repository.PaymentDetailRepository paymentDetailRepository) {
         this.studentRepository = studentRepository;
         this.attendanceRepository = attendanceRepository;
         this.studentGroupRepository = studentGroupRepository;
+        this.paymentDetailRepository = paymentDetailRepository;
     }
 
     public StudentFullHistoryDTO getStudentFullHistory(Long studentId) {
         // Récupérer l'étudiant
-        StudentEntity student = studentRepository.findById(studentId)
+        StudentEntity student = studentRepository.findById(Objects.requireNonNull(studentId))
                 .orElseThrow(() -> new EntityNotFoundException("Étudiant non trouvé"));
 
         return mapStudentEntityToDTO(student);
@@ -79,7 +82,7 @@ public class StudentHistoryService {
         // Convertir les séries en SeriesHistoryDTO, en filtrant si besoin
         List<SeriesHistoryDTO> seriesDTOs = group.getSeries().stream()
                 .map(series -> mapSeriesEntityToDTO(series, student, group, isOfficial))
-                .filter(Objects::nonNull)  // on enlève les séries qui n'ont aucune session pertinente
+                .filter(Objects::nonNull) // on enlève les séries qui n'ont aucune session pertinente
                 .toList();
 
         dto.setSeries(seriesDTOs);
@@ -88,12 +91,32 @@ public class StudentHistoryService {
 
     // ===================== mapSeriesEntityToDTO ======================
     private SeriesHistoryDTO mapSeriesEntityToDTO(SessionSeriesEntity series,
-                                                  StudentEntity student,
-                                                  GroupEntity group,
-                                                  boolean isOfficial) {
+            StudentEntity student,
+            GroupEntity group,
+            boolean isOfficial) {
         SeriesHistoryDTO dto = new SeriesHistoryDTO();
         dto.setSeriesId(series.getId());
         dto.setSeriesName(series.getName());
+
+        // IMPORTANT: Charger tous les payment details ACTIFS (non CANCELLED) pour cette
+        // série et cet étudiant en une seule requête
+        // Cela évite le problème de lazy loading et améliore les performances
+        List<PaymentDetailEntity> paymentDetailsForSeries = paymentDetailRepository
+                .findByPayment_StudentIdAndSession_SessionSeriesId(student.getId(), series.getId());
+
+        // FILTRER les paiements CANCELLED
+        List<PaymentDetailEntity> activePaymentDetails = paymentDetailsForSeries.stream()
+                .filter(pd -> pd.getActive() != null && pd.getActive())
+                .filter(pd -> !"CANCELLED".equals(pd.getPayment().getStatus()))
+                .toList();
+
+        // Créer une map sessionId -> PaymentDetail pour un accès rapide
+        Map<Long, PaymentDetailEntity> paymentDetailMap = activePaymentDetails.stream()
+                .collect(Collectors.toMap(
+                        pd -> pd.getSession().getId(),
+                        pd -> pd,
+                        (existing, replacement) -> existing // En cas de doublon, garder le premier
+                ));
 
         // NOUVEAU: Récupérer la date d'inscription de l'étudiant au groupe
         Date enrollmentDate = isOfficial ? getStudentEnrollmentDate(student, group) : null;
@@ -103,50 +126,55 @@ public class StudentHistoryService {
                 .sorted(Comparator.comparing(SessionEntity::getSessionTimeStart))
                 .toList();
 
-        // NOUVEAU: Filtrer d'abord les sessions selon la date d'inscription
-        List<SessionEntity> eligibleSessions = filterSessionsAfterEnrollment(allSessions, enrollmentDate);
-
-        // 1) Filtre sessions où l'étudiant a AU MOINS un attendance OU un paiement
-        List<SessionEntity> relevantSessions = eligibleSessions.stream()
-                .filter(session -> {
-                    boolean hasAttendance = session.getAttendances().stream()
-                            .anyMatch(a -> a.getStudent().getId().equals(student.getId()) && a.isActive());
-                    boolean hasPayment = session.getPaymentDetails().stream()
-                            .anyMatch(pd -> pd.getPayment().getStudent().getId().equals(student.getId()));
-                    return hasAttendance || hasPayment;
-                })
-                .toList();
-
-        // 2) Si le groupe est "officiel", on garde le relevantSessions
-        //    Sinon, on re-filtre pour ne conserver que ceux où l'étudiant a réellement un attendance (rattrapage)
+        // CORRECTION: Pour l'HISTORIQUE COMPLET, afficher toutes les sessions du groupe
+        // Le filtrage par date d'inscription s'applique UNIQUEMENT pour le calcul du
+        // coût
         List<SessionEntity> filteredSessions;
         if (isOfficial) {
-            filteredSessions = relevantSessions;
+            // Étudiant inscrit au groupe => afficher TOUTES les sessions de la série
+            // (même celles avant l'inscription, pour voir l'historique complet)
+            filteredSessions = allSessions;
         } else {
-            filteredSessions = relevantSessions.stream()
+            // Rattrapage => afficher uniquement les sessions où l'étudiant a une attendance
+            // active
+            filteredSessions = allSessions.stream()
                     .filter(session -> session.getAttendances().stream()
                             .anyMatch(a -> a.getStudent().getId().equals(student.getId()) && a.isActive()))
                     .toList();
         }
 
-        // 3) Si le résultat est VIDE => on ne retourne pas cette série (on renvoie null)
+        // Si le résultat est VIDE => on ne retourne pas cette série (on renvoie null)
         if (filteredSessions.isEmpty()) {
-            return null;  // => la série n'apparaîtra pas dans le PDF
+            return null; // => la série n'apparaîtra pas dans le PDF
         }
 
-        // NOUVEAU: Calculer le coût total uniquement pour les sessions éligibles (après inscription)
-        double totalCostForStudent = calculateTotalCostForStudent(group, eligibleSessions);
+        // NOUVEAU: Pour le CALCUL DU COÛT, filtrer par date d'inscription
+        List<SessionEntity> eligibleSessionsForCost = filterSessionsAfterEnrollment(allSessions, enrollmentDate);
+
+        // NOUVEAU: Calculer le coût total en fonction du type de groupe
+        double totalCostForStudent;
+        if (isOfficial) {
+            // Pour les groupes officiels : coût basé sur les sessions après inscription
+            totalCostForStudent = calculateTotalCostForStudent(group, eligibleSessionsForCost);
+        } else {
+            // Pour les sessions de rattrapage : coût basé UNIQUEMENT sur les sessions
+            // où l'étudiant est PRÉSENT avec paiement COMPLÉTÉ
+            totalCostForStudent = calculateTotalCostForCatchUpSessions(group, filteredSessions, student);
+        }
+
         double totalPaidForSeries = calculateTotalPaidForSeries(series, student);
 
-        // NOUVEAU: Statut de paiement basé sur les sessions auxquelles l'étudiant a droit
-        // Si l'étudiant a payé >= au coût des sessions éligibles, le paiement est complet
+        // NOUVEAU: Statut de paiement basé sur les sessions auxquelles l'étudiant a
+        // droit
+        // Si l'étudiant a payé >= au coût des sessions éligibles, le paiement est
+        // complet
         dto.setPaymentStatus(totalPaidForSeries >= totalCostForStudent ? "Complet" : "Partiel");
         dto.setTotalAmountPaid(totalPaidForSeries);
         dto.setTotalCost(totalCostForStudent);
 
         // 4) Construire la liste finale de SessionHistoryDTO
         List<SessionHistoryDTO> sessionDTOs = filteredSessions.stream()
-                .map(session -> mapSessionEntityToDTO(session, student))
+                .map(session -> mapSessionEntityToDTO(session, student, paymentDetailMap))
                 .toList();
 
         dto.setSessions(sessionDTOs);
@@ -154,10 +182,11 @@ public class StudentHistoryService {
     }
 
     // ===================== mapSessionEntityToDTO ======================
-    private SessionHistoryDTO mapSessionEntityToDTO(SessionEntity session, StudentEntity student) {
+    private SessionHistoryDTO mapSessionEntityToDTO(SessionEntity session, StudentEntity student,
+            Map<Long, PaymentDetailEntity> paymentDetailMap) {
         SessionHistoryDTO dto = new SessionHistoryDTO();
 
-        // Si la session n’est plus active (= dévalidée)
+        // Si la session n'est plus active (= dévalidée)
         if (Boolean.FALSE.equals(session.getActive())) {
             dto.setSessionId(session.getId());
             dto.setSessionName(session.getTitle());
@@ -199,11 +228,10 @@ public class StudentHistoryService {
             dto.setCatchUpSession(false);
         }
 
-        // Gérer le paiement
-        PaymentDetailEntity paymentDetail = session.getPaymentDetails().stream()
-                .filter(pd -> pd.getPayment().getStudent().getId().equals(student.getId()))
-                .findFirst()
-                .orElse(null);
+        // CORRECTION: Utiliser la map pré-chargée au lieu du lazy loading
+        // Cela résout le problème où les paiements n'apparaissaient pas pour les
+        // sessions de rattrapage
+        PaymentDetailEntity paymentDetail = paymentDetailMap.get(session.getId());
 
         if (paymentDetail != null) {
             dto.setPaymentStatus(paymentDetail.getPayment().getStatus());
@@ -247,24 +275,41 @@ public class StudentHistoryService {
     }
 
     /**
-     * Calcule le coût total pour les sessions auxquelles l'étudiant a droit (après inscription)
+     * Calcule le coût total pour les sessions auxquelles l'étudiant a droit (après
+     * inscription)
      */
     private double calculateTotalCostForStudent(GroupEntity group, List<SessionEntity> eligibleSessions) {
         double pricePerSession = group.getPrice().getPrice();
         return pricePerSession * eligibleSessions.size();
     }
 
+    /**
+     * Calcule le coût total pour les sessions de rattrapage
+     * Ne compte QUE les sessions où l'étudiant est PRÉSENT avec paiement COMPLÉTÉ
+     */
+    private double calculateTotalCostForCatchUpSessions(GroupEntity group, List<SessionEntity> sessions,
+            StudentEntity student) {
+        double pricePerSession = group.getPrice().getPrice();
+
+        // Compter uniquement les sessions de rattrapage EFFECTIVEMENT SUIVIES par
+        // l'étudiant (présent)
+        long attendedCatchUpSessions = sessions.stream()
+                .filter(session -> session.getAttendances().stream()
+                        .anyMatch(a -> a.getStudent().getId().equals(student.getId())
+                                && a.isActive()
+                                && Boolean.TRUE.equals(a.getIsPresent())))
+                .count();
+
+        return pricePerSession * attendedCatchUpSessions;
+    }
+
     private double calculateTotalPaidForSeries(SessionSeriesEntity series, StudentEntity student) {
         return series.getSessions().stream()
                 .flatMap(session -> session.getPaymentDetails().stream())
                 .filter(pd -> pd.getPayment().getStudent().getId().equals(student.getId()))
+                .filter(pd -> pd.getActive() != null && pd.getActive())
+                .filter(pd -> !"CANCELLED".equals(pd.getPayment().getStatus()))
                 .mapToDouble(PaymentDetailEntity::getAmountPaid)
                 .sum();
-    }
-
-    private double calculateTotalCostOfSeries(GroupEntity group) {
-        double pricePerSession = group.getPrice().getPrice();
-        int sessionNumberPerSerie = group.getSessionNumberPerSerie();
-        return pricePerSession * sessionNumberPerSerie;
     }
 }

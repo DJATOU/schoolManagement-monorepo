@@ -1,5 +1,6 @@
 package com.school.management.persistance;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Max;
@@ -19,6 +20,7 @@ import java.util.Set;
 @NoArgsConstructor
 @AllArgsConstructor
 @SuperBuilder
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 @NamedEntityGraph(
         name = "Student.withAllData",
         attributeNodes = {
@@ -66,6 +68,7 @@ public class StudentEntity extends PersonEntity {
     private Set<GroupEntity> groups ;
 
     @OneToMany(mappedBy = "student")
+    @JsonIgnore
     private Set<AttendanceEntity> attendances;
 
     @ManyToOne

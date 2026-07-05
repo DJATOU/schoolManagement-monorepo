@@ -30,13 +30,17 @@ export class PaymentConfirmationDialogComponent {
 
   constructor(
     private dialogRef: MatDialogRef<PaymentConfirmationDialogComponent>,
-    @Inject(MAT_DIALOG_DATA) public data: { 
-      seriesName: string; 
-      seriesPrice: number; 
-      paymentDetails: PaymentDetail[]; 
-      paymentHistory: Payment[]; 
-      totalOwed: number; 
-      totalPaid: number; 
+    @Inject(MAT_DIALOG_DATA) public data: {
+      seriesName: string;
+      numberOfSessions: number;
+      pricePerSession: number;
+      totalCost: number;
+      paymentDetails: PaymentDetail[];
+      paymentHistory: Payment[];
+      totalPaid: number;
+      remainingAmount: number;
+      isCatchUp: boolean;
+      calculationNote: string;
     }
   ) {}
 

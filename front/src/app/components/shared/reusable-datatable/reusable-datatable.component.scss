@@ -1,22 +1,146 @@
-.datatable{
-    width: 100%;
-    border: 2px solid #c2e9d4;
-    overflow: auto;
+:host {
+  display: block;
+  padding: 20px 20px 48px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
 
-    th{
-        background-color: #f5f5f5;
-        color: #000;
-        font-weight: 600;
+// ===== TOOLBAR =====
+.datatable-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.dt-btn {
+  border-radius: 10px;
+  font-weight: 600;
+  height: 40px;
+
+  mat-icon {
+    margin-right: 4px;
+    font-size: 19px;
+    width: 19px;
+    height: 19px;
+  }
+
+  &.dt-create {
+    background: #6366f1;
+    color: #fff;
+    &:hover { background: #4f46e5; }
+  }
+
+  &.dt-edit {
+    color: #6366f1;
+    border-color: #c7d2fe;
+  }
+
+  &.dt-delete {
+    color: #ef4444;
+    border-color: #fecaca;
+    &:hover { background: #fef2f2; }
+  }
+}
+
+.dt-search {
+  min-width: 240px;
+
+  mat-icon {
+    color: #94a3b8;
+    margin-right: 6px;
+  }
+}
+
+// ===== TABLE =====
+.datatable-wrapper {
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.05);
+  background: #fff;
+}
+
+.datatable {
+  width: 100%;
+  background: #fff;
+
+  th.mat-mdc-header-cell {
+    background: #f8fafc;
+    color: #475569;
+    font-weight: 700;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 14px 16px;
+  }
+
+  td.mat-mdc-cell {
+    color: #1e293b;
+    font-size: 0.9rem;
+    padding: 12px 16px;
+    border-bottom: 1px solid #f1f5f9;
+  }
+
+  tr.mat-mdc-row {
+    transition: background 0.15s ease;
+
+    &:hover {
+      background: #f8fafc;
     }
+
+    &.row-selected {
+      background: #eef2ff;
+    }
+
+    &:last-child td.mat-mdc-cell {
+      border-bottom: none;
+    }
+  }
+
+  // Couleur de l'accent des cases à cocher
+  .mat-mdc-checkbox.mat-mdc-checkbox-checked .mdc-checkbox__background,
+  .mat-mdc-checkbox .mdc-checkbox__background {
+    border-radius: 4px;
+  }
 }
 
-.btn-group{
-    display: flex;
-    justify-content: space-between;
+.dt-no-data td {
+  padding: 28px;
+  text-align: center;
+  color: #94a3b8;
+  font-style: italic;
 }
 
-.mat-mdc-button-base{
-    min-width: 100px;
-    margin: 10px 20px 10px 0px;
-    padding: 10px;
+// ===== PAGINATOR =====
+mat-paginator {
+  margin-top: 8px;
+  border-radius: 12px;
+  background: transparent;
+}
+
+// ===== RESPONSIVE =====
+@media (max-width: 768px) {
+  :host {
+    padding: 12px;
+  }
+
+  .datatable-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .dt-search {
+    width: 100%;
+  }
 }

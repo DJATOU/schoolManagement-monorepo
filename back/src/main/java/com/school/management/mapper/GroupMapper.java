@@ -6,7 +6,7 @@ import com.school.management.shared.exception.ResourceNotFoundException;
 import com.school.management.shared.mapper.MappingContext;
 import org.mapstruct.*;
 
-@Mapper(componentModel = "spring",  builder = @Builder())
+@Mapper(componentModel = "spring", builder = @Builder())
 public interface GroupMapper {
 
     @Mapping(source = "groupType.id", target = "groupTypeId")
@@ -15,10 +15,12 @@ public interface GroupMapper {
     @Mapping(source = "price.id", target = "priceId")
     @Mapping(source = "teacher.id", target = "teacherId")
     @Mapping(source = "teacher.firstName", target = "teacherName")
-    @Mapping(source = "groupType.name", target = "groupTypeName")  // Map group type name
-    @Mapping(source = "level.name", target = "levelName")          // Map level name
-    @Mapping(source = "subject.name", target = "subjectName")      // Map subject name
-    @Mapping(source = "price.price", target = "priceAmount")      // Map price amount
+    @Mapping(source = "groupType.name", target = "groupTypeName")
+    @Mapping(source = "level.name", target = "levelName")
+    @Mapping(source = "subject.name", target = "subjectName")
+    @Mapping(source = "price.price", target = "priceAmount")
+    @Mapping(target = "isCatchUp", ignore = true)
+    @Mapping(target = "studentIds", ignore = true)
     GroupDTO groupToGroupDTO(GroupEntity group);
 
     @Mapping(source = "groupTypeId", target = "groupType", qualifiedByName = "idToGroupType")
@@ -26,9 +28,22 @@ public interface GroupMapper {
     @Mapping(source = "subjectId", target = "subject", qualifiedByName = "idToSubject")
     @Mapping(source = "priceId", target = "price", qualifiedByName = "idToPricing")
     @Mapping(source = "teacherId", target = "teacher", qualifiedByName = "idToTeacher")
+    @Mapping(target = "createdBy", ignore = true)
+    @Mapping(target = "updatedBy", ignore = true)
+    @Mapping(target = "series", ignore = true)
+    @Mapping(target = "students", ignore = true)
     GroupEntity groupDTOToGroup(GroupDTO groupDto, @Context MappingContext context);
 
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
+    @Mapping(target = "createdBy", ignore = true)
+    @Mapping(target = "updatedBy", ignore = true)
+    @Mapping(target = "groupType", ignore = true)
+    @Mapping(target = "level", ignore = true)
+    @Mapping(target = "price", ignore = true)
+    @Mapping(target = "series", ignore = true)
+    @Mapping(target = "students", ignore = true)
+    @Mapping(target = "subject", ignore = true)
+    @Mapping(target = "teacher", ignore = true)
     void updateGroupFromDto(GroupDTO dto, @MappingTarget GroupEntity entity, @Context MappingContext context);
 
     @Named("idToGroupType")
@@ -40,31 +55,34 @@ public interface GroupMapper {
                 .orElseThrow(() -> new ResourceNotFoundException("GroupType", id));
     }
 
-
     @Named("idToLevel")
     default LevelEntity idToLevel(Long id, @Context MappingContext context) {
-        if (id == null) return null;
+        if (id == null)
+            return null;
         return context.getLevelRepository().findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Level", id));
     }
 
     @Named("idToSubject")
     default SubjectEntity idToSubject(Long id, @Context MappingContext context) {
-        if (id == null) return null;
+        if (id == null)
+            return null;
         return context.getSubjectRepository().findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Subject", id));
     }
 
     @Named("idToPricing")
     default PricingEntity idToPricing(Long id, @Context MappingContext context) {
-        if (id == null) return null;
+        if (id == null)
+            return null;
         return context.getPricingRepository().findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Pricing", id));
     }
 
     @Named("idToTeacher")
     default TeacherEntity idToTeacher(Long id, @Context MappingContext context) {
-        if (id == null) return null;
+        if (id == null)
+            return null;
         return context.getTeacherRepository().findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Teacher", id));
     }

@@ -282,12 +282,16 @@ export class AttendanceHistoryDialogComponent implements OnInit {
     if (this.attendanceHistory.data && this.attendanceHistory.data.length > 0) {
       for (const attendance of this.attendanceHistory.data) {
         const fillColor = this.getFillColorForAttendance(attendance);
+        const sessionName = attendance.sessionName || 'N/A';
+        const sessionDisplayName = attendance.isCatchUp ? `${sessionName} (Rattrapage)` : sessionName;
+
+        const justifiedText = attendance.isPresent ? '' : (attendance.isJustified ? 'Oui' : 'Non');
 
         body.push([
-          { text: attendance.sessionName || 'N/A', fillColor },
+          { text: sessionDisplayName, fillColor, ...(attendance.isCatchUp && { color: 'red', bold: true }) },
           { text: attendance.sessionDate ? new Date(attendance.sessionDate).toLocaleDateString() : 'N/A', fillColor },
           { text: attendance.isPresent ? 'Oui' : 'Non', fillColor },
-          { text: attendance.isJustified ? 'Oui' : 'Non', fillColor },
+          { text: justifiedText, fillColor },
           { text: attendance.description || '', fillColor }
         ]);
       }

@@ -1,5 +1,826 @@
+// ============================================================
+//  CALENDRIER — thème cohérent avec le design system (indigo)
+//  Le composant est en ViewEncapsulation.None : on scope tout
+//  sous .calendar-container pour éviter les fuites de style.
+// ============================================================
 
-/* Styles pour mat-mdc-text-field-wrapper */
-.group-selector-toolbar .mat-mdc-text-field-wrapper.mdc-text-field.mdc-text-field--filled {
-  height: 56px !important;
+// Palette locale (alignée sur le reste de l'app)
+$cal-accent: #6366f1;
+$cal-accent-dark: #4f46e5;
+$cal-accent-soft: #eef2ff;
+$cal-ink: #1e293b;
+$cal-muted: #64748b;
+$cal-faint: #94a3b8;
+$cal-border: #e2e8f0;
+$cal-surface: #ffffff;
+$cal-today: #eef2ff;
+$cal-radius: 14px;
+
+// Le composant calendrier remplit toute la hauteur disponible du layout
+app-calendar {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+}
+
+.calendar-container {
+  height: 100%;
+  padding: 16px 20px;
+  background: #f8fafc;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+
+  // FullCalendar wrapper doit remplir la hauteur de la carte
+  full-calendar {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  // ---- Carte englobant filtres + calendrier ----
+  .calendar-card {
+    background: $cal-surface;
+    border-radius: $cal-radius;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+    border: 1px solid $cal-border;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    position: relative; // ancre l'overlay des filtres
+  }
+
+  // ---- En-tête compact (toujours visible) ----
+  .calendar-filters-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    border-bottom: 1px solid $cal-border;
+    background: #fcfdfe;
+    flex: 0 0 auto;
+    position: relative;
+    z-index: 25;
+  }
+
+  // Bouton repliable "Filtres"
+  .filters-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 38px;
+    padding: 0 12px;
+    border: 1px solid $cal-border;
+    border-radius: 10px;
+    background: #f1f5f9;
+    color: $cal-ink;
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.18s ease;
+
+    &:hover {
+      background: $cal-accent-soft;
+      border-color: $cal-accent;
+    }
+
+    &.is-open {
+      background: $cal-accent-soft;
+      border-color: $cal-accent;
+      color: $cal-accent-dark;
+    }
+
+    .filters-toggle-icon {
+      color: $cal-accent;
+      font-size: 19px;
+      width: 19px;
+      height: 19px;
+    }
+
+    .filters-chevron {
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+      color: $cal-muted;
+    }
+  }
+
+  .filters-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    background: $cal-accent;
+    color: #fff;
+    border-radius: 10px;
+    font-size: 0.72rem;
+    font-weight: 700;
+  }
+
+  // Rappel des filtres actifs en mat-chips (panneau fermé)
+  .filters-chips {
+    flex: 1;
+    min-width: 0;
+
+    .mat-mdc-chip {
+      background: $cal-accent-soft;
+      border-radius: 14px;
+
+      .mdc-evolution-chip__text-label {
+        color: $cal-accent-dark;
+        font-weight: 600;
+        font-size: 0.78rem;
+      }
+
+      .mat-mdc-chip-avatar {
+        color: $cal-accent;
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+      }
+
+      .mat-mdc-chip-remove {
+        color: $cal-accent-dark;
+        opacity: 0.7;
+        &:hover { opacity: 1; }
+      }
+    }
+  }
+
+  // Voile de fermeture de l'overlay filtres
+  .calendar-filters-backdrop {
+    position: absolute;
+    inset: 0;
+    z-index: 20;
+    background: transparent;
+  }
+
+  .filters-clear {
+    margin-left: auto;
+    min-width: 0;
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    border-radius: 10px;
+    color: $cal-muted;
+    border: 1px solid $cal-border;
+    background: #f1f5f9;
+
+    mat-icon {
+      font-size: 19px;
+      width: 19px;
+      height: 19px;
+      margin: 0;
+    }
+
+    &:hover {
+      color: #ef4444;
+      border-color: #fecaca;
+      background: #fef2f2;
+    }
+  }
+
+  // ---- Panneau de filtres : OVERLAY déroulant (ne pousse pas le calendrier) ----
+  .calendar-filters-panel {
+    position: absolute;
+    top: 59px;            // juste sous l'en-tête
+    left: 0;
+    right: 0;
+    z-index: 24;
+    background: $cal-surface;
+    border-bottom: 1px solid $cal-border;
+    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.1);
+    padding: 0 14px;
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    pointer-events: none;
+    transform: translateY(-6px);
+    transition: max-height 0.24s ease, opacity 0.18s ease, padding 0.24s ease, transform 0.24s ease;
+
+    &.open {
+      max-height: 240px;
+      opacity: 1;
+      padding: 14px;
+      pointer-events: auto;
+      transform: translateY(0);
+    }
+  }
+
+  .filters-fields {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  // ---- Le calendrier vit DANS .calendar-card (pas de double bordure) ----
+  .fc {
+    background: $cal-surface;
+    padding: 14px 16px;
+    flex: 1 1 auto;
+    min-height: 0;
+    width: 100%;
+    --fc-border-color: #{$cal-border};
+    --fc-today-bg-color: #{$cal-today};
+    --fc-now-indicator-color: #{$cal-accent};
+    --fc-page-bg-color: #{$cal-surface};
+    font-family: 'Helvetica Neue', sans-serif;
+  }
+
+  // La grille occupe toute la largeur et toute la hauteur restante
+  .fc .fc-view-harness {
+    height: 100% !important;
+  }
+
+  .fc table {
+    width: 100% !important;
+  }
+
+  // ============ TOOLBAR ============
+  .fc .fc-toolbar.fc-header-toolbar {
+    margin-bottom: 20px;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  // Chaque bloc de la toolbar peut revenir à la ligne proprement
+  .fc .fc-toolbar-chunk {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .fc .fc-toolbar-title {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: $cal-ink;
+    text-transform: capitalize;
+    letter-spacing: -0.01em;
+  }
+
+  // ---- Boutons génériques ----
+  .fc .fc-button {
+    background: $cal-surface;
+    border: 1px solid $cal-border;
+    color: $cal-muted;
+    font-weight: 600;
+    font-size: 0.8125rem;
+    text-transform: capitalize;
+    padding: 7px 14px;
+    border-radius: 9px;
+    box-shadow: none;
+    transition: all 0.18s ease;
+
+    &:hover {
+      background: $cal-accent-soft;
+      border-color: $cal-accent;
+      color: $cal-accent-dark;
+    }
+
+    &:focus {
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25);
+    }
+
+    &:disabled {
+      opacity: 0.45;
+      background: $cal-surface;
+      border-color: $cal-border;
+      color: $cal-faint;
+    }
+  }
+
+  // ---- Boutons de navigation (prev / next) ----
+  .fc .fc-prev-button,
+  .fc .fc-next-button {
+    width: 38px;
+    height: 38px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border-radius: 9px;
+
+    .fc-icon {
+      font-size: 1.2em;
+    }
+  }
+
+  // ---- Bouton "Aujourd'hui" ----
+  .fc .fc-today-button {
+    background: $cal-surface;
+    border: 1px solid $cal-border;
+    color: $cal-ink;
+
+    &:not(:disabled):hover {
+      background: $cal-accent-soft;
+    }
+  }
+
+  // ---- Groupe de boutons de vue (Mois / Semaine / Jour / Liste) ----
+  .fc .fc-button-group {
+    gap: 0;
+    background: #f1f5f9;
+    border-radius: 10px;
+    padding: 3px;
+    border: 1px solid $cal-border;
+    height: 42px;            // hauteur de référence de la toolbar
+    box-sizing: border-box;
+    align-items: stretch;
+
+    .fc-button {
+      background: transparent;
+      border: none;
+      border-radius: 7px;
+      color: $cal-muted;
+      display: flex;
+      align-items: center;   // remplit toute la hauteur, texte centré
+
+      &:hover {
+        background: rgba(99, 102, 241, 0.1);
+        color: $cal-accent-dark;
+      }
+
+      // Vue active
+      &.fc-button-active {
+        background: $cal-accent;
+        color: #fff;
+        box-shadow: 0 2px 6px rgba(99, 102, 241, 0.35);
+      }
+
+      &:focus {
+        box-shadow: none;
+      }
+    }
+  }
+
+  // ============ GRILLE (en-têtes de jours) ============
+  .fc .fc-col-header-cell {
+    background: #f8fafc;
+    padding: 12px 0;
+    border-color: $cal-border;
+  }
+
+  .fc .fc-col-header-cell-cushion {
+    color: $cal-muted;
+    font-weight: 700;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 6px;
+    text-decoration: none;
+  }
+
+  // ============ CASES DES JOURS ============
+  .fc .fc-daygrid-day {
+    transition: background 0.15s ease;
+
+    &:hover {
+      background: rgba(99, 102, 241, 0.04);
+    }
+  }
+
+  .fc .fc-daygrid-day-number {
+    color: $cal-ink;
+    font-weight: 600;
+    font-size: 0.85rem;
+    padding: 8px 10px;
+    text-decoration: none;
+  }
+
+  // Jours hors du mois courant : estompés
+  .fc .fc-day-other .fc-daygrid-day-number {
+    color: $cal-faint;
+    opacity: 0.6;
+  }
+
+  // ---- Jour courant ----
+  .fc .fc-day-today {
+    background: $cal-today !important;
+
+    .fc-daygrid-day-number {
+      background: $cal-accent;
+      color: #fff;
+      border-radius: 8px;
+      width: 28px;
+      height: 28px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin: 6px 8px;
+      padding: 0;
+      font-weight: 700;
+      box-shadow: 0 2px 6px rgba(99, 102, 241, 0.4);
+    }
+  }
+
+  // ============ ÉVÉNEMENTS ============
+  .fc .fc-event,
+  .fc .fc-daygrid-event {
+    background: linear-gradient(135deg, $cal-accent 0%, #818cf8 100%);
+    border: none;
+    border-radius: 7px;
+    padding: 3px 8px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #fff;
+    box-shadow: 0 1px 3px rgba(99, 102, 241, 0.3);
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    margin: 2px 4px;
+
+    &:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 10px rgba(99, 102, 241, 0.45);
+    }
+  }
+
+  .fc .fc-event-time {
+    font-weight: 700;
+    opacity: 0.9;
+  }
+
+  .fc .fc-event-title {
+    font-weight: 600;
+  }
+
+  // ---- Pastille pour la vue mois (dot events) ----
+  .fc .fc-daygrid-event-dot {
+    border-color: $cal-accent;
+  }
+
+  // ---- Sessions terminées (classe is-finished posée par le TS) ----
+  .fc .fc-event.is-finished,
+  .fc .is-finished {
+    background: #e2e8f0;
+    color: $cal-muted;
+    box-shadow: none;
+    opacity: 0.85;
+
+    .fc-event-time,
+    .fc-event-title {
+      text-decoration: line-through;
+      color: $cal-muted;
+    }
+
+    &:hover {
+      transform: none;
+      box-shadow: none;
+    }
+  }
+
+  // ============ VUES SEMAINE / JOUR (timeGrid) ============
+  .fc .fc-timegrid-slot {
+    height: 2.6em;
+  }
+
+  .fc .fc-timegrid-axis-cushion,
+  .fc .fc-timegrid-slot-label-cushion {
+    color: $cal-faint;
+    font-size: 0.72rem;
+    font-weight: 600;
+  }
+
+  .fc .fc-timegrid-now-indicator-line {
+    border-color: $cal-accent;
+  }
+
+  // ============ VUE LISTE ============
+  .fc .fc-list {
+    border-radius: 10px;
+    overflow: hidden;
+    border-color: $cal-border;
+  }
+
+  .fc .fc-list-day-cushion {
+    background: #f8fafc;
+    color: $cal-ink;
+    font-weight: 700;
+  }
+
+  .fc .fc-list-event {
+    cursor: pointer;
+
+    &:hover td {
+      background: $cal-accent-soft;
+    }
+
+    .fc-list-event-dot {
+      border-color: $cal-accent;
+    }
+
+    .fc-list-event-title {
+      color: $cal-ink;
+      font-weight: 600;
+    }
+
+    .fc-list-event-time {
+      color: $cal-muted;
+    }
+  }
+
+  // ============ CHAMPS DE FILTRE (Niveau / Matière / Groupe) ============
+  .filter-field.mat-mdc-form-field {
+    width: 200px;
+    height: 42px;
+    display: inline-flex;
+    align-items: stretch;
+
+    // Le groupe est un peu plus large (noms parfois longs)
+    &.filter-field--group {
+      width: 220px;
+    }
+
+    .mat-mdc-text-field-wrapper {
+      background: #f1f5f9;
+      border-radius: 10px;
+      padding: 0 12px;
+      height: 42px;
+      width: 100%;
+      transition: all 0.18s ease;
+      box-sizing: border-box;
+    }
+
+    .mdc-notched-outline__leading,
+    .mdc-notched-outline__notch,
+    .mdc-notched-outline__trailing {
+      border-color: $cal-border !important;
+    }
+
+    &:hover .mat-mdc-text-field-wrapper {
+      background: $cal-accent-soft;
+    }
+
+    &.mat-focused .mat-mdc-text-field-wrapper {
+      background: $cal-accent-soft;
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25);
+    }
+
+    &.mat-focused {
+      .mdc-notched-outline__leading,
+      .mdc-notched-outline__notch,
+      .mdc-notched-outline__trailing {
+        border-color: $cal-accent !important;
+      }
+    }
+
+    .mat-mdc-form-field-flex {
+      align-items: center;
+      height: 42px;
+      width: 100%;
+    }
+
+    .mat-mdc-form-field-infix {
+      padding: 0 !important;
+      min-height: 42px;
+      display: flex;
+      align-items: center;
+      width: 100%;
+    }
+
+    .mat-mdc-form-field-subscript-wrapper {
+      display: none;
+    }
+
+    .filter-field-icon {
+      color: $cal-accent;
+      font-size: 19px;
+      width: 19px;
+      height: 19px;
+      margin-right: 6px;
+      flex-shrink: 0;
+    }
+
+    .mat-mdc-select {
+      min-width: 0;
+      flex: 1;
+    }
+
+    .mat-mdc-select-placeholder,
+    .mat-mdc-select-value-text {
+      color: $cal-ink;
+      font-weight: 600;
+      font-size: 0.85rem;
+    }
+
+    .filter-value,
+    .group-selector-value {
+      display: block;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: $cal-ink;
+      font-weight: 600;
+      font-size: 0.85rem;
+    }
+
+    .mat-mdc-select-arrow {
+      color: $cal-muted;
+    }
+  }
+
+  // État "filtre actif" : pastille teintée + contour accent
+  .filter-field.mat-mdc-form-field.filter-active {
+    .mat-mdc-text-field-wrapper {
+      background: $cal-accent-soft;
+    }
+
+    .mdc-notched-outline__leading,
+    .mdc-notched-outline__notch,
+    .mdc-notched-outline__trailing {
+      border-color: rgba(99, 102, 241, 0.45) !important;
+    }
+
+    .filter-value,
+    .mat-mdc-select-arrow {
+      color: $cal-accent-dark;
+    }
+  }
+}
+
+// ---- Panel déroulant des filtres (rendu en overlay, hors du composant) ----
+.calendar-filter-panel.mat-mdc-select-panel {
+  width: 264px;       // entre 250 et 280px
+  max-width: 264px;
+  max-height: 300px;  // hauteur max raisonnable
+  border-radius: 12px;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.15);
+  padding: 6px;
+  overflow-y: auto;   // seule la zone d'options scrolle
+  box-sizing: border-box;
+
+  // Scrollbar fine et discrète, avec espace par rapport au contenu
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+    margin: 6px 0;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 6px;
+  }
+  &::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+  }
+
+  .mat-mdc-option {
+    border-radius: 8px;
+    min-height: 42px;            // hauteur d'option cohérente
+    padding: 0 12px;             // padding horizontal cohérent
+    margin-right: 4px;           // espace pour que la scrollbar ne chevauche pas
+    font-size: 0.875rem;
+
+    // Nom sur une seule ligne + ellipsis, check aligné à droite
+    .mdc-list-item__primary-text {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      min-width: 0;
+    }
+
+    .option-label {
+      flex: 1;
+      min-width: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: $cal-ink;
+    }
+
+    .option-check {
+      flex-shrink: 0;
+      margin-left: 8px;
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+      color: $cal-accent;
+    }
+
+    &:hover:not(.mdc-list-item--selected) {
+      background: #eef2ff;
+    }
+
+    // Focus clavier visible
+    &.mat-mdc-option-active {
+      background: #eef2ff;
+    }
+
+    // État sélectionné : fond violet subtil + texte lisible (pas de blanc sur clair)
+    &.mdc-list-item--selected {
+      background: rgba(99, 102, 241, 0.12);
+
+      .option-label,
+      .mdc-list-item__primary-text {
+        color: $cal-accent-dark;
+        font-weight: 600;
+      }
+
+      .option-check {
+        color: $cal-accent-dark;
+      }
+    }
+  }
+
+  // "All Groups" (1ère option) : séparateur subtil en dessous
+  .mat-mdc-option.all-groups-option {
+    position: relative;
+    margin-bottom: 5px;
+
+    &::after {
+      content: '';
+      position: absolute;
+      left: 12px;
+      right: 12px;
+      bottom: -3px;
+      height: 1px;
+      background: #e2e8f0;
+    }
+  }
+}
+
+// ---- Tooltip des noms de groupe tronqués ----
+.group-selector-tooltip.mat-mdc-tooltip {
+  font-size: 12px;
+}
+
+// ============ RESPONSIVE ============
+@media (max-width: 768px) {
+  .calendar-container {
+    padding: 10px;
+
+    .fc {
+      padding: 12px;
+    }
+
+    .fc .fc-toolbar.fc-header-toolbar {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 10px;
+    }
+
+    .fc .fc-toolbar-title {
+      font-size: 1.1rem;
+      text-align: center;
+    }
+
+    // Empile et centre les groupes de boutons
+    .fc .fc-toolbar-chunk {
+      display: flex;
+      justify-content: center;
+    }
+
+    .fc .fc-daygrid-day-number {
+      font-size: 0.78rem;
+      padding: 5px 6px;
+    }
+
+    .fc .fc-col-header-cell-cushion {
+      font-size: 0.65rem;
+    }
+
+    // Les champs de filtre s'empilent proprement dans le panneau
+    .filters-fields {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .filter-field.mat-mdc-form-field,
+    .filter-field.mat-mdc-form-field.filter-field--group {
+      width: 100%;
+    }
+
+    // Masquer les chips de résumé sur petit écran (place limitée)
+    .filters-chips {
+      display: none;
+    }
+
+    // Le panneau ouvert peut être un peu plus haut une fois empilé
+    .calendar-filters-panel.open {
+      max-height: 280px;
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .calendar-container {
+    .fc .fc-button {
+      padding: 6px 10px;
+      font-size: 0.75rem;
+    }
+  }
 }

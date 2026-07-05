@@ -17,6 +17,8 @@ import { DeleteCommand } from './DeleteCommand';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ConfirmationDialogComponent } from '../confirmation-dialog/confirmation-dialog.component';
 import { el } from '@fullcalendar/core/internal-common';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { ProfilePdfService } from '../../../services/profile-pdf.service';
 
 interface ColumnDefenition {
   columnDef: string;
@@ -27,7 +29,7 @@ interface ColumnDefenition {
 @Component({
   selector: 'app-reusable-datatable',
   standalone: true,
-  imports: [NgIf,MatIcon,MatButton,MatTableModule, MatPaginatorModule, MatSortModule, MatFormFieldModule, MatInputModule, MatCheckboxModule, MatRecycleRows],
+  imports: [NgIf,MatIcon,MatButton,MatTableModule, MatPaginatorModule, MatSortModule, MatFormFieldModule, MatInputModule, MatCheckboxModule, MatRecycleRows, TranslateModule],
   templateUrl: './reusable-datatable.component.html',
   styleUrl: './reusable-datatable.component.scss'
 })
@@ -60,8 +62,13 @@ export class ReusableDatatableComponent  implements OnInit{
 
   constructor(private router: Router,
               public dialog: MatDialog,
-              private snackBar: MatSnackBar) {
-    this.datePipe = new DatePipe('en-US');
+              private snackBar: MatSnackBar,
+              private translate: TranslateService,
+              private profilePdfService: ProfilePdfService) {
+    this.datePipe = new DatePipe(this.translate.currentLang || 'fr');
+    this.translate.onLangChange.subscribe(event => {
+      this.datePipe = new DatePipe(event.lang);
+    });
   }
   
   /** Implement create logic */
@@ -72,10 +79,10 @@ export class ReusableDatatableComponent  implements OnInit{
   /** Implement view logic */
   onView() {
     this.selection.selected.forEach((selected) => {
-      let informations= this.flattenFormData(selected, this.columns ,"Informations fondamentales");
-      
+      let informations= this.flattenFormData(selected, this.columns , this.translate.instant('DATATABLE.PRIMARY_INFORMATION'));
+
       let otherColumn= Object.keys(selected).filter(key => !this.columns.some(column => column.columnDef === key));
-      let otherInformation= this.flattenFormData(selected, otherColumn ,"Autre informations")
+      let otherInformation= this.flattenFormData(selected, otherColumn , this.translate.instant('DATATABLE.OTHER_INFORMATION'))
       
       informations.push(...otherInformation);
 
@@ -86,7 +93,7 @@ export class ReusableDatatableComponent  implements OnInit{
   }
 
   /** This function is used like an Adapter that transform simple object to summary-dialog input*/
-  flattenFormData(data: any,cols: any[], parentKey: string = 'Informations'): { label: string, value: any }[] {
+  flattenFormData(data: any,cols: any[], parentKey: string = this.translate.instant('DATATABLE.INFORMATION')): { label: string, value: any }[] {
     let result: { label: string, value: any }[] = [];
 
     // Ajouter les informations fondamentales en premiers
@@ -129,12 +136,12 @@ export class ReusableDatatableComponent  implements OnInit{
       //Faire la confirmation avant la suppression
       this.dialog.open(ConfirmationDialogComponent, {
         data:{
-          title: 'Dialogue de confirmation',
-          message: 'Voulez-vous vraiment supprimer ces éléments?',
-          confirmText: 'Yes, delete',
-          cancelText: 'No, cancel',
+          title: this.translate.instant('CONFIRMATION_DIALOG.TITLE'),
+          message: this.translate.instant('CONFIRMATION_DIALOG.MESSAGE'),
+          confirmText: this.translate.instant('CONFIRMATION_DIALOG.CONFIRM'),
+          cancelText: this.translate.instant('CONFIRMATION_DIALOG.CANCEL'),
           confirmColor: 'warn'
-        } 
+        }
       }).afterClosed().subscribe((result: boolean) => {
         if (result) {
           let id_list = this.selection.selected.map((selected) => Number(selected.id));
@@ -148,11 +155,11 @@ export class ReusableDatatableComponent  implements OnInit{
               this.selection.clear();
 
               console.log('Elements disabled successfully:', response);
-              this.showSuccessMessage('Elements disabled successfully.'); // Affichez le message de succès
+              this.showSuccessMessage(this.translate.instant('DATATABLE.DISABLE_SUCCESS'));
             },
             error: (error) => {
               console.error('Error disabling elements:', error);
-              this.showErrorMessage('Error disabling elements.'); // Affichez le message d'erreur
+              this.showErrorMessage(this.translate.instant('DATATABLE.DISABLE_ERROR'));
             }
           });
         }
@@ -177,9 +184,28 @@ export class ReusableDatatableComponent  implements OnInit{
     });
   }
   
-  /** Implement print logic */
+  /** Génère un PDF propre de la liste (colonnes affichées, toutes les lignes). */
   onPrint() {
-    window.print();
+    const rows = (this.data || []) as any[];
+    if (rows.length === 0) {
+      this.showErrorMessage(this.translate.instant('DATATABLE.FILTER_PLACEHOLDER'));
+      return;
+    }
+
+    const title = this.translate.instant('DATATABLE.' + this.dataType.toUpperCase());
+    const safeTitle = title && title.indexOf('DATATABLE.') === -1 ? title : 'Liste';
+
+    this.profilePdfService.generateProfilePdf({
+      title: safeTitle,
+      subtitle: `${rows.length} élément(s)`,
+      sections: [],
+      tableTitle: safeTitle,
+      tableColumns: this.columns.map(c => c.header),
+      tableRows: rows.map(row => this.columns.map(c => {
+        const val = c.cell(row);
+        return val === 'undefined' || val === 'null' ? '' : val;
+      }))
+    });
   }
 
   /**For the filter option. */

@@ -23,7 +23,7 @@ export class PricingService {
   updatePricing(id: number, pricing: Pricing): Observable<Pricing> {
     return this.http.put<Pricing>(`${this.apiUrl}/${id}`, pricing);
   }
-  
+
   disablePricings(id_list: Number[]): Observable<boolean> {
     return this.http.delete<boolean>(`${this.apiUrl}/disable/${id_list}`);
   }

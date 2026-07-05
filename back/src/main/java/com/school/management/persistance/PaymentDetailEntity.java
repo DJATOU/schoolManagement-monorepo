@@ -1,5 +1,6 @@
 package com.school.management.persistance;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -13,6 +14,7 @@ import java.util.Date;
 @NoArgsConstructor
 @AllArgsConstructor
 @SuperBuilder
+@JsonIgnoreProperties({ "hibernateLazyInitializer", "handler" })
 public class PaymentDetailEntity extends BaseEntity {
 
     @Id
@@ -35,7 +37,17 @@ public class PaymentDetailEntity extends BaseEntity {
     private Date paymentDate; // La date du paiement
 
     @Column(name = "is_catch_up")
+    @Builder.Default
     private Boolean isCatchUp = false;
+
+    /**
+     * Indique si ce paiement a été définitivement supprimé.
+     * - true: Suppression définitive (irréversible, ne peut pas être re-payé)
+     * - false/null: Suppression temporaire ou désactivation (peut être réactivé)
+     */
+    @Column(name = "permanently_deleted")
+    @Builder.Default
+    private Boolean permanentlyDeleted = false;
 
     @Override
     protected void onCreate() {

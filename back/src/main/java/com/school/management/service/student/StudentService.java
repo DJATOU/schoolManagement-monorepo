@@ -30,7 +30,8 @@ import java.util.stream.Stream;
 /**
  * Service métier pour la gestion des étudiants.
  *
- * REFACTORÉ Phase 1 : Utilise maintenant MappingContext au lieu de ApplicationContextProvider
+ * REFACTORÉ Phase 1 : Utilise maintenant MappingContext au lieu de
+ * ApplicationContextProvider
  * pour résoudre les dépendances lors du mapping DTO → Entity.
  *
  * @author Claude Code
@@ -60,11 +61,11 @@ public class StudentService {
 
     @Autowired
     public StudentService(StudentRepository studentRepository,
-                         StudentMapper studentMapper,
-                         StudentSearchService studentSearchService,
-                         ImageUrlService imageUrlService,
-                         LevelRepository levelRepository,
-                         TutorRepository tutorRepository) {
+            StudentMapper studentMapper,
+            StudentSearchService studentSearchService,
+            ImageUrlService imageUrlService,
+            LevelRepository levelRepository,
+            TutorRepository tutorRepository) {
         this.studentMapper = studentMapper;
         this.studentRepository = studentRepository;
         this.studentSearchService = studentSearchService;
@@ -84,7 +85,9 @@ public class StudentService {
     }
 
     /**
-     * Retourne le MappingContext pour utilisation dans les controllers si nécessaire.
+     * Retourne le MappingContext pour utilisation dans les controllers si
+     * nécessaire.
+     * 
      * @return le contexte de mapping configuré
      */
     public MappingContext getMappingContext() {
@@ -94,7 +97,7 @@ public class StudentService {
     @Transactional(readOnly = true)
     public Optional<StudentEntity> findById(Long id) {
         try {
-            return studentRepository.findById(id);
+            return studentRepository.findById(Objects.requireNonNull(id));
         } catch (DataAccessException e) {
             throw new CustomServiceException("Error fetching student with ID " + id, e);
         }
@@ -108,25 +111,25 @@ public class StudentService {
 
     @Transactional
     public StudentEntity save(StudentEntity student) {
-        return studentRepository.save(student);
+        return studentRepository.save(Objects.requireNonNull(student));
     }
 
     @Transactional
-    public List<StudentEntity> searchStudents(String firstName, String lastName, Long level, Long groupId, String establishment) {
+    public List<StudentEntity> searchStudents(String firstName, String lastName, Long level, Long groupId,
+            String establishment) {
         CriteriaBuilder cb = entityManager.getCriteriaBuilder();
         CriteriaQuery<StudentEntity> cq = cb.createQuery(StudentEntity.class);
         Root<StudentEntity> student = cq.from(StudentEntity.class);
 
         Predicate[] predicates = Stream.of(
-                        buildPredicate(firstName, name -> cb.equal(cb.lower(student.get(FIRSTNAME)), name.toLowerCase())),
-                        buildPredicate(lastName, name -> cb.equal(cb.lower(student.get(LASTNAME)), name.toLowerCase())),
-                        buildPredicate(level, lev -> cb.equal(student.get("level"), lev)),
-                        buildPredicate(groupId, id -> {
-                            Join<StudentEntity, GroupEntity> groupsJoin = student.join("groups");
-                            return cb.equal(groupsJoin.get("id"), id);
-                        }),
-                        buildPredicate(establishment, est -> cb.equal(student.get("establishment"), est))
-                )
+                buildPredicate(firstName, name -> cb.equal(cb.lower(student.get(FIRSTNAME)), name.toLowerCase())),
+                buildPredicate(lastName, name -> cb.equal(cb.lower(student.get(LASTNAME)), name.toLowerCase())),
+                buildPredicate(level, lev -> cb.equal(student.get("level"), lev)),
+                buildPredicate(groupId, id -> {
+                    Join<StudentEntity, GroupEntity> groupsJoin = student.join("groups");
+                    return cb.equal(groupsJoin.get("id"), id);
+                }),
+                buildPredicate(establishment, est -> cb.equal(student.get("establishment"), est)))
                 .filter(Objects::nonNull)
                 .toArray(Predicate[]::new);
 
@@ -142,8 +145,7 @@ public class StudentService {
                     StudentDTO dto = studentMapper.studentToStudentDTO(entity);
                     // Utiliser ImageUrlService pour générer l'URL de manière centralisée
                     String photoUrl = imageUrlService.getStudentPhotoUrl(
-                            imageUrlService.extractFilename(entity.getPhoto())
-                    );
+                            imageUrlService.extractFilename(entity.getPhoto()));
                     dto.setPhoto(photoUrl);
                     return dto;
                 })
@@ -185,7 +187,7 @@ public class StudentService {
 
     @Transactional
     public void desactivateStudent(Long id) {
-        StudentEntity student = studentRepository.findById(id)
+        StudentEntity student = studentRepository.findById(Objects.requireNonNull(id))
                 .orElseThrow(() -> new CustomServiceException("Student not found with id " + id));
         student.setActive(false);
         studentRepository.save(student);

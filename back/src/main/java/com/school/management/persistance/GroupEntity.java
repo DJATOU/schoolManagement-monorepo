@@ -2,6 +2,7 @@ package com.school.management.persistance;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -16,6 +17,7 @@ import java.util.Set;
 @NoArgsConstructor
 @AllArgsConstructor
 @SuperBuilder
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class GroupEntity extends BaseEntity {
 
     @Id
@@ -59,5 +61,6 @@ public class GroupEntity extends BaseEntity {
 
     @Builder.Default
     @OneToMany(mappedBy = "group", fetch = FetchType.LAZY)  // Lazy loading for series
+    @JsonIgnore
     private Set<SessionSeriesEntity> series = new HashSet<>();
 }

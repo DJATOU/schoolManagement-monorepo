@@ -17,6 +17,9 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { PaymentDetail } from '../../../models/paymentDetail/paymentDetail';
 import { PricingService } from '../../../services/pricing.service';
 import { HttpErrorResponse } from '@angular/common/http';
+import { AttendanceService } from '../../../services/attendance.service';
+import { forkJoin } from 'rxjs';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-payment-dialog',
@@ -31,29 +34,39 @@ import { HttpErrorResponse } from '@angular/common/http';
     MatFormFieldModule,
     MatInputModule,
     MatSelectModule,
-    MatOptionModule
+    MatOptionModule,
+    TranslateModule
   ]
 })
 export class PaymentDialogComponent implements OnInit {
   paymentForm: FormGroup;
   groups: Group[];
   sessionSeries: SessionSeries[] = [];
+  paymentMethods = [
+    { value: 'cash', labelKey: 'payment.dialog.methods.cash' },
+    { value: 'cheque', labelKey: 'payment.dialog.methods.cheque' },
+    { value: 'carte_bancaire', labelKey: 'payment.dialog.methods.card' },
+    { value: 'autre', labelKey: 'payment.dialog.methods.other' }
+  ];
   studentId: number;
   paymentDetails: PaymentDetail[] = [];
   totalAmountPaid = 0;
   totalAmountOwed = 0;
   remainingAmount = 0;
+  nextCatchUpSessionId: number | null = null;
+  sessionPrice: number | null = null;
 
   constructor(
     private fb: FormBuilder,
     private dialogRef: MatDialogRef<PaymentDialogComponent>,
     private sessionSeriesService: SeriesService,
     private paymentService: PaymentService,
-    private pricingService :PricingService,
+    private pricingService: PricingService,
+    private attendanceService: AttendanceService,
     private dialog: MatDialog,
     private snackBar: MatSnackBar,
+    private translate: TranslateService,
     @Inject(MAT_DIALOG_DATA) public data: { studentId: number, groups: Group[] }
-    
   ) {
     this.groups = data.groups;
     this.studentId = data.studentId;
@@ -70,10 +83,11 @@ export class PaymentDialogComponent implements OnInit {
   ngOnInit(): void {
     this.paymentForm.get('groupId')!.valueChanges.subscribe(groupId => {
       this.loadSessionSeries(groupId);
+      this.loadSessionPrice(groupId);
     });
   }
 
-  loadSessionSeries(groupId: number): void {
+  loadSessionSeries(groupId: number | null): void {
     if (groupId) {
       this.sessionSeriesService.getSessionSeriesByGroupId(groupId).subscribe({
         next: (series) => {
@@ -81,100 +95,172 @@ export class PaymentDialogComponent implements OnInit {
           this.paymentForm.get('sessionSeriesId')!.setValue(null);
         },
         error: (err) => {
-          console.error('Error loading session series:', err);
+          console.error('Erreur lors du chargement des séries de sessions :', err);
         }
       });
     }
   }
 
+  loadSessionPrice(groupId: number | null): void {
+    const group = this.groups.find(g => g.id === groupId);
+
+    if (group?.priceId) {
+      this.pricingService.getPricingById(group.priceId).subscribe({
+        next: pricing => {
+          this.sessionPrice = pricing.price;
+          const amountControl = this.paymentForm.get('amountPaid');
+          if (amountControl && (amountControl.pristine || amountControl.value === null)) {
+            amountControl.setValue(pricing.price);
+          }
+        },
+        error: (err) => {
+          console.error('Erreur lors du chargement du tarif de la session :', err);
+          this.sessionPrice = null;
+        }
+      });
+    } else {
+      this.sessionPrice = null;
+      this.paymentForm.get('amountPaid')!.reset();
+    }
+  }
+
   openConfirmationDialog(paymentData: Payment): void {
     if (!paymentData.sessionSeriesId) {
-      this.snackBar.open('Veuillez sélectionner une série avant de poursuivre.', 'Fermer', { duration: 4000 });
+      this.snackBar.open(
+        this.translate.instant('payment.dialog.messages.selectSeries'),
+        this.translate.instant('common.cancel'),
+        { duration: 4000 }
+      );
       return;
     }
 
     const sessionSeriesId = paymentData.sessionSeriesId;
     const sessionSeries = this.sessionSeries.find(series => series.id === sessionSeriesId);
-    const seriesName = sessionSeries?.name || 'Unknown Series';
-  
-    // Charger le groupe pour obtenir le priceId et récupérer les informations de tarification
+    const seriesName = sessionSeries?.name || this.translate.instant('payment.dialog.messages.unknownSeries');
+
     const group = this.groups.find(group => group.id === sessionSeries?.groupId);
     if (group?.priceId) {
-      this.pricingService.getPricingById(group.priceId).subscribe({
-        next: (pricing) => {
-          const pricePerSession = pricing.price;
-          const totalSessionsInSeries = group.sessionNumberPerSerie;
-          const groupPrice = pricePerSession * totalSessionsInSeries;
-  
-          // Calculer le coût total des sessions créées
-          const totalCreatedSessionsCost = sessionSeries!.numberOfSessionsCreated * pricePerSession;
-  
-          // Récupérer le montant total déjà payé par l'étudiant pour cette série
-          this.paymentService.getPaymentHistoryForSeries(this.studentId, sessionSeriesId).subscribe({
-            next: (paymentHistory) => {
-              const totalPaidPreviously = paymentHistory.reduce((acc, curr) => acc + curr.amountPaid, 0);
-              const newTotalPaid = totalPaidPreviously + paymentData.amountPaid;
-  
-              // Vérifier si le nouveau total payé dépasse le coût total de la série
-              if (newTotalPaid > groupPrice) {
-                const surplus = newTotalPaid - groupPrice;
-                this.snackBar.open(
-                  `Le montant payé dépasse le coût total de la série de ${surplus} euros.`,
-                  'Fermer',
-                  { duration: 5000 }
-                );
-                return;
+      this.nextCatchUpSessionId = null;
+      // Charger en parallèle : pricing, attendances, payment history et payment details
+      forkJoin({
+        pricing: this.pricingService.getPricingById(group.priceId),
+        attendances: this.attendanceService.getAttendanceByStudentAndSeries(this.studentId, sessionSeriesId),
+        paymentDetails: this.paymentService.getPaymentDetailsForSeries(this.studentId, sessionSeriesId)
+        }).subscribe({
+          next: ({ pricing, attendances, paymentDetails }) => {
+            const pricePerSession = pricing.price;
+            const paymentHistory: Payment[] = [];
+
+            // Déterminer si l'étudiant est en rattrapage pour cette série
+            // Un étudiant est en rattrapage si TOUTES ses attendances pour cette série ont isCatchUp = true
+            const isCatchUpStudent = attendances.length > 0 && attendances.every(a => a.isCatchUp);
+
+          let numberOfSessions: number;
+          let totalCost: number;
+          let calculationNote: string;
+
+          const totalPaidFromDetails = paymentDetails
+            ? paymentDetails.reduce((acc, detail) => acc + (detail.amountPaid || 0), 0)
+            : undefined;
+
+          if (isCatchUpStudent) {
+            // RATTRAPAGE : Compter uniquement les sessions où l'étudiant est PRÉSENT
+            numberOfSessions = attendances.filter(a => a.isCatchUp && a.isPresent).length;
+            const totalPaidPreviously = (paymentDetails || [])
+              .filter(detail => detail.isCatchUp)
+              .reduce((acc, curr) => acc + (curr.amountPaid || 0), 0);
+
+            totalCost = numberOfSessions * pricePerSession;
+            calculationNote = this.translate.instant('payment.dialog.notes.catchUp');
+
+            const newTotalPaid = totalPaidPreviously + paymentData.amountPaid;
+
+            // Vérifier si le nouveau total payé dépasse le coût
+            if (newTotalPaid > totalCost) {
+              const surplus = newTotalPaid - totalCost;
+              this.snackBar.open(
+                this.translate.instant('payment.dialog.messages.overpayCatchUp', { sessions: numberOfSessions, surplus }),
+                this.translate.instant('common.cancel'),
+                { duration: 5000 }
+              );
+              return;
+            }
+
+            const remainingAmount = totalCost - newTotalPaid;
+
+            // Ouvrir le dialogue de confirmation
+            const dialogRef = this.dialog.open(PaymentConfirmationDialogComponent, {
+              width: '500px',
+              data: {
+                seriesName: seriesName,
+                numberOfSessions: numberOfSessions,
+                pricePerSession: pricePerSession,
+                totalCost: totalCost,
+                paymentDetails: paymentDetails,
+                paymentHistory: paymentHistory,
+                totalPaid: newTotalPaid,
+                remainingAmount: remainingAmount,
+                isCatchUp: isCatchUpStudent,
+                calculationNote: calculationNote
               }
-  
-              // Vérifier si le nouveau total payé dépasse le coût des sessions créées
-              if (newTotalPaid > totalCreatedSessionsCost) {
-                this.snackBar.open(
-                  "Le paiement ne peut pas être effectué car il dépasse le coût des sessions actuellement créées. Veuillez completer la création des sessions pour cette série.",
-                  'Fermer',
-                  { duration: 5000 }
-                );
-                return;
+            });
+
+            dialogRef.afterClosed().subscribe(result => {
+              if (result) {
+                this.submitPayment(paymentData);
               }
-  
-              // Si tout est en ordre, calculer le montant restant
-              const remainingAmount = groupPrice - newTotalPaid;
-  
-              // Récupérer les détails de paiement pour la série
-              this.paymentService.getPaymentDetailsForSeries(this.studentId, sessionSeriesId).subscribe({
-                next: (paymentDetails) => {
-                  // Ouvrir le dialogue de confirmation avec les données nécessaires
-                  const dialogRef = this.dialog.open(PaymentConfirmationDialogComponent, {
-                    width: '500px',
-                    data: {
-                      seriesName: seriesName,
-                      seriesPrice: groupPrice,
-                      paymentDetails: paymentDetails,
-                      paymentHistory: paymentHistory,
-                      totalPaid: newTotalPaid,
-                      totalOwed: groupPrice,
-                      remainingAmount: remainingAmount
-                    }
-                  });
-  
-                  // Après la fermeture du dialogue de confirmation
-                  dialogRef.afterClosed().subscribe(result => {
-                    if (result) {
-                      this.submitPayment(paymentData);
-                    }
-                  });
-                },
-                error: (err) => {
-                  console.error('Erreur lors de la récupération des détails de paiement:', err);
-                }
-              });
-            },
-            error: (err) => {
-              console.error('Erreur lors de la récupération de l’historique des paiements:', err);
+            });
+            return;
+          } else {
+            // NORMAL : Utiliser le nombre de sessions créées
+            numberOfSessions = sessionSeries!.numberOfSessionsCreated;
+            totalCost = numberOfSessions * pricePerSession;
+            calculationNote = '';
+          }
+
+          const totalPaidPreviously = totalPaidFromDetails
+            ?? paymentHistory.reduce((acc, curr) => acc + curr.amountPaid, 0);
+          const newTotalPaid = totalPaidPreviously + paymentData.amountPaid;
+
+          // Vérifier si le nouveau total payé dépasse le coût
+          if (newTotalPaid > totalCost) {
+            const surplus = newTotalPaid - totalCost;
+            this.snackBar.open(
+              `Le montant payé dépasse le coût total (${numberOfSessions} sessions) de ${surplus} DA. Le paiement ne peut pas être effectué.`,
+              'Fermer',
+              { duration: 5000 }
+            );
+            return;
+          }
+
+          const remainingAmount = totalCost - newTotalPaid;
+
+          // Ouvrir le dialogue de confirmation
+          const dialogRef = this.dialog.open(PaymentConfirmationDialogComponent, {
+            width: '500px',
+            data: {
+              seriesName: seriesName,
+              numberOfSessions: numberOfSessions,
+              pricePerSession: pricePerSession,
+              totalCost: totalCost,
+              paymentDetails: paymentDetails,
+              paymentHistory: paymentHistory,
+              totalPaid: newTotalPaid,
+              remainingAmount: remainingAmount,
+              isCatchUp: isCatchUpStudent,
+              calculationNote: calculationNote
+            }
+          });
+
+          dialogRef.afterClosed().subscribe(result => {
+            if (result) {
+              this.submitPayment(paymentData);
             }
           });
         },
         error: (err) => {
-          console.error('Erreur lors de la récupération des informations de tarification:', err);
+          console.error('Erreur lors de la récupération des données:', err);
+          this.snackBar.open('Erreur lors de la récupération des données.', 'Fermer', { duration: 5000 });
         }
       });
     } else {
@@ -194,7 +280,15 @@ export class PaymentDialogComponent implements OnInit {
   }
 
   submitPayment(paymentData: Payment): void {
-    this.paymentService.addPayment(paymentData).subscribe({
+    if (this.nextCatchUpSessionId) {
+      paymentData.sessionId = this.nextCatchUpSessionId;
+    }
+
+    const paymentRequest = paymentData.sessionId && this.nextCatchUpSessionId
+      ? this.paymentService.processCatchUpPayment(paymentData)
+      : this.paymentService.addPayment(paymentData);
+
+    paymentRequest.subscribe({
       next: (response) => {
         this.snackBar.open('Paiement effectué avec succès', 'Fermer', { duration: 3000 });
         this.dialogRef.close(response);

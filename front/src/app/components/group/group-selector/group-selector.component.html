@@ -1,9 +1,24 @@
-<mat-form-field appearance="fill" class="group-selector-toolbar">
-    <mat-label>Select Group</mat-label>
-    <mat-select [formControl]="selectedGroup">
-      <mat-option *ngFor="let group of groups" [value]="group.id">
-        {{ group.name }}
-      </mat-option>
-    </mat-select>
-  </mat-form-field>
-  
+<mat-form-field appearance="outline" class="group-selector-toolbar" subscriptSizing="dynamic">
+  <mat-icon matPrefix class="group-selector-icon">groups</mat-icon>
+  <mat-select [formControl]="selectedGroup"
+              panelClass="group-selector-panel"
+              [panelWidth]="null"
+              aria-label="Filtrer le calendrier par groupe"
+              [matTooltip]="getSelectedGroupName()"
+              matTooltipClass="group-selector-tooltip">
+    <!-- Valeur affichée dans le trigger : une seule ligne + ellipsis -->
+    <mat-select-trigger>
+      <span class="group-selector-value">{{ getSelectedGroupName() }}</span>
+    </mat-select-trigger>
+
+    <mat-option *ngFor="let group of groups; let i = index"
+                [value]="group.id"
+                [class.all-groups-option]="i === 0"
+                [matTooltip]="group.name"
+                matTooltipClass="group-selector-tooltip"
+                matTooltipShowDelay="400">
+      <span class="option-label">{{ group.name }}</span>
+      <mat-icon class="option-check" *ngIf="selectedGroup.value === group.id">check</mat-icon>
+    </mat-option>
+  </mat-select>
+</mat-form-field>

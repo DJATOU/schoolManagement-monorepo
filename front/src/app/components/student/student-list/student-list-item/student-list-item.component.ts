@@ -5,9 +5,12 @@ import { MatListItem } from '@angular/material/list';
 import { MatCard, MatCardContent } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatChipsModule } from '@angular/material/chips';
 import { Router } from '@angular/router';
 import { environment } from '../../../../../environments/environment';
 import { MatIcon } from '@angular/material/icon';
+import { StudentPaymentStatusService } from '../../../../services/student-payment-status.service';
+import { StudentPaymentStatus } from '../../../../models/student-payment-status';
 
 @Component({
   selector: 'app-student-list-item',
@@ -19,7 +22,8 @@ import { MatIcon } from '@angular/material/icon';
     MatCardContent,
     MatIcon,
     MatButtonModule,
-    MatTooltipModule
+    MatTooltipModule,
+    MatChipsModule
   ],
   templateUrl: './student-list-item.component.html',
   styleUrls: ['./student-list-item.component.scss']
@@ -27,23 +31,65 @@ import { MatIcon } from '@angular/material/icon';
 export class StudentListItemComponent implements OnInit {
   @Input() student!: Student;  // Accepte un objet étudiant
   @Input() showDeleteButton: boolean = false; // Contrôle du bouton "Supprimer"
+  @Input() paymentStatus?: StudentPaymentStatus; // Statut de paiement (optionnel, peut être passé par le parent)
   @Output() deleteStudent = new EventEmitter<Student>(); // Événement pour notifier la suppression
 
   studentPhotoUrl: string = '';
+  hasImageError: boolean = false;
+  avatarColor: string = '#6366f1';
 
-  constructor(private router: Router) {}
+  // Palette d'avatars (cohérente avec profile-card)
+  private avatarColors = [
+    '#6366f1', '#8b5cf6', '#ec4899', '#ef4444', '#f97316',
+    '#eab308', '#22c55e', '#14b8a6', '#06b6d4', '#3b82f6'
+  ];
+
+  constructor(
+    private router: Router,
+    private paymentStatusService: StudentPaymentStatusService
+  ) {}
 
   ngOnInit(): void {
-    // Générer dynamiquement l'URL complète de la photo de l'étudiant
+    this.setAvatarColor();
+
+    // Générer l'URL complète de la photo seulement si une photo existe.
+    // Sinon on retombe sur les initiales colorées (pas d'image cassée).
     if (this.student?.photo) {
       this.studentPhotoUrl = `${environment.apiUrl}${environment.imagesPath}${this.student.photo}`;
-    } else {
-      this.studentPhotoUrl = 'assets/default-avatar.png';  // Utiliser un avatar par défaut si aucune photo
+    }
+
+    // Charger le statut de paiement si non fourni par le parent
+    if (!this.paymentStatus && this.student?.id) {
+      this.loadPaymentStatus();
     }
   }
 
+  /**
+   * Initiales de l'étudiant (max 2 caractères) pour l'avatar par défaut.
+   */
+  getInitials(): string {
+    const firstInitial = (this.student?.firstName || '').charAt(0).toUpperCase();
+    const lastInitial = (this.student?.lastName || '').charAt(0).toUpperCase();
+    return (firstInitial + lastInitial) || 'XX';
+  }
+
+  /**
+   * Couleur d'avatar déterministe basée sur le nom.
+   */
+  private setAvatarColor(): void {
+    const name = `${this.student?.firstName || ''}${this.student?.lastName || ''}`;
+    const hash = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    this.avatarColor = this.avatarColors[hash % this.avatarColors.length];
+  }
+
+  /**
+   * Fallback initiales si l'image ne charge pas.
+   */
+  onImageError(): void {
+    this.hasImageError = true;
+  }
+
   navigateToStudent(student: Student) {
-    console.log("rrrrrrrrrrrr");
     this.router.navigate(['/student', student.id]); // En supposant que /student/:id est votre route
   }
 
@@ -74,5 +120,80 @@ export class StudentListItemComponent implements OnInit {
       const phoneNumber = cleanPhone.startsWith('+') ? cleanPhone : `+212${cleanPhone}`;
       window.open(`https://wa.me/${phoneNumber}`, '_blank');
     }
+  }
+
+  /**
+   * Charge le statut de paiement de l'étudiant
+   * @private
+   */
+  private loadPaymentStatus(): void {
+    if (this.student && this.student.id) {
+      this.paymentStatusService.getStudentPaymentStatus(this.student.id).subscribe({
+        next: (status) => {
+          this.paymentStatus = status;
+        },
+        error: (error) => {
+          console.error('Error loading payment status:', error);
+          this.paymentStatus = undefined;
+        }
+      });
+    }
+  }
+
+  /**
+   * Retourne l'icône appropriée selon le statut de paiement
+   */
+  getPaymentIcon(): string {
+    if (!this.paymentStatus) return '';
+
+    switch (this.paymentStatus.paymentStatus) {
+      case 'GOOD':
+        return 'check_circle';
+      case 'LATE':
+        return 'warning';
+      case 'NA':
+        return 'remove_circle_outline';
+      default:
+        return '';
+    }
+  }
+
+  /**
+   * Retourne le label approprié selon le statut de paiement
+   */
+  getPaymentLabel(): string {
+    if (!this.paymentStatus) return '';
+
+    switch (this.paymentStatus.paymentStatus) {
+      case 'GOOD':
+        return 'À jour';
+      case 'LATE':
+        return 'En retard';
+      case 'NA':
+        return 'N/A';
+      default:
+        return '';
+    }
+  }
+
+  /**
+   * Génère le texte du tooltip pour les retards de paiement
+   */
+  getPaymentTooltip(): string {
+    if (!this.paymentStatus || this.paymentStatus.paymentStatus !== 'LATE') {
+      return '';
+    }
+
+    const lines: string[] = ['Paiements en retard:'];
+
+    for (const lateGroup of this.paymentStatus.lateGroups) {
+      const remaining = lateGroup.dueAmount - lateGroup.paidAmount;
+      lines.push(
+        `• ${lateGroup.groupName}: ${lateGroup.unpaidSessionsCount} session(s) - ` +
+        `Reste ${remaining.toFixed(2)} DA (${lateGroup.paidAmount.toFixed(2)}/${lateGroup.dueAmount.toFixed(2)} DA)`
+      );
+    }
+
+    return lines.join('\n');
   }
 }

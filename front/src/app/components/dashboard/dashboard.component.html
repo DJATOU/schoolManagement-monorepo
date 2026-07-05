@@ -1,9 +1,127 @@
+<div class="dashboard fade-in" #dashboardContent>
+  <!-- En-tête + filtre période -->
+  <header class="dash-header">
+    <div>
+      <h1 class="dash-title">{{ 'dashboard.title' | translate }}</h1>
+      <p class="dash-subtitle">{{ 'dashboard.subtitle' | translate }}</p>
+    </div>
 
-<div class="dashboard-main">
-  <app-reusable-card title="Subscribe Students" icon="school" color="green-card"></app-reusable-card>
-  <app-reusable-card title="Subscribe Professors" icon="person_add" color="green-card"></app-reusable-card>
-  <app-reusable-card title="Subscribe Groups" icon="group_add" color="green-card"></app-reusable-card>
-  <app-reusable-card title="Subscribe Attendance" icon="school" color="green-card"></app-reusable-card>
-  <app-reusable-card title="Subscribe Session" icon="event_add" color="green-card"></app-reusable-card>
-  <app-reusable-card title="Subscribe Payment" icon="payment_add" color="green-card"></app-reusable-card>
+    <div class="period-filter">
+      <div class="filter-row">
+        <div class="preset-group">
+          <button class="preset" [class.active]="activePreset === 'year'" (click)="applyPreset('year')">{{ 'dashboard.period.year' | translate }}</button>
+          <button class="preset" [class.active]="activePreset === 'month'" (click)="applyPreset('month')">{{ 'dashboard.period.month' | translate }}</button>
+          <button class="preset" [class.active]="activePreset === 'custom'" (click)="activePreset = 'custom'">{{ 'dashboard.period.custom' | translate }}</button>
+        </div>
+        <button mat-stroked-button class="print-btn" (click)="printPdf()" [disabled]="loading || !stats">
+          <mat-icon>print</mat-icon>{{ 'dashboard.print' | translate }}
+        </button>
+      </div>
+
+      <div class="custom-range" *ngIf="activePreset === 'custom'">
+        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="date-field">
+          <mat-label>{{ 'dashboard.period.from' | translate }}</mat-label>
+          <input matInput [matDatepicker]="p1" [(ngModel)]="customFrom">
+          <mat-datepicker-toggle matSuffix [for]="p1"></mat-datepicker-toggle>
+          <mat-datepicker #p1></mat-datepicker>
+        </mat-form-field>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="date-field">
+          <mat-label>{{ 'dashboard.period.to' | translate }}</mat-label>
+          <input matInput [matDatepicker]="p2" [(ngModel)]="customTo">
+          <mat-datepicker-toggle matSuffix [for]="p2"></mat-datepicker-toggle>
+          <mat-datepicker #p2></mat-datepicker>
+        </mat-form-field>
+        <button mat-flat-button class="apply-btn" (click)="applyCustom()" [disabled]="!customFrom || !customTo">
+          <mat-icon>check</mat-icon>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <ng-container *ngIf="!loading && stats; else loadingTpl">
+    <!-- Cartes KPI -->
+    <section class="kpi-grid">
+      <article *ngFor="let kpi of kpis" class="kpi-card" [ngClass]="'kpi--' + kpi.variant">
+        <div class="kpi-glow"></div>
+        <div class="kpi-icon"><mat-icon>{{ kpi.icon }}</mat-icon></div>
+        <div class="kpi-body">
+          <span class="kpi-value">{{ kpi.value }}</span>
+          <span class="kpi-label">{{ kpi.label }}</span>
+        </div>
+      </article>
+    </section>
+
+    <section class="stats-grid">
+      <!-- Sessions par statut -->
+      <div class="stat-card">
+        <h3 class="stat-title"><mat-icon>event</mat-icon>{{ 'dashboard.sessions.title' | translate }} ({{ totalSessions }})</h3>
+        <div class="seg-row">
+          <span class="seg-label"><i class="dot dot-emerald"></i>{{ 'dashboard.sessions.validated' | translate }}</span>
+          <div class="seg-track"><div class="seg-fill bar--emerald" [style.width.%]="pct(stats.sessionsValidated, totalSessions)"></div></div>
+          <span class="seg-val">{{ stats.sessionsValidated }}</span>
+        </div>
+        <div class="seg-row">
+          <span class="seg-label"><i class="dot dot-indigo"></i>{{ 'dashboard.sessions.scheduled' | translate }}</span>
+          <div class="seg-track"><div class="seg-fill bar--indigo" [style.width.%]="pct(stats.sessionsScheduled, totalSessions)"></div></div>
+          <span class="seg-val">{{ stats.sessionsScheduled }}</span>
+        </div>
+        <div class="seg-row">
+          <span class="seg-label"><i class="dot dot-rose"></i>{{ 'dashboard.sessions.deactivated' | translate }}</span>
+          <div class="seg-track"><div class="seg-fill bar--rose" [style.width.%]="pct(stats.sessionsDeactivated, totalSessions)"></div></div>
+          <span class="seg-val">{{ stats.sessionsDeactivated }}</span>
+        </div>
+        <div class="seg-row">
+          <span class="seg-label"><i class="dot dot-amber"></i>{{ 'dashboard.sessions.catchUps' | translate }}</span>
+          <div class="seg-track"><div class="seg-fill bar--amber" [style.width.%]="pct(stats.catchUpSessions, totalSessions)"></div></div>
+          <span class="seg-val">{{ stats.catchUpSessions }}</span>
+        </div>
+      </div>
+
+      <!-- Présences -->
+      <div class="stat-card">
+        <h3 class="stat-title"><mat-icon>fact_check</mat-icon>{{ 'dashboard.attendance.title' | translate }} ({{ totalAttendance }})</h3>
+        <div class="seg-row">
+          <span class="seg-label"><i class="dot dot-emerald"></i>{{ 'dashboard.attendance.present' | translate }}</span>
+          <div class="seg-track"><div class="seg-fill bar--emerald" [style.width.%]="pct(stats.presentCount, totalAttendance)"></div></div>
+          <span class="seg-val">{{ stats.presentCount }}</span>
+        </div>
+        <div class="seg-row">
+          <span class="seg-label"><i class="dot dot-amber"></i>{{ 'dashboard.attendance.justified' | translate }}</span>
+          <div class="seg-track"><div class="seg-fill bar--amber" [style.width.%]="pct(stats.justifiedAbsences, totalAttendance)"></div></div>
+          <span class="seg-val">{{ stats.justifiedAbsences }}</span>
+        </div>
+        <div class="seg-row">
+          <span class="seg-label"><i class="dot dot-rose"></i>{{ 'dashboard.attendance.unjustified' | translate }}</span>
+          <div class="seg-track"><div class="seg-fill bar--rose" [style.width.%]="pct(stats.unjustifiedAbsences, totalAttendance)"></div></div>
+          <span class="seg-val">{{ stats.unjustifiedAbsences }}</span>
+        </div>
+      </div>
+
+      <!-- Répartition par genre (anneau) -->
+      <div class="stat-card ring-card">
+        <h3 class="stat-title"><mat-icon>wc</mat-icon>{{ 'dashboard.gender.title' | translate }}</h3>
+        <div class="ring-wrap">
+          <svg viewBox="0 0 120 120" class="ring">
+            <circle class="ring-bg" cx="60" cy="60" r="54"></circle>
+            <circle class="ring-fg" cx="60" cy="60" r="54" [style.stroke-dashoffset]="genderRingOffset"></circle>
+          </svg>
+          <div class="ring-center">
+            <span class="ring-pct">{{ maleRate }}%</span>
+            <span class="ring-sub">{{ 'dashboard.gender.male' | translate }}</span>
+          </div>
+        </div>
+        <div class="ring-legend">
+          <span class="lg lg-male"><i></i>{{ stats.maleStudents }} {{ 'dashboard.gender.maleShort' | translate }}</span>
+          <span class="lg lg-female"><i></i>{{ stats.femaleStudents }} {{ 'dashboard.gender.femaleShort' | translate }}</span>
+        </div>
+      </div>
+    </section>
+  </ng-container>
+
+  <ng-template #loadingTpl>
+    <div class="dash-loading">
+      <mat-progress-spinner mode="indeterminate" diameter="56"></mat-progress-spinner>
+      <span>{{ 'dashboard.loading' | translate }}</span>
+    </div>
+  </ng-template>
 </div>

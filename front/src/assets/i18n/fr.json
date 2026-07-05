@@ -1,0 +1,345 @@
+{
+  "COMMON": {
+    "CLEAR": "Effacer",
+    "SUBMIT": "Soumettre",
+    "REQUIRED_MESSAGE": "Les champs marqués d'un astérisque (*) sont obligatoires.",
+    "FIRST_NAME": "Prénom",
+    "LAST_NAME": "Nom",
+    "GENDER": "Sexe",
+    "MALE": "Masculin",
+    "FEMALE": "Féminin",
+    "UPLOAD_PHOTO": "Télécharger une photo",
+    "NO_FILE_SELECTED": "Aucun fichier sélectionné",
+    "CHOOSE_IMAGE": "Choisir une image",
+    "EMAIL": "Email",
+    "PHONE": "Numéro de téléphone",
+    "NATIONALITY": "Nationalité",
+    "COMMUNICATION": "Moyen de communication préféré",
+    "BIRTHDATE": "Date de naissance",
+    "BIRTHPLACE": "Lieu de naissance",
+    "ADDRESS": "Adresse",
+    "CITY": "Ville",
+    "LEVEL": "Niveau",
+    "SCHOOL": "Établissement",
+    "DESCRIPTION": "Description"
+  },
+  "LANGUAGE": {
+    "FRENCH": "Français",
+    "ENGLISH": "Anglais",
+    "TOGGLE": "Changer la langue (actuelle: {{value}})"
+  },
+  "NAV": {
+    "MENU": "Menu",
+    "TABS": {
+      "STUDENTS": "Élèves",
+      "GROUPS": "Groupes",
+      "TEACHERS": "Professeurs"
+    },
+    "SEARCH": {
+      "PLACEHOLDER_STUDENT": "Rechercher un élève...",
+      "PLACEHOLDER_GROUP": "Rechercher un groupe...",
+      "PLACEHOLDER_TEACHER": "Rechercher un professeur...",
+      "PLACEHOLDER_GENERIC": "Rechercher..."
+    },
+    "USER": {
+      "ROLE": "Administrateur"
+    },
+    "ACTIONS": {
+      "TOGGLE_THEME": "Mode sombre/clair",
+      "SETTINGS": "Paramètres",
+      "LOGOUT": "Déconnexion"
+    }
+  },
+  "SIDE_MENU": {
+    "BRAND_TITLE": "School Manager",
+    "BRAND_SUBTITLE": "Navigation principale",
+    "REGISTRATION": "Inscription",
+    "STUDENTS": "Étudiants",
+    "TEACHERS": "Enseignants",
+    "GROUPS": "Groupes",
+    "FINANCIAL_MANAGEMENT": "Gestion Financière",
+    "PAYMENTS": "Paiements",
+    "FEES": "Frais",
+    "DISCOUNTS": "Réductions",
+    "ACADEMIC_TRACKING": "Suivi Académique",
+    "ATTENDANCE": "Présences",
+    "SESSIONS": "Sessions",
+    "CALENDAR": "Calendrier",
+    "SERIES": "Séries",
+    "CATCH_UPS": "Rattrapages",
+    "TRANSFERS": "Transferts",
+    "ACADEMIC_RESOURCES": "Ressources Académiques",
+    "LEVELS": "Niveaux",
+    "ROOMS": "Salles",
+    "SUBJECTS": "Matières",
+    "GROUP_TYPES": "Types de Groupes",
+    "PRICING": "Tarification"
+  },
+  "DATATABLE": {
+    "PRINT": "Imprimer",
+    "CREATE": "Créer",
+    "DELETE": "Supprimer",
+    "EDIT": "Éditer",
+    "VIEW": "Voir",
+    "FILTER": "Filtrer",
+    "FILTER_PLACEHOLDER": "Texte",
+    "PRIMARY_INFORMATION": "Informations fondamentales",
+    "OTHER_INFORMATION": "Autres informations",
+    "INFORMATION": "Informations",
+    "DISABLE_SUCCESS": "Éléments désactivés avec succès.",
+    "DISABLE_ERROR": "Erreur lors de la désactivation des éléments."
+  },
+  "CONFIRMATION_DIALOG": {
+    "TITLE": "Dialogue de confirmation",
+    "MESSAGE": "Voulez-vous vraiment supprimer ces éléments?",
+    "CONFIRM": "Oui, supprimer",
+    "CANCEL": "Non, annuler"
+  },
+  "STUDENT_FORM": {
+    "TITLE": "Inscription d'un étudiant",
+    "TABS": {
+      "PERSONAL": "Informations personnelles",
+      "CONTACT": "Informations de contact",
+      "ACADEMIC": "Informations académiques"
+    },
+    "AVERAGE": "Moyenne"
+  },
+  "TEACHER_FORM": {
+    "TITLE": "Inscription d'un enseignant",
+    "TABS": {
+      "PERSONAL": "Informations personnelles",
+      "CONTACT": "Informations de contact",
+      "PROFESSIONAL": "Informations professionnelles"
+    },
+    "ADDRESS": "Adresse",
+    "CITY": "Ville",
+    "SPECIALIZATION": "Spécialisation",
+    "EXPERIENCE": "Années d'expérience",
+    "NATIONALITY": "Nationalité",
+    "MARITAL_STATUS": "Statut matrimonial",
+    "SINGLE": "Célibataire",
+    "MARRIED": "Marié",
+    "COMMUNICATION": "Préférences de communication"
+  },
+  "common": {
+    "clear": "Effacer",
+    "description": "Description",
+    "cancel": "Annuler",
+    "confirm": "Confirmer",
+    "ok": "OK"
+  },
+  "navigation": {
+    "language": "Langue"
+  },
+  "dashboard": {
+    "title": "Tableau de bord",
+    "subtitle": "Statistiques de l'établissement",
+    "period": {
+      "year": "Année",
+      "month": "Mois",
+      "custom": "Période",
+      "from": "Du",
+      "to": "Au"
+    },
+    "kpi": {
+      "activeStudents": "Étudiants actifs",
+      "teachers": "Enseignants",
+      "groups": "Groupes",
+      "newStudents": "Nouveaux inscrits",
+      "leaving": "Sortants",
+      "catchUps": "Rattrapages"
+    },
+    "sessions": {
+      "title": "Sessions",
+      "validated": "Validées",
+      "scheduled": "Programmées",
+      "deactivated": "Dévalidées",
+      "catchUps": "Rattrapages"
+    },
+    "attendance": {
+      "title": "Présences",
+      "present": "Présents",
+      "justified": "Abs. justifiées",
+      "unjustified": "Abs. non justifiées"
+    },
+    "gender": {
+      "title": "Répartition par genre",
+      "male": "Hommes",
+      "female": "Femmes",
+      "maleShort": "H",
+      "femaleShort": "F"
+    },
+    "print": "Imprimer",
+    "loading": "Chargement des statistiques…"
+  },
+  "sessionForm": {
+    "title": "Création d'une session",
+    "tabs": {
+      "details": "Détails de la session",
+      "timing": "Planification",
+      "identifiers": "Identifiants"
+    },
+    "fields": {
+      "title": "Titre",
+      "sessionType": "Type de session",
+      "feedbackLink": "Lien de feedback",
+      "sessionDateStart": "Date de début",
+      "chooseDate": "Choisissez une date",
+      "sessionTimeStart": "Heure de début",
+      "selectTime": "Sélectionnez une heure",
+      "sessionDateEnd": "Date de fin",
+      "sessionTimeEnd": "Heure de fin",
+      "group": "Groupe",
+      "room": "Salle",
+      "teacher": "Enseignant"
+    },
+    "actions": {
+      "save": "Enregistrer la session"
+    },
+    "messages": {
+      "created": "Session créée avec succès !",
+      "invalid": "Veuillez remplir correctement tous les champs obligatoires."
+    }
+  },
+  "groupForm": {
+    "title": "Création d'un groupe",
+    "requiredFields": "Les champs marqués d'un astérisque (*) sont obligatoires.",
+    "tabs": {
+      "basicDetails": "Informations de base",
+      "additionalDetails": "Détails supplémentaires"
+    },
+    "fields": {
+      "name": "Nom du groupe",
+      "uploadPhoto": "Télécharger une photo",
+      "noFile": "Aucun fichier sélectionné",
+      "chooseImage": "Choisir une image",
+      "groupType": "Type de groupe",
+      "level": "Niveau",
+      "subject": "Matière",
+      "sessionNumberPerSerie": "Sessions par série",
+      "price": "Prix",
+      "teacher": "Enseignant"
+    },
+    "actions": {
+      "save": "Enregistrer le groupe"
+    },
+    "messages": {
+      "createdWithPhoto": "Groupe créé avec succès avec une photo.",
+      "photoUploadFailed": "Groupe créé mais l'envoi de la photo a échoué.",
+      "created": "Groupe créé avec succès !",
+      "createError": "Une erreur est survenue lors de la création du groupe.",
+      "invalid": "Veuillez compléter tous les champs obligatoires."
+    }
+  },
+  "summary": {
+    "title": "Résumé"
+  },
+  "tutorForm": {
+    "title": "Ajouter un tuteur",
+    "field": {
+      "label": "Ajouter un tuteur",
+      "hint": "Cliquez pour créer et rattacher un tuteur"
+    },
+    "fields": {
+      "firstName": "Prénom",
+      "lastName": "Nom",
+      "phoneNumber": "Téléphone",
+      "email": "Email",
+      "relationship": "Lien de parenté"
+    },
+    "relationships": {
+      "parent": "Parent",
+      "guardian": "Tuteur légal",
+      "other": "Autre"
+    },
+    "actions": {
+      "save": "Ajouter le tuteur"
+    },
+    "messages": {
+      "attached": "Tuteur ajouté et rattaché à l'étudiant.",
+      "error": "Erreur lors de la création du tuteur."
+    }
+  },
+  "payment": {
+    "dialog": {
+      "title": "Ajouter un paiement",
+      "fields": {
+        "group": "Groupe",
+        "catchUp": "Rattrapage",
+        "sessionSeries": "Série de sessions",
+        "amount": "Montant payé",
+        "paymentMethod": "Méthode de paiement",
+        "description": "Description"
+      },
+      "methods": {
+        "cash": "Espèces",
+        "cheque": "Chèque",
+        "card": "Carte bancaire",
+        "other": "Autre"
+      },
+      "messages": {
+        "selectSeries": "Veuillez sélectionner une série de sessions avant de confirmer.",
+        "unknownSeries": "Série inconnue",
+        "overpayCatchUp": "Le montant payé dépasse le total pour {{sessions}} session(s) de rattrapage de {{surplus}} DA. Le paiement ne peut pas être effectué."
+      },
+      "notes": {
+        "catchUp": "Calcul pour les sessions de rattrapage"
+      }
+    },
+    "history": {
+      "fields": {
+        "groups": "Groupes",
+        "series": "Séries"
+      },
+      "catchUpNotice": {
+        "title": "Série de rattrapage",
+        "description": "Seules les sessions marquées comme rattrapage sont affichées pour cette série."
+      },
+      "labels": {
+        "status": "Statut",
+        "totalCatchUp": "Total (rattrapage)",
+        "total": "Total",
+        "paid": "Payé",
+        "remaining": "Restant",
+        "catchUpPrefix": "Rattrapage",
+        "cash": "Espèces",
+        "noDescription": "Aucune description"
+      },
+      "status": {
+        "paid": "Payé",
+        "partiallyPaid": "Partiellement payé",
+        "unpaid": "Non payé"
+      },
+      "table": {
+        "session": "Session",
+        "paymentDate": "Date de paiement",
+        "amountPaid": "Montant payé",
+        "paymentStatus": "Statut du paiement",
+        "empty": "Aucun historique de paiement disponible"
+      },
+      "actions": {
+        "print": "Exporter en PDF"
+      },
+      "pdf": {
+        "title": "Historique des paiements",
+        "student": "Étudiant",
+        "date": "Date",
+        "catchUpOnly": "Sessions de rattrapage uniquement",
+        "details": "Détails",
+        "studentSignature": "Signature de l'étudiant",
+        "adminSignature": "Signature de l'administration",
+        "page": "Page",
+        "of": "sur"
+      }
+    }
+  },
+  "calendar": {
+    "buttons": {
+      "today": "Aujourd'hui",
+      "month": "Mois",
+      "week": "Semaine",
+      "day": "Jour",
+      "list": "Liste"
+    }
+  }
+}

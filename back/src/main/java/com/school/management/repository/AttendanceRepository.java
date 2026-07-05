@@ -7,14 +7,17 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface AttendanceRepository extends JpaRepository<AttendanceEntity, Long> {
 
     long countByStudentIdAndSessionSeriesIdAndIsPresent(Long studentId, Long sessionSeriesId, boolean isPresent);
+
+    @Query("SELECT a FROM AttendanceEntity a WHERE a.session.id = :sessionId AND a.student.id = :studentId AND a.active = true ORDER BY a.id DESC LIMIT 1")
+    Optional<AttendanceEntity> findBySessionIdAndStudentId(@Param("sessionId") Long sessionId,
+            @Param("studentId") Long studentId);
 
     List<SessionEntity> findByStudentIdAndIsPresent(Long studentId, boolean b);
 
@@ -22,8 +25,8 @@ public interface AttendanceRepository extends JpaRepository<AttendanceEntity, Lo
     boolean existsByStudentIdAndSessionId(@Param("studentId") Long studentId, @Param("sessionId") Long sessionId);
 
     @Query("SELECT CASE WHEN COUNT(a) > 0 THEN TRUE ELSE FALSE END FROM AttendanceEntity a WHERE a.student.id = :studentId AND a.session.id = :sessionId AND a.active = true")
-    boolean existsByStudentIdAndSessionIdAndActiveTrue(@Param("studentId") Long studentId, @Param("sessionId") Long sessionId);
-
+    boolean existsByStudentIdAndSessionIdAndActiveTrue(@Param("studentId") Long studentId,
+            @Param("sessionId") Long sessionId);
 
     @Query("SELECT a FROM AttendanceEntity a WHERE a.session.id = :sessionId")
     List<AttendanceEntity> findBySessionId(@Param("sessionId") Long sessionId);
@@ -37,5 +40,24 @@ public interface AttendanceRepository extends JpaRepository<AttendanceEntity, Lo
     List<AttendanceEntity> findByStudentIdAndIsCatchUp(Long studentId, boolean isCatchUp);
 
     boolean existsByGroupIdAndStudentIdAndIsCatchUp(Long id, Long studentId, boolean b);
-}
 
+    List<AttendanceEntity> findByStudentIdAndActiveTrue(Long studentId);
+
+    // ===== Statistiques tableau de bord (sur période, via la date de session) =====
+
+    @Query("SELECT COUNT(a) FROM AttendanceEntity a WHERE a.active = true AND a.isPresent = true " +
+            "AND a.session.sessionTimeStart BETWEEN :from AND :to")
+    long countPresent(@Param("from") java.util.Date from, @Param("to") java.util.Date to);
+
+    @Query("SELECT COUNT(a) FROM AttendanceEntity a WHERE a.active = true AND a.isPresent = false " +
+            "AND a.isJustified = true AND a.session.sessionTimeStart BETWEEN :from AND :to")
+    long countJustifiedAbsences(@Param("from") java.util.Date from, @Param("to") java.util.Date to);
+
+    @Query("SELECT COUNT(a) FROM AttendanceEntity a WHERE a.active = true AND a.isPresent = false " +
+            "AND (a.isJustified = false OR a.isJustified IS NULL) AND a.session.sessionTimeStart BETWEEN :from AND :to")
+    long countUnjustifiedAbsences(@Param("from") java.util.Date from, @Param("to") java.util.Date to);
+
+    @Query("SELECT COUNT(a) FROM AttendanceEntity a WHERE a.active = true AND a.isCatchUp = true " +
+            "AND a.session.sessionTimeStart BETWEEN :from AND :to")
+    long countCatchUp(@Param("from") java.util.Date from, @Param("to") java.util.Date to);
+}

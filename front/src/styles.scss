@@ -5,43 +5,197 @@
 @import 'styles/layout';
 @import 'styles/buttons';
 @import 'styles/forms';
+@import 'styles/profile';
+@import 'styles/entity-grid';
 
-html, body {
+html,
+body {
   height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
 }
 
 body {
-  max-width: 95rem;
-  margin: 0 auto;
+  width: 100%;
   font-family: Roboto, "Helvetica Neue", sans-serif;
   background: linear-gradient(to top, #accbee 0%, #e7f0fd 100%);
-  overflow-y: auto;
 }
+
+app-root {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+
+/*@media (min-width: 1400px) {
+  body {
+    padding-left: clamp(48px, 40vw, 200px);
+    padding-right: clamp(18px, 10vw, 100px);
+  }
+}*/
+
+/* Shared entity card styling - Compact design for better space utilization */
+.app-entity-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 13rem;
+  /* Reduced from 16rem */
+  max-height: 15rem;
+  /* Reduced from 18rem */
+  padding: 0.75rem 1rem;
+  /* Reduced padding */
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+  background-color: #fff;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.12);
+  }
+}
+
+.app-entity-card__body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  /* Slightly reduced gap */
+  text-align: center;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+
+.app-entity-card__avatar {
+  width: 3.5rem;
+  /* Reduced from 4.5rem */
+  height: 3.5rem;
+  /* Reduced from 4.5rem */
+  border-radius: 50%;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #eef2ff, #e0f2fe);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.04);
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+.app-entity-card__title {
+  font-size: 0.9rem;
+  /* Slightly reduced */
+  font-weight: 600;
+  color: #0f172a;
+  margin: 0.2rem 0;
+  line-height: 1.3;
+}
+
+.app-entity-card__subtitle {
+  color: #6b7280;
+  font-size: 0.8rem;
+  /* Slightly reduced */
+  line-height: 1.3;
+}
+
+.app-entity-card__actions {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.6rem;
+  /* Slightly reduced gap */
+  width: 100%;
+  margin-top: auto;
+  padding-top: 0.6rem;
+  /* Reduced padding */
+  border-top: 1px solid #e5e7eb;
+}
+
+.app-entity-card__actions .contact-button {
+  transition: transform 0.2s ease, background-color 0.2s ease;
+
+  &:hover:not([disabled]) {
+    transform: scale(1.1);
+    background-color: rgba(59, 130, 246, 0.08);
+  }
+
+  &[disabled] {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+}
+
+.app-entity-card-container {
+  @extend .cards-container;
+}
+
+/* Responsive adjustments for smaller screens */
+@media (max-width: 768px) {
+  .app-entity-card {
+    min-height: 12rem;
+    /* Slightly reduced for tablets */
+    max-height: 14rem;
+    padding: 0.75rem 0.875rem;
+  }
+
+  .app-entity-card__avatar {
+    width: 3.25rem;
+    height: 3.25rem;
+  }
+
+  .app-entity-card__title {
+    font-size: 0.875rem;
+  }
+
+  .app-entity-card__subtitle {
+    font-size: 0.75rem;
+  }
+}
+
 
 
 /* Adjust the calendar size */
 .fc {
   max-width: 900px;
   margin: 0 auto;
-  font-size: 16px; /* Adjust font size as needed */
+  font-size: 16px;
+  /* Adjust font size as needed */
 }
 
 /* Event styling for contrast against the cell background */
 .fc-event {
   background: linear-gradient(180.5deg, rgb(0, 128, 128) 8.5%, rgb(174, 206, 100) 118.2%);
-  color: white; /* White text for readability */
-  border: none; /* No border for a cleaner look */
-  border-radius: 4px; /* Rounded corners */
+  color: white;
+  /* White text for readability */
+  border: none;
+  /* No border for a cleaner look */
+  border-radius: 4px;
+  /* Rounded corners */
   cursor: pointer;
-  overflow: hidden; /* Prevent text from spilling out */
-  text-overflow: ellipsis; /* End with ellipsis if text is too long */
-  white-space: nowrap; /* Keep text in a single line */
-  position: relative; /* Position relative for the tooltip */
+  overflow: hidden;
+  /* Prevent text from spilling out */
+  text-overflow: ellipsis;
+  /* End with ellipsis if text is too long */
+  white-space: nowrap;
+  /* Keep text in a single line */
+  position: relative;
+  /* Position relative for the tooltip */
 }
 
 /* Tooltip styling */
 .fc-event:hover::after {
-  content: attr(data-tooltip); /* Use a custom attribute for tooltip text */
+  content: attr(data-tooltip);
+  /* Use a custom attribute for tooltip text */
   position: absolute;
   width: max-content;
   bottom: 100%;
@@ -61,13 +215,15 @@ body {
 /* Ensuring the background gradient changes on hover */
 .fc-event:hover {
   background: linear-gradient(180.5deg, rgb(0, 128, 128) 0%, rgb(174, 206, 100) 80%);
-  color: white; /* Ensure text remains readable */
+  color: white;
+  /* Ensure text remains readable */
 }
 
 /* Style for finished events */
 .fc-event.is-finished {
   background: linear-gradient(98.3deg, rgb(0, 0, 0) 10.6%, rgb(255, 0, 0) 97.7%);
-  color: white; /* Ensure text remains readable */
+  color: white;
+  /* Ensure text remains readable */
 }
 
 /* Override FullCalendar list view event hover for finished events */
@@ -95,31 +251,42 @@ body {
 }
 
 .fc-daygrid-day {
-  height: 120px; /* Fixed height for days to accommodate more events */
+  height: 120px;
+  /* Fixed height for days to accommodate more events */
 }
 
 .fc .fc-daygrid-day {
-  border-color: #e0e0e0; /* Lighter borders for the grid */
-  background-color: #f9f9f9; /* Light gray background for cells */
-  border: 1px solid #e0e0e0; /* Slight border for definition */
+  border-color: #e0e0e0;
+  /* Lighter borders for the grid */
+  background-color: #f9f9f9;
+  /* Light gray background for cells */
+  border: 1px solid #e0e0e0;
+  /* Slight border for definition */
 }
 
 /* Calendar header */
 .fc-header-toolbar {
-  background-color: #f5f5f5; /* Light grey background */
-  color: #333; /* Dark text for contrast */
-  padding: 10px; /* Padding for better spacing */
-  border-bottom: 2px solid #ddd; /* Subtle separation from the calendar */
+  background-color: #f5f5f5;
+  /* Light grey background */
+  color: #333;
+  /* Dark text for contrast */
+  padding: 10px;
+  /* Padding for better spacing */
+  border-bottom: 2px solid #ddd;
+  /* Subtle separation from the calendar */
 }
 
 /* Style for today's date for emphasis */
 .fc .fc-daygrid-day.fc-day-today {
-  background-color: #e8f0fe; /* Light blue for today's date */
-  border-color: #c6d2f5; /* Matching border color */
+  background-color: #e8f0fe;
+  /* Light blue for today's date */
+  border-color: #c6d2f5;
+  /* Matching border color */
 }
 
 /* Ensure global styles don't interfere */
-.fc-event-title, .fc-event-title-container {
+.fc-event-title,
+.fc-event-title-container {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -156,7 +323,9 @@ mat-dialog-content p strong {
 
 /* Modal content styles */
 .modal-content {
-  .session-card, .students-card {
+
+  .session-card,
+  .students-card {
     margin-bottom: 1rem;
   }
 
@@ -214,23 +383,18 @@ mat-card-title {
   opacity: 0.6;
 }
 
-/* shared-layout-container styles */
+/* ================================================================
+   GLOBAL LAYOUT STYLES
+   ================================================================ */
+
+// Target the shared layout container globally
 .shared-layout-container {
-  background-color: red; /* couleur de fond souhaitée */
-  /* autres styles si nécessaire */
+  background-color: #f5f6fa !important;
 }
 
-/* Conteneur principal pour la mise en page */
-.main-container {
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-}
-
-/* Contenu principal */
-.main-content {
-  flex-grow: 1;
-  padding: 20px;
+// .app-main-container takes full available width - no max-width constraint
+.app-main-container {
+  width: 100%;
 }
 
 /* Footer */
@@ -243,24 +407,30 @@ mat-card-title {
 
 /* styles.scss ou global.scss */
 .snack-bar-success {
-  background-color: #4caf50; /* Couleur verte pour succès */
-  color: #fff; /* Texte blanc */
+  background-color: #4caf50;
+  /* Couleur verte pour succès */
+  color: #fff;
+  /* Texte blanc */
 }
 
 .snack-bar-error {
-  background-color: #f44336; /* Couleur rouge pour erreur */
-  color: #fff; /* Texte blanc */
+  background-color: #f44336;
+  /* Couleur rouge pour erreur */
+  color: #fff;
+  /* Texte blanc */
 }
 
 
 /* Ensure the Angular Material overlay container has a high z-index */
 .cdk-overlay-container {
-  z-index: 1000 !important; /* Adjust as necessary */
+  z-index: 1000 !important;
+  /* Adjust as necessary */
 }
 
 /* Ensure the ngx-material-timepicker has an even higher z-index */
 .ngx-material-timepicker-container {
-  z-index: 1050 !important; /* Adjust as necessary */
+  z-index: 1050 !important;
+  /* Adjust as necessary */
 }
 
 
@@ -268,72 +438,90 @@ mat-card-title {
 
 
 @media (max-width: 600px) {
+
   /* Ajustements pour le body */
   body {
     max-width: 100%;
     margin: 0;
-    padding: 0 1rem; /* Ajouter un padding latéral */
-    font-size: 0.9rem; /* Réduire légèrement la taille de la police */
+    padding: 0 1rem;
+    /* Ajouter un padding latéral */
+    font-size: 0.9rem;
+    /* Réduire légèrement la taille de la police */
   }
 
   /* Ajustements pour le calendrier (.fc) */
   .fc {
     max-width: 100%;
-    font-size: 14px; /* Réduire la taille de la police */
-    margin: 0 0.5rem; /* Marges latérales */
+    font-size: 14px;
+    /* Réduire la taille de la police */
+    margin: 0 0.5rem;
+    /* Marges latérales */
   }
 
   /* Ajustements pour les événements du calendrier (.fc-event) */
   .fc-event {
-    font-size: 12px; /* Réduire la taille de la police */
-    padding: 0.25rem; /* Réduire le padding */
+    font-size: 12px;
+    /* Réduire la taille de la police */
+    padding: 0.25rem;
+    /* Réduire le padding */
   }
 
   /* Assurer que le texte des événements ne déborde pas */
   .fc-event-title,
   .fc-event-title-container {
-    white-space: normal; /* Permettre au texte de passer à la ligne */
+    white-space: normal;
+    /* Permettre au texte de passer à la ligne */
   }
 
   /* Ajustements pour les cellules du calendrier */
   .fc-daygrid-day {
-    height: auto; /* Laisser la hauteur s'adapter au contenu */
+    height: auto;
+    /* Laisser la hauteur s'adapter au contenu */
   }
 
   .fc-daygrid-day-events {
-    flex-wrap: nowrap; /* Éviter que les événements ne se superposent verticalement */
-    overflow-x: auto; /* Permettre le défilement horizontal si nécessaire */
+    flex-wrap: nowrap;
+    /* Éviter que les événements ne se superposent verticalement */
+    overflow-x: auto;
+    /* Permettre le défilement horizontal si nécessaire */
   }
 
   /* Ajustements pour les modals et dialogues */
   .modal-header {
-    font-size: 1.2rem; /* Réduire la taille de la police */
-    text-align: center; /* Centrer le texte */
+    font-size: 1.2rem;
+    /* Réduire la taille de la police */
+    text-align: center;
+    /* Centrer le texte */
   }
 
   .modal-content {
-    padding: 0.5rem; /* Réduire le padding */
+    padding: 0.5rem;
+    /* Réduire le padding */
   }
 
   .student-list-item {
-    flex-direction: column; /* Empiler verticalement */
+    flex-direction: column;
+    /* Empiler verticalement */
     align-items: flex-start;
   }
 
   .description-input {
     margin-left: 0;
-    width: 100%; /* Occuper toute la largeur */
+    width: 100%;
+    /* Occuper toute la largeur */
   }
 
   /* Ajustements pour le contenu principal */
   .main-content {
-    padding: 1rem; /* Réduire le padding */
+    padding: 1rem;
+    /* Réduire le padding */
   }
 
   /* Ajustements pour le footer */
   .footer {
     padding: 0.5rem;
-    font-size: 0.875rem; /* Réduire la taille de la police */
+    font-size: 0.875rem;
+    /* Réduire la taille de la police */
   }
 
   /* Boutons et formulaires */
@@ -341,8 +529,10 @@ mat-card-title {
   input,
   select,
   textarea {
-    width: 100%; /* Occuper toute la largeur disponible */
-    font-size: 1rem; /* Taille de police adaptée */
+    width: 100%;
+    /* Occuper toute la largeur disponible */
+    font-size: 1rem;
+    /* Taille de police adaptée */
   }
 
   .form-group {
@@ -367,74 +557,91 @@ mat-card-title {
 
 
 @media (min-width: 600px) and (max-width: 1500px) {
+
   /* Ajustements pour le body */
   body {
     max-width: 100%;
     margin: 0 auto;
-    padding: 0 2rem; /* Ajouter un padding latéral */
-    font-size: 1rem; /* Taille de police normale */
+    padding: 0 2rem;
+    /* Ajouter un padding latéral */
+    font-size: 1rem;
+    /* Taille de police normale */
   }
 
   /* Ajustements pour le calendrier (.fc) */
   .fc {
     max-width: 100%;
-    font-size: 15px; /* Taille de police légèrement réduite */
-    margin: 0 auto; /* Centrer le calendrier */
+    font-size: 15px;
+    /* Taille de police légèrement réduite */
+    margin: 0 auto;
+    /* Centrer le calendrier */
   }
 
   /* Ajustements pour les événements du calendrier (.fc-event) */
   .fc-event {
-    font-size: 14px; /* Taille de police adaptée */
-    padding: 0.5rem; /* Padding modéré */
+    font-size: 14px;
+    /* Taille de police adaptée */
+    padding: 0.5rem;
+    /* Padding modéré */
   }
 
   /* Ajustements pour le texte des événements */
   .fc-event-title,
   .fc-event-title-container {
-    white-space: nowrap; /* Empêcher le passage à la ligne */
+    white-space: nowrap;
+    /* Empêcher le passage à la ligne */
     overflow: hidden;
     text-overflow: ellipsis;
   }
 
   /* Ajustements pour les cellules du calendrier */
   .fc-daygrid-day {
-    height: 100px; /* Hauteur adaptée pour les écrans moyens */
+    height: 100px;
+    /* Hauteur adaptée pour les écrans moyens */
   }
 
   .fc-daygrid-day-events {
-    flex-wrap: wrap; /* Permettre le retour à la ligne des événements */
+    flex-wrap: wrap;
+    /* Permettre le retour à la ligne des événements */
     overflow: visible;
   }
 
   /* Ajustements pour les modals et dialogues */
   .modal-header {
-    font-size: 1.4rem; /* Taille de police légèrement réduite */
-    text-align: left; /* Alignement à gauche */
+    font-size: 1.4rem;
+    /* Taille de police légèrement réduite */
+    text-align: left;
+    /* Alignement à gauche */
   }
 
   .modal-content {
-    padding: 1rem; /* Padding modéré */
+    padding: 1rem;
+    /* Padding modéré */
   }
 
   .student-list-item {
-    flex-direction: row; /* Disposition en ligne */
+    flex-direction: row;
+    /* Disposition en ligne */
     align-items: center;
   }
 
   .description-input {
     margin-left: 0.5rem;
-    width: auto; /* Largeur adaptée au contenu */
+    width: auto;
+    /* Largeur adaptée au contenu */
   }
 
   /* Ajustements pour le contenu principal */
   .main-content {
-    padding: 1.5rem; /* Padding adapté */
+    padding: 1.5rem;
+    /* Padding adapté */
   }
 
   /* Ajustements pour le footer */
   .footer {
     padding: 0.75rem;
-    font-size: 0.95rem; /* Taille de police adaptée */
+    font-size: 0.95rem;
+    /* Taille de police adaptée */
   }
 
   /* Boutons et formulaires */
@@ -442,8 +649,10 @@ mat-card-title {
   input,
   select,
   textarea {
-    width: auto; /* Largeur adaptée au contenu */
-    font-size: 1rem; /* Taille de police normale */
+    width: auto;
+    /* Largeur adaptée au contenu */
+    font-size: 1rem;
+    /* Taille de police normale */
   }
 
   .form-group {
@@ -489,7 +698,98 @@ mat-card-title {
   0% {
     opacity: 0;
   }
+
   100% {
     opacity: 1;
+  }
+}
+
+/* ================================================================
+   AUTOCOMPLETE DE RECHERCHE (barre de navigation)
+   Le panel est rendu dans un overlay global → style ici.
+   ================================================================ */
+.nav-autocomplete-panel.mat-mdc-autocomplete-panel {
+  border-radius: 0 0 22px 22px !important;
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.16) !important;
+  padding: 8px !important;
+  margin-top: 0;
+  max-height: 340px;
+  border: 1px solid #eef0f4;
+  border-top: none;
+  clip-path: inset(0 -30px -30px -30px); // n'affiche pas d'ombre vers le haut
+
+  .mat-mdc-option {
+    border-radius: 10px;
+    min-height: 52px;
+    padding: 6px 10px;
+    margin-bottom: 2px;
+    transition: background 0.15s ease;
+
+    &:hover:not(.mdc-list-item--disabled) {
+      background: #eef2ff;
+    }
+
+    &.mat-mdc-option-active {
+      background: #eef2ff;
+    }
+  }
+
+  .nav-suggestion {
+    .mdc-list-item__primary-text {
+      display: flex !important;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+    }
+  }
+
+  .sugg-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    color: #fff;
+    text-transform: uppercase;
+    flex-shrink: 0;
+  }
+
+  .sugg-avatar--student { background: linear-gradient(135deg, #6366f1, #818cf8); }
+  .sugg-avatar--teacher { background: linear-gradient(135deg, #0ea5e9, #38bdf8); }
+  .sugg-avatar--group   { background: linear-gradient(135deg, #8b5cf6, #a78bfa); }
+
+  .sugg-text {
+    flex: 1;
+    min-width: 0;
+    font-weight: 600;
+    font-size: 0.92rem;
+    color: #1e293b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .sugg-type {
+    color: #cbd5e1;
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+  }
+
+  .nav-suggestion--empty {
+    color: #94a3b8;
+    font-style: italic;
+
+    .mdc-list-item__primary-text {
+      gap: 8px;
+    }
+
+    mat-icon {
+      color: #cbd5e1;
+    }
   }
 }

@@ -15,7 +15,7 @@ export class PdfGeneratorService {
   }
 
   async generateFullHistoryPdf(fullHistory: StudentFullHistoryDTO, logoUrl: string): Promise<void> {
-    
+
     let logoBase64 = '';
     try {
       logoBase64 = await this.convertImageToBase64(logoUrl);
@@ -179,12 +179,12 @@ export class PdfGeneratorService {
 
   private getFullHistoryContent(fullHistory: StudentFullHistoryDTO): Content[] {
     const content: Content[] = [];
-  
+
     if (fullHistory.groups && fullHistory.groups.length > 0) {
       // Trier les groupes par nom
       const sortedGroups = fullHistory.groups.sort((a, b) => a.groupName.localeCompare(b.groupName));
       sortedGroups.forEach(group => {
-  
+
         // Ligne de séparation + titre du groupe
         content.push(
           {
@@ -206,11 +206,11 @@ export class PdfGeneratorService {
           },
           { text: '\n' }
         );
-  
+
         // S'il y a des séries
         if (group.series && group.series.length > 0) {
           group.series.forEach(series => {
-  
+
             // Vérifier si la série a des sessions
             if (!series.sessions || series.sessions.length === 0) {
               // Aucune session => message
@@ -222,8 +222,8 @@ export class PdfGeneratorService {
             } else {
               // sessions présentes => distinguer rattrapage ou normal
               // Test : si toutes les sessions sont catchUpSession = true => rattrapage
-              const allAreCatchUp = series.sessions.every(s => s.catchUpSession === true);
-  
+              const allAreCatchUp = series.sessions.every(s => s.catchUpSession);
+
               if (allAreCatchUp) {
                 // Affichage "Session de rattrapage"
                 content.push({
@@ -247,7 +247,7 @@ export class PdfGeneratorService {
                   }
                 );
               }
-  
+
               // Afficher le tableau des sessions
               content.push(this.getSessionsTable(series.sessions));
               content.push({ text: '\n' });
@@ -261,7 +261,7 @@ export class PdfGeneratorService {
             margin: [0, 0, 0, 10]
           });
         }
-  
+
         content.push({ text: '\n' });
       });
     } else {
@@ -271,46 +271,49 @@ export class PdfGeneratorService {
         italics: true
       });
     }
-  
+
     return content;
   }
-  
+
 
   private getSessionsTable(sessions: SessionHistoryDTO[]): Content {
-    
+
+    // IMPORTANT: Filtrer les sessions avec paiement CANCELLED
+    const activeSessions = sessions.filter(session => session.paymentStatus !== 'CANCELLED');
+
     const body: any[] = [];
-  
+
     // Définir la ligne d'en-tête
     const headerRow: any[] = [
       { text: 'Session', style: 'tableHeader' },
       { text: 'Date', style: 'tableHeader' },
       { text: 'Présence', style: 'tableHeader' },
-      { text: 'Justifiée', style: 'tableHeader' },
+      { text: 'onJustifiée', style: 'tableHeader' },
       { text: 'Description', style: 'tableHeader' },
       { text: 'Date de Paiement', style: 'tableHeader' },
       { text: 'Paiement', style: 'tableHeader' },
       { text: 'Montant Payé', style: 'tableHeader' }
     ];
-  
+
     body.push(headerRow);
-  
-    // Ajouter les lignes de données avec couleurs
-    sessions.forEach(session => {
+
+    // Ajouter les lignes de données avec couleurs (sans les CANCELLED)
+    activeSessions.forEach(session => {
       const fillColor = this.getFillColorForAttendance(session);
 
       const sessionTitle = session.catchUpSession
       ? `Session de rattrapage: ${session.sessionName}`
       : session.sessionName || 'N/A';
-      
+
       // Gestion de la justification
-    let justificationText = '';
+    let justificationText: string;
     if (session.attendanceStatus?.toLowerCase() === 'absent') {
       justificationText = session.isJustified ? 'Oui' : 'Non';
     } else {
       // Présent ou Non renseigné => pas de justification
       justificationText = '';
     }
-  
+
       const row: any[] = [
         { text: sessionTitle || 'N/A', fillColor },
         { text: session.sessionDate ? new Date(session.sessionDate).toLocaleDateString() : 'N/A', fillColor },
@@ -321,10 +324,10 @@ export class PdfGeneratorService {
         { text: session.paymentStatus || 'Non payé', fillColor },
         { text: session.amountPaid != null ? `${session.amountPaid} DA` : '0 DA', fillColor }
       ];
-  
+
       body.push(row);
     });
-  
+
     return {
       table: {
         headerRows: 1,
@@ -338,24 +341,28 @@ export class PdfGeneratorService {
   }
 
   private getFillColorForAttendance(session: SessionHistoryDTO): string {
-    console.log('Checking fillColor for session:', session);
-    const paymentStatus = session.paymentStatus?.toLowerCase() || '';
-    const attendanceStatus = session.attendanceStatus?.toLowerCase() || '';
+    const paymentStatus = (session.paymentStatus || '').toLowerCase().replace(/[\s_-]+/g, ' ').trim();
+    const attendanceStatus = (session.attendanceStatus || '').toLowerCase().trim();
+    const isPresent = attendanceStatus === 'présent' || attendanceStatus === 'present';
+    const isAbsent = attendanceStatus === 'absent';
+    const isCompleted = paymentStatus === 'completed' || paymentStatus === 'complete' || paymentStatus === 'complété';
+    const isInProgress = paymentStatus === 'in progress' || paymentStatus === 'inprogress' || paymentStatus === 'en cours';
+    const isUnpaid = paymentStatus === 'non payé' || paymentStatus === 'non paye' || paymentStatus === 'unpaid' || paymentStatus === 'pending';
 
-    if (paymentStatus === 'completed' && attendanceStatus === 'présent') {
-      return '#32a852'; // Vert clair amélioré pour plus de visibilité
-    } else if (paymentStatus === 'completed' && attendanceStatus === 'absent') {
-      return '#ff6347'; // Rouge vif pour plus de visibilité
-    } else if (paymentStatus === 'in progress' && attendanceStatus === 'présent') {
-      return '#ffd700'; // Jaune prononcé
-    } else if (paymentStatus === 'in progress' && attendanceStatus === 'absent') {
-      return '#ff4500'; // Rouge prononcé
+    if (isCompleted && isPresent) {
+      return '#32a852'; // Présent + payé
+    } else if (isCompleted && isAbsent) {
+      return '#ff6347'; // Absent + payé
+    } else if (isInProgress && isPresent) {
+      return '#ffd700'; // Présent + en cours
+    } else if (isInProgress && isAbsent) {
+      return '#ff4500'; // Absent + en cours
+    } else if (isUnpaid && isPresent) {
+      return '#e60000'; // Présent + non payé
     } else if (attendanceStatus === '' || attendanceStatus === 'non renseigné') {
-      return '#f5f5f5'; // Gris clair pour indiquer une absence de renseignement
-    } else if (paymentStatus === 'non payé' && attendanceStatus === 'présent') {
-      return '#e60000'; // Rouge vif pour indiquer "Présent et Non payé"
+      return '#f5f5f5'; // Présence non renseignée
     } else {
-      return '#ffffff'; // Blanc par défaut
+      return '#ffffff';
     }
   }
 }

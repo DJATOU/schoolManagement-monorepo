@@ -1,5 +1,4 @@
 import { CommonModule } from '@angular/common';
-import { HttpClientModule } from '@angular/common/http';
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatCard, MatCardContent, MatCardHeader, MatCardTitle } from '@angular/material/card';
@@ -10,6 +9,8 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
+import { MatButtonModule } from '@angular/material/button';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatStepperModule } from '@angular/material/stepper';
 import { MatTabsModule } from '@angular/material/tabs';
@@ -18,6 +19,10 @@ import { Level } from '../../../models/level/level';
 import { LevelService } from '../../../services/level.service';
 import { StudentService } from '../services/student.service';
 import { SummaryDialogComponent } from '../../summary-dialog/summary-dialog.component';
+import { AddTutorDialogComponent } from '../../tutor/add-tutor-dialog/add-tutor-dialog.component';
+import { Tutor } from '../../../models/tutor/tutor';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { COMMUNICATION_OPTIONS, DEFAULT_NATIONALITY, NATIONALITIES } from '../../../utils/form-options';
 
 @Component({
   selector: 'app-student',
@@ -27,11 +32,7 @@ import { SummaryDialogComponent } from '../../summary-dialog/summary-dialog.comp
     MatFormFieldModule,
     MatInputModule,
     MatDatepickerModule,
-    
-// TODO: `HttpClientModule` should not be imported into a component directly.
-// Please refactor the code to add `provideHttpClient()` call to the provider list in the
-// application bootstrap logic and remove the `HttpClientModule` import from this component.
-HttpClientModule,
+
     MatNativeDateModule,
     RouterModule,
     MatStepperModule,
@@ -39,13 +40,16 @@ HttpClientModule,
     MatTabsModule,
     MatOption,
     MatSelectModule,
+    MatButtonModule,
+    MatTooltipModule,
     CommonModule,
     MatDialogModule,
     MatCard,
     MatCardContent,
     MatCardHeader,
     MatCardTitle,
-    MatSnackBarModule // Ajoutez ceci
+    MatSnackBarModule,
+    TranslateModule
   ],
   templateUrl: './student-form.component.html',
   styleUrls: ['./student-form.component.scss'],
@@ -54,16 +58,17 @@ HttpClientModule,
     { provide: DateAdapter, useClass: NativeDateAdapter },
     { provide: MAT_DATE_LOCALE, useValue: 'us-US' },
     {
-      provide: MAT_DATE_FORMATS, useValue: {
+      provide: MAT_DATE_FORMATS,
+      useValue: {
         parse: {
-          dateInput: 'LL',
+          dateInput: 'LL'
         },
         display: {
           dateInput: 'LL',
           monthYearLabel: 'MMM YYYY',
           dateA11yLabel: 'LL',
-          monthYearA11yLabel: 'MMMM YYYY',
-        },
+          monthYearA11yLabel: 'MMMM YYYY'
+        }
       }
     }
   ]
@@ -72,14 +77,19 @@ export class StudentFormComponent implements OnInit {
   selectedFile: File | null = null;
   levels: Level[] = [];
   studentForm!: FormGroup;
+  selectedTutor: Tutor | null = null;
+
+  readonly communicationOptions = COMMUNICATION_OPTIONS;
+  readonly nationalities = NATIONALITIES;
 
   constructor(
     private fb: FormBuilder,
     private studentService: StudentService,
     private levelService: LevelService,
     public dialog: MatDialog,
-    private snackBar: MatSnackBar
-  ) {}
+    private snackBar: MatSnackBar,
+    private translate: TranslateService
+  ) { }
 
   ngOnInit(): void {
     this.initializeForm();
@@ -97,13 +107,17 @@ export class StudentFormComponent implements OnInit {
       contactInformation: this.fb.group({
         email: ['', [Validators.required, Validators.email]],
         phoneNumber: [''],
+        nationality: [DEFAULT_NATIONALITY],
+        communicationPreference: [''],
         dateOfBirth: ['', Validators.required],
-        placeOfBirth: ['']
+        placeOfBirth: [''],
+        address: [''],
+        city: ['']
       }),
       academicInformation: this.fb.group({
         level: ['', Validators.required],
         establishment: [''],
-        averageScore: ['', Validators.pattern("^[0-9]*$")],
+        averageScore: ['', Validators.pattern('^[0-9]*$')],
         description: ['']
       })
     });
@@ -112,7 +126,7 @@ export class StudentFormComponent implements OnInit {
   private loadLevels(): void {
     this.levelService.getLevels().subscribe({
       next: (data) => (this.levels = data),
-      error: () => this.showErrorMessage('Error loading levels.')
+      error: () => this.showErrorMessage('messages.levelsError')
     });
   }
 
@@ -123,15 +137,42 @@ export class StudentFormComponent implements OnInit {
     }
   }
 
+  /**
+   * Ouvre la popup d'ajout de tuteur. Le tuteur est créé en base par la popup
+   * et renvoyé ici ; on le mémorise pour l'attacher à l'étudiant à la soumission.
+   */
+  openTutorDialog(): void {
+    const dialogRef = this.dialog.open(AddTutorDialogComponent, {
+      width: '520px',
+      maxWidth: '95vw'
+    });
+
+    dialogRef.afterClosed().subscribe((tutor: Tutor | null) => {
+      if (tutor) {
+        this.selectedTutor = tutor;
+        this.showSuccessMessage('tutorForm.messages.attached');
+      }
+    });
+  }
+
+  /** Retire le tuteur sélectionné du formulaire (sans le supprimer en base). */
+  clearTutor(): void {
+    this.selectedTutor = null;
+  }
+
+  get tutorFullName(): string {
+    if (!this.selectedTutor) return '';
+    return `${this.selectedTutor.firstName} ${this.selectedTutor.lastName}`;
+  }
+
   onSubmit(): void {
     if (this.studentForm.invalid) {
-      this.showErrorMessage('The form is not valid or the file is not selected.');
+      this.showErrorMessage('messages.invalidForm');
       return;
     }
 
     const formData = this.prepareFormData();
 
-    // Ouvrir un dialogue pour afficher le résumé des données saisies
     const flattenedData = this.flattenFormData(this.studentForm.value);
     const dialogRef = this.dialog.open(SummaryDialogComponent, {
       data: flattenedData
@@ -159,17 +200,33 @@ export class StudentFormComponent implements OnInit {
         const value = group.get(key)?.value;
         if (key === 'level') {
           formDataToSubmit.append('levelId', value);
+        } else if (key === 'dateOfBirth' && value instanceof Date) {
+          // Format date as yyyy-MM-dd for backend
+          const formattedDate = this.formatDateForBackend(value);
+          formDataToSubmit.append(key, formattedDate);
         } else {
           formDataToSubmit.append(key, value);
         }
       });
     });
 
+    // Attacher le tuteur sélectionné (déjà créé en base via la popup)
+    if (this.selectedTutor?.id != null) {
+      formDataToSubmit.append('tutorId', String(this.selectedTutor.id));
+    }
+
     return formDataToSubmit;
   }
 
-  private flattenFormData(data: any, parentKey: string = ''): { label: string, value: any }[] {
-    let result: { label: string, value: any }[] = [];
+  private formatDateForBackend(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  private flattenFormData(data: any, parentKey: string = ''): { label: string; value: any }[] {
+    let result: { label: string; value: any }[] = [];
     Object.keys(data).forEach(key => {
       const newKey = parentKey ? `${parentKey} - ${key}` : key;
       const value = data[key];
@@ -187,11 +244,11 @@ export class StudentFormComponent implements OnInit {
       next: (response) => {
         console.log('Student created:', response);
         this.onClearForm();
-        this.showSuccessMessage('Student created successfully.');
+        this.showSuccessMessage('messages.studentCreated');
       },
       error: (error) => {
         console.error('Error creating student:', error);
-        this.showErrorMessage('Error creating student.');
+        this.showErrorMessage('messages.studentCreateError');
       }
     });
   }
@@ -199,17 +256,18 @@ export class StudentFormComponent implements OnInit {
   onClearForm(): void {
     this.studentForm.reset();
     this.selectedFile = null;
+    this.selectedTutor = null;
   }
 
-  private showSuccessMessage(message: string): void {
-    this.snackBar.open(message, 'OK', {
+  private showSuccessMessage(messageKey: string): void {
+    this.snackBar.open(this.translate.instant(messageKey), this.translate.instant('common.ok'), {
       duration: 3000,
       panelClass: ['snack-bar-success']
     });
   }
 
-  private showErrorMessage(message: string): void {
-    this.snackBar.open(message, 'OK', {
+  private showErrorMessage(messageKey: string): void {
+    this.snackBar.open(this.translate.instant(messageKey), this.translate.instant('common.ok'), {
       duration: 3000,
       panelClass: ['snack-bar-error']
     });

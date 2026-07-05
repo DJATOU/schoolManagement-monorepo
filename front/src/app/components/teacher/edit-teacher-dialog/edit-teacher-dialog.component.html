@@ -3,13 +3,18 @@
   <mat-dialog-content>
     <!-- Photo Preview et Upload -->
     <div class="photo-section" *ngIf="photoPreview">
-      <img [src]="photoPreview" alt="Photo enseignant" class="photo-preview" />
+      <img [src]="photoPreview" alt="Enseignant" class="photo-preview" />
+      <button type="button" mat-icon-button color="warn" class="clear-photo-btn" (click)="clearPhoto()"
+        matTooltip="Supprimer la photo">
+        <mat-icon>delete</mat-icon>
+      </button>
     </div>
 
     <mat-form-field appearance="fill" class="full-width photo-field">
       <mat-label>Photo de l'enseignant</mat-label>
       <div class="upload-container">
-        <input matInput readonly [value]="selectedFile?.name" placeholder="Aucun fichier sélectionné" class="upload-input">
+        <input matInput readonly [value]="selectedFile?.name" placeholder="Aucun fichier sélectionné"
+          class="upload-input">
         <button type="button" mat-raised-button color="accent" (click)="photoInput.click()" class="upload-button">
           <mat-icon>add_a_photo</mat-icon> Choisir une image
         </button>
@@ -52,19 +57,16 @@
     <mat-form-field appearance="fill" class="full-width">
       <mat-label>Sexe</mat-label>
       <mat-select formControlName="gender">
-        <mat-option value="Male">Homme</mat-option>
-        <mat-option value="Female">Femme</mat-option>
+        <mat-option value="male">Homme</mat-option>
+        <mat-option value="female">Femme</mat-option>
       </mat-select>
     </mat-form-field>
 
     <mat-form-field appearance="fill" class="full-width">
       <mat-label>Spécialisation</mat-label>
-      <input matInput formControlName="specialization" />
-    </mat-form-field>
-
-    <mat-form-field appearance="fill" class="full-width">
-      <mat-label>Qualifications</mat-label>
-      <textarea matInput formControlName="qualifications" rows="3"></textarea>
+      <mat-select formControlName="specialization">
+        <mat-option *ngFor="let subject of subjects" [value]="subject.name">{{ subject.name }}</mat-option>
+      </mat-select>
     </mat-form-field>
 
     <mat-form-field appearance="fill" class="full-width">
@@ -73,8 +75,17 @@
     </mat-form-field>
 
     <mat-form-field appearance="fill" class="full-width">
-      <mat-label>Préférence de communication</mat-label>
-      <input matInput formControlName="communicationPreference" />
+      <mat-label>Nationalité</mat-label>
+      <mat-select formControlName="nationality">
+        <mat-option *ngFor="let nationality of nationalities" [value]="nationality">{{ nationality }}</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="fill" class="full-width">
+      <mat-label>Moyen de communication préféré</mat-label>
+      <mat-select formControlName="communicationPreference">
+        <mat-option *ngFor="let option of communicationOptions" [value]="option.value">{{ option.labelKey | translate }}</mat-option>
+      </mat-select>
     </mat-form-field>
   </mat-dialog-content>
 

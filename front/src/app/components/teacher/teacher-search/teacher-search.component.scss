@@ -1,174 +1,230 @@
-// Base font-size for responsiveness
-html {
-    font-size: 100%;
-    @media (max-width: 768px) {
-      font-size: 87.5%; // Decrease the font size for smaller screens
-    }
-  }
-  
-  *::before,
-  *::after {
-    box-sizing: border-box;
-  }
-  
-  // Set the container to fill at least the height of the viewport
-  .content-container {
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh; // Minimum height is the full viewport height
-    margin-top: -64px; // If there is a fixed header, you might need to offset for the header height
-  
-    // The first child (toolbar) does not grow but can shrink
-    // The teacher view grows and shrinks with flexbox
-    // The pagination does not grow but can shrink
-    // This ensures that pagination is at the bottom when there is little content
-    > * {
-      flex-shrink: 0;
-    }
-  
-    > .teacher-view {
-      flex-grow: 1;
-      overflow-y: auto; // Allows scrolling within the teacher view only
-    }
-  
-    > mat-paginator {
-      flex-shrink: 0;
-    }
-  }
-  
-  // Toolbar at the top
-  .view-toggle-toolbar {
-    justify-content: flex-end;
-    background-color: transparent;
-    padding-bottom: 0.625rem;
-    // Apply the margin-top to offset the negative margin of the container
-    margin-top: 64px; // Adjust this value to match the height of your fixed header
-  }
-  
-  // Teacher card view styling - CSS Grid for professional responsive layout
-  .card-view {
-    padding: 2rem;
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
-    gap: 2rem;
-    align-items: start;
-    max-width: 1600px;
-    margin: 0 auto;
+// Import shared page layout styles
+@import '../../../../styles/page-layout';
 
-    // For small number of items, limit max columns
-    &:has(app-teacher-card:nth-last-child(1):first-child) {
-      // 1 item: center it
-      grid-template-columns: minmax(280px, 400px);
-      justify-content: center;
-    }
+// ===== MAIN CONTAINER =====
+.teacher-search-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
 
-    &:has(app-teacher-card:nth-last-child(2):first-child) {
-      // 2 items: limit to 2 columns
-      grid-template-columns: repeat(2, minmax(280px, 400px));
-      justify-content: center;
-    }
+// ===== TOPBAR (fixed at top) =====
+.topbar {
+  flex: 0 0 auto;
+  background: white;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 12px 16px;
+  z-index: 10;
+}
 
-    // Tablet: 2 columns
-    @media (min-width: 768px) and (max-width: 1199px) {
-      grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
-      max-width: 800px;
-    }
+.topbar-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
 
-    // Desktop: 3-4 columns
-    @media (min-width: 1200px) {
-      grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
-      max-width: 1400px;
-    }
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
 
-    // Large screens: max 4 columns
-    @media (min-width: 1400px) {
-      grid-template-columns: repeat(4, 1fr);
-    }
-  }
+// ===== COMPACT PAGINATOR IN TOPBAR =====
+.compact-paginator {
+  display: flex;
+  align-items: center;
+  background: #f8fafc;
+  border-radius: 10px;
+  padding: 4px 8px;
+  border: 1px solid #e2e8f0;
 
-  .list-view {
-    padding: 2rem;
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    max-width: 1200px;
-    margin: 0 auto;
-  }
-
-  // Remove individual margins - grid gap handles spacing
-  app-teacher-card,
-  app-teacher-list {
-    margin: 0;
-    width: 100%;
-  }
-  
-  // Paginator styling
   mat-paginator {
-    display: flex;
-    justify-content: center;
-    padding: 0.5rem;
-    box-shadow: 0 -2px 4px -1px rgba(0,0,0,0.2);
-  }
-  
-  // Responsive design adjustments
-  @media (max-width: 768px) {
-    mat-paginator {
-      flex-wrap: wrap;
+    background: transparent;
+
+    ::ng-deep {
+      .mat-mdc-paginator-container {
+        min-height: 32px;
+        padding: 0;
+        background: transparent;
+        justify-content: flex-end;
+        gap: 6px;
+        display: flex;
+        align-items: center;
+      }
+
+      .mat-mdc-paginator-page-size {
+        display: none;
+      }
+
+      .mat-mdc-paginator-range-label {
+        font-size: 12px;
+        font-weight: 600;
+        color: #475569;
+        padding: 0;
+        margin: 0;
+      }
+
+      .mat-mdc-paginator-range-actions {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        margin-left: 8px;
+      }
+
+      .mat-mdc-icon-button {
+        width: 28px;
+        height: 28px;
+        line-height: 28px;
+        border-radius: 8px;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        &:not([disabled]) {
+          background: white;
+          border: 1px solid #e2e8f0;
+
+          &:hover {
+            background: #6366f1;
+            border-color: #6366f1;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 6px rgba(99, 102, 241, 0.3);
+
+            .mat-icon,
+            .mat-mdc-paginator-icon {
+              color: white !important;
+              fill: white !important;
+            }
+          }
+        }
+
+        &[disabled] {
+          opacity: 0.3;
+        }
+
+        .mat-icon,
+        .mat-mdc-paginator-icon {
+          color: #64748b;
+          fill: #64748b;
+          font-size: 18px;
+          width: 18px !important;
+          height: 18px !important;
+          flex-shrink: 0;
+        }
+      }
     }
+  }
 
-    .teacher-view {
-      // Adjust for smaller screens, if necessary
+  @media (max-width: 500px) {
+    display: none;
+  }
+}
+
+// ===== CONTENT AREA (scrollable) =====
+.content-area {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 16px;
+  min-height: 100px;
+  scroll-behavior: smooth;
+}
+
+// ===== CARDS GRID =====
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
+  width: 100%;
+  // Espace bas garanti (le padding-bottom du scroller est ignoré par certains navigateurs)
+  padding-bottom: 40px;
+}
+
+// ===== LIST VIEW =====
+.list-view {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  // Espace bas garanti pour que le dernier item ne soit pas collé
+  padding-bottom: 40px;
+}
+
+// ===== INFINITE SCROLL INDICATORS =====
+.loading-more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px;
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 500;
+
+  mat-spinner {
+    ::ng-deep circle {
+      stroke: #6366f1;
     }
   }
+}
 
-  .loading-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 400px;
-    padding: 3rem;
+.end-of-list {
+  display: flex;
+  justify-content: center;
+  padding: 20px;
+  color: #94a3b8;
+  font-size: 13px;
+  font-weight: 500;
+  border-top: 1px solid #e2e8f0;
+  margin-top: 16px;
+}
+
+// ===== LOADING STATE =====
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  padding: 3rem;
+  gap: 16px;
+  color: #64748b;
+}
+
+// ===== EMPTY STATE =====
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  padding: 3rem;
+  text-align: center;
+  color: #9e9e9e;
+
+  .empty-icon {
+    font-size: 80px;
+    width: 80px;
+    height: 80px;
+    color: #bdbdbd;
+    margin-bottom: 1rem;
   }
 
-  .empty-state {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-height: 400px;
-    padding: 3rem;
-    text-align: center;
-    color: #9e9e9e;
-
-    .empty-icon {
-      font-size: 80px;
-      width: 80px;
-      height: 80px;
-      color: #bdbdbd;
-      margin-bottom: 1rem;
-    }
-
-    p {
-      font-size: 1.1rem;
-      margin: 0;
-      font-weight: 400;
-    }
+  p {
+    font-size: 1.1rem;
+    margin: 0;
+    font-weight: 400;
   }
+}
 
-
-  .card-view,
-  .list-view {
-    transition: all 0.3s ease-in-out;
-  }
-
-  .card-view {
-    opacity: 1;
-  }
-
-  .list-view {
-    opacity: 1;
-  }
-
-  .teacher-view.ng-leave, .teacher-view.ng-enter {
-    opacity: 0;
-    transition: opacity 0.3s ease-in-out;
-  }
+// ===== CARDS AND LIST ITEMS FULL WIDTH =====
+app-teacher-card,
+app-teacher-list {
+  width: 100%;
+}

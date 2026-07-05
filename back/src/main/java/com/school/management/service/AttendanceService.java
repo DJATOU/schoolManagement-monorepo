@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Objects;
 
 @Service
 public class AttendanceService {
@@ -33,8 +34,8 @@ public class AttendanceService {
 
     @Autowired
     public AttendanceService(AttendanceRepository attendanceRepository, AttendanceMapper attendanceMapper,
-                           StudentRepository studentRepository, SessionRepository sessionRepository,
-                           SessionSeriesRepository sessionSeriesRepository, GroupRepository groupRepository) {
+            StudentRepository studentRepository, SessionRepository sessionRepository,
+            SessionSeriesRepository sessionSeriesRepository, GroupRepository groupRepository) {
         this.attendanceRepository = attendanceRepository;
         this.attendanceMapper = attendanceMapper;
         this.studentRepository = studentRepository;
@@ -44,7 +45,8 @@ public class AttendanceService {
     }
 
     /**
-     * PHASE 1 REFACTORING: Initialise le MappingContext après injection des dépendances
+     * PHASE 1 REFACTORING: Initialise le MappingContext après injection des
+     * dépendances
      */
     @PostConstruct
     private void initMappingContext() {
@@ -59,8 +61,7 @@ public class AttendanceService {
                 groupRepository,
                 sessionSeriesRepository,
                 studentRepository,
-                sessionRepository
-        );
+                sessionRepository);
         LOGGER.debug("MappingContext initialized for AttendanceService");
     }
 
@@ -79,37 +80,39 @@ public class AttendanceService {
     }
 
     public AttendanceEntity getAttendanceById(Long id) {
-        return attendanceRepository.findById(id)
+        return attendanceRepository.findById(Objects.requireNonNull(id))
                 .orElseThrow(() -> new RuntimeException("Attendance not found")); // Customize this exception
     }
 
     public AttendanceEntity createAttendance(AttendanceEntity attendance) {
-        return attendanceRepository.save(attendance);
+        return attendanceRepository.save(Objects.requireNonNull(attendance));
     }
 
     public AttendanceEntity updateAttendance(Long id) {
         AttendanceEntity existingAttendance = getAttendanceById(id);
         // Update properties of existingAttendance using values from updatedAttendance
         // ...
-        return attendanceRepository.save(existingAttendance);
+        return attendanceRepository.save(Objects.requireNonNull(existingAttendance));
     }
 
     public void deleteAttendance(Long id) {
-        attendanceRepository.deleteById(id);
+        attendanceRepository.deleteById(Objects.requireNonNull(id));
     }
 
-    //Save attendance
+    // Save attendance
     public AttendanceEntity save(AttendanceEntity attendance) {
-        return attendanceRepository.save(attendance);
+        return attendanceRepository.save(Objects.requireNonNull(attendance));
     }
 
     public List<AttendanceEntity> saveAll(List<AttendanceEntity> attendances) {
         for (AttendanceEntity attendance : attendances) {
-            if (attendanceRepository.existsByStudentIdAndSessionIdAndActiveTrue(attendance.getStudent().getId(), attendance.getSession().getId())) {
-                throw new IllegalArgumentException("Attendance already exists for student ID " + attendance.getStudent().getId() + " and session ID " + attendance.getSession().getId());
+            if (attendanceRepository.existsByStudentIdAndSessionIdAndActiveTrue(attendance.getStudent().getId(),
+                    attendance.getSession().getId())) {
+                throw new IllegalArgumentException("Attendance already exists for student ID "
+                        + attendance.getStudent().getId() + " and session ID " + attendance.getSession().getId());
             }
         }
-        return attendanceRepository.saveAll(attendances);
+        return attendanceRepository.saveAll(Objects.requireNonNull(attendances));
     }
 
     @Transactional
@@ -122,7 +125,7 @@ public class AttendanceService {
         for (AttendanceEntity attendance : attendances) {
             attendance.setActive(false);
         }
-        attendanceRepository.saveAll(attendances);
+        attendanceRepository.saveAll(Objects.requireNonNull(attendances));
     }
 
     public List<AttendanceDTO> getAttendanceBySessionId(Long sessionId) {
@@ -133,7 +136,8 @@ public class AttendanceService {
     }
 
     public List<AttendanceDTO> getAttendanceByStudentAndSeries(Long studentId, Long sessionSeriesId) {
-        List<AttendanceEntity> attendanceEntities = attendanceRepository.findByStudentIdAndSessionSeriesIdAndActiveTrue(studentId, sessionSeriesId);
+        List<AttendanceEntity> attendanceEntities = attendanceRepository
+                .findByStudentIdAndSessionSeriesIdAndActiveTrue(studentId, sessionSeriesId);
         return attendanceEntities.stream()
                 .map(attendanceMapper::attendanceToAttendanceDTO)
                 .toList();

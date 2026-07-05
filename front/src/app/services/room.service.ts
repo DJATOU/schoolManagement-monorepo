@@ -23,7 +23,7 @@ export class RoomService {
   updateRoom(id: number, Room: Room): Observable<Room> {
     return this.http.put<Room>(`${this.apiUrl}/${id}`, Room);
   }
-  
+
   disableRooms(id_list: Number[]): Observable<boolean> {
     return this.http.delete<boolean>(`${this.apiUrl}/disable/${id_list}`);
   }
@@ -31,5 +31,5 @@ export class RoomService {
   getRoom(id: number): Observable<Room> {
     return this.http.get<Room>(`${this.apiUrl}/${id}`);
   }
-  
+
 }

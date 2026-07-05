@@ -1,52 +1,155 @@
+/* ============================================================
+   Formulaires (étudiant / enseignant) — layout homogène,
+   adaptatif et sans scroll interne.
+   ============================================================ */
+
 /* Container for the entire form */
 .form-container {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem; /* 20px converted to rem */
-  max-width: 50rem; /* 800px converted to rem */
-  margin: 1.875rem auto; /* 30px converted to rem */
-  padding: 1.25rem; /* 20px converted to rem */
-  border: 0.0625rem solid #ddd; /* 1px converted to rem */
-  border-radius: 0.5rem; /* 8px converted to rem */
-  box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.1); /* 4px and 8px converted to rem */
-  background-color: white;
-  height: calc(100vh - 13rem); /* 220px converted to rem */
-  overflow-y: auto;
+  gap: 1rem;
+  width: 100%;
+  max-width: 56rem;              /* ~900px sur grand écran */
+  margin: 1.5rem auto;
+  padding: 1.75rem;
+  border: 1px solid #e6e8ee;
+  border-radius: 1rem;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+  background-color: #fff;
+  box-sizing: border-box;
+  /* Pas de hauteur fixe : le formulaire s'adapte à son contenu → aucun scroll interne */
 }
 
-/* Tab group styles to ensure height consistency */
+/* Le titre et l'éventuelle instruction restent en haut */
+.form-title {
+  flex: 0 0 auto;
+  margin: 0 0 0.25rem;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.form-instruction {
+  flex: 0 0 auto;
+  margin: 0 0 0.25rem !important;
+  font-size: 13px !important;
+}
+
+/* Tab group : occupe la largeur, hauteur pilotée par le contenu */
 .tab-group {
   display: flex;
   flex-direction: column;
-  flex-grow: 1; /* Ensure it takes the full height of the form container */
+  flex: 1 1 auto;
 }
 
-/* Tab content */
+/* Onglets : on laisse Material gérer, sans scroll interne forcé */
+.tab-group .mat-mdc-tab-body-wrapper {
+  flex: 1 1 auto;
+}
+
+.tab-group .mat-mdc-tab-body,
+.tab-group .mat-mdc-tab-body-content {
+  overflow: visible !important;
+}
+
+/* Tab content : grille adaptative (auto-fit) → 2 colonnes sur large,
+   1 colonne sur petit écran, automatiquement. Aucun scroll. */
 .tab-content {
-  flex-grow: 1; /* Take remaining space */
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 1.25rem; /* 20px converted to rem */
-  overflow-y: auto; /* Allow scrolling if content overflows */
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+  gap: 0.5rem 1.5rem;
+  padding: 1.25rem 0.25rem 0.5rem;
+  box-sizing: border-box;
+  align-content: start;
 }
 
+/* Les éléments larges occupent toute la largeur (photo, description, textarea, tuteur) */
+.tab-content .photo-upload,
+.tab-content textarea,
+.tab-content .full-width,
+.tab-content > .mat-mdc-form-field:has(textarea) {
+  grid-column: 1 / -1;
+}
 
-/* Styles pour les petits écrans */
-@media (max-width: 1500px) {
+/* Champs Material : largeur pleine et rendu homogène */
+.tab-content .mat-mdc-form-field {
+  width: 100%;
+}
+
+/* Coins arrondis homogènes sur les champs "fill" */
+.tab-content .mat-mdc-form-field .mdc-text-field--filled:not(.mdc-text-field--disabled) {
+  border-radius: 0.6rem 0.6rem 0 0;
+}
+
+/* Onglets : label plus lisible et barre active nette */
+.tab-group .mat-mdc-tab .mdc-tab__text-label {
+  font-weight: 600;
+}
+
+/* Espace réservé aux messages d'erreur : compact mais présent */
+.tab-content .mat-mdc-form-field .mat-mdc-form-field-subscript-wrapper {
+  height: 0.75rem;
+}
+
+/* Hauteur interne des champs "fill" : compacte, avec la place nécessaire
+   au label flottant (sinon le label chevauche la valeur saisie). */
+.tab-content .mat-mdc-form-field .mat-mdc-form-field-infix {
+  min-height: 48px;
+  padding-top: 24px;
+  padding-bottom: 8px;
+}
+
+/* Barre de boutons : collée en bas, homogène entre les formulaires */
+.button-container {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  padding-top: 1.25rem;
+  margin-top: 0.25rem;
+  border-top: 1px solid #eef0f4;
+  background-color: #fff;
+}
+
+.button-container .submit-button,
+.button-container .clear-button {
+  min-width: 12rem;
+}
+
+/* ===== Adaptatif ===== */
+
+/* Écrans moyens : marges réduites */
+@media (max-width: 1200px) {
   .form-container {
-    padding: 1rem; /* Réduire le padding */
-    margin: 1rem; /* Réduire les marges */
-    max-width: 100%; /* Utiliser toute la largeur de l'écran */
-    height: auto; /* Laisser la hauteur s'adapter au contenu */
+    max-width: 100%;
+    margin: 1rem auto;
+    padding: 1.25rem;
   }
 
   .tab-content {
-    gap: 1rem; /* Réduire l'espacement entre les éléments */
+    gap: 0.5rem 1rem;
+  }
+}
+
+/* Petits écrans : une seule colonne + boutons pleine largeur */
+@media (max-width: 640px) {
+  .form-container {
+    padding: 1rem;
+    border-radius: 0.75rem;
   }
 
-  /* Si vous avez plusieurs colonnes, passez-les en une seule colonne */
   .tab-content {
-    grid-template-columns: 1fr; /* S'assurer que le contenu s'empile verticalement */
+    grid-template-columns: 1fr;
+    padding-top: 1rem;
   }
 
+  .button-container {
+    flex-direction: column;
+  }
+
+  .button-container .submit-button,
+  .button-container .clear-button {
+    width: 100%;
+    min-width: 0;
+  }
 }

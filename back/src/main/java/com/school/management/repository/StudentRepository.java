@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.lang.NonNull;
 
 import java.util.List;
 import java.util.Optional;
@@ -27,6 +28,15 @@ public interface StudentRepository extends JpaRepository<StudentEntity, Long> {
 
     List<StudentEntity> findAllByActiveTrue();
 
+    long countByActiveTrue();
+
+    @Query("SELECT COUNT(s) FROM StudentEntity s WHERE s.active = true AND LOWER(s.gender) IN :genders")
+    long countActiveByGenderIn(@Param("genders") List<String> genders);
+
+    long countByActiveTrueAndDateCreationBetween(java.time.LocalDateTime from, java.time.LocalDateTime to);
+
+    long countByActiveFalse();
+
     @Query("SELECT s FROM StudentEntity s " +
             "LEFT JOIN FETCH s.groups g " +
             "LEFT JOIN FETCH g.series ser " +
@@ -35,5 +45,6 @@ public interface StudentRepository extends JpaRepository<StudentEntity, Long> {
     StudentEntity findStudentWithAllData(@Param("studentId") Long studentId);
 
     @EntityGraph(value = "Student.withAllData", type = EntityGraph.EntityGraphType.LOAD)
-    Optional<StudentEntity> findById(Long id);
+    @NonNull
+    Optional<StudentEntity> findById(@NonNull Long id);
 }

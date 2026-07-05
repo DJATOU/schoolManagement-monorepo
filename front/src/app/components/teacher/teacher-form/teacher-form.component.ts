@@ -13,10 +13,15 @@ import { MatNativeDateModule } from '@angular/material/core';
 import { MatIconModule } from '@angular/material/icon';
 import { MatOptionModule } from '@angular/material/core';
 import { MatSelectModule } from '@angular/material/select';
+import { MatButtonModule } from '@angular/material/button';
 import { ReactiveFormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatCardModule } from '@angular/material/card';
+import { TranslateModule } from '@ngx-translate/core';
+import { COMMUNICATION_OPTIONS, DEFAULT_NATIONALITY, NATIONALITIES } from '../../../utils/form-options';
+import { SubjectService } from '../../../services/subject.service';
+import { Subject } from '../../../models/subject/subject';
 
 @Component({
   selector: 'app-teacher-form',
@@ -30,10 +35,12 @@ import { MatCardModule } from '@angular/material/card';
     MatIconModule,
     MatOptionModule,
     MatSelectModule,
+    MatButtonModule,
     MatTabsModule,
     MatSnackBarModule,
     CommonModule,
-    MatCardModule
+    MatCardModule,
+    TranslateModule
   ],
   templateUrl: './teacher-form.component.html',
   styleUrls: ['./teacher-form.component.scss'],
@@ -45,9 +52,14 @@ export class TeacherFormComponent implements OnInit {
   teacherId: number | null = null;
   isEditMode = false;
 
+  readonly communicationOptions = COMMUNICATION_OPTIONS;
+  readonly nationalities = NATIONALITIES;
+  subjects: Subject[] = [];
+
   constructor(
     private fb: FormBuilder,
     private teacherService: TeacherService,
+    private subjectService: SubjectService,
     public dialog: MatDialog,
     private snackBar: MatSnackBar,
     private route: ActivatedRoute,
@@ -63,25 +75,24 @@ export class TeacherFormComponent implements OnInit {
       contactInformation: this.fb.group({
         email: ['', [Validators.required, Validators.email]],
         phoneNumber: ['', Validators.required],
+        nationality: [DEFAULT_NATIONALITY],
+        communicationPreference: [''],
+        dateOfBirth: ['', Validators.required],
+        placeOfBirth: [''],
         address: [''],
         city: ['']
       }),
       professionalDetails: this.fb.group({
-        dateOfBirth: ['', Validators.required],
-        placeOfBirth: [''],
         specialization: [''],
-        qualifications: ['']
-      }),
-      otherInformation: this.fb.group({
         yearsOfExperience: ['', [Validators.required, Validators.pattern("^[0-9]*$")]],
-        nationality: [''],
-        maritalStatus: [''],
-        communicationPreference: ['']
+        maritalStatus: ['']
       })
     });
   }
 
   ngOnInit(): void {
+    this.loadSubjects();
+
     // Vérifier si c'est une édition
     this.route.params.subscribe(params => {
       const id = params['id'];
@@ -90,6 +101,13 @@ export class TeacherFormComponent implements OnInit {
         this.isEditMode = true;
         this.loadTeacher(this.teacherId);
       }
+    });
+  }
+
+  private loadSubjects(): void {
+    this.subjectService.getSubjects().subscribe({
+      next: (data) => (this.subjects = data),
+      error: (error) => console.error('Error loading subjects:', error)
     });
   }
 
@@ -106,20 +124,17 @@ export class TeacherFormComponent implements OnInit {
           contactInformation: {
             email: teacher.email,
             phoneNumber: teacher.phoneNumber,
+            nationality: teacher.nationality || DEFAULT_NATIONALITY,
+            communicationPreference: teacher.communicationPreference,
+            dateOfBirth: teacher.dateOfBirth,
+            placeOfBirth: teacher.placeOfBirth,
             address: teacher.address,
             city: '' // Ajouter si disponible dans le model
           },
           professionalDetails: {
-            dateOfBirth: teacher.dateOfBirth,
-            placeOfBirth: teacher.placeOfBirth,
             specialization: teacher.specialization,
-            qualifications: teacher.qualifications
-          },
-          otherInformation: {
             yearsOfExperience: teacher.yearsOfExperience,
-            nationality: '', // Ajouter si disponible
-            maritalStatus: '', // Ajouter si disponible
-            communicationPreference: teacher.communicationPreference
+            maritalStatus: '' // Ajouter si disponible
           }
         });
       },
@@ -136,7 +151,7 @@ export class TeacherFormComponent implements OnInit {
       this.selectedFile = target.files[0];
     }
   }
-  
+
 
   flattenFormData(data: any, parentKey: string = ''): { label: string, value: any }[] {
     let result: { label: string, value: any }[] = [];
@@ -199,7 +214,7 @@ export class TeacherFormComponent implements OnInit {
       }
     } else {
       // MODE CRÉATION
-      if (this.teacherForm.valid && this.selectedFile) {
+      if (this.teacherForm.valid) {
         const formData = {
           basicInformation: this.teacherForm.get('basicInformation')?.value,
           contactInformation: this.teacherForm.get('contactInformation')?.value,
@@ -245,12 +260,12 @@ export class TeacherFormComponent implements OnInit {
           }
         });
       } else {
-        console.warn('The form is not valid or the file is not selected.');
-        this.showErrorMessage('The form is not valid or the file is not selected.');
+        console.warn('The form is not valid.');
+        this.showErrorMessage('The form is not valid.');
       }
     }
   }
-  
+
 
   onClearForm(): void {
     this.teacherForm.reset();

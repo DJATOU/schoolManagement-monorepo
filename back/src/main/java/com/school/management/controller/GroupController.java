@@ -4,7 +4,6 @@ import com.school.management.dto.GroupDTO;
 import com.school.management.dto.SessionSeriesDto;
 import com.school.management.dto.StudentDTO;
 import com.school.management.mapper.GroupMapper;
-import com.school.management.persistance.AttendanceEntity;
 import com.school.management.persistance.GroupEntity;
 import com.school.management.service.group.GroupServiceImpl;
 import com.school.management.shared.exception.ResourceNotFoundException;
@@ -21,10 +20,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 @RestController
 @RequestMapping("/api/groups")
@@ -41,7 +37,6 @@ public class GroupController {
                 .toList();
     }
 
-
     @Autowired
     public GroupController(GroupServiceImpl groupService, GroupMapper groupMapper) {
         this.groupService = groupService;
@@ -50,7 +45,8 @@ public class GroupController {
 
     @PostMapping("/createGroupe")
     public ResponseEntity<GroupDTO> createGroup(@Valid @ModelAttribute GroupDTO groupDto) {
-        // PHASE 1 REFACTORING: Utilise MappingContext au lieu de ApplicationContextProvider
+        // PHASE 1 REFACTORING: Utilise MappingContext au lieu de
+        // ApplicationContextProvider
         GroupEntity group = groupMapper.groupDTOToGroup(groupDto, groupService.getMappingContext());
         GroupEntity savedGroup = groupService.save(group);
         return new ResponseEntity<>(groupMapper.groupToGroupDTO(savedGroup), HttpStatus.CREATED);
@@ -69,7 +65,6 @@ public class GroupController {
         return ResponseEntity.ok(groupMapper.groupToGroupDTO(group));
     }
 
-
     @GetMapping
     public ResponseEntity<List<GroupDTO>> getAllGroups() {
         List<GroupDTO> groups = groupService.findAll().stream()
@@ -81,7 +76,8 @@ public class GroupController {
     @PutMapping("/{id}")
     public ResponseEntity<GroupDTO> updateGroup(@PathVariable Long id, @Valid @RequestBody GroupDTO groupDto) {
         groupService.findById(id).orElseThrow(() -> new ResourceNotFoundException("Group", id));
-        // PHASE 1 REFACTORING: Utilise MappingContext au lieu de ApplicationContextProvider
+        // PHASE 1 REFACTORING: Utilise MappingContext au lieu de
+        // ApplicationContextProvider
         GroupEntity updatedGroup = groupMapper.groupDTOToGroup(groupDto, groupService.getMappingContext());
         updatedGroup.setId(id);
         GroupEntity savedGroup = groupService.save(updatedGroup);
@@ -94,7 +90,7 @@ public class GroupController {
         return ResponseEntity.noContent().build();
     }
 
-    //desactivate a group
+    // desactivate a group
     @DeleteMapping("disable/{id}")
     public ResponseEntity<Boolean> desactivateGroup(@PathVariable Long id) {
         groupService.desactivateGroup(id);
@@ -183,7 +179,6 @@ public class GroupController {
         return ResponseEntity.ok(studentCount);
     }
 
-
     @GetMapping("/{studentId}/groups-for-payment")
     public ResponseEntity<List<GroupDTO>> getGroupsForPayment(@PathVariable Long studentId) {
         // Le service renvoie déjà la liste de DTO directement
@@ -193,7 +188,8 @@ public class GroupController {
 
     /**
      * PHASE 3A: Upload photo pour un groupe
-     * @param id ID du groupe
+     * 
+     * @param id   ID du groupe
      * @param file Fichier photo
      * @return Nom du fichier uploadé
      */
@@ -212,6 +208,7 @@ public class GroupController {
 
     /**
      * PHASE 3A: Récupère la photo d'un groupe
+     * 
      * @param id ID du groupe
      * @return Resource contenant la photo
      */
@@ -220,7 +217,7 @@ public class GroupController {
         try {
             Resource photo = groupService.getPhoto(id);
             return ResponseEntity.ok()
-                    .contentType(MediaType.IMAGE_JPEG)
+                    .contentType(java.util.Objects.requireNonNull(MediaType.IMAGE_JPEG))
                     .body(photo);
         } catch (IOException e) {
             LOGGER.error("Failed to get photo for group {}: {}", id, e.getMessage(), e);

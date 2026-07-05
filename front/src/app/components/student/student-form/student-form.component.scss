@@ -1,0 +1,77 @@
+// Champ "Tuteur" cliquable (ouvre la popup de création + attachement)
+.tutor-field {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+  border: 1.5px dashed #cbd5e1;
+  border-radius: 12px;
+  background: #f8fafc;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease;
+
+  &:hover {
+    border-color: #6366f1;
+    background: #eef2ff;
+  }
+
+  &.has-tutor {
+    border-style: solid;
+    border-color: #c7d2fe;
+    background: #fff;
+  }
+
+  .tutor-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #eef2ff;
+    color: #6366f1;
+    flex-shrink: 0;
+
+    mat-icon {
+      font-size: 24px;
+      width: 24px;
+      height: 24px;
+    }
+  }
+
+  .tutor-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    flex: 1;
+
+    .tutor-name {
+      font-weight: 600;
+      color: #1e293b;
+      font-size: 0.92rem;
+    }
+
+    .tutor-meta {
+      font-size: 0.8rem;
+      color: #64748b;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
+
+  .tutor-chevron {
+    color: #94a3b8;
+    flex-shrink: 0;
+  }
+
+  .tutor-clear {
+    flex-shrink: 0;
+    color: #94a3b8;
+
+    &:hover {
+      color: #ef4444;
+    }
+  }
+}

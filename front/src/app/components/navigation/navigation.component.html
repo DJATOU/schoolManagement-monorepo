@@ -1,99 +1,94 @@
 <mat-toolbar class="main-toolbar">
-  <!-- Logo Section -->
   <div class="toolbar-section logo-section">
-    <button mat-icon-button (click)="toggleSidenav()" class="menu-toggle" matTooltip="Menu">
+    <button mat-icon-button (click)="toggleSidenav()" class="menu-toggle" [matTooltip]="'NAV.MENU' | translate">
       <mat-icon>menu</mat-icon>
     </button>
-    <img src="assets/succes_assistance.png" alt="Logo" class="logo" [routerLink]="['/dashboard']">
+    <img src="assets/succes_assistance.png" alt="Logo" class="logo" [routerLink]="['/dashboard']" />
   </div>
 
-  <!-- Search Type Tabs -->
   <div class="search-tabs">
-    <button class="tab-button"
-            [class.active]="selectedIcon === 'student'"
-            (click)="setSearchType('student')"
-            matTooltip="Élèves">
+    <button class="tab-button" [class.active]="selectedIcon === 'student'" (click)="setSearchType('student')"
+      [matTooltip]="'NAV.TABS.STUDENTS' | translate">
       <mat-icon>school</mat-icon>
-      <span class="tab-label">Élèves</span>
+      <span class="tab-label">{{ 'NAV.TABS.STUDENTS' | translate }}</span>
     </button>
-    <button class="tab-button"
-            [class.active]="selectedIcon === 'group'"
-            (click)="setSearchType('group')"
-            matTooltip="Groupes">
+    <button class="tab-button" [class.active]="selectedIcon === 'group'" (click)="setSearchType('group')"
+      [matTooltip]="'NAV.TABS.GROUPS' | translate">
       <mat-icon>groups</mat-icon>
-      <span class="tab-label">Groupes</span>
+      <span class="tab-label">{{ 'NAV.TABS.GROUPS' | translate }}</span>
     </button>
-    <button class="tab-button"
-            [class.active]="selectedIcon === 'teacher'"
-            (click)="setSearchType('teacher')"
-            matTooltip="Professeurs">
+    <button class="tab-button" [class.active]="selectedIcon === 'teacher'" (click)="setSearchType('teacher')"
+      [matTooltip]="'NAV.TABS.TEACHERS' | translate">
       <mat-icon>person</mat-icon>
-      <span class="tab-label">Professeurs</span>
+      <span class="tab-label">{{ 'NAV.TABS.TEACHERS' | translate }}</span>
     </button>
   </div>
 
-  <!-- Search Bar -->
   <div class="search-container">
-    <div class="search-field">
+    <div class="search-field" [class.search-field--open]="auto.isOpen" matAutocompleteOrigin #origin="matAutocompleteOrigin">
       <mat-icon class="search-prefix" (click)="onSearch()">search</mat-icon>
-      <input type="text"
-             class="search-input"
-             [placeholder]="placeholder"
-             [formControl]="searchControl"
-             [matAutocomplete]="auto"
-             (keydown.enter)="onSearch()">
-      <button type="button"
-              *ngIf="searchControl.value"
-              (click)="searchControl.setValue('')"
-              class="clear-button"
-              matTooltip="Effacer">
+      <input type="text" class="search-input" [placeholder]="placeholderKey | translate" [formControl]="searchControl"
+        [matAutocomplete]="auto" [matAutocompleteConnectedTo]="origin" (keydown.enter)="onSearch()">
+      <button type="button" *ngIf="searchControl.value" (click)="searchControl.setValue('')" class="clear-button"
+        [matTooltip]="'COMMON.CLEAR' | translate">
         <mat-icon>close</mat-icon>
       </button>
 
-      <mat-autocomplete #auto="matAutocomplete" (optionSelected)="onSelect($event.option.value)">
-        <mat-option *ngFor="let suggestion of filteredSuggestions | async" [value]="suggestion">
-          {{ suggestion }}
-        </mat-option>
+      <mat-autocomplete #auto="matAutocomplete" class="nav-autocomplete-panel"
+        (optionSelected)="onSelect($event.option.value)">
+        <ng-container *ngIf="(searchControl.value || '').trim().length >= 2">
+          <mat-option *ngFor="let suggestion of filteredSuggestions | async" [value]="suggestion" class="nav-suggestion">
+            <span class="sugg-avatar" [ngClass]="'sugg-avatar--' + selectedIcon">{{ initialsOf(suggestion) }}</span>
+            <span class="sugg-text">{{ suggestion }}</span>
+            <mat-icon class="sugg-type">{{ typeIcon }}</mat-icon>
+          </mat-option>
+          <mat-option *ngIf="(filteredSuggestions | async)?.length === 0" disabled
+            class="nav-suggestion nav-suggestion--empty">
+            <mat-icon>search_off</mat-icon>
+            <span>Aucun résultat</span>
+          </mat-option>
+        </ng-container>
       </mat-autocomplete>
     </div>
   </div>
 
-  <!-- User Profile Pill -->
   <div class="user-profile-pill" [matMenuTriggerFor]="userMenu">
-    <img src="assets/pic.jpg" alt="User" class="user-avatar">
+    <img
+      src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%233f51b5'/%3E%3Ccircle cx='50' cy='35' r='18' fill='white'/%3E%3Cellipse cx='50' cy='85' rx='30' ry='25' fill='white'/%3E%3C/svg%3E"
+      alt="Admin" class="user-avatar" />
     <div class="user-info">
       <span class="user-name">M. DJATOU</span>
-      <span class="user-role">Administrateur</span>
+      <span class="user-role">{{ 'NAV.USER.ROLE' | translate }}</span>
     </div>
     <mat-icon class="dropdown-icon">expand_more</mat-icon>
   </div>
 
-  <!-- User Menu -->
   <mat-menu #userMenu="matMenu">
     <button mat-menu-item (click)="toggleDarkMode()">
       <mat-icon>brightness_6</mat-icon>
-      <span>Mode sombre/clair</span>
+      <span>{{ 'NAV.ACTIONS.TOGGLE_THEME' | translate }}</span>
     </button>
+    <button mat-menu-item disabled>{{ 'navigation.language' | translate }}</button>
     <button mat-menu-item (click)="changeLanguage('fr')">
       <mat-icon>language</mat-icon>
-      <span>Français</span>
+      <span>{{ 'LANGUAGE.FRENCH' | translate }}</span>
     </button>
-    <button mat-menu-item (click)="changeLanguage('ar')">
+    <button mat-menu-item (click)="changeLanguage('en')">
       <mat-icon>language</mat-icon>
-      <span>العربية</span>
+      <span>{{ 'LANGUAGE.ENGLISH' | translate }}</span>
     </button>
-    <button mat-menu-item (click)="changeLanguage('es')">
-      <mat-icon>language</mat-icon>
-      <span>Español</span>
+    <button mat-menu-item (click)="toggleLanguage()">
+      <mat-icon>swap_horiz</mat-icon>
+      <span>{{ 'LANGUAGE.TOGGLE' | translate:{ value: currentLanguage.toUpperCase() } }}</span>
     </button>
     <button mat-menu-item (click)="openSettings()">
       <mat-icon>settings</mat-icon>
-      <span>Paramètres</span>
+      <span>{{ 'NAV.ACTIONS.SETTINGS' | translate }}</span>
     </button>
     <mat-divider></mat-divider>
     <button mat-menu-item (click)="logout()">
       <mat-icon>logout</mat-icon>
-      <span>Déconnexion</span>
+      <span>{{ 'NAV.ACTIONS.LOGOUT' | translate }}</span>
     </button>
   </mat-menu>
 </mat-toolbar>
