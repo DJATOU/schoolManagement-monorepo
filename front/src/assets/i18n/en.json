@@ -13,8 +13,12 @@
     "CHOOSE_IMAGE": "Choose an image",
     "EMAIL": "Email",
     "PHONE": "Phone number",
+    "NATIONALITY": "Nationality",
+    "COMMUNICATION": "Preferred contact method",
     "BIRTHDATE": "Date of birth",
     "BIRTHPLACE": "Place of birth",
+    "ADDRESS": "Address",
+    "CITY": "City",
     "LEVEL": "Level",
     "SCHOOL": "School",
     "DESCRIPTION": "Description"
@@ -92,7 +96,7 @@
     "CANCEL": "No, cancel"
   },
   "STUDENT_FORM": {
-    "TITLE": "Student registration form",
+    "TITLE": "Student registration",
     "TABS": {
       "PERSONAL": "Personal information",
       "CONTACT": "Contact information",
@@ -101,17 +105,15 @@
     "AVERAGE": "Average score"
   },
   "TEACHER_FORM": {
-    "TITLE": "Teacher registration form",
+    "TITLE": "Teacher registration",
     "TABS": {
-      "BASIC": "Basic information",
-      "CONTACT": "Contact details",
-      "PROFESSIONAL": "Professional details",
-      "OTHER": "Other information"
+      "PERSONAL": "Personal information",
+      "CONTACT": "Contact information",
+      "PROFESSIONAL": "Professional information"
     },
     "ADDRESS": "Address",
     "CITY": "City",
     "SPECIALIZATION": "Specialization",
-    "QUALIFICATIONS": "Qualifications",
     "EXPERIENCE": "Years of experience",
     "NATIONALITY": "Nationality",
     "MARITAL_STATUS": "Marital status",
@@ -130,15 +132,48 @@
     "language": "Language"
   },
   "dashboard": {
-    "subscribeStudents": "Registered students",
-    "subscribeProfessors": "Registered teachers",
-    "subscribeGroups": "Created groups",
-    "subscribeAttendance": "Attendance recorded",
-    "subscribeSession": "Planned sessions",
-    "subscribePayment": "Processed payments"
+    "title": "Dashboard",
+    "subtitle": "School statistics",
+    "period": {
+      "year": "Year",
+      "month": "Month",
+      "custom": "Range",
+      "from": "From",
+      "to": "To"
+    },
+    "kpi": {
+      "activeStudents": "Active students",
+      "teachers": "Teachers",
+      "groups": "Groups",
+      "newStudents": "New enrollments",
+      "leaving": "Leavers",
+      "catchUps": "Catch-ups"
+    },
+    "sessions": {
+      "title": "Sessions",
+      "validated": "Validated",
+      "scheduled": "Scheduled",
+      "deactivated": "Cancelled",
+      "catchUps": "Catch-ups"
+    },
+    "attendance": {
+      "title": "Attendance",
+      "present": "Present",
+      "justified": "Justified abs.",
+      "unjustified": "Unjustified abs."
+    },
+    "gender": {
+      "title": "Gender breakdown",
+      "male": "Male",
+      "female": "Female",
+      "maleShort": "M",
+      "femaleShort": "F"
+    },
+    "print": "Print",
+    "loading": "Loading statistics…"
   },
   "sessionForm": {
-    "title": "Session creation form",
+    "title": "Create a session",
     "tabs": {
       "details": "Session details",
       "timing": "Schedule",
@@ -167,7 +202,7 @@
     }
   },
   "groupForm": {
-    "title": "Group creation form",
+    "title": "Create a group",
     "requiredFields": "Fields marked with an asterisk (*) are required.",
     "tabs": {
       "basicDetails": "Basic details",
@@ -198,6 +233,32 @@
   },
   "summary": {
     "title": "Summary"
+  },
+  "tutorForm": {
+    "title": "Add a tutor",
+    "field": {
+      "label": "Add a tutor",
+      "hint": "Click to create and attach a tutor"
+    },
+    "fields": {
+      "firstName": "First name",
+      "lastName": "Last name",
+      "phoneNumber": "Phone",
+      "email": "Email",
+      "relationship": "Relationship"
+    },
+    "relationships": {
+      "parent": "Parent",
+      "guardian": "Legal guardian",
+      "other": "Other"
+    },
+    "actions": {
+      "save": "Add tutor"
+    },
+    "messages": {
+      "attached": "Tutor added and attached to the student.",
+      "error": "Error while creating the tutor."
+    }
   },
   "payment": {
     "dialog": {

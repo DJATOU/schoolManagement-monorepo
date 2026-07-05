@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, NgZone, Injector, ApplicationRef, ComponentFactoryResolver, EmbeddedViewRef, ViewEncapsulation } from '@angular/core';
+import { Component, OnInit, AfterViewInit, ViewChild, ViewEncapsulation, HostListener } from '@angular/core';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { FullCalendarComponent, FullCalendarModule } from '@fullcalendar/angular';
 import dayGridPlugin from '@fullcalendar/daygrid';
@@ -15,10 +15,18 @@ import { debounceTime } from 'rxjs/operators';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
 import { MatOptionModule } from '@angular/material/core';
+import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatChipsModule } from '@angular/material/chips';
 import { CommonModule } from '@angular/common';
 import { MatMenuModule } from '@angular/material/menu';
-import { GroupSelectorComponent } from '../../group/group-selector/group-selector.component';
 import { TranslateService } from '@ngx-translate/core';
+import { GroupService } from '../../../services/group.service';
+import { LevelService } from '../../../services/level.service';
+import { SubjectService } from '../../../services/subject.service';
+import { Group } from '../../../models/group/group';
+import { Level } from '../../../models/level/level';
+import { Subject as SubjectModel } from '../../../models/subject/subject';
 
 @Component({
   selector: 'app-calendar',
@@ -33,26 +41,45 @@ import { TranslateService } from '@ngx-translate/core';
     MatFormFieldModule,
     MatSelectModule,
     MatOptionModule,
+    MatIconModule,
+    MatTooltipModule,
+    MatChipsModule,
     CommonModule,
     MatMenuModule,
-    MatButtonModule,
   ],
   standalone: true
 })
-export class CalendarComponent implements OnInit {
+export class CalendarComponent implements OnInit, AfterViewInit {
   @ViewChild('fullcalendar') calendarComponent: FullCalendarComponent | undefined;
   calendarOptions: CalendarOptions | undefined;
+
+  // Filtres
+  selectedLevel = new FormControl(0);
+  selectedSubject = new FormControl(0);
   selectedGroup = new FormControl(0);
+
+  levels: Level[] = [];
+  subjects: SubjectModel[] = [];
+  private allGroups: Group[] = [];
+  filteredGroups: Group[] = [];
+
+  // Panneau de filtres repliable (fermé par défaut pour libérer la hauteur)
+  filtersOpen = false;
+
+  private readonly allGroupsOption: Group = {
+    id: 0, name: 'Tous les groupes', groupTypeId: 0, levelId: 0,
+    subjectId: 0, sessionNumberPerSerie: 0, priceId: 0, teacherId: 0
+  };
+
   private eventsSubject = new Subject<{ groupId: number | null, startStr: string, endStr: string, successCallback: (events: EventInput[]) => void, failureCallback: (error: Error) => void }>();
 
   constructor(
     private sessionService: SessionService,
     public dialog: MatDialog,
-    private ngZone: NgZone,
-    private injector: Injector,
-    private appRef: ApplicationRef,
-    private resolver: ComponentFactoryResolver,
-    private translate: TranslateService
+    private translate: TranslateService,
+    private groupService: GroupService,
+    private levelService: LevelService,
+    private subjectService: SubjectService
   ) {}
 
   ngOnInit() {
@@ -66,10 +93,15 @@ export class CalendarComponent implements OnInit {
       plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin, listPlugin],
       initialView: 'dayGridMonth',
       locale: this.translate.currentLang,
+      // Le calendrier remplit toute la hauteur dispo et étire ses lignes :
+      // pas d'ascenseur interne, adaptatif sur tout écran.
+      height: '100%',
+      expandRows: true,
+      dayMaxEvents: true,
       headerToolbar: {
         left: 'prev,next today',
         center: 'title',
-        right: 'dayGridMonth,timeGridWeek,timeGridDay,listMonth,customGroupSelector'
+        right: 'dayGridMonth,timeGridWeek,timeGridDay,listMonth'
       },
       buttonText: {
         today: this.translate.instant('calendar.buttons.today'),
@@ -77,12 +109,6 @@ export class CalendarComponent implements OnInit {
         week: this.translate.instant('calendar.buttons.week'),
         day: this.translate.instant('calendar.buttons.day'),
         listMonth: this.translate.instant('calendar.buttons.list')
-      },
-      customButtons: {
-        customGroupSelector: {
-          text: '', // No text, we will replace it with custom HTML
-          click: () => {} // Empty function, we won't use it
-        }
       },
       events: (fetchInfo, successCallback, failureCallback) => {
         const groupId = this.selectedGroup.value === 0 ? null : this.selectedGroup.value;
@@ -113,26 +139,112 @@ export class CalendarComponent implements OnInit {
       }
     });
 
-    this.insertGroupSelector();
+    this.loadFilterData();
+
+    // Niveau / Matière filtrent la liste des groupes (cascade).
+    this.selectedLevel.valueChanges.subscribe(() => this.applyGroupFilter());
+    this.selectedSubject.valueChanges.subscribe(() => this.applyGroupFilter());
+
+    // Le groupe sélectionné pilote le chargement des événements.
+    this.selectedGroup.valueChanges.subscribe(() => this.refreshEvents());
   }
 
-  private insertGroupSelector() {
-    setTimeout(() => {
-      const customButton = document.querySelector('.fc-customGroupSelector-button');
-      if (customButton) {
-        const factory = this.resolver.resolveComponentFactory(GroupSelectorComponent);
-        const componentRef = factory.create(this.injector);
+  ngAfterViewInit(): void {
+    // Recalcule la taille une fois le layout flex stabilisé.
+    setTimeout(() => this.calendarComponent?.getApi()?.updateSize(), 0);
+  }
 
-        componentRef.instance.selectedGroup = this.selectedGroup;
+  @HostListener('window:resize')
+  onWindowResize(): void {
+    this.calendarComponent?.getApi()?.updateSize();
+  }
 
-        this.appRef.attachView(componentRef.hostView);
-        customButton.appendChild((componentRef.hostView as EmbeddedViewRef<GroupSelectorComponent>).rootNodes[0]);
+  /**
+   * Charge les niveaux, matières et groupes pour alimenter les filtres.
+   */
+  private loadFilterData(): void {
+    this.levelService.getLevels().subscribe(levels => this.levels = levels);
+    this.subjectService.getSubjects().subscribe(subjects => this.subjects = subjects);
+    this.groupService.getGroups().subscribe(groups => {
+      this.allGroups = groups;
+      this.applyGroupFilter();
+    });
+  }
 
-        this.selectedGroup.valueChanges.subscribe(() => {
-          this.refreshEvents();
-        });
-      }
-    }, 0);
+  /**
+   * Recalcule la liste des groupes affichés selon le niveau et la matière,
+   * en conservant toujours l'option "Tous les groupes" en tête.
+   * Réinitialise le groupe sélectionné s'il ne fait plus partie de la liste.
+   */
+  private applyGroupFilter(): void {
+    const levelId = this.selectedLevel.value ?? 0;
+    const subjectId = this.selectedSubject.value ?? 0;
+
+    const matching = this.allGroups.filter(g =>
+      (levelId === 0 || g.levelId === levelId) &&
+      (subjectId === 0 || g.subjectId === subjectId)
+    );
+
+    this.filteredGroups = [this.allGroupsOption, ...matching];
+
+    // Si le groupe courant n'est plus dans la liste, repasser sur "Tous les groupes".
+    const currentGroupId = this.selectedGroup.value ?? 0;
+    if (currentGroupId !== 0 && !matching.some(g => g.id === currentGroupId)) {
+      this.selectedGroup.setValue(0); // déclenche refreshEvents via valueChanges
+    }
+  }
+
+  /**
+   * Nom du groupe sélectionné (pour le trigger et le tooltip).
+   */
+  getSelectedGroupName(): string {
+    const current = this.filteredGroups.find(g => g.id === this.selectedGroup.value);
+    return current?.name ?? 'Tous les groupes';
+  }
+
+  /**
+   * Nom du niveau sélectionné (libellé court par défaut).
+   */
+  getSelectedLevelName(): string {
+    if ((this.selectedLevel.value ?? 0) === 0) return 'Niveau';
+    return this.levels.find(l => l.id === this.selectedLevel.value)?.name ?? 'Niveau';
+  }
+
+  /**
+   * Nom de la matière sélectionnée (libellé court par défaut).
+   */
+  getSelectedSubjectName(): string {
+    if ((this.selectedSubject.value ?? 0) === 0) return 'Matière';
+    return this.subjects.find(s => s.id === this.selectedSubject.value)?.name ?? 'Matière';
+  }
+
+  /**
+   * Nombre de filtres actifs.
+   */
+  activeFiltersCount(): number {
+    let count = 0;
+    if ((this.selectedLevel.value ?? 0) !== 0) count++;
+    if ((this.selectedSubject.value ?? 0) !== 0) count++;
+    if ((this.selectedGroup.value ?? 0) !== 0) count++;
+    return count;
+  }
+
+  /**
+   * Ouvre / ferme le panneau de filtres et recalcule la taille du calendrier
+   * (la hauteur disponible change quand le panneau s'ouvre/se ferme).
+   */
+  toggleFilters(): void {
+    this.filtersOpen = !this.filtersOpen;
+    setTimeout(() => this.calendarComponent?.getApi()?.updateSize(), 280);
+  }
+
+  /**
+   * Réinitialise tous les filtres.
+   */
+  resetFilters(): void {
+    this.selectedLevel.setValue(0);
+    this.selectedSubject.setValue(0);
+    this.selectedGroup.setValue(0);
   }
 
   private refreshEvents() {

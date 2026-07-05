@@ -13,8 +13,12 @@
     "CHOOSE_IMAGE": "Choisir une image",
     "EMAIL": "Email",
     "PHONE": "Numéro de téléphone",
+    "NATIONALITY": "Nationalité",
+    "COMMUNICATION": "Moyen de communication préféré",
     "BIRTHDATE": "Date de naissance",
     "BIRTHPLACE": "Lieu de naissance",
+    "ADDRESS": "Adresse",
+    "CITY": "Ville",
     "LEVEL": "Niveau",
     "SCHOOL": "Établissement",
     "DESCRIPTION": "Description"
@@ -92,7 +96,7 @@
     "CANCEL": "Non, annuler"
   },
   "STUDENT_FORM": {
-    "TITLE": "Formulaire d'inscription étudiant",
+    "TITLE": "Inscription d'un étudiant",
     "TABS": {
       "PERSONAL": "Informations personnelles",
       "CONTACT": "Informations de contact",
@@ -101,17 +105,15 @@
     "AVERAGE": "Moyenne"
   },
   "TEACHER_FORM": {
-    "TITLE": "Formulaire d'inscription des enseignants",
+    "TITLE": "Inscription d'un enseignant",
     "TABS": {
-      "BASIC": "Informations de base",
-      "CONTACT": "Coordonnées",
-      "PROFESSIONAL": "Détails professionnels",
-      "OTHER": "Autres informations"
+      "PERSONAL": "Informations personnelles",
+      "CONTACT": "Informations de contact",
+      "PROFESSIONAL": "Informations professionnelles"
     },
     "ADDRESS": "Adresse",
     "CITY": "Ville",
     "SPECIALIZATION": "Spécialisation",
-    "QUALIFICATIONS": "Qualifications",
     "EXPERIENCE": "Années d'expérience",
     "NATIONALITY": "Nationalité",
     "MARITAL_STATUS": "Statut matrimonial",
@@ -130,15 +132,48 @@
     "language": "Langue"
   },
   "dashboard": {
-    "subscribeStudents": "Étudiants inscrits",
-    "subscribeProfessors": "Enseignants inscrits",
-    "subscribeGroups": "Groupes créés",
-    "subscribeAttendance": "Présences enregistrées",
-    "subscribeSession": "Sessions planifiées",
-    "subscribePayment": "Paiements traités"
+    "title": "Tableau de bord",
+    "subtitle": "Statistiques de l'établissement",
+    "period": {
+      "year": "Année",
+      "month": "Mois",
+      "custom": "Période",
+      "from": "Du",
+      "to": "Au"
+    },
+    "kpi": {
+      "activeStudents": "Étudiants actifs",
+      "teachers": "Enseignants",
+      "groups": "Groupes",
+      "newStudents": "Nouveaux inscrits",
+      "leaving": "Sortants",
+      "catchUps": "Rattrapages"
+    },
+    "sessions": {
+      "title": "Sessions",
+      "validated": "Validées",
+      "scheduled": "Programmées",
+      "deactivated": "Dévalidées",
+      "catchUps": "Rattrapages"
+    },
+    "attendance": {
+      "title": "Présences",
+      "present": "Présents",
+      "justified": "Abs. justifiées",
+      "unjustified": "Abs. non justifiées"
+    },
+    "gender": {
+      "title": "Répartition par genre",
+      "male": "Hommes",
+      "female": "Femmes",
+      "maleShort": "H",
+      "femaleShort": "F"
+    },
+    "print": "Imprimer",
+    "loading": "Chargement des statistiques…"
   },
   "sessionForm": {
-    "title": "Formulaire de création de session",
+    "title": "Création d'une session",
     "tabs": {
       "details": "Détails de la session",
       "timing": "Planification",
@@ -167,7 +202,7 @@
     }
   },
   "groupForm": {
-    "title": "Formulaire de création de groupe",
+    "title": "Création d'un groupe",
     "requiredFields": "Les champs marqués d'un astérisque (*) sont obligatoires.",
     "tabs": {
       "basicDetails": "Informations de base",
@@ -198,6 +233,32 @@
   },
   "summary": {
     "title": "Résumé"
+  },
+  "tutorForm": {
+    "title": "Ajouter un tuteur",
+    "field": {
+      "label": "Ajouter un tuteur",
+      "hint": "Cliquez pour créer et rattacher un tuteur"
+    },
+    "fields": {
+      "firstName": "Prénom",
+      "lastName": "Nom",
+      "phoneNumber": "Téléphone",
+      "email": "Email",
+      "relationship": "Lien de parenté"
+    },
+    "relationships": {
+      "parent": "Parent",
+      "guardian": "Tuteur légal",
+      "other": "Autre"
+    },
+    "actions": {
+      "save": "Ajouter le tuteur"
+    },
+    "messages": {
+      "attached": "Tuteur ajouté et rattaché à l'étudiant.",
+      "error": "Erreur lors de la création du tuteur."
+    }
   },
   "payment": {
     "dialog": {

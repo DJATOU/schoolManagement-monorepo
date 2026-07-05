@@ -86,10 +86,12 @@ public class TeacherService {
         teacherToUpdate.setDateOfBirth(teacher.getDateOfBirth());
         teacherToUpdate.setPlaceOfBirth(teacher.getPlaceOfBirth());
         teacherToUpdate.setGender(teacher.getGender());
+        teacherToUpdate.setAddress(teacher.getAddress());
+        teacherToUpdate.setCity(teacher.getCity());
         teacherToUpdate.setSpecialization(teacher.getSpecialization());
-        teacherToUpdate.setQualifications(teacher.getQualifications());
         teacherToUpdate.setYearsOfExperience(teacher.getYearsOfExperience());
         teacherToUpdate.setCommunicationPreference(teacher.getCommunicationPreference());
+        teacherToUpdate.setNationality(teacher.getNationality());
         // Ne pas mettre à jour groups ici - géré séparément
         return teacherRepository.save(teacherToUpdate);
     }

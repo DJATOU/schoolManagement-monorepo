@@ -25,19 +25,29 @@
   </div>
 
   <div class="search-container">
-    <div class="search-field">
+    <div class="search-field" [class.search-field--open]="auto.isOpen" matAutocompleteOrigin #origin="matAutocompleteOrigin">
       <mat-icon class="search-prefix" (click)="onSearch()">search</mat-icon>
       <input type="text" class="search-input" [placeholder]="placeholderKey | translate" [formControl]="searchControl"
-        [matAutocomplete]="auto" (keydown.enter)="onSearch()">
+        [matAutocomplete]="auto" [matAutocompleteConnectedTo]="origin" (keydown.enter)="onSearch()">
       <button type="button" *ngIf="searchControl.value" (click)="searchControl.setValue('')" class="clear-button"
         [matTooltip]="'COMMON.CLEAR' | translate">
         <mat-icon>close</mat-icon>
       </button>
 
-      <mat-autocomplete #auto="matAutocomplete" (optionSelected)="onSelect($event.option.value)">
-        <mat-option *ngFor="let suggestion of filteredSuggestions | async" [value]="suggestion">
-          {{ suggestion }}
-        </mat-option>
+      <mat-autocomplete #auto="matAutocomplete" class="nav-autocomplete-panel"
+        (optionSelected)="onSelect($event.option.value)">
+        <ng-container *ngIf="(searchControl.value || '').trim().length >= 2">
+          <mat-option *ngFor="let suggestion of filteredSuggestions | async" [value]="suggestion" class="nav-suggestion">
+            <span class="sugg-avatar" [ngClass]="'sugg-avatar--' + selectedIcon">{{ initialsOf(suggestion) }}</span>
+            <span class="sugg-text">{{ suggestion }}</span>
+            <mat-icon class="sugg-type">{{ typeIcon }}</mat-icon>
+          </mat-option>
+          <mat-option *ngIf="(filteredSuggestions | async)?.length === 0" disabled
+            class="nav-suggestion nav-suggestion--empty">
+            <mat-icon>search_off</mat-icon>
+            <span>Aucun résultat</span>
+          </mat-option>
+        </ng-container>
       </mat-autocomplete>
     </div>
   </div>

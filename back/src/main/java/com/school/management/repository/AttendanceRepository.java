@@ -42,4 +42,22 @@ public interface AttendanceRepository extends JpaRepository<AttendanceEntity, Lo
     boolean existsByGroupIdAndStudentIdAndIsCatchUp(Long id, Long studentId, boolean b);
 
     List<AttendanceEntity> findByStudentIdAndActiveTrue(Long studentId);
+
+    // ===== Statistiques tableau de bord (sur période, via la date de session) =====
+
+    @Query("SELECT COUNT(a) FROM AttendanceEntity a WHERE a.active = true AND a.isPresent = true " +
+            "AND a.session.sessionTimeStart BETWEEN :from AND :to")
+    long countPresent(@Param("from") java.util.Date from, @Param("to") java.util.Date to);
+
+    @Query("SELECT COUNT(a) FROM AttendanceEntity a WHERE a.active = true AND a.isPresent = false " +
+            "AND a.isJustified = true AND a.session.sessionTimeStart BETWEEN :from AND :to")
+    long countJustifiedAbsences(@Param("from") java.util.Date from, @Param("to") java.util.Date to);
+
+    @Query("SELECT COUNT(a) FROM AttendanceEntity a WHERE a.active = true AND a.isPresent = false " +
+            "AND (a.isJustified = false OR a.isJustified IS NULL) AND a.session.sessionTimeStart BETWEEN :from AND :to")
+    long countUnjustifiedAbsences(@Param("from") java.util.Date from, @Param("to") java.util.Date to);
+
+    @Query("SELECT COUNT(a) FROM AttendanceEntity a WHERE a.active = true AND a.isCatchUp = true " +
+            "AND a.session.sessionTimeStart BETWEEN :from AND :to")
+    long countCatchUp(@Param("from") java.util.Date from, @Param("to") java.util.Date to);
 }

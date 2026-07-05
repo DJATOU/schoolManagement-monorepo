@@ -4,6 +4,8 @@ import { CommonModule } from '@angular/common';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
 import { MatOptionModule } from '@angular/material/core';
+import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { GroupService } from '../../../services/group.service';
 import { Group } from '../../../models/group/group';
 
@@ -15,7 +17,9 @@ import { Group } from '../../../models/group/group';
     ReactiveFormsModule,
     MatFormFieldModule,
     MatSelectModule,
-    MatOptionModule
+    MatOptionModule,
+    MatIconModule,
+    MatTooltipModule
   ],
   templateUrl: './group-selector.component.html',
   styleUrls: ['./group-selector.component.scss']
@@ -42,5 +46,13 @@ export class GroupSelectorComponent implements OnInit {
         this.selectedGroup.setValue(this.groups[0].id);
       }
     });
+  }
+
+  /**
+   * Nom du groupe actuellement sélectionné (pour le trigger et le tooltip).
+   */
+  getSelectedGroupName(): string {
+    const current = this.groups.find(g => g.id === this.selectedGroup.value);
+    return current?.name ?? 'All Groups';
   }
 }

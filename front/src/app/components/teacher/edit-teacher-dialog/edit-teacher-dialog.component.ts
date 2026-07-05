@@ -12,6 +12,10 @@ import { MatNativeDateModule } from '@angular/material/core';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { TeacherService } from '../../../services/teacher.service';
+import { COMMUNICATION_OPTIONS, DEFAULT_NATIONALITY, NATIONALITIES } from '../../../utils/form-options';
+import { TranslateModule } from '@ngx-translate/core';
+import { SubjectService } from '../../../services/subject.service';
+import { Subject } from '../../../models/subject/subject';
 
 @Component({
   selector: 'app-edit-teacher-dialog',
@@ -27,7 +31,8 @@ import { TeacherService } from '../../../services/teacher.service';
     MatDatepickerModule,
     MatNativeDateModule,
     MatIconModule,
-    MatTooltipModule
+    MatTooltipModule,
+    TranslateModule
   ],
   templateUrl: './edit-teacher-dialog.component.html',
   styleUrls: ['./edit-teacher-dialog.component.scss']
@@ -38,14 +43,24 @@ export class EditTeacherDialogComponent implements OnInit {
   photoPreview: string | null = null;
   shouldClearPhoto: boolean = false;
 
+  readonly communicationOptions = COMMUNICATION_OPTIONS;
+  readonly nationalities = NATIONALITIES;
+  subjects: Subject[] = [];
+
   constructor(
     public dialogRef: MatDialogRef<EditTeacherDialogComponent>,
     @Inject(MAT_DIALOG_DATA) public data: { teacher: Teacher },
     private fb: FormBuilder,
-    private teacherService: TeacherService
+    private teacherService: TeacherService,
+    private subjectService: SubjectService
   ) { }
 
   ngOnInit(): void {
+    this.subjectService.getSubjects().subscribe({
+      next: (data) => (this.subjects = data),
+      error: (error) => console.error('Error loading subjects:', error)
+    });
+
     // Convertir dateOfBirth en objet Date si c'est une chaîne
     let dateOfBirth: Date | null = null;
     if (this.data.teacher.dateOfBirth) {
@@ -61,8 +76,8 @@ export class EditTeacherDialogComponent implements OnInit {
       placeOfBirth: [this.data.teacher.placeOfBirth],
       gender: [this.data.teacher.gender],
       specialization: [this.data.teacher.specialization],
-      qualifications: [this.data.teacher.qualifications],
       yearsOfExperience: [this.data.teacher.yearsOfExperience],
+      nationality: [this.data.teacher.nationality || DEFAULT_NATIONALITY],
       communicationPreference: [this.data.teacher.communicationPreference]
     });
 

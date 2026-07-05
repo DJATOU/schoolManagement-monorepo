@@ -25,16 +25,20 @@
           </mat-select>
         </mat-form-field>
 
-        <mat-form-field appearance="fill" class="photo-field">
-          <mat-label>{{ 'COMMON.UPLOAD_PHOTO' | translate }}</mat-label>
-          <div class="upload-container">
-            <input matInput readonly [value]="selectedFile?.name" [placeholder]="'COMMON.NO_FILE_SELECTED' | translate" class="upload-input">
-            <button type="button" mat-raised-button color="accent" (click)="photoInput.click()" class="upload-button">
-            <mat-icon>attach_file</mat-icon> {{ 'COMMON.CHOOSE_IMAGE' | translate }}
+        <!-- Upload photo de l'étudiant -->
+        <div class="photo-upload">
+          <div class="photo-placeholder">
+            <mat-icon>person</mat-icon>
+          </div>
+          <div class="photo-info">
+            <span class="photo-label">{{ 'COMMON.UPLOAD_PHOTO' | translate }}</span>
+            <span class="photo-filename">{{ selectedFile?.name || ('COMMON.NO_FILE_SELECTED' | translate) }}</span>
+          </div>
+          <button type="button" mat-stroked-button class="photo-choose-btn" (click)="photoInput.click()">
+            <mat-icon>photo_camera</mat-icon> {{ 'COMMON.CHOOSE_IMAGE' | translate }}
           </button>
           <input type="file" (change)="onFileSelected($event)" accept="image/*" hidden #photoInput>
         </div>
-        </mat-form-field>
       </div>
     </mat-tab>
 
@@ -51,6 +55,20 @@
         </mat-form-field>
 
         <mat-form-field appearance="fill">
+          <mat-label>{{ 'COMMON.NATIONALITY' | translate }}</mat-label>
+          <mat-select formControlName="nationality">
+            <mat-option *ngFor="let nationality of nationalities" [value]="nationality">{{ nationality }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="fill">
+          <mat-label>{{ 'COMMON.COMMUNICATION' | translate }}</mat-label>
+          <mat-select formControlName="communicationPreference">
+            <mat-option *ngFor="let option of communicationOptions" [value]="option.value">{{ option.labelKey | translate }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="fill">
           <mat-label>{{ 'COMMON.BIRTHDATE' | translate }}</mat-label>
           <input matInput [matDatepicker]="picker" formControlName="dateOfBirth">
           <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
@@ -61,6 +79,41 @@
           <mat-label>{{ 'COMMON.BIRTHPLACE' | translate }}</mat-label>
           <input matInput formControlName="placeOfBirth">
         </mat-form-field>
+
+        <mat-form-field appearance="fill">
+          <mat-label>{{ 'COMMON.ADDRESS' | translate }}</mat-label>
+          <input matInput formControlName="address">
+        </mat-form-field>
+
+        <mat-form-field appearance="fill">
+          <mat-label>{{ 'COMMON.CITY' | translate }}</mat-label>
+          <input matInput formControlName="city">
+        </mat-form-field>
+
+        <!-- Tuteur : champ cliquable qui ouvre une popup de création + attachement -->
+        <div class="tutor-field full-width" [class.has-tutor]="selectedTutor" (click)="openTutorDialog()"
+             tabindex="0" role="button" (keyup.enter)="openTutorDialog()">
+          <div class="tutor-icon">
+            <mat-icon>{{ selectedTutor ? 'how_to_reg' : 'person_add' }}</mat-icon>
+          </div>
+          <div class="tutor-info" *ngIf="selectedTutor; else noTutor">
+            <span class="tutor-name">{{ tutorFullName }}</span>
+            <span class="tutor-meta">
+              {{ selectedTutor.phoneNumber }}<ng-container *ngIf="selectedTutor.email"> · {{ selectedTutor.email }}</ng-container>
+            </span>
+          </div>
+          <ng-template #noTutor>
+            <div class="tutor-info">
+              <span class="tutor-name">{{ 'tutorForm.field.label' | translate }}</span>
+              <span class="tutor-meta">{{ 'tutorForm.field.hint' | translate }}</span>
+            </div>
+          </ng-template>
+          <button *ngIf="selectedTutor" type="button" mat-icon-button class="tutor-clear"
+                  (click)="clearTutor(); $event.stopPropagation()" [matTooltip]="'common.cancel' | translate">
+            <mat-icon>close</mat-icon>
+          </button>
+          <mat-icon *ngIf="!selectedTutor" class="tutor-chevron">chevron_right</mat-icon>
+        </div>
       </div>
     </mat-tab>
     <mat-tab [label]="'STUDENT_FORM.TABS.ACADEMIC' | translate">

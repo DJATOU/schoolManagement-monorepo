@@ -22,6 +22,7 @@ import { PaymentHistoryDialogComponent } from '../../payment/payment-history/pay
 import { AttendanceHistoryDialogComponent } from '../../attendance/attendance-history-dialog/attendance-history-dialog.component';
 import { environment } from '../../../../environments/environment';
 import { PdfGeneratorService } from '../services/pdf-generator.service';
+import { ProfilePdfService } from '../../../services/profile-pdf.service';
 
 const errorMessages = {
   PAYMENT_EXCEEDS_SESSIONS: "Le paiement ne peut pas être effectué car il dépasse le coût des sessions actuellement créées.",
@@ -72,10 +73,45 @@ export class StudentProfileComponent implements OnInit {
     private fb: FormBuilder,
     private snackBar: MatSnackBar,
     private dialog: MatDialog,
-    private pdfGeneratorService: PdfGeneratorService // Injection du service
+    private pdfGeneratorService: PdfGeneratorService, // Injection du service
+    private profilePdfService: ProfilePdfService
   ) {
     this.groupForm = this.fb.group({
       groupIds: [[]]
+    });
+  }
+
+  /** Génère la fiche profil PDF de l'étudiant (infos, hors historique). */
+  printProfilePdf(): void {
+    if (!this.student) return;
+    const s = this.student;
+    this.profilePdfService.generateProfilePdf({
+      title: `${s.firstName} ${s.lastName}`,
+      subtitle: s.levelName ? `Étudiant · ${s.levelName}` : 'Étudiant',
+      sections: [
+        {
+          heading: 'Informations personnelles',
+          rows: [
+            { label: 'Sexe', value: s.gender },
+            { label: 'Email', value: s.email },
+            { label: 'Téléphone', value: s.phoneNumber },
+            { label: 'Date de naissance', value: s.dateOfBirth ? new Date(s.dateOfBirth).toLocaleDateString('fr-FR') : null },
+            { label: 'Lieu de naissance', value: s.placeOfBirth }
+          ]
+        },
+        {
+          heading: 'Informations académiques',
+          rows: [
+            { label: 'Niveau', value: s.levelName },
+            { label: 'Établissement', value: s.establishment },
+            { label: 'Moyenne', value: s.averageScore }
+          ]
+        }
+      ],
+      listTitle: `Groupes (${this.studentGroups.length})`,
+      listItems: this.studentGroups.map(g =>
+        `${g.name}${g.levelName ? ' — ' + g.levelName : ''}${g.subjectName ? ' (' + g.subjectName + ')' : ''}`
+      )
     });
   }
 

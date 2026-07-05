@@ -55,21 +55,21 @@
 
       <div class="filter-panel-content">
         <mat-form-field appearance="outline" class="filter-field">
-          <mat-label>Groupe</mat-label>
-          <mat-select [(ngModel)]="selectedGroupId" (selectionChange)="onGroupFilterChange()">
-            <mat-option [value]="null">Tous les groupes</mat-option>
-            <mat-option *ngFor="let group of groups" [value]="group.id">
-              {{ group.name }}
-            </mat-option>
-          </mat-select>
-        </mat-form-field>
-
-        <mat-form-field appearance="outline" class="filter-field">
           <mat-label>Niveau</mat-label>
           <mat-select [(ngModel)]="selectedLevelId" (selectionChange)="onLevelFilterChange()">
             <mat-option [value]="null">Tous les niveaux</mat-option>
             <mat-option *ngFor="let level of levels" [value]="level.id">
               {{ level.name }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="filter-field">
+          <mat-label>Groupe</mat-label>
+          <mat-select [(ngModel)]="selectedGroupId" (selectionChange)="onGroupFilterChange()">
+            <mat-option [value]="null">Tous les groupes</mat-option>
+            <mat-option *ngFor="let group of filteredGroups" [value]="group.id">
+              {{ group.name }}
             </mat-option>
           </mat-select>
         </mat-form-field>

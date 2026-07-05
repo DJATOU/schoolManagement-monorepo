@@ -36,7 +36,7 @@
           <mat-label>{{ 'sessionForm.fields.sessionTimeStart' | translate }}</mat-label>
           <input matInput [ngxTimepicker]="startTimePicker" readonly [placeholder]="'sessionForm.fields.selectTime' | translate" formControlName="sessionTimeStart">
           <ngx-material-timepicker-toggle [for]="startTimePicker" matSuffix></ngx-material-timepicker-toggle>
-          <ngx-material-timepicker #startTimePicker></ngx-material-timepicker>
+          <ngx-material-timepicker #startTimePicker [format]="timeFormat"></ngx-material-timepicker>
         </mat-form-field>
 
         <mat-form-field appearance="fill">
@@ -49,7 +49,7 @@
           <mat-label>{{ 'sessionForm.fields.sessionTimeEnd' | translate }}</mat-label>
           <input matInput [ngxTimepicker]="endTimePicker" readonly [placeholder]="'sessionForm.fields.selectTime' | translate" formControlName="sessionTimeEnd">
           <ngx-material-timepicker-toggle [for]="endTimePicker" matSuffix></ngx-material-timepicker-toggle>
-          <ngx-material-timepicker #endTimePicker></ngx-material-timepicker>
+          <ngx-material-timepicker #endTimePicker [format]="timeFormat"></ngx-material-timepicker>
         </mat-form-field>
       </div>
     </mat-tab>

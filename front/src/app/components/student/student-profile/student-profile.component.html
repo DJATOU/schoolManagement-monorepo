@@ -1,92 +1,108 @@
-<div class="student-profile-container fade-in" *ngIf="!loading; else loadingSpinner">
-  <mat-card class="student-card">
-    <mat-card-header>
-      <div class="header-container">
-        <div class="student-info-header">
-          <div class="student-photo-container">
-            <img *ngIf="studentPhotoUrl && !hasImageError; else studentInitials" [src]="studentPhotoUrl"
-              alt="Photo de l'étudiant" class="student-photo" (error)="onImageError()">
-            <ng-template #studentInitials>
-              <div class="student-initials" [style.background-color]="avatarColor">
-                {{ getInitials() }}
-              </div>
-            </ng-template>
-          </div>
-          <div class="student-name-level">
-            <mat-card-title>{{ student?.firstName }} {{ student?.lastName }}</mat-card-title>
-            <mat-card-subtitle>{{ student?.level }}</mat-card-subtitle>
-          </div>
+<div class="pf-container fade-in" *ngIf="!loading; else loadingSpinner">
+  <mat-card class="pf-card">
+    <!-- En-tête -->
+    <div class="pf-header">
+      <div class="pf-identity">
+        <div class="pf-avatar">
+          <img *ngIf="studentPhotoUrl && !hasImageError; else studentInitials" [src]="studentPhotoUrl"
+            alt="Photo de l'étudiant" (error)="onImageError()">
+          <ng-template #studentInitials>
+            <div class="pf-initials" [style.background-color]="avatarColor">{{ getInitials() }}</div>
+          </ng-template>
         </div>
-        <div class="header-buttons">
-          <button mat-icon-button class="edit-button" (click)="onEdit()" aria-label="Modifier"
-            matTooltip="Modifier le profil">
-            <mat-icon>edit</mat-icon>
-          </button>
-          <button mat-icon-button class="disable-button" (click)="onDisable()" aria-label="Désactiver"
-            matTooltip="Désactiver le compte">
-            <mat-icon>block</mat-icon>
-          </button>
+        <div class="pf-titles">
+          <h1 class="pf-name">{{ student?.firstName }} {{ student?.lastName }}</h1>
+          <span class="pf-badge" *ngIf="student?.levelName">
+            <mat-icon>school</mat-icon>{{ student?.levelName }}
+          </span>
+        </div>
+      </div>
 
-          <button mat-icon-button class="payment-history-button" (click)="openPaymentHistoryDialog()"
-            aria-label="Historique des paiements" matTooltip="Voir l'historique des paiements">
-            <mat-icon>account_balance_wallet</mat-icon>
-          </button>
-          <button mat-icon-button class="attendance-history-button" (click)="openAttendanceHistoryDialog()"
-            aria-label="Historique de présence" matTooltip="Voir l'historique de présence">
-            <mat-icon>fact_check</mat-icon>
-          </button>
-          <button mat-icon-button class="full-history-button" (click)="generateFullHistoryPdf()"
-            aria-label="Historique complet" matTooltip="Voir l'historique complet">
-            <mat-icon>print</mat-icon>
-          </button>
-        </div>
+      <div class="pf-header-buttons">
+        <button mat-icon-button class="pf-hb pf-hb-edit" (click)="onEdit()" matTooltip="Modifier le profil">
+          <mat-icon>edit</mat-icon>
+        </button>
+        <button mat-icon-button class="pf-hb pf-hb-payment" (click)="openPaymentHistoryDialog()"
+          matTooltip="Historique des paiements">
+          <mat-icon>account_balance_wallet</mat-icon>
+        </button>
+        <button mat-icon-button class="pf-hb pf-hb-attendance" (click)="openAttendanceHistoryDialog()"
+          matTooltip="Historique de présence">
+          <mat-icon>fact_check</mat-icon>
+        </button>
+        <button mat-icon-button class="pf-hb pf-hb-print" (click)="generateFullHistoryPdf()"
+          matTooltip="Historique complet (PDF)">
+          <mat-icon>print</mat-icon>
+        </button>
+        <button mat-icon-button class="pf-hb pf-hb-edit" (click)="printProfilePdf()"
+          matTooltip="Imprimer la fiche (PDF)">
+          <mat-icon>badge</mat-icon>
+        </button>
+        <button mat-icon-button class="pf-hb pf-hb-danger" (click)="onDisable()" matTooltip="Désactiver le compte">
+          <mat-icon>block</mat-icon>
+        </button>
       </div>
-    </mat-card-header>
-    <mat-card-content>
-      <div class="student-info-grid">
-        <div class="info-section">
-          <h3>Informations Personnelles</h3>
-          <p><strong>Sexe :</strong> {{ student?.gender }}</p>
-          <p><strong>Email :</strong> {{ student?.email }}</p>
-          <p><strong>Téléphone :</strong> {{ student?.phoneNumber }}</p>
-          <p><strong>Date de naissance :</strong> {{ student?.dateOfBirth | date: 'mediumDate' }}</p>
-          <p><strong>Lieu de naissance :</strong> {{ student?.placeOfBirth }}</p>
-        </div>
-        <div class="info-section">
-          <h3>Informations Académiques</h3>
-          <p><strong>Niveau :</strong> {{ student?.levelName }}</p>
-          <p><strong>Établissement :</strong> {{ student?.establishment }}</p>
-          <p><strong>Moyenne :</strong> {{ student?.averageScore }}</p>
-        </div>
+    </div>
+
+    <!-- Contenu -->
+    <div class="pf-body">
+      <div class="pf-grid">
+        <section class="pf-section">
+          <h3 class="pf-section-title"><mat-icon>person</mat-icon>Informations personnelles</h3>
+          <div class="pf-row"><mat-icon>wc</mat-icon><span class="pf-label">Sexe</span><span class="pf-value">{{ student?.gender || '—' }}</span></div>
+          <div class="pf-row"><mat-icon>mail</mat-icon><span class="pf-label">Email</span><span class="pf-value">{{ student?.email || '—' }}</span></div>
+          <div class="pf-row"><mat-icon>call</mat-icon><span class="pf-label">Téléphone</span><span class="pf-value">{{ student?.phoneNumber || '—' }}</span></div>
+          <div class="pf-row"><mat-icon>cake</mat-icon><span class="pf-label">Date de naissance</span><span class="pf-value">{{ (student?.dateOfBirth | date: 'mediumDate') || '—' }}</span></div>
+          <div class="pf-row"><mat-icon>place</mat-icon><span class="pf-label">Lieu de naissance</span><span class="pf-value">{{ student?.placeOfBirth || '—' }}</span></div>
+        </section>
+
+        <section class="pf-section">
+          <h3 class="pf-section-title"><mat-icon>menu_book</mat-icon>Informations académiques</h3>
+          <div class="pf-row"><mat-icon>school</mat-icon><span class="pf-label">Niveau</span><span class="pf-value">{{ student?.levelName || '—' }}</span></div>
+          <div class="pf-row"><mat-icon>apartment</mat-icon><span class="pf-label">Établissement</span><span class="pf-value">{{ student?.establishment || '—' }}</span></div>
+          <div class="pf-row"><mat-icon>grade</mat-icon><span class="pf-label">Moyenne</span><span class="pf-value">{{ student?.averageScore != null ? student?.averageScore : '—' }}</span></div>
+        </section>
       </div>
-      <div class="button-container">
-        <button mat-raised-button color="accent" (click)="openPaymentDialog()">Ajouter Paiement</button>
-        <button mat-raised-button color="primary" (click)="openGroupDialog()">Gérer les Groupes</button>
+
+      <div class="pf-actions">
+        <button mat-flat-button class="pf-action-primary" (click)="openPaymentDialog()">
+          <mat-icon>add_card</mat-icon> Ajouter un paiement
+        </button>
+        <button mat-stroked-button class="pf-action-secondary" (click)="openGroupDialog()">
+          <mat-icon>groups</mat-icon> Gérer les groupes
+        </button>
       </div>
-    </mat-card-content>
+    </div>
   </mat-card>
 
-  <!-- Accordeon avec barre de défilement pour les groupes -->
-  <mat-accordion class="group-accordion">
-    <mat-expansion-panel>
+  <!-- Groupes -->
+  <mat-accordion class="pf-accordion">
+    <mat-expansion-panel [expanded]="true">
       <mat-expansion-panel-header>
         <mat-panel-title>
-          Voir les Groupes
+          <mat-icon>groups</mat-icon>
+          Groupes ({{ studentGroups.length }})
         </mat-panel-title>
       </mat-expansion-panel-header>
-      <div class="group-cards-scroll">
-        <div class="group-cards">
+      <div class="pf-cards-scroll">
+        <div class="pf-cards" *ngIf="studentGroups.length > 0; else noGroups">
           <app-group-card *ngFor="let group of studentGroups" [group]="group" [levels]="levels"
             [groupTypes]="allGroupTypes">
           </app-group-card>
         </div>
+        <ng-template #noGroups>
+          <div class="pf-empty">
+            <mat-icon>group_off</mat-icon>
+            <span>Aucun groupe pour le moment</span>
+          </div>
+        </ng-template>
       </div>
     </mat-expansion-panel>
   </mat-accordion>
 </div>
 
 <ng-template #loadingSpinner>
-  <div class="loading-spinner">
+  <div class="pf-spinner">
     <mat-progress-spinner mode="indeterminate"></mat-progress-spinner>
   </div>
 </ng-template>

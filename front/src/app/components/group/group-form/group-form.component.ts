@@ -22,6 +22,7 @@ import { MatNativeDateModule } from '@angular/material/core';
 import { MatIconModule } from '@angular/material/icon';
 import { MatOptionModule } from '@angular/material/core';
 import { MatSelectModule } from '@angular/material/select';
+import { MatButtonModule } from '@angular/material/button';
 import { ReactiveFormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { MatSnackBarModule } from '@angular/material/snack-bar';
@@ -40,6 +41,7 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
     MatIconModule,
     MatOptionModule,
     MatSelectModule,
+    MatButtonModule,
     MatTabsModule,
     MatSnackBarModule,
     CommonModule,

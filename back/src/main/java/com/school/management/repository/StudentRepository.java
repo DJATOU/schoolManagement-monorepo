@@ -28,6 +28,15 @@ public interface StudentRepository extends JpaRepository<StudentEntity, Long> {
 
     List<StudentEntity> findAllByActiveTrue();
 
+    long countByActiveTrue();
+
+    @Query("SELECT COUNT(s) FROM StudentEntity s WHERE s.active = true AND LOWER(s.gender) IN :genders")
+    long countActiveByGenderIn(@Param("genders") List<String> genders);
+
+    long countByActiveTrueAndDateCreationBetween(java.time.LocalDateTime from, java.time.LocalDateTime to);
+
+    long countByActiveFalse();
+
     @Query("SELECT s FROM StudentEntity s " +
             "LEFT JOIN FETCH s.groups g " +
             "LEFT JOIN FETCH g.series ser " +

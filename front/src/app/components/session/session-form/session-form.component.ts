@@ -57,6 +57,9 @@ export class SessionFormComponent implements OnInit {
   rooms: Room[] = [];
   series: SessionSeries[] = [];
 
+  // Format d'heure des timepickers : 24h en français, 12h (AM/PM) sinon.
+  timeFormat: 12 | 24 = 24;
+
   constructor(
     private fb: FormBuilder,
     private sessionService: SessionService,
@@ -91,6 +94,104 @@ export class SessionFormComponent implements OnInit {
     });
 
     this.loadSelectOptions();
+    this.setupTimingAutoFill();
+    this.setupTeacherAutoFill();
+
+    // Format d'heure selon la langue : 24h en français, 12h (AM/PM) en anglais.
+    this.updateTimeFormat(this.translate.currentLang);
+    this.translate.onLangChange.subscribe(({ lang }) => this.updateTimeFormat(lang));
+  }
+
+  /**
+   * Choisit le format d'heure des timepickers selon la langue active.
+   */
+  private updateTimeFormat(lang: string | undefined): void {
+    this.timeFormat = (lang ?? 'fr').startsWith('fr') ? 24 : 12;
+  }
+
+  /**
+   * Auto-remplissage intelligent de la planification :
+   * - quand la date de début change, la date de fin prend la même valeur
+   *   (une séance se termine le même jour) ;
+   * - quand l'heure de début change, l'heure de fin est proposée à +2h.
+   * L'utilisateur peut toujours ajuster la date/heure de fin manuellement ensuite.
+   */
+  private setupTimingAutoFill(): void {
+    const timing = this.sessionForm.get('sessionTiming');
+    const dateStart = timing?.get('sessionDateStart');
+    const dateEnd = timing?.get('sessionDateEnd');
+    const timeStart = timing?.get('sessionTimeStart');
+    const timeEnd = timing?.get('sessionTimeEnd');
+
+    dateStart?.valueChanges.subscribe(value => {
+      if (value && !dateEnd?.value) {
+        dateEnd?.setValue(value);
+      }
+    });
+
+    timeStart?.valueChanges.subscribe(value => {
+      if (value && !timeEnd?.value) {
+        timeEnd?.setValue(this.addHours(value, 2));
+      }
+    });
+  }
+
+  /**
+   * Ajoute un nombre d'heures à une valeur d'heure, en gérant à la fois le
+   * format 24h ("18:00") et le format 12h ("06:00 PM"). Retourne dans le même
+   * format que l'entrée, avec débordement sur 24h.
+   */
+  private addHours(time: string, hoursToAdd: number): string {
+    const match = time.match(/(\d{1,2}):(\d{2})/);
+    if (!match) {
+      return time;
+    }
+    const period = time.match(/AM|PM/i)?.[0]?.toUpperCase();
+
+    let hours = parseInt(match[1], 10);
+    const minutes = parseInt(match[2], 10);
+
+    // Normaliser en 24h pour le calcul
+    if (period === 'PM' && hours !== 12) {
+      hours += 12;
+    } else if (period === 'AM' && hours === 12) {
+      hours = 0;
+    }
+
+    const total = ((hours + hoursToAdd) * 60 + minutes + 24 * 60) % (24 * 60);
+    const h24 = Math.floor(total / 60);
+    const m = total % 60;
+    const mm = m.toString().padStart(2, '0');
+
+    if (period) {
+      // Reformater en 12h AM/PM
+      const newPeriod = h24 >= 12 ? 'PM' : 'AM';
+      let h12 = h24 % 12;
+      if (h12 === 0) {
+        h12 = 12;
+      }
+      return `${h12.toString().padStart(2, '0')}:${mm} ${newPeriod}`;
+    }
+
+    return `${h24.toString().padStart(2, '0')}:${mm}`;
+  }
+
+  /**
+   * Pré-remplit automatiquement l'enseignant à partir du groupe choisi
+   * (le groupe est déjà lié à un enseignant lors de sa création).
+   * L'utilisateur peut toujours changer manuellement ensuite.
+   */
+  private setupTeacherAutoFill(): void {
+    const identifiers = this.sessionForm.get('identifiers');
+    const groupId = identifiers?.get('groupId');
+    const teacherId = identifiers?.get('teacherId');
+
+    groupId?.valueChanges.subscribe(id => {
+      const group = this.groups.find(g => g.id === id);
+      if (group?.teacherId) {
+        teacherId?.setValue(group.teacherId);
+      }
+    });
   }
 
   loadSelectOptions(): void {
@@ -103,11 +204,11 @@ export class SessionFormComponent implements OnInit {
     const [hourPart, minutePart] = time.match(/\d+/g) || [];
     const period = time.match(/AM|PM/i)?.[0];
 
-    if (!hourPart || !minutePart || !period) {
+    if (!hourPart || !minutePart) {
       throw new Error('Invalid time input format');
     }
 
-    const hours = parseInt(hourPart, 10);
+    let hours = parseInt(hourPart, 10);
     const minutes = parseInt(minutePart, 10);
     const dateTime = new Date(date);
 
@@ -115,14 +216,17 @@ export class SessionFormComponent implements OnInit {
       throw new Error('Invalid date format');
     }
 
-    if (period.toUpperCase() === "PM" && hours !== 12) {
-      dateTime.setHours(hours + 12, minutes, 0, 0);
-    } else if (period.toUpperCase() === "AM" && hours === 12) {
-      dateTime.setHours(0, minutes, 0, 0);
-    } else {
-      dateTime.setHours(hours, minutes, 0, 0);
+    if (period) {
+      // Compat ancien format AM/PM
+      if (period.toUpperCase() === 'PM' && hours !== 12) {
+        hours += 12;
+      } else if (period.toUpperCase() === 'AM' && hours === 12) {
+        hours = 0;
+      }
     }
+    // Format 24h : on utilise les heures telles quelles
 
+    dateTime.setHours(hours, minutes, 0, 0);
     return dateTime.toISOString();
   }
 

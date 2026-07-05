@@ -5,6 +5,7 @@
 @import 'styles/layout';
 @import 'styles/buttons';
 @import 'styles/forms';
+@import 'styles/profile';
 @import 'styles/entity-grid';
 
 html,
@@ -700,5 +701,95 @@ mat-card-title {
 
   100% {
     opacity: 1;
+  }
+}
+
+/* ================================================================
+   AUTOCOMPLETE DE RECHERCHE (barre de navigation)
+   Le panel est rendu dans un overlay global → style ici.
+   ================================================================ */
+.nav-autocomplete-panel.mat-mdc-autocomplete-panel {
+  border-radius: 0 0 22px 22px !important;
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.16) !important;
+  padding: 8px !important;
+  margin-top: 0;
+  max-height: 340px;
+  border: 1px solid #eef0f4;
+  border-top: none;
+  clip-path: inset(0 -30px -30px -30px); // n'affiche pas d'ombre vers le haut
+
+  .mat-mdc-option {
+    border-radius: 10px;
+    min-height: 52px;
+    padding: 6px 10px;
+    margin-bottom: 2px;
+    transition: background 0.15s ease;
+
+    &:hover:not(.mdc-list-item--disabled) {
+      background: #eef2ff;
+    }
+
+    &.mat-mdc-option-active {
+      background: #eef2ff;
+    }
+  }
+
+  .nav-suggestion {
+    .mdc-list-item__primary-text {
+      display: flex !important;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+    }
+  }
+
+  .sugg-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    color: #fff;
+    text-transform: uppercase;
+    flex-shrink: 0;
+  }
+
+  .sugg-avatar--student { background: linear-gradient(135deg, #6366f1, #818cf8); }
+  .sugg-avatar--teacher { background: linear-gradient(135deg, #0ea5e9, #38bdf8); }
+  .sugg-avatar--group   { background: linear-gradient(135deg, #8b5cf6, #a78bfa); }
+
+  .sugg-text {
+    flex: 1;
+    min-width: 0;
+    font-weight: 600;
+    font-size: 0.92rem;
+    color: #1e293b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .sugg-type {
+    color: #cbd5e1;
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+  }
+
+  .nav-suggestion--empty {
+    color: #94a3b8;
+    font-style: italic;
+
+    .mdc-list-item__primary-text {
+      gap: 8px;
+    }
+
+    mat-icon {
+      color: #cbd5e1;
+    }
   }
 }

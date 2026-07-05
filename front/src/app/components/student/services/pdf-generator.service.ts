@@ -341,24 +341,28 @@ export class PdfGeneratorService {
   }
 
   private getFillColorForAttendance(session: SessionHistoryDTO): string {
-    console.log('Checking fillColor for session:', session);
-    const paymentStatus = session.paymentStatus?.toLowerCase() || '';
-    const attendanceStatus = session.attendanceStatus?.toLowerCase() || '';
+    const paymentStatus = (session.paymentStatus || '').toLowerCase().replace(/[\s_-]+/g, ' ').trim();
+    const attendanceStatus = (session.attendanceStatus || '').toLowerCase().trim();
+    const isPresent = attendanceStatus === 'présent' || attendanceStatus === 'present';
+    const isAbsent = attendanceStatus === 'absent';
+    const isCompleted = paymentStatus === 'completed' || paymentStatus === 'complete' || paymentStatus === 'complété';
+    const isInProgress = paymentStatus === 'in progress' || paymentStatus === 'inprogress' || paymentStatus === 'en cours';
+    const isUnpaid = paymentStatus === 'non payé' || paymentStatus === 'non paye' || paymentStatus === 'unpaid' || paymentStatus === 'pending';
 
-    if (paymentStatus === 'completed' && attendanceStatus === 'présent') {
-      return '#32a852'; // Vert clair amélioré pour plus de visibilité
-    } else if (paymentStatus === 'completed' && attendanceStatus === 'absent') {
-      return '#ff6347'; // Rouge vif pour plus de visibilité
-    } else if (paymentStatus === 'in progress' && attendanceStatus === 'présent') {
-      return '#ffd700'; // Jaune prononcé
-    } else if (paymentStatus === 'in progress' && attendanceStatus === 'absent') {
-      return '#ff4500'; // Rouge prononcé
+    if (isCompleted && isPresent) {
+      return '#32a852'; // Présent + payé
+    } else if (isCompleted && isAbsent) {
+      return '#ff6347'; // Absent + payé
+    } else if (isInProgress && isPresent) {
+      return '#ffd700'; // Présent + en cours
+    } else if (isInProgress && isAbsent) {
+      return '#ff4500'; // Absent + en cours
+    } else if (isUnpaid && isPresent) {
+      return '#e60000'; // Présent + non payé
     } else if (attendanceStatus === '' || attendanceStatus === 'non renseigné') {
-      return '#f5f5f5'; // Gris clair pour indiquer une absence de renseignement
-    } else if (paymentStatus === 'non payé' && attendanceStatus === 'présent') {
-      return '#e60000'; // Rouge vif pour indiquer "Présent et Non payé"
+      return '#f5f5f5'; // Présence non renseignée
     } else {
-      return '#ffffff'; // Blanc par défaut
+      return '#ffffff';
     }
   }
 }

@@ -57,19 +57,16 @@
     <mat-form-field appearance="fill" class="full-width">
       <mat-label>Sexe</mat-label>
       <mat-select formControlName="gender">
-        <mat-option value="Male">Homme</mat-option>
-        <mat-option value="Female">Femme</mat-option>
+        <mat-option value="male">Homme</mat-option>
+        <mat-option value="female">Femme</mat-option>
       </mat-select>
     </mat-form-field>
 
     <mat-form-field appearance="fill" class="full-width">
       <mat-label>Spécialisation</mat-label>
-      <input matInput formControlName="specialization" />
-    </mat-form-field>
-
-    <mat-form-field appearance="fill" class="full-width">
-      <mat-label>Qualifications</mat-label>
-      <textarea matInput formControlName="qualifications" rows="3"></textarea>
+      <mat-select formControlName="specialization">
+        <mat-option *ngFor="let subject of subjects" [value]="subject.name">{{ subject.name }}</mat-option>
+      </mat-select>
     </mat-form-field>
 
     <mat-form-field appearance="fill" class="full-width">
@@ -78,8 +75,17 @@
     </mat-form-field>
 
     <mat-form-field appearance="fill" class="full-width">
-      <mat-label>Préférence de communication</mat-label>
-      <input matInput formControlName="communicationPreference" />
+      <mat-label>Nationalité</mat-label>
+      <mat-select formControlName="nationality">
+        <mat-option *ngFor="let nationality of nationalities" [value]="nationality">{{ nationality }}</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="fill" class="full-width">
+      <mat-label>Moyen de communication préféré</mat-label>
+      <mat-select formControlName="communicationPreference">
+        <mat-option *ngFor="let option of communicationOptions" [value]="option.value">{{ option.labelKey | translate }}</mat-option>
+      </mat-select>
     </mat-form-field>
   </mat-dialog-content>
 

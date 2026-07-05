@@ -26,9 +26,6 @@ public class TeacherEntity extends PersonEntity {
     @Column(name = "specialization")
     private String specialization;
 
-    @Column(name = "qualifications", columnDefinition = "TEXT")
-    private String qualifications;
-
     @Column(name = "years_of_experience")
     private Integer yearsOfExperience;
 

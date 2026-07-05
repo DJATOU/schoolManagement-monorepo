@@ -1,75 +1,84 @@
-<div class="group-profile-container fade-in" *ngIf="!loadingGroup && group; else loadingSpinner">
-  <mat-card class="group-card">
-    <mat-card-header>
-      <div class="header-container">
-        <div class="group-info-header">
-          <div class="group-photo-container" *ngIf="groupPhotoUrl; else groupInitials">
-            <img [src]="groupPhotoUrl" alt="Photo du groupe" class="group-photo" (error)="onImageError()">
-          </div>
+<div class="pf-container fade-in" *ngIf="!loadingGroup && group; else loadingSpinner">
+  <mat-card class="pf-card">
+    <!-- En-tête -->
+    <div class="pf-header pf-header--group">
+      <div class="pf-identity">
+        <div class="pf-avatar pf-avatar--square">
+          <img *ngIf="groupPhotoUrl; else groupInitials" [src]="groupPhotoUrl" alt="Photo du groupe"
+            (error)="onImageError()">
           <ng-template #groupInitials>
-            <div class="group-initials-container" [style.background-color]="avatarColor">
-              {{ getInitials() }}
-            </div>
+            <div class="pf-initials" [style.background-color]="avatarColor">{{ getInitials() }}</div>
           </ng-template>
-          <div class="group-name-type">
-            <mat-card-title>{{ group.name }}</mat-card-title>
-            <mat-card-subtitle>{{ group.groupTypeName || group.groupTypeId }}</mat-card-subtitle>
+        </div>
+        <div class="pf-titles">
+          <h1 class="pf-name">{{ group.name }}</h1>
+          <span class="pf-badge" *ngIf="group.groupTypeName || group.groupTypeId">
+            <mat-icon>category</mat-icon>{{ group.groupTypeName || group.groupTypeId }}
+          </span>
+        </div>
+      </div>
+
+      <div class="pf-header-buttons">
+        <button mat-icon-button class="pf-hb pf-hb-edit" (click)="onEditGroup()" matTooltip="Modifier le groupe">
+          <mat-icon>edit</mat-icon>
+        </button>
+        <button mat-icon-button class="pf-hb pf-hb-print" (click)="printGroupPdf()" matTooltip="Imprimer la fiche (PDF)">
+          <mat-icon>print</mat-icon>
+        </button>
+        <button mat-icon-button class="pf-hb pf-hb-danger" (click)="onDisable()" matTooltip="Supprimer le groupe">
+          <mat-icon>block</mat-icon>
+        </button>
+      </div>
+    </div>
+
+    <!-- Contenu -->
+    <div class="pf-body">
+      <div class="pf-grid">
+        <section class="pf-section">
+          <h3 class="pf-section-title"><mat-icon>info</mat-icon>Informations sur le groupe</h3>
+          <div class="pf-row"><mat-icon>category</mat-icon><span class="pf-label">Type de groupe</span><span class="pf-value">{{ group.groupTypeName || group.groupTypeId || '—' }}</span></div>
+          <div class="pf-row"><mat-icon>school</mat-icon><span class="pf-label">Niveau</span><span class="pf-value">{{ group.levelName || group.levelId || '—' }}</span></div>
+          <div class="pf-row"><mat-icon>menu_book</mat-icon><span class="pf-label">Matière</span><span class="pf-value">{{ group.subjectName || group.subjectId || '—' }}</span></div>
+          <div class="pf-row"><mat-icon>event_repeat</mat-icon><span class="pf-label">Sessions par série</span><span class="pf-value">{{ group.sessionNumberPerSerie || '—' }}</span></div>
+          <div class="pf-row"><mat-icon>payments</mat-icon><span class="pf-label">Prix</span><span class="pf-value">{{ group.priceAmount || group.pricing?.price || '—' }}</span></div>
+          <div class="pf-row"><mat-icon>person</mat-icon><span class="pf-label">Enseignant</span><span class="pf-value">{{ group.teacherName || '—' }}</span></div>
+        </section>
+
+        <section class="pf-section">
+          <h3 class="pf-section-title"><mat-icon>description</mat-icon>Description</h3>
+          <div class="pf-row pf-row--block">
+            <span class="pf-value">{{ group.description || 'Aucune description.' }}</span>
           </div>
-        </div>
-        <div class="header-buttons">
-          <button mat-icon-button class="edit-button" (click)="onEditGroup()" aria-label="Modifier le groupe"
-            matTooltip="Modifier le groupe">
-            <mat-icon>edit</mat-icon>
-          </button>
-          <button mat-icon-button class="delete-button" (click)="onDisable()" aria-label="Supprimer le groupe"
-            matTooltip="Supprimer le groupe">
-            <mat-icon>block</mat-icon>
-          </button>
-        </div>
+        </section>
       </div>
-    </mat-card-header>
-    <mat-card-content>
-      <div class="group-info-grid">
-        <div class="info-section">
-          <h3>Informations sur le Groupe</h3>
-          <p><strong>Type de groupe :</strong> {{ group.groupTypeName || group.groupTypeId }}</p>
-          <p><strong>Niveau :</strong> {{ group.levelName || group.levelId }}</p>
-          <p><strong>Sujet :</strong> {{ group.subjectName || group.subjectId }}</p>
-          <p><strong>Nombre de sessions par série :</strong> {{ group.sessionNumberPerSerie }}</p>
-          <p><strong>Prix :</strong> {{ group.priceAmount || group.pricing?.price }}</p>
-          <p><strong>Enseignant :</strong> {{ group.teacherName }}</p>
-        </div>
-        <div class="info-section">
-          <h3>Description</h3>
-          <p>{{ group.description }}</p>
-        </div>
+
+      <div class="pf-actions">
+        <button mat-flat-button class="pf-action-primary" (click)="addStudentToGroup()">
+          <mat-icon>person_add</mat-icon> Ajouter un étudiant
+        </button>
+        <button mat-stroked-button class="pf-action-secondary">
+          <mat-icon>library_add</mat-icon> Créer une série
+        </button>
       </div>
-      <div class="button-container">
-        <button mat-raised-button color="primary" (click)="addStudentToGroup()">Ajouter un étudiant</button>
-        <button mat-raised-button color="accent">Créer une nouvelle série</button>
-      </div>
-    </mat-card-content>
+    </div>
   </mat-card>
 
-  <!-- Accordéon pour les étudiants et séries -->
-  <mat-accordion class="group-accordion">
-    <!-- Panneau pour les étudiants -->
-    <mat-expansion-panel *ngIf="!loadingStudents" class="student-panel">
+  <!-- Accordéon : étudiants + séries -->
+  <mat-accordion class="pf-accordion">
+    <mat-expansion-panel *ngIf="!loadingStudents" [expanded]="true" class="student-panel">
       <mat-expansion-panel-header>
-        <mat-panel-title>Étudiants</mat-panel-title>
+        <mat-panel-title><mat-icon>group</mat-icon>Étudiants</mat-panel-title>
         <mat-panel-description>{{ students.length }} étudiant(s)</mat-panel-description>
       </mat-expansion-panel-header>
       <div class="student-list-container">
-        <!-- Mise à jour pour afficher le bouton "Supprimer" -->
         <app-student-list [students]="students" [showDeleteButton]="true"
           (deleteStudent)="removeStudentFromGroup($event)"></app-student-list>
       </div>
     </mat-expansion-panel>
 
-    <!-- Panneau pour les séries -->
     <mat-expansion-panel *ngIf="!loadingSeries" class="series-panel">
       <mat-expansion-panel-header>
-        <mat-panel-title>Séries</mat-panel-title>
+        <mat-panel-title><mat-icon>layers</mat-icon>Séries</mat-panel-title>
         <mat-panel-description>{{ series.length }} série(s)</mat-panel-description>
       </mat-expansion-panel-header>
       <div class="series-list">
@@ -94,7 +103,7 @@
 </div>
 
 <ng-template #loadingSpinner>
-  <div class="loading-spinner">
+  <div class="pf-spinner">
     <mat-progress-spinner mode="indeterminate"></mat-progress-spinner>
   </div>
 </ng-template>

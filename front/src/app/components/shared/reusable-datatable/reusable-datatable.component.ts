@@ -18,6 +18,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { ConfirmationDialogComponent } from '../confirmation-dialog/confirmation-dialog.component';
 import { el } from '@fullcalendar/core/internal-common';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { ProfilePdfService } from '../../../services/profile-pdf.service';
 
 interface ColumnDefenition {
   columnDef: string;
@@ -62,7 +63,8 @@ export class ReusableDatatableComponent  implements OnInit{
   constructor(private router: Router,
               public dialog: MatDialog,
               private snackBar: MatSnackBar,
-              private translate: TranslateService) {
+              private translate: TranslateService,
+              private profilePdfService: ProfilePdfService) {
     this.datePipe = new DatePipe(this.translate.currentLang || 'fr');
     this.translate.onLangChange.subscribe(event => {
       this.datePipe = new DatePipe(event.lang);
@@ -182,9 +184,28 @@ export class ReusableDatatableComponent  implements OnInit{
     });
   }
   
-  /** Implement print logic */
+  /** Génère un PDF propre de la liste (colonnes affichées, toutes les lignes). */
   onPrint() {
-    window.print();
+    const rows = (this.data || []) as any[];
+    if (rows.length === 0) {
+      this.showErrorMessage(this.translate.instant('DATATABLE.FILTER_PLACEHOLDER'));
+      return;
+    }
+
+    const title = this.translate.instant('DATATABLE.' + this.dataType.toUpperCase());
+    const safeTitle = title && title.indexOf('DATATABLE.') === -1 ? title : 'Liste';
+
+    this.profilePdfService.generateProfilePdf({
+      title: safeTitle,
+      subtitle: `${rows.length} élément(s)`,
+      sections: [],
+      tableTitle: safeTitle,
+      tableColumns: this.columns.map(c => c.header),
+      tableRows: rows.map(row => this.columns.map(c => {
+        const val = c.cell(row);
+        return val === 'undefined' || val === 'null' ? '' : val;
+      }))
+    });
   }
 
   /**For the filter option. */

@@ -11,10 +11,16 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { ConfirmationDialogComponent } from '../../shared/confirmation-dialog/confirmation-dialog.component';
 import { EditTeacherDialogComponent } from '../edit-teacher-dialog/edit-teacher-dialog.component';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { environment } from '../../../../environments/environment';
+import { GroupService } from '../../../services/group.service';
+import { Group } from '../../../models/group/group';
+import { GroupCardComponent } from '../../group/group-card/group-card.component';
+import { MatExpansionModule } from '@angular/material/expansion';
+import { ProfilePdfService } from '../../../services/profile-pdf.service';
 @Component({
   selector: 'app-teacher-profile',
   standalone: true,
@@ -27,7 +33,10 @@ import { environment } from '../../../../environments/environment';
     MatProgressSpinnerModule,
     ReactiveFormsModule,
     MatFormFieldModule,
-    MatSelectModule
+    MatSelectModule,
+    MatTooltipModule,
+    MatExpansionModule,
+    GroupCardComponent
   ],
   templateUrl: './teacher-profile.component.html',
   styleUrls: ['./teacher-profile.component.scss']
@@ -39,6 +48,9 @@ export class TeacherProfileComponent implements OnInit {
   teacherPhotoUrl: string = '';
   hasImageError: boolean = false;
   avatarColor: string = '#6366f1';
+  teacherGroups: Group[] = [];
+  levels: any[] = [];
+  groupTypes: any[] = [];
 
   // Colors for avatar backgrounds
   private readonly avatarColors = [
@@ -52,7 +64,9 @@ export class TeacherProfileComponent implements OnInit {
     private fb: FormBuilder,
     private router: Router,
     private dialog: MatDialog,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private groupService: GroupService,
+    private profilePdfService: ProfilePdfService
   ) {
     this.groupForm = this.fb.group({
       groupIds: [[]]
@@ -63,7 +77,49 @@ export class TeacherProfileComponent implements OnInit {
     const teacherId = this.route.snapshot.paramMap.get('id');
     if (teacherId) {
       this.getTeacherDetails(+teacherId);
+      this.loadTeacherGroups(+teacherId);
     }
+  }
+
+  private loadTeacherGroups(teacherId: number): void {
+    this.groupService.getGroupsByTeacherId(teacherId).subscribe({
+      next: (groups) => this.teacherGroups = groups || [],
+      error: (err) => console.error('Error loading teacher groups:', err)
+    });
+  }
+
+  /** Génère la fiche PDF de l'enseignant (infos + groupes). */
+  printProfilePdf(): void {
+    if (!this.teacher) return;
+    const t = this.teacher;
+    this.profilePdfService.generateProfilePdf({
+      title: `${t.firstName} ${t.lastName}`,
+      subtitle: t.specialization ? `Enseignant · ${t.specialization}` : 'Enseignant',
+      sections: [
+        {
+          heading: 'Informations personnelles',
+          rows: [
+            { label: 'Sexe', value: t.gender },
+            { label: 'Email', value: t.email },
+            { label: 'Téléphone', value: t.phoneNumber },
+            { label: 'Date de naissance', value: t.dateOfBirth ? new Date(t.dateOfBirth).toLocaleDateString('fr-FR') : null },
+            { label: 'Lieu de naissance', value: t.placeOfBirth },
+            { label: 'Adresse', value: t.address }
+          ]
+        },
+        {
+          heading: 'Informations professionnelles',
+          rows: [
+            { label: 'Spécialisation', value: t.specialization },
+            { label: "Années d'expérience", value: t.yearsOfExperience }
+          ]
+        }
+      ],
+      listTitle: `Groupes enseignés (${this.teacherGroups.length})`,
+      listItems: this.teacherGroups.map(g =>
+        `${g.name}${g.levelName ? ' — ' + g.levelName : ''}${g.subjectName ? ' (' + g.subjectName + ')' : ''}`
+      )
+    });
   }
 
   getTeacherDetails(id: number): void {

@@ -69,6 +69,7 @@ export class StudentSearchComponent implements OnInit, OnDestroy, AfterViewInit 
 
   // Filter options
   groups: Group[] = [];
+  filteredGroups: Group[] = [];
   levels: Level[] = [];
 
   // Late payment counter
@@ -162,35 +163,45 @@ export class StudentSearchComponent implements OnInit, OnDestroy, AfterViewInit 
     const viewportHeight = window.innerHeight;
 
     // Measure actual offsets from the page layout
-    // Header: 64px, Topbar: ~60px, Footer: ~56px, Container padding: ~48px  
+    // Header: 64px, Topbar: ~60px, Footer: ~56px, Container padding: ~48px
     const fixedHeightUsed = 228; // Total fixed elements
     const availableHeight = viewportHeight - fixedHeightUsed;
 
-    // Card dimensions from CSS - must match exactly
+    const isList = this.viewMode === 'list';
+
+    // Dimensions dépendantes du mode d'affichage.
+    // Liste: 1 colonne, lignes compactes. Cartes: grille multi-colonnes.
+    const gap = isList ? 10 : 16;
     const cardMinWidth = 220; // minmax(220px, 1fr)
-    const cardHeight = 208;   // min-height: 13rem = 208px
-    const gap = 16;
+    const rowHeight = (isList ? 84 : 208) + gap; // hauteur réelle d'une ligne/carte + gap
 
-    // Calculate columns from container width
-    const columns = Math.max(1, Math.floor((containerWidth + gap) / (cardMinWidth + gap)));
-
-    // Calculate rows from available height  
-    const rowHeight = cardHeight + gap;
+    const columns = isList
+      ? 1
+      : Math.max(1, Math.floor((containerWidth + gap) / (cardMinWidth + gap)));
     const rows = Math.max(1, Math.floor(availableHeight / rowHeight));
 
-    const itemsPerPage = rows * columns;
+    const itemsPerPage = Math.max(1, rows * columns);
 
-    // Remove debug log in production
-    console.log('📊 PageSize calc:', { viewportHeight, availableHeight, columns, rows, itemsPerPage });
-
-    // Update page size
-    if (itemsPerPage !== this.pageSize && itemsPerPage > 0) {
+    // Update page size only if it actually changed
+    if (itemsPerPage !== this.pageSize) {
       this.pageSize = itemsPerPage;
-      // Update pageSizeOptions to include calculated size
       if (!this.pageSizeOptions.includes(itemsPerPage)) {
         this.pageSizeOptions = [...new Set([...this.pageSizeOptions, itemsPerPage])].sort((a, b) => a - b);
       }
+      this.clampPageIndex();
       this.updatePageStudents();
+    }
+  }
+
+  /**
+   * Garde l'index de page dans les bornes valides après un changement de pageSize.
+   * Évite d'afficher une page « fantôme » (ex. la dernière page partielle) quand
+   * le nombre d'éléments par page change pendant la navigation.
+   */
+  private clampPageIndex(): void {
+    const maxPage = Math.max(0, Math.ceil(this.filteredStudents.length / this.pageSize) - 1);
+    if (this.currentPageIndex > maxPage) {
+      this.currentPageIndex = maxPage;
     }
   }
 
@@ -221,11 +232,24 @@ export class StudentSearchComponent implements OnInit, OnDestroy, AfterViewInit 
   private loadFilterOptions(): void {
     this.groupService.getGroups().subscribe(groups => {
       this.groups = groups;
+      this.updateFilteredGroups();
     });
 
     this.levelService.getLevels().subscribe(levels => {
       this.levels = levels;
     });
+  }
+
+  /**
+   * Restreint la liste des groupes proposés au niveau sélectionné.
+   * (Niveau "Tous" => tous les groupes.)
+   */
+  private updateFilteredGroups(): void {
+    if (this.selectedLevelId == null) {
+      this.filteredGroups = [...this.groups];
+    } else {
+      this.filteredGroups = this.groups.filter(g => g.levelId === this.selectedLevelId);
+    }
   }
 
   listenToSearchEvents(): void {
@@ -320,6 +344,13 @@ export class StudentSearchComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   onLevelFilterChange(): void {
+    // Le niveau restreint la liste des groupes ; on réinitialise le groupe
+    // s'il ne correspond plus au niveau choisi.
+    this.updateFilteredGroups();
+    if (this.selectedGroupId != null &&
+        !this.filteredGroups.some(g => g.id === this.selectedGroupId)) {
+      this.selectedGroupId = null;
+    }
     this.applyAllFilters();
   }
 
@@ -334,6 +365,7 @@ export class StudentSearchComponent implements OnInit, OnDestroy, AfterViewInit 
 
   clearLevelFilter(): void {
     this.selectedLevelId = null;
+    this.updateFilteredGroups();
     this.applyAllFilters();
   }
 

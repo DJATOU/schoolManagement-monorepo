@@ -18,10 +18,12 @@ export class TeacherListComponent {
 
   ngOnInit(): void {
     this.profile = {
+      id: this.teacher.id,
       firstName: this.teacher.firstName,
       lastName: this.teacher.lastName,
       photo: this.teacher.photo,
       email: this.teacher.email,
+      phoneNumber: this.teacher.phoneNumber,
     };
   }
 }

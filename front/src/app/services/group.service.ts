@@ -96,8 +96,18 @@ export class GroupService {
     return this.http.post(`${this.apiUrl2}/${groupId}/addStudents`, { studentIds: [studentId] });
   }
 
+  /** Ajoute plusieurs étudiants à un groupe en une seule requête. */
+  addStudentsToGroup(groupId: number, studentIds: number[]): Observable<any> {
+    return this.http.post(`${this.apiUrl2}/${groupId}/addStudents`, { studentIds });
+  }
+
   getGroupsForPayment(studentId: number): Observable<Group[]> {
     return this.http.get<Group[]>(`${API_BASE_URL}/api/students/${studentId}/payable-groups`);
+  }
+
+  /** Récupère les groupes enseignés par un enseignant. */
+  getGroupsByTeacherId(teacherId: number): Observable<Group[]> {
+    return this.http.get<Group[]>(`${this.apiUrl}/teacher/${teacherId}`);
   }
 
   /**

@@ -52,24 +52,29 @@ export class SessionModalComponent implements OnInit {
     // On ne charge les étudiants que si la liste est vide
     if (!this.sessionData.students || this.sessionData.students.length === 0) {
       try {
-        // Supposons que sessionTimeStart soit un champ Date ou string dans sessionData
         const sessionDate = this.sessionData.sessionTimeStart;
-  
-        // Appel à ton service GET /groups/{groupId}/studentsForSession?date=... 
-        // pour ne récupérer que les étudiants assignés avant sessionDate
-        const students = await this.sessionService
+
+        // 1) Étudiants assignés au groupe avant la date de la session
+        let students = await this.sessionService
           .getStudentsForSession(this.sessionData.groupId, sessionDate)
           .toPromise();
-  
-        // On initialise isPresent à false pour éviter de forcer tout le monde en "présent"
+
+        // 2) Fallback : si rien (ex. assignations sans date antérieure),
+        //    on remonte tous les étudiants du groupe pour la prise de présence
+        if (!students || students.length === 0) {
+          students = await this.sessionService
+            .getStudentsByGroupId(this.sessionData.groupId)
+            .toPromise();
+        }
+
         this.sessionData.students = students?.map(student => ({
           ...student,
           id: student.id as number,
-          isPresent: true,    // On laisse l'admin cocher manuellement 
+          isPresent: true,
           description: '',
-          isCatchUp: false     // Par défaut, non rattrapage
+          isCatchUp: false
         })) ?? [];
-  
+
       } catch (error) {
         console.error('Error fetching students:', error);
       }

@@ -35,6 +35,14 @@ export class StudentListItemComponent implements OnInit {
   @Output() deleteStudent = new EventEmitter<Student>(); // Événement pour notifier la suppression
 
   studentPhotoUrl: string = '';
+  hasImageError: boolean = false;
+  avatarColor: string = '#6366f1';
+
+  // Palette d'avatars (cohérente avec profile-card)
+  private avatarColors = [
+    '#6366f1', '#8b5cf6', '#ec4899', '#ef4444', '#f97316',
+    '#eab308', '#22c55e', '#14b8a6', '#06b6d4', '#3b82f6'
+  ];
 
   constructor(
     private router: Router,
@@ -42,11 +50,12 @@ export class StudentListItemComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    // Générer dynamiquement l'URL complète de la photo de l'étudiant
+    this.setAvatarColor();
+
+    // Générer l'URL complète de la photo seulement si une photo existe.
+    // Sinon on retombe sur les initiales colorées (pas d'image cassée).
     if (this.student?.photo) {
       this.studentPhotoUrl = `${environment.apiUrl}${environment.imagesPath}${this.student.photo}`;
-    } else {
-      this.studentPhotoUrl = 'assets/default-avatar.png';  // Utiliser un avatar par défaut si aucune photo
     }
 
     // Charger le statut de paiement si non fourni par le parent
@@ -55,8 +64,32 @@ export class StudentListItemComponent implements OnInit {
     }
   }
 
+  /**
+   * Initiales de l'étudiant (max 2 caractères) pour l'avatar par défaut.
+   */
+  getInitials(): string {
+    const firstInitial = (this.student?.firstName || '').charAt(0).toUpperCase();
+    const lastInitial = (this.student?.lastName || '').charAt(0).toUpperCase();
+    return (firstInitial + lastInitial) || 'XX';
+  }
+
+  /**
+   * Couleur d'avatar déterministe basée sur le nom.
+   */
+  private setAvatarColor(): void {
+    const name = `${this.student?.firstName || ''}${this.student?.lastName || ''}`;
+    const hash = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    this.avatarColor = this.avatarColors[hash % this.avatarColors.length];
+  }
+
+  /**
+   * Fallback initiales si l'image ne charge pas.
+   */
+  onImageError(): void {
+    this.hasImageError = true;
+  }
+
   navigateToStudent(student: Student) {
-    console.log("rrrrrrrrrrrr");
     this.router.navigate(['/student', student.id]); // En supposant que /student/:id est votre route
   }
 

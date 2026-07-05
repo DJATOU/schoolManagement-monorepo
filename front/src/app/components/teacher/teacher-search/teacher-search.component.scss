@@ -142,6 +142,8 @@
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 16px;
   width: 100%;
+  // Espace bas garanti (le padding-bottom du scroller est ignoré par certains navigateurs)
+  padding-bottom: 40px;
 }
 
 // ===== LIST VIEW =====
@@ -150,6 +152,8 @@
   flex-direction: column;
   gap: 16px;
   width: 100%;
+  // Espace bas garanti pour que le dernier item ne soit pas collé
+  padding-bottom: 40px;
 }
 
 // ===== INFINITE SCROLL INDICATORS =====

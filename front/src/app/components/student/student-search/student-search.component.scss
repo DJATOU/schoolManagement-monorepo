@@ -210,6 +210,9 @@
   @media (max-width: 400px) {
     grid-template-columns: 1fr;
   }
+
+  // Espace bas garanti (padding-bottom du scroller ignoré par certains navigateurs)
+  padding-bottom: 40px;
 }
 
 // List view
@@ -218,6 +221,7 @@
   flex-direction: column;
   gap: 10px;
   width: 100%;
+  padding-bottom: 40px;
 }
 
 // Loading state

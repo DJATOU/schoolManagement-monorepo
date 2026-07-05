@@ -167,6 +167,23 @@ export class NavigationComponent implements OnInit {
     this.onSearch();
   }
 
+  /** Initiales (max 2) à partir d'un libellé de suggestion. */
+  initialsOf(suggestion: string): string {
+    const parts = (suggestion || '').trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return '?';
+    if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+    return (parts[0][0] + parts[1][0]).toUpperCase();
+  }
+
+  /** Icône Material correspondant au type de recherche courant. */
+  get typeIcon(): string {
+    switch (this.selectedIcon) {
+      case 'group': return 'groups';
+      case 'teacher': return 'person';
+      default: return 'school';
+    }
+  }
+
   toggleDarkMode() {
     console.log('Toggle dark mode');
   }

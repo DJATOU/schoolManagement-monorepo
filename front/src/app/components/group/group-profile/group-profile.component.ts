@@ -5,13 +5,14 @@ import { Group } from '../../../models/group/group';
 import { Student } from '../../student/domain/student';
 import { SessionSeries } from '../../../models/sessionSerie/sessionSerie';
 import { GroupService } from '../../../services/group.service';
-import { AddStudentDialogComponent } from '../../session/add-student-dialog/add-student-dialog.component';
+import { AddStudentsDialogComponent } from '../add-students-dialog/add-students-dialog.component';
 import { MatCardModule } from '@angular/material/card';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { CommonModule } from '@angular/common';
 import { MatIcon } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatList, MatListItem } from '@angular/material/list';
 import { ProfileListItemComponent } from '../../shared/profile-list-item/profile-list-item.component';
 import { StudentListComponent } from "../../student/student-list/student-list.component";
@@ -19,6 +20,7 @@ import { StudentService } from '../../student/services/student.service';
 import { ConfirmationDialogComponent } from '../../shared/confirmation-dialog/confirmation-dialog.component';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { EditGroupDialogComponent } from '../edit-group-dialog/edit-group-dialog.component';
+import { ProfilePdfService } from '../../../services/profile-pdf.service';
 
 @Component({
   selector: 'app-group-profile',
@@ -31,11 +33,11 @@ import { EditGroupDialogComponent } from '../edit-group-dialog/edit-group-dialog
     MatButtonModule,
     MatProgressSpinnerModule,
     MatIcon,
+    MatTooltipModule,
     MatList,
     MatListItem,
     CommonModule,
     ProfileListItemComponent,
-    StudentListComponent,
     StudentListComponent
   ]
 })
@@ -61,7 +63,39 @@ export class GroupProfileComponent implements OnInit {
     private route: ActivatedRoute,
     private dialog: MatDialog,
     private snackBar: MatSnackBar,
+    private profilePdfService: ProfilePdfService,
   ) { }
+
+  /** Génère la fiche PDF du groupe (infos + liste des étudiants). */
+  printGroupPdf(): void {
+    if (!this.group) return;
+    const g = this.group;
+    this.profilePdfService.generateProfilePdf({
+      title: g.name,
+      subtitle: g.groupTypeName ? `Groupe · ${g.groupTypeName}` : 'Groupe',
+      sections: [
+        {
+          heading: 'Informations sur le groupe',
+          rows: [
+            { label: 'Type de groupe', value: g.groupTypeName || g.groupTypeId },
+            { label: 'Niveau', value: g.levelName || g.levelId },
+            { label: 'Matière', value: g.subjectName || g.subjectId },
+            { label: 'Sessions par série', value: g.sessionNumberPerSerie },
+            { label: 'Prix', value: g.priceAmount || g.pricing?.price },
+            { label: 'Enseignant', value: g.teacherName }
+          ]
+        }
+      ],
+      tableTitle: `Étudiants (${this.students.length})`,
+      tableColumns: ['#', 'Nom', 'Prénom', 'Remarques'],
+      tableRows: this.students.map((s, i) => [
+        i + 1,
+        s.lastName,
+        s.firstName,
+        ''
+      ])
+    });
+  }
 
   ngOnInit(): void {
     const groupId = this.getGroupIdFromRoute();
@@ -176,21 +210,46 @@ export class GroupProfileComponent implements OnInit {
   }
 
   addStudentToGroup(): void {
-    const dialogRef = this.dialog.open(AddStudentDialogComponent, {
-      width: '400px',
-      data: { groupId: this.group?.id }
-    });
+    if (!this.group?.id) {
+      return;
+    }
 
-    dialogRef.afterClosed().subscribe(result => {
-      if (result) {
-        this.groupService.addStudentToGroup(this.group!.id!, result.studentId).subscribe({
-          next: () => {
-            this.loadStudents(this.group!.id!); // Reload the students list after adding
-          },
-          error: (error) => {
-            console.error('Error adding student to group:', error);
+    // Récupérer le niveau du groupe pour ne proposer que les étudiants de ce niveau
+    this.groupService.getLevelIdByGroupId(this.group.id).subscribe({
+      next: (levelId) => {
+        if (levelId === undefined) {
+          console.error('Cannot add student: group has no level');
+          return;
+        }
+
+        // Exclure les étudiants déjà présents dans le groupe
+        const existingStudentIds = this.students
+          .map(student => student.id)
+          .filter((id): id is number => id !== undefined && id !== null);
+
+        const dialogRef = this.dialog.open(AddStudentsDialogComponent, {
+          width: '500px',
+          maxWidth: '95vw',
+          data: { levelId, existingStudentIds }
+        });
+
+        dialogRef.afterClosed().subscribe((selectedIds: number[] | null) => {
+          if (selectedIds && selectedIds.length > 0) {
+            this.groupService.addStudentsToGroup(this.group!.id!, selectedIds).subscribe({
+              next: () => {
+                this.loadStudents(this.group!.id!); // Recharger la liste après ajout
+                this.showSuccessMessage(`${selectedIds.length} étudiant(s) ajouté(s) au groupe.`);
+              },
+              error: (error) => {
+                console.error('Error adding students to group:', error);
+                this.showErrorMessage("Erreur lors de l'ajout des étudiants au groupe.");
+              }
+            });
           }
         });
+      },
+      error: (error) => {
+        console.error('Failed to get level for group:', error);
       }
     });
   }
@@ -286,13 +345,17 @@ export class GroupProfileComponent implements OnInit {
   }
 
   showSuccessMessage(message: string): void {
-    // Implémentez la logique pour afficher un message de succès
-    console.log(message);
+    this.snackBar.open(message, 'Fermer', {
+      duration: 3000,
+      panelClass: ['snack-bar-success']
+    });
   }
 
   showErrorMessage(message: string): void {
-    // Implémentez la logique pour afficher un message d'erreur
-    console.error(message);
+    this.snackBar.open(message, 'Fermer', {
+      duration: 3000,
+      panelClass: ['snack-bar-error']
+    });
   }
 
 }

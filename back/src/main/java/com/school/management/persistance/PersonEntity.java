@@ -45,10 +45,16 @@ public abstract class PersonEntity extends BaseEntity {
     @Column(name = "address")
     private String address;
 
+    @Column(name = "city")
+    private String city;
+
     @Column(name = "photo")
     private String photo;
 
     @Column(name = "communication_preference")
     private String communicationPreference;
+
+    @Column(name = "nationality")
+    private String nationality;
 
 }

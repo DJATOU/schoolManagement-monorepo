@@ -1,0 +1,46 @@
+<h2 mat-dialog-title>{{ 'tutorForm.title' | translate }}</h2>
+
+<mat-dialog-content>
+  <form [formGroup]="tutorForm" class="tutor-form">
+    <div class="form-row">
+      <mat-form-field appearance="outline">
+        <mat-label>{{ 'tutorForm.fields.firstName' | translate }}</mat-label>
+        <input matInput formControlName="firstName" required>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>{{ 'tutorForm.fields.lastName' | translate }}</mat-label>
+        <input matInput formControlName="lastName" required>
+      </mat-form-field>
+    </div>
+
+    <div class="form-row">
+      <mat-form-field appearance="outline">
+        <mat-label>{{ 'tutorForm.fields.phoneNumber' | translate }}</mat-label>
+        <input matInput formControlName="phoneNumber" required>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>{{ 'tutorForm.fields.email' | translate }}</mat-label>
+        <input matInput type="email" formControlName="email">
+      </mat-form-field>
+    </div>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>{{ 'tutorForm.fields.relationship' | translate }}</mat-label>
+      <mat-select formControlName="relationship">
+        <mat-option value="Parent">{{ 'tutorForm.relationships.parent' | translate }}</mat-option>
+        <mat-option value="Guardian">{{ 'tutorForm.relationships.guardian' | translate }}</mat-option>
+        <mat-option value="Other">{{ 'tutorForm.relationships.other' | translate }}</mat-option>
+      </mat-select>
+    </mat-form-field>
+  </form>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button type="button" (click)="onCancel()">{{ 'common.cancel' | translate }}</button>
+  <button mat-flat-button color="primary" type="button" (click)="onSave()" [disabled]="saving">
+    <mat-icon>person_add</mat-icon>
+    {{ 'tutorForm.actions.save' | translate }}
+  </button>
+</mat-dialog-actions>

@@ -55,8 +55,6 @@ public interface StudentMapper {
     @Mapping(target = "dateUpdate", ignore = true)
     @Mapping(target = "description", ignore = true)
     @Mapping(target = "updatedBy", ignore = true)
-    @Mapping(target = "address", ignore = true)
-    @Mapping(target = "communicationPreference", ignore = true)
     StudentEntity studentDTOToStudent(StudentDTO studentDto, @Context MappingContext context);
 
     /**
@@ -78,8 +76,6 @@ public interface StudentMapper {
     @Mapping(target = "dateUpdate", ignore = true)
     @Mapping(target = "description", ignore = true)
     @Mapping(target = "updatedBy", ignore = true)
-    @Mapping(target = "address", ignore = true)
-    @Mapping(target = "communicationPreference", ignore = true)
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     void updateStudentFromDTO(StudentDTO dto, @MappingTarget StudentEntity entity, @Context MappingContext context);
 

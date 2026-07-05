@@ -9,6 +9,8 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
+import { MatButtonModule } from '@angular/material/button';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatStepperModule } from '@angular/material/stepper';
 import { MatTabsModule } from '@angular/material/tabs';
@@ -17,7 +19,10 @@ import { Level } from '../../../models/level/level';
 import { LevelService } from '../../../services/level.service';
 import { StudentService } from '../services/student.service';
 import { SummaryDialogComponent } from '../../summary-dialog/summary-dialog.component';
+import { AddTutorDialogComponent } from '../../tutor/add-tutor-dialog/add-tutor-dialog.component';
+import { Tutor } from '../../../models/tutor/tutor';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { COMMUNICATION_OPTIONS, DEFAULT_NATIONALITY, NATIONALITIES } from '../../../utils/form-options';
 
 @Component({
   selector: 'app-student',
@@ -35,6 +40,8 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
     MatTabsModule,
     MatOption,
     MatSelectModule,
+    MatButtonModule,
+    MatTooltipModule,
     CommonModule,
     MatDialogModule,
     MatCard,
@@ -70,6 +77,10 @@ export class StudentFormComponent implements OnInit {
   selectedFile: File | null = null;
   levels: Level[] = [];
   studentForm!: FormGroup;
+  selectedTutor: Tutor | null = null;
+
+  readonly communicationOptions = COMMUNICATION_OPTIONS;
+  readonly nationalities = NATIONALITIES;
 
   constructor(
     private fb: FormBuilder,
@@ -96,8 +107,12 @@ export class StudentFormComponent implements OnInit {
       contactInformation: this.fb.group({
         email: ['', [Validators.required, Validators.email]],
         phoneNumber: [''],
+        nationality: [DEFAULT_NATIONALITY],
+        communicationPreference: [''],
         dateOfBirth: ['', Validators.required],
-        placeOfBirth: ['']
+        placeOfBirth: [''],
+        address: [''],
+        city: ['']
       }),
       academicInformation: this.fb.group({
         level: ['', Validators.required],
@@ -120,6 +135,34 @@ export class StudentFormComponent implements OnInit {
     if (target?.files?.length) {
       this.selectedFile = target.files[0];
     }
+  }
+
+  /**
+   * Ouvre la popup d'ajout de tuteur. Le tuteur est créé en base par la popup
+   * et renvoyé ici ; on le mémorise pour l'attacher à l'étudiant à la soumission.
+   */
+  openTutorDialog(): void {
+    const dialogRef = this.dialog.open(AddTutorDialogComponent, {
+      width: '520px',
+      maxWidth: '95vw'
+    });
+
+    dialogRef.afterClosed().subscribe((tutor: Tutor | null) => {
+      if (tutor) {
+        this.selectedTutor = tutor;
+        this.showSuccessMessage('tutorForm.messages.attached');
+      }
+    });
+  }
+
+  /** Retire le tuteur sélectionné du formulaire (sans le supprimer en base). */
+  clearTutor(): void {
+    this.selectedTutor = null;
+  }
+
+  get tutorFullName(): string {
+    if (!this.selectedTutor) return '';
+    return `${this.selectedTutor.firstName} ${this.selectedTutor.lastName}`;
   }
 
   onSubmit(): void {
@@ -167,6 +210,11 @@ export class StudentFormComponent implements OnInit {
       });
     });
 
+    // Attacher le tuteur sélectionné (déjà créé en base via la popup)
+    if (this.selectedTutor?.id != null) {
+      formDataToSubmit.append('tutorId', String(this.selectedTutor.id));
+    }
+
     return formDataToSubmit;
   }
 
@@ -208,6 +256,7 @@ export class StudentFormComponent implements OnInit {
   onClearForm(): void {
     this.studentForm.reset();
     this.selectedFile = null;
+    this.selectedTutor = null;
   }
 
   private showSuccessMessage(messageKey: string): void {
