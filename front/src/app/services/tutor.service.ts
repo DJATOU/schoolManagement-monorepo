@@ -1,14 +1,14 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { environment } from '../../environments/environment';
+import { API_BASE_URL } from '../app.config';
 import { Tutor } from '../models/tutor/tutor';
 
 @Injectable({
   providedIn: 'root'
 })
 export class TutorService {
-  private apiUrl = `${environment.apiUrl}/api/tutors`;
+  private apiUrl = `${API_BASE_URL}/api/tutors`;
 
   constructor(private http: HttpClient) {}
 

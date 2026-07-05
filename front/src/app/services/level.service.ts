@@ -2,14 +2,14 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { Level } from '../models/level/level';
-import { environment } from '../../environments/environment';
+import { API_BASE_URL } from '../app.config';
 
 @Injectable({
   providedIn: 'root'
 })
 export class LevelService {
 
-  private apiUrl = `${environment.apiUrl}/api/levels`;
+  private apiUrl = `${API_BASE_URL}/api/levels`;
 
   constructor(private http: HttpClient) { }
 
