@@ -1,68 +1,114 @@
-<div class="datatable-toolbar">
-  <div class="toolbar-actions">
-    <button mat-flat-button class="dt-btn dt-create" (click)="onCreate()">
-      <mat-icon>add</mat-icon>
-      {{ 'DATATABLE.CREATE' | translate }}
-    </button>
-    <button mat-stroked-button class="dt-btn" (click)="onPrint()">
-      <mat-icon>print</mat-icon>
-      {{ 'DATATABLE.PRINT' | translate }}
-    </button>
-    <button mat-stroked-button class="dt-btn dt-edit" *ngIf="isOneItemSelected()" (click)="onEdit()">
-      <mat-icon>edit</mat-icon>
-      {{ 'DATATABLE.EDIT' | translate }}
-    </button>
-    <button mat-stroked-button class="dt-btn" *ngIf="isOneItemSelected()" (click)="onView()">
-      <mat-icon>visibility</mat-icon>
-      {{ 'DATATABLE.VIEW' | translate }}
-    </button>
-    <button mat-stroked-button class="dt-btn dt-delete" *ngIf="selection.hasValue()" (click)="onDisable()">
-      <mat-icon>delete</mat-icon>
-      {{ 'DATATABLE.DELETE' | translate }}
-    </button>
+<!-- En-tête de page : titre de l'entité + compteur -->
+<div class="dt-page-header">
+  <div class="dt-header-text">
+    <h1 class="dt-title">
+      <mat-icon class="dt-title-icon">{{ entityIcon }}</mat-icon>
+      {{ entityTitle }}
+    </h1>
+    <p class="dt-subtitle">{{ entitySubtitle }}</p>
+  </div>
+  <button mat-flat-button class="dt-btn dt-create" (click)="onCreate()" appAdminOnly>
+    <mat-icon>add</mat-icon>
+    {{ 'DATATABLE.CREATE' | translate }}
+  </button>
+</div>
+
+<div class="datatable-card">
+  <!-- Barre d'outils : recherche + actions contextuelles -->
+  <div class="datatable-toolbar">
+    <mat-form-field appearance="outline" class="dt-search" subscriptSizing="dynamic">
+      <mat-icon matPrefix>search</mat-icon>
+      <input matInput (keyup)="applyFilter($event)"
+             [placeholder]="'DATATABLE.SEARCH_PLACEHOLDER' | translate" #input>
+    </mat-form-field>
+
+    <div class="toolbar-meta">
+      <span class="dt-chip" *ngIf="!selection.hasValue()">
+        {{ 'DATATABLE.TOTAL' | translate: { count: rowCount } }}
+      </span>
+      <span class="dt-chip dt-chip-selected" *ngIf="selection.hasValue()">
+        {{ 'DATATABLE.SELECTED' | translate: { count: selection.selected.length } }}
+        <button mat-icon-button class="chip-clear" (click)="selection.clear()"
+                [matTooltip]="'DATATABLE.CLEAR_SELECTION' | translate">
+          <mat-icon>close</mat-icon>
+        </button>
+      </span>
+    </div>
+
+    <div class="toolbar-actions">
+      <button mat-stroked-button class="dt-btn" (click)="onPrint()"
+              [matTooltip]="printTooltip">
+        <mat-icon>print</mat-icon>
+        {{ 'DATATABLE.PRINT' | translate }}
+      </button>
+      <button mat-stroked-button class="dt-btn" (click)="onView()"
+              [disabled]="!isOneItemSelected()"
+              [matTooltip]="isOneItemSelected() ? '' : ('DATATABLE.VIEW_DISABLED_HINT' | translate)">
+        <mat-icon>visibility</mat-icon>
+        {{ 'DATATABLE.VIEW' | translate }}
+      </button>
+      <button mat-stroked-button class="dt-btn dt-edit" (click)="onEdit()"
+              [disabled]="!isOneItemSelected()"
+              [matTooltip]="isOneItemSelected() ? '' : ('DATATABLE.EDIT_DISABLED_HINT' | translate)"
+              appAdminOnly>
+        <mat-icon>edit</mat-icon>
+        {{ 'DATATABLE.EDIT' | translate }}
+      </button>
+      <button mat-stroked-button class="dt-btn dt-delete" (click)="onDisable()"
+              [disabled]="!selection.hasValue()"
+              [matTooltip]="selection.hasValue() ? '' : ('DATATABLE.DELETE_DISABLED_HINT' | translate)"
+              appAdminOnly>
+        <mat-icon>delete</mat-icon>
+        {{ 'DATATABLE.DELETE' | translate }}
+      </button>
+    </div>
   </div>
 
-  <mat-form-field appearance="outline" class="dt-search" subscriptSizing="dynamic">
-    <mat-icon matPrefix>search</mat-icon>
-    <input matInput (keyup)="applyFilter($event)" [placeholder]="'DATATABLE.FILTER_PLACEHOLDER' | translate" #input>
-  </mat-form-field>
-</div>
+  <div class="datatable-wrapper">
+    <table mat-table [dataSource]="dataSource" matSort recycleRows class="datatable">
+      <ng-container matColumnDef="select">
+          <th mat-header-cell *matHeaderCellDef>
+          <mat-checkbox (change)="$event ? toggleAllRows() : null"
+                          [checked]="selection.hasValue() && isAllSelected()"
+                          [indeterminate]="selection.hasValue() && !isAllSelected()"
+                          [aria-label]="checkboxLabel()">
+          </mat-checkbox>
+          </th>
+          <td mat-cell *matCellDef="let row">
+          <mat-checkbox (click)="$event.stopPropagation()"
+                          (change)="$event ? selection.toggle(row) : null"
+                          [checked]="selection.isSelected(row)"
+                          [aria-label]="checkboxLabel(row)">
+          </mat-checkbox>
+          </td>
+      </ng-container>
 
-<div class="datatable-wrapper">
-  <table mat-table [dataSource]="dataSource" matSort recycleRows class="datatable">
-    <ng-container matColumnDef="select">
-        <th mat-header-cell *matHeaderCellDef>
-        <mat-checkbox (change)="$event ? toggleAllRows() : null"
-                        [checked]="selection.hasValue() && isAllSelected()"
-                        [indeterminate]="selection.hasValue() && !isAllSelected()"
-                        [aria-label]="checkboxLabel()">
-        </mat-checkbox>
-        </th>
-        <td mat-cell *matCellDef="let row">
-        <mat-checkbox (click)="$event.stopPropagation()"
-                        (change)="$event ? selection.toggle(row) : null"
-                        [checked]="selection.isSelected(row)"
-                        [aria-label]="checkboxLabel(row)">
-        </mat-checkbox>
+      @for (column of columns; track column) {
+          <ng-container [matColumnDef]="column.columnDef">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>{{column.header}}</th>
+          <td mat-cell *matCellDef="let row">{{ display(column.cell(row)) }}</td>
+          </ng-container>
+      }
+      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns;"
+          (click)="selection.toggle(row)"
+          [class.row-selected]="selection.isSelected(row)"></tr>
+
+      <tr class="dt-no-data" *matNoDataRow>
+        <td [attr.colspan]="displayedColumns.length">
+          <div class="dt-empty">
+            <mat-icon class="dt-empty-icon">{{ hasData ? 'search_off' : 'inbox' }}</mat-icon>
+            <p class="dt-empty-title">
+              {{ (hasData ? 'DATATABLE.NO_RESULTS' : 'DATATABLE.EMPTY') | translate }}
+            </p>
+            <p class="dt-empty-hint">
+              {{ (hasData ? 'DATATABLE.NO_RESULTS_HINT' : 'DATATABLE.EMPTY_HINT') | translate }}
+            </p>
+          </div>
         </td>
-    </ng-container>
+      </tr>
+    </table>
+  </div>
 
-    @for (column of columns; track column) {
-        <ng-container [matColumnDef]="column.columnDef">
-        <th mat-header-cell *matHeaderCellDef mat-sort-header>{{column.header}}</th>
-        <td mat-cell *matCellDef="let row">{{column.cell(row)}}</td>
-        </ng-container>
-    }
-    <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-    <tr mat-row *matRowDef="let row; columns: displayedColumns;"
-        [class.row-selected]="selection.isSelected(row)"></tr>
-
-    <tr class="dt-no-data" *matNoDataRow>
-      <td [attr.colspan]="displayedColumns.length">
-        {{ 'DATATABLE.FILTER_PLACEHOLDER' | translate }} — aucun résultat
-      </td>
-    </tr>
-  </table>
+  <mat-paginator [pageSizeOptions]="[5,10,20,50]" showFirstLastButtons></mat-paginator>
 </div>
-<mat-paginator [pageSizeOptions]="[5,10,20]" showFirstLastButtons></mat-paginator>
-

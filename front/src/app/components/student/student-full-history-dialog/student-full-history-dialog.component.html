@@ -1,0 +1,269 @@
+<h2 mat-dialog-title>
+  {{ 'studentHistory.dialog.title' | translate }}
+  <span *ngIf="fullHistory"> — {{ fullHistory.studentName }}</span>
+</h2>
+
+<mat-dialog-content>
+  <!-- Chargement -->
+  <div class="fh-spinner" *ngIf="loading">
+    <mat-progress-spinner mode="indeterminate" diameter="48"></mat-progress-spinner>
+  </div>
+
+  <!-- Erreur -->
+  <div class="fh-error" *ngIf="!loading && errorMessage">
+    <mat-icon>error_outline</mat-icon>
+    <span>{{ errorMessage }}</span>
+  </div>
+
+  <ng-container *ngIf="!loading && !errorMessage && fullHistory">
+    <!--
+      Légende des quatre états d'une ligne. La coloration croisait auparavant présence et
+      paiement, soit six teintes ; la présence ayant sa propre colonne, la couleur ne porte
+      plus que la question monétaire. Chaque état a un libellé, la couleur ne porte jamais
+      seule le sens (exigence 11.4).
+    -->
+    <div class="fh-legend">
+      <span class="fh-legend-item">
+        <span class="fh-box row-paid"></span> {{ 'studentHistory.legend.paid' | translate }}
+      </span>
+      <span class="fh-legend-item">
+        <span class="fh-box row-due"></span> {{ 'studentHistory.legend.due' | translate }}
+      </span>
+      <span class="fh-legend-item">
+        <span class="fh-box row-exempted"></span> {{ 'studentHistory.legend.exempted' | translate }}
+      </span>
+      <span class="fh-legend-item">
+        <span class="fh-excluded-tag">
+          <mat-icon aria-hidden="true">block</mat-icon>
+          {{ 'studentHistory.excludedTag' | translate }}
+        </span>
+        {{ 'studentHistory.legend.excludedSession' | translate }}
+      </span>
+      <span class="fh-legend-item">
+        <span class="fh-catchup-tag">{{ 'studentHistory.catchUpTag' | translate }}</span>
+        {{ 'studentHistory.legend.catchUpSession' | translate }}
+      </span>
+    </div>
+
+    <!-- Aucun groupe -->
+    <p class="fh-empty" *ngIf="!fullHistory.groups || fullHistory.groups.length === 0">
+      {{ 'studentHistory.noGroup' | translate }}
+    </p>
+
+    <!-- Groupes -->
+    <mat-accordion multi>
+      <mat-expansion-panel *ngFor="let group of fullHistory.groups" [expanded]="true">
+        <mat-expansion-panel-header>
+          <mat-panel-title>
+            <mat-icon>groups</mat-icon>
+            {{ group.groupName }}
+          </mat-panel-title>
+        </mat-expansion-panel-header>
+
+        <p class="fh-empty" *ngIf="!group.series || group.series.length === 0">
+          {{ 'studentHistory.noSeries' | translate }}
+        </p>
+
+        <!-- Une carte par série -->
+        <div class="fh-series" *ngFor="let series of group.series">
+
+          <!-- En-tête : série, étudiant, prix unitaire -->
+          <div class="fh-card-head">
+            <div class="fh-card-identity">
+              <h3 class="fh-card-title">
+                {{ group.groupName }} — {{ series.seriesName }}
+                <span class="fh-catchup-tag" *ngIf="isCatchUpSeries(series)">
+                  {{ 'studentHistory.catchUpTag' | translate }}
+                </span>
+              </h3>
+              <p class="fh-card-sub">
+                <span>{{ fullHistory.studentName }}</span>
+                <ng-container *ngIf="hasUnitPrice(series)">
+                  <span class="fh-sep">·</span>
+                  <!-- Tarif catalogue barré : sans lui, un prix réduit paraîtrait arbitraire
+                       et l'administrateur ne pourrait pas l'expliquer à la famille. -->
+                  <span class="fh-price-gross" *ngIf="hasDiscount(series)">
+                    {{ series.unitPriceGross | number:'1.2-2' }}
+                  </span>
+                  <span class="fh-price-net">
+                    {{ 'studentHistory.unitPrice' | translate:
+                       { price: (series.unitPriceNet | number:'1.2-2') } }}
+                  </span>
+                </ng-container>
+              </p>
+            </div>
+
+            <!-- Badge déduit du statut serveur et de l'exemption, sans indicateur stocké -->
+            <span class="fh-badge" [ngClass]="'fh-badge-' + seriesBadge(series)">
+              <mat-icon aria-hidden="true">{{ seriesBadge(series) === 'FULL' ? 'check_circle' :
+                (seriesBadge(series) === 'EXEMPTED' ? 'volunteer_activism' : 'schedule') }}</mat-icon>
+              {{ 'studentHistory.badge.' + seriesBadge(series) | translate }}
+            </span>
+          </div>
+
+          <!-- Les trois montants, chacun avec son sous-libellé explicatif -->
+          <div class="fh-amounts">
+            <div class="fh-amount">
+              <span class="fh-amount-label">{{ 'studentHistory.amounts.due' | translate }}</span>
+              <span class="fh-amount-value">
+                {{ seriesDue(series) | number:'1.2-2' }} <small>DA</small>
+              </span>
+              <!-- Le coût énoncé en clair remplace le mot « prorata », que la famille ne peut
+                   pas interpréter : « 2 séances × 6 000 DA = 12 000 DA ». -->
+              <span class="fh-amount-sub" *ngIf="hasUnitPrice(series)">
+                {{ 'studentHistory.amounts.dueBreakdown' | translate: {
+                     count: billableSessionsCount(series),
+                     price: (series.unitPriceNet | number:'1.2-2'),
+                     total: (seriesDue(series) | number:'1.2-2')
+                   } }}
+              </span>
+              <span class="fh-amount-sub" *ngIf="!hasUnitPrice(series)">
+                {{ 'studentHistory.amounts.dueSessions' | translate:
+                   { count: billableSessionsCount(series) } }}
+              </span>
+            </div>
+
+            <div class="fh-amount">
+              <span class="fh-amount-label">{{ 'studentHistory.amounts.paid' | translate }}</span>
+              <span class="fh-amount-value fh-amount-paid">
+                {{ seriesPaid(series) | number:'1.2-2' }} <small>DA</small>
+              </span>
+              <span class="fh-amount-sub">
+                {{ 'studentHistory.amounts.paidSessions' | translate:
+                   { count: paidSessionsCount(series) } }}
+              </span>
+            </div>
+
+            <div class="fh-amount">
+              <span class="fh-amount-label">{{ 'studentHistory.amounts.remaining' | translate }}</span>
+              <span class="fh-amount-value"
+                    [ngClass]="seriesRemaining(series) > 0 ? 'fh-amount-due' : 'fh-amount-settled'">
+                {{ seriesRemaining(series) | number:'1.2-2' }} <small>DA</small>
+              </span>
+              <span class="fh-amount-sub">
+                {{ 'studentHistory.amounts.remainingSessions' | translate:
+                   { count: unpaidSessionsCount(series) } }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Séances non facturées : visibles, mais hors dette (exigences 11.3, 11.4) -->
+          <p class="fh-excluded-note" *ngIf="excludedSessionsCount(series) > 0">
+            <mat-icon aria-hidden="true">block</mat-icon>
+            {{ 'studentHistory.excludedSummary' | translate: { count: excludedSessionsCount(series) } }}
+            <span class="fh-excluded-hint">{{ 'studentHistory.notADebt' | translate }}</span>
+          </p>
+
+          <!-- Trop-perçu : l'écart entre versé et affecté doit être nommé, pas noyé -->
+          <p class="fh-overpaid" *ngIf="(series.totalOverpaid ?? 0) > 0">
+            <mat-icon aria-hidden="true">savings</mat-icon>
+            {{ 'studentHistory.allocated' | translate }} : {{ series.totalAllocated | number:'1.2-2' }} DA
+            — {{ 'studentHistory.overpaid' | translate }} : {{ series.totalOverpaid | number:'1.2-2' }} DA
+          </p>
+
+          <p class="fh-refund" *ngIf="(series.totalRefunded ?? 0) > 0">
+            <mat-icon aria-hidden="true">undo</mat-icon>
+            {{ 'studentHistory.refunded' | translate }} : {{ series.totalRefunded | number:'1.2-2' }} DA
+          </p>
+
+          <p class="fh-empty" *ngIf="getActiveSessions(series).length === 0">
+            {{ 'studentHistory.noSessionInSeries' | translate }}
+          </p>
+
+          <table class="fh-table" *ngIf="getActiveSessions(series).length > 0">
+            <thead>
+              <tr>
+                <th>{{ 'studentHistory.table.session' | translate }}</th>
+                <th>{{ 'studentHistory.table.date' | translate }}</th>
+                <th>{{ 'studentHistory.table.attendance' | translate }}</th>
+                <!-- Colonnes masquées quand elles sont vides sur toute la série, jamais
+                     inconditionnellement : la justification ne concerne que les absences, et
+                     de l'argent rendu doit toujours rester visible. -->
+                <th *ngIf="showJustifiedColumn(series)">
+                  {{ 'studentHistory.table.justified' | translate }}
+                </th>
+                <th class="fh-num">{{ 'studentHistory.table.amountPaid' | translate }}</th>
+                <th class="fh-num" *ngIf="showRefundColumn(series)">
+                  {{ 'studentHistory.table.refunded' | translate }}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let session of getActiveSessions(series)"
+                  [ngClass]="getSessionRowClass(session)">
+                <td>
+                  <span *ngIf="isCatchUpBilled(session)" class="fh-catchup-tag"
+                        [attr.title]="'studentHistory.catchUpBilledReason' | translate">
+                    {{ 'studentHistory.catchUpTag' | translate }}
+                  </span>
+                  {{ session.sessionName || '—' }}
+                </td>
+                <td>{{ session.sessionDate ? (session.sessionDate | date: 'dd/MM') : '—' }}</td>
+                <td>
+                  <!-- Le motif de non-facturation est donné dans la ligne même : hors de la
+                       ligne, il obligerait à relier une note du bas de carte à une ligne. -->
+                  <span *ngIf="sessionState(session) === 'NOT_BILLED'" class="fh-inline-reason">
+                    {{ 'studentHistory.beforeEnrolment' | translate }}
+                  </span>
+                  <span *ngIf="sessionState(session) !== 'NOT_BILLED'">
+                    <mat-icon class="fh-attendance-icon" aria-hidden="true"
+                              *ngIf="session.attendanceStatus === 'PRESENT'">check</mat-icon>
+                    {{ attendanceLabel(session) }}
+                    <span class="fh-justified-inline" *ngIf="session.attendanceStatus === 'ABSENT'
+                          && !showJustifiedColumn(series)">
+                      ({{ getJustificationText(session) }})
+                    </span>
+                  </span>
+                </td>
+                <td *ngIf="showJustifiedColumn(series)">{{ getJustificationText(session) || '—' }}</td>
+                <td class="fh-num">
+                  <ng-container *ngIf="sessionState(session) === 'NOT_BILLED'">
+                    <span class="fh-not-billed-amount">
+                      {{ 'studentHistory.excludedTag' | translate }}
+                    </span>
+                  </ng-container>
+                  <ng-container *ngIf="sessionState(session) === 'EXEMPTED'">
+                    <!-- Exemption totale : le tarif catalogue barré dit ce que la séance aurait
+                         coûté, « exempté » dit pourquoi rien n'est dû. Un « 0 DA » nu ne
+                         distinguerait pas une exemption d'une séance gratuite. -->
+                    <span class="fh-price-gross" *ngIf="(series.unitPriceGross ?? 0) > 0">
+                      {{ series.unitPriceGross | number:'1.2-2' }}
+                    </span>
+                    <span class="fh-exempted-amount">{{ sessionAmountLabel(session) }}</span>
+                  </ng-container>
+                  <ng-container *ngIf="sessionState(session) === 'DUE'
+                                       || sessionState(session) === 'PAID'">
+                    <span class="fh-price-gross" *ngIf="hasDiscount(series)">
+                      {{ series.unitPriceGross | number:'1.2-2' }}
+                    </span>
+                    <span class="fh-session-amount">
+                      {{ sessionAmount(session) | number:'1.2-2' }} DA
+                    </span>
+                    <span class="fh-amount-mention" *ngIf="sessionAmountLabel(session)">
+                      {{ sessionAmountLabel(session) }}
+                    </span>
+                    <mat-icon class="fh-paid-icon" aria-hidden="true"
+                              *ngIf="sessionState(session) === 'PAID'">check_circle</mat-icon>
+                  </ng-container>
+                </td>
+                <td class="fh-num" *ngIf="showRefundColumn(series)">
+                  <span *ngIf="(session.refundedAmount ?? 0) > 0" class="fh-refund-cell">
+                    {{ session.refundedAmount | number:'1.2-2' }} DA
+                  </span>
+                  <span *ngIf="!session.refundedAmount">—</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </mat-expansion-panel>
+    </mat-accordion>
+  </ng-container>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="generatePdf()" [disabled]="loading || !!errorMessage || !fullHistory">
+    <mat-icon>print</mat-icon> {{ 'studentHistory.dialog.print' | translate }}
+  </button>
+  <button mat-button (click)="dialogRef.close()">{{ 'common.close' | translate }}</button>
+</mat-dialog-actions>

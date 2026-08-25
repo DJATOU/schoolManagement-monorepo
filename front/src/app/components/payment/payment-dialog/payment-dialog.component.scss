@@ -1,14 +1,218 @@
-mat-form-field {
-    width: 100%;
-  }
-  
-  mat-dialog-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 1rem;
-  }
+/*
+  Le dialogue tient en une hauteur bornée : seul mat-dialog-content défile, le titre et
+  la barre d'actions restent fixes. Sans ça les boutons passaient sous le pli et il
+  fallait faire défiler toute la page pour valider.
+*/
+.payment-dialog__title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 
-  ::ng-deep .rattrapage-option {
-    background-color: #ffeeba !important;
+  mat-icon {
+    color: #4f46e5;
   }
-  
+}
+
+.payment-form {
+  display: flex;
+  flex-direction: column;
+  /* La marge négative compense le padding par défaut de mat-dialog-content. */
+  min-height: 0;
+}
+
+.payment-dialog__content {
+  /* 65vh est la valeur Material par défaut ; on l'assume explicitement. */
+  max-height: 65vh;
+  padding-top: 0.5rem;
+  /* Le défilement ne se propage pas à la page derrière le dialogue. */
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+/* Barre de défilement visible mais discrète (elle était quasi invisible). */
+.payment-dialog__content::-webkit-scrollbar {
+  width: 10px;
+}
+
+.payment-dialog__content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.payment-dialog__content::-webkit-scrollbar-thumb {
+  background: rgba(79, 70, 229, 0.28);
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background-clip: content-box;
+
+  &:hover {
+    background: rgba(79, 70, 229, 0.5);
+    background-clip: content-box;
+  }
+}
+
+.payment-dialog__content {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(79, 70, 229, 0.35) transparent;
+}
+
+.payment-dialog__actions {
+  gap: 0.75rem;
+  padding: 0.75rem 1.5rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+/* Deux champs par ligne quand la largeur le permet : moitié moins de hauteur. */
+.payment-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  column-gap: 1rem;
+}
+
+mat-form-field {
+  width: 100%;
+}
+
+::ng-deep .rattrapage-option {
+  background-color: #ffeeba !important;
+}
+
+/* Bloc « paiement intégral de la série » : mis en avant car il modifie le montant. */
+.full-series-block {
+  margin: 0 0 1rem;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  border-radius: 10px;
+  background: rgba(99, 102, 241, 0.06);
+}
+
+.full-series-hint {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  margin: 0.35rem 0 0 2rem;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  color: rgba(0, 0, 0, 0.62);
+}
+
+/* Réduction de l'étudiant : annoncée avant la saisie pour éviter un encaissement au
+   plein tarif. */
+.discount-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  border-left: 4px solid #3949ab;
+  border-radius: 4px;
+  background: #e8eaf6;
+  color: #283593;
+  font-size: 0.85rem;
+  font-weight: 500;
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+}
+
+/* Récapitulatif du dû calculé par le serveur. */
+.quote-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0 0 12px;
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+.quote-error {
+  margin: 0 0 12px;
+  color: #c62828;
+  font-size: 0.85rem;
+}
+
+/* Mention « soldée » accolée au nom d'une série qui n'a plus rien à encaisser.
+   L'option étant déjà grisée par Material, ce badge donne le motif en un coup d'œil
+   sans avoir à survoler pour lire l'infobulle. */
+.series-settled-badge {
+  font-size: 12px;
+  font-style: italic;
+  color: #64748b;
+}
+
+/* Séances non facturées : ni une dette, ni une erreur de calcul. Le motif est affiché à
+   côté du décompte pour que l'administrateur puisse l'expliquer à la famille. */
+.quote-summary__excluded {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  color: #92400e;
+
+  mat-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+  }
+}
+
+.quote-summary__reason {
+  font-style: italic;
+}
+
+/* Excédent hérité d'un encaissement antérieur au prorata : signalé, jamais corrigé
+   silencieusement. */
+.quote-summary__excess {
+  color: #b45309;
+  font-weight: 500;
+}
+
+/* Aperçu de la répartition : le report est automatique, cet encadré est le seul endroit où
+   l'administrateur le voit avant de valider. */
+.allocation-preview {
+  margin: 0 0 1rem;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid rgba(13, 148, 136, 0.3);
+  border-radius: 10px;
+  background: rgba(13, 148, 136, 0.07);
+  font-size: 0.82rem;
+  color: #0f766e;
+}
+
+.allocation-preview__title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 0.35rem;
+  font-weight: 600;
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+}
+
+.allocation-preview__line {
+  margin: 0 0 0.2rem 1.5rem;
+}
+
+/* Reliquat non plaçable : le versement serait refusé en totalité. Traité comme une alerte,
+   pas comme une simple information. */
+.allocation-preview__blocked {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 0.5rem 0 0;
+  color: #b91c1c;
+  font-weight: 500;
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    flex: 0 0 auto;
+  }
+}

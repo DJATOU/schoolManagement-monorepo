@@ -93,11 +93,15 @@ export class CalendarComponent implements OnInit, AfterViewInit {
       plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin, listPlugin],
       initialView: 'dayGridMonth',
       locale: this.translate.currentLang,
-      // Le calendrier remplit toute la hauteur dispo et étire ses lignes :
-      // pas d'ascenseur interne, adaptatif sur tout écran.
-      height: '100%',
-      expandRows: true,
-      dayMaxEvents: true,
+      // « auto » : la grille prend sa hauteur naturelle et c'est la carte qui défile.
+      // Avec « 100% », les six semaines d'un mois comme août 2026 devaient tenir dans la
+      // hauteur disponible : la dernière ligne était comprimée à quelques pixels et ses
+      // séances devenaient invisibles (la séance du 23 août n'apparaissait qu'en vue Liste).
+      height: 'auto',
+      // Nombre fixe plutôt que « true » : avec « true », la limite dépend de la hauteur de
+      // la cellule, si bien qu'une ligne comprimée n'affichait plus aucune séance — et pas
+      // même le lien « +N ». Ici, deux séances visibles au minimum, puis « +N ».
+      dayMaxEvents: 2,
       headerToolbar: {
         left: 'prev,next today',
         center: 'title',
@@ -273,7 +277,6 @@ export class CalendarComponent implements OnInit, AfterViewInit {
                         groupName: session.groupName,
                         roomName: session.roomName,
                         teacherName: session.teacherName,
-                        feedbackLink: session.feedbackLink,
                         sessionType: session.sessionType,
                         groupId: session.groupId,
                         isFinished: session.isFinished,
@@ -325,12 +328,19 @@ handleEventClick(clickInfo: EventClickArg) {
       // Ouverture de la modale avec les données de session
       const dialogRef = this.dialog.open(SessionModalComponent, {
         data: sessionData,
-        width: '600px',
+        // 600px comprimait la feuille de présence (nom + note + « Justifié » sur une ligne).
+        width: '760px',
+        maxWidth: '95vw',
         maxHeight: '90vh'
       });
 
       // Gérer les actions après la fermeture de la modale
       dialogRef.afterClosed().subscribe(result => {
+        // Séance supprimée : on retire l'évènement du calendrier sans recharger la page.
+        if (result === 'deleted') {
+          clickInfo.event.remove();
+          return;
+        }
         if (result && result.isFinished) {
           clickInfo.event.setProp('classNames', ['is-finished']);
           clickInfo.event.setExtendedProp('isFinished', true);

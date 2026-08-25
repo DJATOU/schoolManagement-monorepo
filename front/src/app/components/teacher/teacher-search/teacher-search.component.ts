@@ -12,6 +12,7 @@ import { SearchService } from '../../../services/SearchService ';
 import { ViewToggleComponent } from '../../shared/view-toggle/view-toggle.component';
 import { ListHeaderComponent } from '../../shared/list-header/list-header.component';
 import { FadeInDirective } from '../../shared/FadeInDirective';
+import { TranslateModule } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-teacher-search',
@@ -21,7 +22,7 @@ import { FadeInDirective } from '../../shared/FadeInDirective';
   imports: [
     CommonModule, MatPaginatorModule, TeacherCardComponent, TeacherListComponent,
     MatIconModule, MatProgressSpinnerModule, ViewToggleComponent, ListHeaderComponent,
-    FadeInDirective
+    FadeInDirective, TranslateModule
   ]
 })
 export class TeacherSearchComponent implements OnInit {
@@ -84,7 +85,7 @@ export class TeacherSearchComponent implements OnInit {
         if (teachers.length === 1) {
           this.router.navigate(['/teacher', teachers[0].id]);
         } else {
-          this.allTeachers = teachers;
+          this.allTeachers = this.sortByName(teachers);
           this.applyFilters();
         }
       });
@@ -94,9 +95,18 @@ export class TeacherSearchComponent implements OnInit {
   loadAllTeachers(): void {
     this.isLoading = true;
     this.teacherService.getTeachers().subscribe(teachers => {
-      this.allTeachers = teachers;
+      this.allTeachers = this.sortByName(teachers);
       this.applyFilters();
       this.isLoading = false;
+    });
+  }
+
+  /** Tri alphabétique par défaut (nom puis prénom), insensible à la casse/accents. */
+  private sortByName(teachers: Teacher[]): Teacher[] {
+    return [...(teachers || [])].sort((a, b) => {
+      const an = `${a.lastName ?? ''} ${a.firstName ?? ''}`.trim();
+      const bn = `${b.lastName ?? ''} ${b.firstName ?? ''}`.trim();
+      return an.localeCompare(bn, 'fr', { sensitivity: 'base' });
     });
   }
 

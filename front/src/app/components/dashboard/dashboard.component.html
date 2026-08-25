@@ -9,7 +9,12 @@
     <div class="period-filter">
       <div class="filter-row">
         <div class="preset-group">
-          <button class="preset" [class.active]="activePreset === 'year'" (click)="applyPreset('year')">{{ 'dashboard.period.year' | translate }}</button>
+          <!-- « Année » couvre l'année scolaire sélectionnée, pas l'année civile : les deux
+               ne se recouvrent pas (septembre → juin contre janvier → décembre). -->
+          <button class="preset" [class.active]="activePreset === 'year'" (click)="applyPreset('year')"
+            [matTooltip]="'dashboard.period.yearTooltip' | translate: { year: yearPresetLabel }">
+            {{ 'dashboard.period.year' | translate }}
+          </button>
           <button class="preset" [class.active]="activePreset === 'month'" (click)="applyPreset('month')">{{ 'dashboard.period.month' | translate }}</button>
           <button class="preset" [class.active]="activePreset === 'custom'" (click)="activePreset = 'custom'">{{ 'dashboard.period.custom' | translate }}</button>
         </div>
@@ -70,11 +75,6 @@
           <div class="seg-track"><div class="seg-fill bar--rose" [style.width.%]="pct(stats.sessionsDeactivated, totalSessions)"></div></div>
           <span class="seg-val">{{ stats.sessionsDeactivated }}</span>
         </div>
-        <div class="seg-row">
-          <span class="seg-label"><i class="dot dot-amber"></i>{{ 'dashboard.sessions.catchUps' | translate }}</span>
-          <div class="seg-track"><div class="seg-fill bar--amber" [style.width.%]="pct(stats.catchUpSessions, totalSessions)"></div></div>
-          <span class="seg-val">{{ stats.catchUpSessions }}</span>
-        </div>
       </div>
 
       <!-- Présences -->
@@ -95,6 +95,18 @@
           <div class="seg-track"><div class="seg-fill bar--rose" [style.width.%]="pct(stats.unjustifiedAbsences, totalAttendance)"></div></div>
           <span class="seg-val">{{ stats.unjustifiedAbsences }}</span>
         </div>
+        <!--
+          Les rattrapages sont un décompte de PRÉSENCES, pas de séances. Cette ligne figurait
+          dans la carte « Sessions », où son pourcentage était calculé sur un total de séances :
+          un rapport sans signification. C'est aussi un sous-ensemble des présents, d'où la
+          mention explicite pour que le total de la carte reste lisible.
+        -->
+        <div class="seg-row seg-row--subset">
+          <span class="seg-label"><i class="dot dot-amber"></i>{{ 'dashboard.attendance.catchUps' | translate }}</span>
+          <div class="seg-track"><div class="seg-fill bar--amber" [style.width.%]="pct(stats.catchUpSessions, totalAttendance)"></div></div>
+          <span class="seg-val">{{ stats.catchUpSessions }}</span>
+        </div>
+        <p class="seg-note">{{ 'dashboard.attendance.catchUpsNote' | translate }}</p>
       </div>
 
       <!-- Répartition par genre (anneau) -->

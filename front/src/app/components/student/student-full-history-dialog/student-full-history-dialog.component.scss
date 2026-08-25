@@ -1,0 +1,428 @@
+/* Couleurs alignées sur la légende du PDF (pdf-generator.service.ts). */
+$color-present-paid: #32a852;
+$color-absent-paid: #ff6347;
+$color-present-progress: #ffd700;
+$color-absent-progress: #ff4500;
+$color-not-filled: #f5f5f5;
+$color-present-unpaid: #e60000;
+$color-exempted: #1e88e5;
+
+/* Séance suivie et non réglée : ambre, et non le rouge d'un incident. C'est un montant
+   attendu dans le cours normal des choses, pas une anomalie — le rouge reste réservé aux
+   remboursements. Même teinte que les informations de facturation non bloquantes ailleurs
+   dans l'application. */
+$color-due: #b45309;
+
+mat-dialog-content {
+  min-width: 320px;
+  max-height: 70vh;
+}
+
+.fh-spinner {
+  display: flex;
+  justify-content: center;
+  padding: 32px 0;
+}
+
+.fh-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #e60000;
+  padding: 16px 0;
+
+  mat-icon {
+    flex-shrink: 0;
+  }
+}
+
+.fh-empty {
+  font-style: italic;
+  color: #777;
+  margin: 8px 0;
+}
+
+/* Légende */
+.fh-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 12px;
+  background-color: #fafafa;
+  border-radius: 6px;
+}
+
+.fh-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.fh-box {
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  display: inline-block;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+
+  /* La pastille de légende reprend exactement la classe de la ligne : deux jeux de noms
+     distincts finissaient par diverger, la légende annonçant une teinte que le tableau
+     n'utilisait plus. */
+  &.row-paid { background-color: rgba($color-present-paid, 0.25); }
+  &.row-due { background-color: rgba($color-due, 0.28); }
+  &.row-exempted { background-color: rgba($color-exempted, 0.22); }
+}
+
+/* Indicateur de rattrapage */
+.fh-catchup-tag {
+  display: inline-block;
+  background-color: #ffa200;
+  color: #fff;
+  font-size: 11px;
+  font-weight: bold;
+  padding: 1px 6px;
+  border-radius: 10px;
+  margin-right: 4px;
+}
+
+/* Indicateur de séance non facturée : contour tireté et icône, jamais la couleur seule.
+   Réutilise la teinte « présence non renseignée » de la légende plutôt que d'en créer une. */
+.fh-excluded-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  background-color: $color-not-filled;
+  color: rgba(0, 0, 0, 0.7);
+  border: 1px dashed rgba(0, 0, 0, 0.4);
+  font-size: 11px;
+  font-weight: bold;
+  padding: 1px 6px;
+  border-radius: 10px;
+  margin-right: 4px;
+  white-space: nowrap;
+
+  mat-icon {
+    font-size: 13px;
+    width: 13px;
+    height: 13px;
+  }
+}
+
+/* Motif d'exclusion, en clair sous le statut de paiement. */
+.fh-excluded-reason {
+  display: block;
+  font-size: 11px;
+  font-style: italic;
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.fh-excluded-amount {
+  color: rgba(0, 0, 0, 0.45);
+}
+
+/* Récapitulatif : ces séances sont visibles mais ne constituent pas une dette. */
+.fh-excluded-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: rgba(0, 0, 0, 0.7);
+
+  mat-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+  }
+}
+
+.fh-excluded-hint {
+  font-style: italic;
+  color: rgba(0, 0, 0, 0.6);
+}
+
+/* ------------------------------------------------------------------
+   Carte de série
+   ------------------------------------------------------------------ */
+
+.fh-series {
+  margin: 12px 0 20px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 14px 16px;
+  background-color: #fff;
+}
+
+/* En-tête : identité à gauche, badge d'état à droite. */
+.fh-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.fh-card-identity {
+  min-width: 0;
+}
+
+.fh-card-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.fh-card-sub {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.fh-sep {
+  color: rgba(0, 0, 0, 0.35);
+}
+
+/* Tarif catalogue barré, à côté du prix net réduit. */
+.fh-price-gross {
+  text-decoration: line-through;
+  color: rgba(0, 0, 0, 0.45);
+  margin-right: 2px;
+}
+
+.fh-price-net {
+  font-weight: 500;
+}
+
+/* Badge d'état de la série. L'icône double le libellé : la couleur ne porte pas seule. */
+.fh-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+
+  mat-icon {
+    font-size: 15px;
+    width: 15px;
+    height: 15px;
+  }
+}
+
+.fh-badge-FULL {
+  background-color: rgba($color-present-paid, 0.18);
+  color: #1b6b34;
+}
+
+.fh-badge-PARTIAL {
+  background-color: rgba($color-due, 0.16);
+  color: $color-due;
+}
+
+.fh-badge-EXEMPTED {
+  background-color: rgba($color-exempted, 0.16);
+  color: #14548f;
+}
+
+/* Les trois montants, sur une ligne, séparés par un filet. */
+.fh-amounts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  margin: 12px 0 10px;
+  border-top: 1px solid #eef0f2;
+  border-bottom: 1px solid #eef0f2;
+}
+
+.fh-amount {
+  flex: 1 1 140px;
+  min-width: 140px;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+
+  + .fh-amount {
+    border-left: 1px solid #eef0f2;
+  }
+}
+
+.fh-amount-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: rgba(0, 0, 0, 0.55);
+}
+
+.fh-amount-value {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.1;
+
+  small {
+    font-size: 11px;
+    font-weight: 600;
+    color: rgba(0, 0, 0, 0.5);
+    margin-left: 2px;
+  }
+}
+
+.fh-amount-paid { color: #1b6b34; }
+.fh-amount-due { color: $color-due; }
+.fh-amount-settled { color: rgba(0, 0, 0, 0.55); }
+
+/* Sous-libellé : c'est lui qui énonce le calcul en clair, « 2 séances × 6 000 DA = 12 000 DA ».
+   Il remplace le mot « prorata », inintelligible pour une famille. */
+.fh-amount-sub {
+  font-size: 11px;
+  color: rgba(0, 0, 0, 0.55);
+}
+
+.fh-refund {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #e60000;
+
+  mat-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+  }
+}
+
+.fh-refund-cell {
+  color: #e60000;
+  font-weight: bold;
+}
+
+/* Trop-perçu : information, pas alerte — teinte distincte du rouge des remboursements. */
+.fh-overpaid {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #00695c;
+
+  mat-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+  }
+}
+
+/* Tableau des séances */
+.fh-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+
+  th,
+  td {
+    padding: 8px;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+  }
+
+  th {
+    font-weight: bold;
+    text-transform: uppercase;
+    font-size: 11px;
+    color: #555;
+  }
+}
+
+/* Un seul état monétaire par ligne. La présence a sa propre colonne : la croiser avec le
+   paiement demandait six teintes pour trois informations, et rendait le tableau illisible. */
+.row-paid { background-color: rgba($color-present-paid, 0.18); }
+
+/* Séance suivie restant à régler. Ambre : un montant attendu, pas un incident. */
+.row-due {
+  background-color: rgba($color-due, 0.12);
+
+  td:first-child {
+    border-left: 3px solid rgba($color-due, 0.7);
+  }
+}
+
+/* Séance écartée du prorata : même fond neutre que « présence non renseignée », plus un
+   liseré tireté. La distinction avec une séance due tient donc aussi sans la couleur. */
+.row-not-billed {
+  background-color: $color-not-filled;
+  color: rgba(0, 0, 0, 0.6);
+
+  td:first-child {
+    border-left: 3px dashed rgba(0, 0, 0, 0.35);
+  }
+}
+.row-exempted { background-color: rgba($color-exempted, 0.14); }
+
+/* Colonnes de montants alignées à droite : des chiffres comparés se lisent alignés. */
+.fh-table .fh-num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Motif de non-facturation, dans la ligne même. */
+.fh-inline-reason {
+  font-style: italic;
+  color: rgba(0, 0, 0, 0.55);
+}
+
+.fh-justified-inline {
+  font-size: 11px;
+  color: rgba(0, 0, 0, 0.55);
+}
+
+.fh-attendance-icon {
+  font-size: 14px;
+  width: 14px;
+  height: 14px;
+  vertical-align: -2px;
+  color: #1b6b34;
+}
+
+.fh-paid-icon {
+  font-size: 14px;
+  width: 14px;
+  height: 14px;
+  vertical-align: -2px;
+  color: #1b6b34;
+  margin-left: 2px;
+}
+
+.fh-session-amount {
+  font-weight: 600;
+}
+
+.row-due .fh-session-amount,
+.fh-amount-mention {
+  color: $color-due;
+}
+
+.fh-amount-mention {
+  font-size: 11px;
+  margin-left: 3px;
+}
+
+/* Séance non facturée : le montant est remplacé par la mention, jamais par « 0 DA » — un
+   zéro se lirait comme une dette soldée. */
+.fh-not-billed-amount {
+  font-style: italic;
+  color: rgba(0, 0, 0, 0.5);
+}
+
+/* Exemption : le tarif catalogue barré dit ce que la séance aurait coûté. */
+.fh-exempted-amount {
+  font-style: italic;
+  color: #14548f;
+}
+
+mat-dialog-actions {
+  padding: 12px 16px;
+}

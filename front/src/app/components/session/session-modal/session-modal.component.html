@@ -1,60 +1,129 @@
+<div class="pf-readonly-banner" *ngIf="readOnly$ | async">
+  <mat-icon>lock</mat-icon>
+  <span>{{ 'schoolYear.readOnly.banner' | translate }}</span>
+</div>
+
 <mat-dialog-content class="modal-content fade-in">
   <mat-tab-group animationDuration="0ms">
-    <mat-tab label="Session Details">
-      <mat-card class="session-card">
-        <mat-card-header>
-          <mat-card-title>{{ sessionData.title }}</mat-card-title>
-          <mat-card-subtitle>{{ sessionData.sessionType }}</mat-card-subtitle>
-        </mat-card-header>
-        <mat-card-content>
-          <div class="session-details">
-            <p><strong>Group:</strong> {{ sessionData.groupName }}</p>
-            <p><strong>Room:</strong> {{ sessionData.roomName }}</p>
-            <p><strong>Teacher:</strong> {{ sessionData.teacherName }}</p>
-            <p><strong>Start:</strong> {{ sessionData.sessionTimeStart | date: 'medium' }}</p>
-            <p><strong>End:</strong> {{ sessionData.sessionTimeEnd | date: 'medium' }}</p>
-            <p><strong>Feedback:</strong> <a href="{{ sessionData.feedbackLink }}" target="_blank">Link</a></p>
+    <mat-tab [label]="'SESSION_MODAL.DETAILS_TAB' | translate">
+      <div class="session-details-panel">
+        <!-- En-tête -->
+        <div class="session-hero">
+          <div class="session-hero-text">
+            <h2 class="session-title">{{ sessionData.title }}</h2>
+            <span class="session-type-chip">{{ sessionData.sessionType }}</span>
           </div>
-        </mat-card-content>
-      </mat-card>
+        </div>
+
+        <!-- Détails -->
+        <div class="detail-grid">
+          <div class="detail-row">
+            <div class="detail-icon-wrap"><mat-icon>groups</mat-icon></div>
+            <div class="detail-body">
+              <span class="detail-label">{{ 'SESSION_MODAL.GROUP' | translate }}</span>
+              <a class="detail-link" (click)="openGroup()"
+                 [matTooltip]="'SESSION_MODAL.OPEN_NEW_TAB' | translate">
+                <span>{{ sessionData.groupName }}</span>
+                <mat-icon class="open-icon">open_in_new</mat-icon>
+              </a>
+            </div>
+          </div>
+
+          <div class="detail-row">
+            <div class="detail-icon-wrap"><mat-icon>meeting_room</mat-icon></div>
+            <div class="detail-body">
+              <span class="detail-label">{{ 'SESSION_MODAL.ROOM' | translate }}</span>
+              <span class="detail-value">{{ sessionData.roomName }}</span>
+            </div>
+          </div>
+
+          <div class="detail-row">
+            <div class="detail-icon-wrap"><mat-icon>person</mat-icon></div>
+            <div class="detail-body">
+              <span class="detail-label">{{ 'SESSION_MODAL.TEACHER' | translate }}</span>
+              <a class="detail-link" (click)="openTeacher()"
+                 [matTooltip]="'SESSION_MODAL.OPEN_NEW_TAB' | translate">
+                <span>{{ sessionData.teacherName }}</span>
+                <mat-icon class="open-icon">open_in_new</mat-icon>
+              </a>
+            </div>
+          </div>
+
+          <div class="detail-row">
+            <div class="detail-icon-wrap"><mat-icon>event_available</mat-icon></div>
+            <div class="detail-body">
+              <span class="detail-label">{{ 'SESSION_MODAL.DATE' | translate }}</span>
+              <span class="detail-value">{{ sessionData.sessionTimeStart | date: 'EEE d MMM y' }}</span>
+            </div>
+          </div>
+
+          <div class="detail-row full">
+            <div class="detail-icon-wrap"><mat-icon>schedule</mat-icon></div>
+            <div class="detail-body">
+              <span class="detail-label">{{ 'SESSION_MODAL.SCHEDULE' | translate }}</span>
+              <span class="detail-value">
+                {{ sessionData.sessionTimeStart | date: 'HH:mm' }}
+                <span class="arrow">→</span>
+                {{ sessionData.sessionTimeEnd | date: 'HH:mm' }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
     </mat-tab>
-    <mat-tab label="Attendances">
+    <mat-tab [label]="'SESSION_MODAL.ATTENDANCES_TAB' | translate">
       <mat-card class="students-card">
         <mat-card-header>
-          <mat-card-title>Students</mat-card-title>
-          <button mat-icon-button (click)="openAddStudentDialog()" [disabled]="isFinished">
-            <mat-icon>add</mat-icon> <!-- Bouton pour ajouter un étudiant -->
+          <mat-card-title>
+            {{ 'SESSION_MODAL.STUDENTS' | translate }} ({{ sessionData.students.length }})
+          </mat-card-title>
+          <button mat-icon-button (click)="openAddStudentDialog()" [disabled]="isFinished || ((writeDisabled$ | async) ?? false)"
+                  [matTooltip]="'SESSION_MODAL.ADD_STUDENT' | translate">
+            <mat-icon>add</mat-icon>
           </button>
         </mat-card-header>
         <mat-card-content>
-          <mat-checkbox (change)="toggleAllStudents($event.checked)" class="check-all" [disabled]="isFinished">Check All</mat-checkbox>
-          <div *ngFor="let student of sessionData.students" class="student-list-item">
-            <mat-checkbox 
-              [(ngModel)]="student.isPresent" 
-              class="student-checkbox" 
-              [disabled]="isFinished"
-              (change)="onPresentChange(student)">
-              {{ student.firstName }} {{ student.lastName }}
-              <span *ngIf="student.isCatchUp" class="catch-up-label">(Rattrapage)</span>
-            </mat-checkbox>
-            
-            <input 
-              matInput 
-              [(ngModel)]="student.description" 
-              placeholder="Add a note" 
-              class="description-input" 
-              [disabled]="isFinished">
-            
-            <mat-checkbox 
-              [(ngModel)]="student.isJustified" 
-              class="justified-checkbox" 
-              [disabled]="isFinished || (student.isPresent ?? false)"
-              (change)="onJustifiedChange(student)">
-              Justified
-            </mat-checkbox>
+          <mat-checkbox (change)="toggleAllStudents($event.checked)" class="check-all" [disabled]="isFinished || ((writeDisabled$ | async) ?? false)">
+            {{ 'SESSION_MODAL.CHECK_ALL' | translate }}
+          </mat-checkbox>
+
+          <!--
+            La liste possède sa propre zone de défilement : « Tout cocher » et les actions
+            restent visibles, et il n'y a qu'un seul ascenseur au lieu de faire défiler
+            toute la fenêtre.
+          -->
+          <div class="students-scroll">
+            <div *ngFor="let student of sessionData.students" class="student-list-item">
+              <mat-checkbox
+                [(ngModel)]="student.isPresent"
+                class="student-checkbox"
+                [disabled]="isFinished || ((writeDisabled$ | async) ?? false)"
+                (change)="onPresentChange(student)">
+              </mat-checkbox>
+
+              <a class="student-name-link" (click)="openStudent(student.id)"
+                 [matTooltip]="'SESSION_MODAL.OPEN_NEW_TAB' | translate">
+                <span class="student-name-text">{{ student.firstName }} {{ student.lastName }}</span>
+                <span *ngIf="student.isCatchUp" class="catch-up-label">{{ 'SESSION_MODAL.CATCH_UP' | translate }}</span>
+                <mat-icon class="open-icon">open_in_new</mat-icon>
+              </a>
+
+              <input
+                matInput
+                [(ngModel)]="student.description"
+                [placeholder]="'SESSION_MODAL.ADD_NOTE' | translate"
+                class="description-input"
+                [disabled]="isFinished || ((writeDisabled$ | async) ?? false)">
+
+              <mat-checkbox
+                [(ngModel)]="student.isJustified"
+                class="justified-checkbox"
+                [disabled]="isFinished || (student.isPresent ?? false) || ((writeDisabled$ | async) ?? false)"
+                (change)="onJustifiedChange(student)">
+                {{ 'SESSION_MODAL.JUSTIFIED' | translate }}
+              </mat-checkbox>
+            </div>
           </div>
-          
-          
         </mat-card-content>
       </mat-card>
     </mat-tab>
@@ -62,8 +131,24 @@
 </mat-dialog-content>
 
 <mat-dialog-actions>
-  <button mat-button (click)="onEditSession()" color="accent" [disabled]="isFinished">Edit Session</button>
-  <button mat-button (click)="onValidateSession()" color="primary" [disabled]="isFinished">Validate Session</button>
-  <button mat-button (click)="onUnvalidateSession()" color="accent" *ngIf="isFinished">Unvalidate Session</button> <!-- Bouton pour dévalider -->
-  <button mat-button (click)="dialogRef.close()" color="warn">Close</button>
+  <button mat-button (click)="onEditSession()" color="accent" [disabled]="isFinished || ((writeDisabled$ | async) ?? false)">
+    {{ 'SESSION_MODAL.EDIT' | translate }}
+  </button>
+  <button mat-button (click)="onValidateSession()" color="primary" [disabled]="isFinished || ((writeDisabled$ | async) ?? false)">
+    {{ 'SESSION_MODAL.VALIDATE' | translate }}
+  </button>
+  <button mat-button (click)="onUnvalidateSession()" color="accent" *ngIf="isFinished" [disabled]="(writeDisabled$ | async) ?? false">
+    {{ 'SESSION_MODAL.UNVALIDATE' | translate }}
+  </button>
+  <button mat-button (click)="onPrintAttendanceSheet()" color="primary">
+    <mat-icon>print</mat-icon> {{ 'SESSION_MODAL.PRINT' | translate }}
+  </button>
+  <button mat-button class="delete-session-btn" (click)="onDeleteSession()"
+          [disabled]="isFinished || ((writeDisabled$ | async) ?? false)"
+          [matTooltip]="isFinished ? ('SESSION_MODAL.DELETE_FINISHED_HINT' | translate) : ''">
+    <mat-icon>delete</mat-icon> {{ 'SESSION_MODAL.DELETE' | translate }}
+  </button>
+  <button mat-button (click)="dialogRef.close()" color="warn">
+    {{ 'SESSION_MODAL.CLOSE' | translate }}
+  </button>
 </mat-dialog-actions>

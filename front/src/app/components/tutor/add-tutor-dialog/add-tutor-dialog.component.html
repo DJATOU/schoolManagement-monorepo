@@ -39,7 +39,7 @@
 
 <mat-dialog-actions align="end">
   <button mat-button type="button" (click)="onCancel()">{{ 'common.cancel' | translate }}</button>
-  <button mat-flat-button color="primary" type="button" (click)="onSave()" [disabled]="saving">
+  <button mat-flat-button color="primary" type="button" (click)="onSave()" [disabled]="saving" appAdminOnly>
     <mat-icon>person_add</mat-icon>
     {{ 'tutorForm.actions.save' | translate }}
   </button>

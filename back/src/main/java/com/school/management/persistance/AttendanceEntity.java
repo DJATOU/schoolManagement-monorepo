@@ -42,4 +42,14 @@ public class AttendanceEntity extends BaseEntity {
     @Column(name = "is_catch_up")
     @Builder.Default
     private Boolean isCatchUp = false;
+
+    // Droit au rattrapage : vrai par défaut, indépendamment de la justification de l'absence
+    @Column(name = "catch_up_right")
+    @Builder.Default
+    private Boolean catchUpRight = true;
+
+    // Séance manquée : lien depuis une présence de rattrapage vers la séance d'origine
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "missed_session_id")
+    private SessionEntity missedSession;
 }

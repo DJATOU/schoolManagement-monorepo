@@ -9,9 +9,10 @@ export interface StudentPaymentStatus {
   /** Statut de paiement global:
    * - 'GOOD': À jour (a payé tout ce qui est dû)
    * - 'LATE': En retard (montant dû > montant payé)
+   * - 'EXEMPT': Exempté (réduction de 100 % sur toutes les séries concernées)
    * - 'NA': Non applicable (aucune session validée/payable)
    */
-  paymentStatus: 'GOOD' | 'LATE' | 'NA';
+  paymentStatus: 'GOOD' | 'LATE' | 'EXEMPT' | 'NA';
 
   /** Liste des groupes où l'étudiant est en retard (vide si GOOD ou NA) */
   lateGroups: LateGroupDetails[];

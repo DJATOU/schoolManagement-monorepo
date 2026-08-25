@@ -29,7 +29,8 @@ public class DashboardController {
     @GetMapping("/stats")
     public ResponseEntity<DashboardStatsDTO> getStats(
             @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate from,
-            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate to) {
-        return ResponseEntity.ok(dashboardStatsService.getStats(from, to));
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate to,
+            @RequestParam(required = false) Long schoolYearId) {
+        return ResponseEntity.ok(dashboardStatsService.getStats(from, to, schoolYearId));
     }
 }

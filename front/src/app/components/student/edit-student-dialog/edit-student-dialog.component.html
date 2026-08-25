@@ -1,87 +1,199 @@
-<h2 mat-dialog-title>Modifier l'étudiant</h2>
-<form [formGroup]="editStudentForm" (ngSubmit)="onSave()">
-  <mat-dialog-content>
-    <!-- Photo Preview et Upload -->
-    <div class="photo-section" *ngIf="photoPreview">
-      <img [src]="photoPreview" alt="Photo étudiant" class="photo-preview" />
-      <button type="button" mat-icon-button color="warn" class="clear-photo-btn" (click)="clearPhoto()"
-        matTooltip="Supprimer la photo">
-        <mat-icon>delete</mat-icon>
-      </button>
-    </div>
+<div class="dlg-hero">
+  <div class="dlg-hero-icon"><mat-icon>edit</mat-icon></div>
+  <div class="dlg-hero-text">
+    <h2 class="dlg-title">{{ 'EDIT_STUDENT.TITLE' | translate }}</h2>
+    <span class="dlg-subtitle">{{ 'EDIT_STUDENT.SUBTITLE' | translate }}</span>
+  </div>
+</div>
 
-    <mat-form-field appearance="fill" class="full-width photo-field">
-      <mat-label>Photo de l'étudiant</mat-label>
-      <div class="upload-container">
-        <input matInput readonly [value]="selectedFile?.name" placeholder="Aucun fichier sélectionné"
-          class="upload-input">
-        <button type="button" mat-raised-button color="accent" (click)="photoInput.click()" class="upload-button">
-          <mat-icon>add_a_photo</mat-icon> Choisir une image
-        </button>
-        <input type="file" (change)="onFileSelected($event)" accept="image/*" hidden #photoInput>
-      </div>
-    </mat-form-field>
+<form [formGroup]="editStudentForm" (ngSubmit)="onSave()" id="editStudentForm">
+  <mat-dialog-content class="dlg-content">
+    <!-- Onglets : chaque groupe de champs reste accessible en un clic, sans long défilement -->
+    <mat-tab-group animationDuration="150ms" class="edit-tabs">
 
-    <mat-form-field appearance="fill" class="full-width">
-      <mat-label>Prénom</mat-label>
-      <input matInput formControlName="firstName" />
-    </mat-form-field>
+      <!-- Identité + naissance -->
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <mat-icon class="tab-icon">person</mat-icon>{{ 'EDIT_STUDENT.SECTION_IDENTITY' | translate }}
+        </ng-template>
+        <div class="tab-body">
+          <div class="photo-row">
+            <div class="photo-preview-wrap" *ngIf="photoPreview && !photoError">
+              <img [appSecureImage]="photoPreview" alt="" class="photo-preview" (error)="onPhotoError()" />
+              <button type="button" mat-icon-button class="clear-photo-btn" (click)="clearPhoto()"
+                [matTooltip]="'EDIT_STUDENT.PHOTO_REMOVE' | translate">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </div>
+            <div class="photo-placeholder" *ngIf="!photoPreview || photoError">
+              <mat-icon>person</mat-icon>
+            </div>
+            <div class="photo-picker">
+              <span class="photo-filename">
+                {{ selectedFile?.name || ('EDIT_STUDENT.PHOTO_NONE' | translate) }}
+              </span>
+              <button type="button" mat-stroked-button (click)="photoInput.click()">
+                <mat-icon>add_a_photo</mat-icon>{{ 'EDIT_STUDENT.PHOTO_CHOOSE' | translate }}
+              </button>
+              <input type="file" (change)="onFileSelected($event)" accept="image/*" hidden #photoInput>
+            </div>
+          </div>
 
-    <mat-form-field appearance="fill" class="full-width">
-      <mat-label>Nom</mat-label>
-      <input matInput formControlName="lastName" />
-    </mat-form-field>
+          <div class="grid-2">
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>{{ 'COMMON.LAST_NAME' | translate }}</mat-label>
+              <input matInput formControlName="lastName" required>
+              <mat-error>{{ 'EDIT_STUDENT.REQUIRED' | translate }}</mat-error>
+            </mat-form-field>
 
-    <mat-form-field appearance="fill" class="full-width">
-      <mat-label>Email</mat-label>
-      <input matInput formControlName="email" />
-    </mat-form-field>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>{{ 'COMMON.FIRST_NAME' | translate }}</mat-label>
+              <input matInput formControlName="firstName" required>
+              <mat-error>{{ 'EDIT_STUDENT.REQUIRED' | translate }}</mat-error>
+            </mat-form-field>
 
-    <mat-form-field appearance="fill" class="full-width">
-      <mat-label>Numéro de téléphone</mat-label>
-      <input matInput formControlName="phoneNumber" />
-    </mat-form-field>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>{{ 'COMMON.GENDER' | translate }}</mat-label>
+              <mat-select formControlName="gender">
+                <mat-option value="male">{{ 'COMMON.MALE' | translate }}</mat-option>
+                <mat-option value="female">{{ 'COMMON.FEMALE' | translate }}</mat-option>
+              </mat-select>
+            </mat-form-field>
 
-    <mat-form-field appearance="fill" class="full-width">
-      <mat-label>Date de naissance</mat-label>
-      <input matInput [matDatepicker]="picker" formControlName="dateOfBirth" />
-      <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
-      <mat-datepicker #picker></mat-datepicker>
-    </mat-form-field>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>{{ 'COMMON.NATIONALITY' | translate }}</mat-label>
+              <mat-select formControlName="nationality">
+                <mat-option *ngFor="let n of nationalities" [value]="n">{{ n }}</mat-option>
+              </mat-select>
+            </mat-form-field>
 
-    <mat-form-field appearance="fill" class="full-width">
-      <mat-label>Lieu de naissance</mat-label>
-      <input matInput formControlName="placeOfBirth" />
-    </mat-form-field>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>{{ 'COMMON.BIRTHDATE' | translate }}</mat-label>
+              <input matInput [matDatepicker]="picker" formControlName="dateOfBirth">
+              <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+              <mat-datepicker #picker></mat-datepicker>
+            </mat-form-field>
 
-    <mat-form-field appearance="fill" class="full-width">
-      <mat-label>Sexe</mat-label>
-      <mat-select formControlName="gender">
-        <mat-option value="male">Homme</mat-option>
-        <mat-option value="female">Femme</mat-option>
-      </mat-select>
-    </mat-form-field>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>{{ 'COMMON.BIRTHPLACE' | translate }}</mat-label>
+              <input matInput formControlName="placeOfBirth">
+            </mat-form-field>
+          </div>
+        </div>
+      </mat-tab>
 
-    <mat-form-field appearance="fill" class="full-width">
-      <mat-label>Niveau</mat-label>
-      <mat-select formControlName="levelId">
-        <mat-option *ngFor="let level of levels" [value]="level.id">{{ level.name }}</mat-option>
-      </mat-select>
-    </mat-form-field>
+      <!-- Contact -->
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <mat-icon class="tab-icon">contact_phone</mat-icon>{{ 'EDIT_STUDENT.SECTION_CONTACT' | translate }}
+        </ng-template>
+        <div class="tab-body">
+          <div class="grid-2">
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>{{ 'COMMON.PHONE' | translate }}</mat-label>
+              <input matInput formControlName="phoneNumber">
+            </mat-form-field>
 
-    <mat-form-field appearance="fill" class="full-width">
-      <mat-label>Établissement</mat-label>
-      <input matInput formControlName="establishment" />
-    </mat-form-field>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>{{ 'COMMON.EMAIL' | translate }}</mat-label>
+              <input matInput formControlName="email" type="email">
+              <mat-error>{{ 'EDIT_STUDENT.EMAIL_INVALID' | translate }}</mat-error>
+            </mat-form-field>
 
-    <mat-form-field appearance="fill" class="full-width">
-      <mat-label>Moyenne</mat-label>
-      <input matInput type="number" formControlName="averageScore" />
-    </mat-form-field>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>{{ 'COMMON.COMMUNICATION' | translate }}</mat-label>
+              <mat-select formControlName="communicationPreference">
+                <mat-option *ngFor="let opt of communicationOptions" [value]="opt.value">
+                  {{ opt.labelKey | translate }}
+                </mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>{{ 'COMMON.CITY' | translate }}</mat-label>
+              <input matInput formControlName="city">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" subscriptSizing="dynamic" class="span-2">
+              <mat-label>{{ 'COMMON.ADDRESS' | translate }}</mat-label>
+              <input matInput formControlName="address">
+            </mat-form-field>
+          </div>
+        </div>
+      </mat-tab>
+
+      <!-- Scolarité -->
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <mat-icon class="tab-icon">school</mat-icon>{{ 'EDIT_STUDENT.SECTION_SCHOOL' | translate }}
+        </ng-template>
+        <div class="tab-body">
+          <div class="grid-2">
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>{{ 'COMMON.LEVEL' | translate }}</mat-label>
+              <mat-select formControlName="levelId">
+                <mat-option *ngFor="let level of levels" [value]="level.id">{{ level.name }}</mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>{{ 'COMMON.SCHOOL' | translate }}</mat-label>
+              <input matInput formControlName="establishment">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>{{ 'STUDENT_FORM.AVERAGE' | translate }}</mat-label>
+              <input matInput type="number" formControlName="averageScore" min="0" max="100">
+              <span matTextSuffix class="suffix">/100</span>
+              <mat-error>{{ 'EDIT_STUDENT.AVERAGE_RANGE' | translate }}</mat-error>
+            </mat-form-field>
+          </div>
+
+          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="full">
+            <mat-label>{{ 'EDIT_STUDENT.DESCRIPTION' | translate }}</mat-label>
+            <textarea matInput formControlName="description" rows="3"></textarea>
+          </mat-form-field>
+
+          <!-- Avertissement : changer de niveau laisse l'étudiant dans des groupes d'un autre niveau -->
+          <div class="warn-box" *ngIf="levelChanged">
+            <mat-icon>warning_amber</mat-icon>
+            <span>{{ 'EDIT_STUDENT.LEVEL_CHANGED' | translate }}</span>
+          </div>
+        </div>
+      </mat-tab>
+
+      <!-- Tuteur -->
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <mat-icon class="tab-icon">escalator_warning</mat-icon>{{ 'EDIT_STUDENT.SECTION_TUTOR' | translate }}
+        </ng-template>
+        <div class="tab-body">
+          <div class="tutor-row">
+            <mat-form-field appearance="outline" subscriptSizing="dynamic" class="tutor-select">
+              <mat-label>{{ 'tutor.title' | translate }}</mat-label>
+              <mat-select formControlName="tutorId">
+                <mat-option [value]="null">{{ 'EDIT_STUDENT.NO_TUTOR' | translate }}</mat-option>
+                <mat-option *ngFor="let t of tutors" [value]="t.id">{{ tutorLabel(t) }}</mat-option>
+              </mat-select>
+            </mat-form-field>
+            <button type="button" mat-stroked-button class="tutor-create" (click)="createTutor()">
+              <mat-icon>person_add</mat-icon>{{ 'EDIT_STUDENT.TUTOR_NEW' | translate }}
+            </button>
+          </div>
+          <p class="section-hint">{{ 'EDIT_STUDENT.TUTOR_HINT' | translate }}</p>
+        </div>
+      </mat-tab>
+    </mat-tab-group>
   </mat-dialog-content>
 
-  <mat-dialog-actions align="end">
-    <button mat-button (click)="onCancel()" type="button">Annuler</button>
-    <button mat-button color="primary" type="submit">Enregistrer</button>
+  <mat-dialog-actions align="end" class="dlg-actions">
+    <span class="invalid-note" *ngIf="editStudentForm.invalid && editStudentForm.touched">
+      <mat-icon>info</mat-icon>{{ 'EDIT_STUDENT.INVALID_HINT' | translate }}
+    </span>
+    <span class="spacer"></span>
+    <button mat-stroked-button (click)="onCancel()" type="button">{{ 'common.cancel' | translate }}</button>
+    <button mat-flat-button color="primary" type="submit" appAdminOnly>
+      <mat-icon>save</mat-icon>{{ 'EDIT_STUDENT.SAVE' | translate }}
+    </button>
   </mat-dialog-actions>
 </form>

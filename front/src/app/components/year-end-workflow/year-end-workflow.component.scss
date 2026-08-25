@@ -1,0 +1,198 @@
+.year-end-workflow {
+  padding: 16px;
+
+  .year-end-card {
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  .year-end-loading {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 0;
+  }
+
+  .year-end-error {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #b00020;
+    padding: 12px 0;
+
+    mat-icon {
+      color: #b00020;
+    }
+  }
+
+  // Espace le contenu de l'en-tête de la carte pour éviter que les labels
+  // flottants des champs "outline" ne soient collés/coupés par le titre.
+  mat-card-content {
+    padding-top: 20px;
+  }
+
+  .year-end-section {
+    margin-bottom: 24px;
+
+    .year-end-section-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: rgba(0, 0, 0, 0.72);
+      margin: 0 0 14px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    }
+  }
+
+  .year-end-new-year {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+
+    mat-form-field {
+      flex: 1 1 220px;
+    }
+  }
+
+  // ---- Barre de filtres repliable (style calendrier) ----
+  $ye-accent: #5b5bd6;
+  $ye-accent-soft: rgba(91, 91, 214, 0.10);
+
+  .ye-filters-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .ye-filters-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 40px;
+    padding: 0 14px;
+    border: 1px solid rgba(91, 91, 214, 0.35);
+    border-radius: 10px;
+    background: #fff;
+    color: $ye-accent;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+
+    &:hover,
+    &.is-open {
+      background: $ye-accent-soft;
+      border-color: $ye-accent;
+    }
+
+    .ye-filters-toggle-icon,
+    .ye-filters-chevron {
+      font-size: 19px;
+      height: 19px;
+      width: 19px;
+      color: $ye-accent;
+    }
+
+    .ye-filters-count {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 20px;
+      height: 20px;
+      padding: 0 6px;
+      border-radius: 10px;
+      background: $ye-accent;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+    }
+  }
+
+  .ye-filters-clear {
+    min-width: 0;
+    color: rgba(0, 0, 0, 0.54);
+  }
+
+  .ye-count {
+    margin-left: auto;
+    font-size: 13px;
+    color: rgba(0, 0, 0, 0.54);
+  }
+
+  // Panneau déroulant (animation d'ouverture)
+  .ye-filters-panel {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.25s ease, margin 0.25s ease;
+
+    &.open {
+      max-height: 260px;
+      margin-top: 14px;
+    }
+
+    .ye-filters-fields {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .ye-filter-field {
+      flex: 1 1 220px;
+
+      // Pastille teintée quand le filtre est actif.
+      &.is-active ::ng-deep .mat-mdc-text-field-wrapper {
+        background: $ye-accent-soft;
+      }
+
+      .ye-filter-icon {
+        color: $ye-accent;
+        font-size: 19px;
+        margin-right: 6px;
+      }
+    }
+  }
+
+  .year-end-table {
+    width: 100%;
+
+    .year-end-decision-field {
+      width: 100%;
+      max-width: 220px;
+      margin: 8px 0 -1.25em; // compense l'espace du hint mat-form-field dans une cellule
+    }
+  }
+
+  .year-end-review-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: #e65100;
+    font-weight: 500;
+
+    mat-icon {
+      font-size: 18px;
+      height: 18px;
+      width: 18px;
+    }
+  }
+
+  .year-end-empty {
+    color: rgba(0, 0, 0, 0.54);
+    font-style: italic;
+  }
+
+  .year-end-result {
+    padding: 8px 0;
+
+    .year-end-review-list {
+      margin-top: 12px;
+    }
+  }
+
+  mat-card-actions {
+    display: flex;
+    gap: 8px;
+    padding: 8px 16px 16px;
+  }
+}

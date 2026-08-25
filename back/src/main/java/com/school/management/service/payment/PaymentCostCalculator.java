@@ -23,8 +23,15 @@ import java.util.Objects;
  *       isPresent / cross-group est fait en amont).</li>
  * </ul>
  *
- * <h2>Exemption / réduction (business-rules.md §10)</h2>
- * Le taux est une fraction [0.00 ; 1.00] appliquée <b>uniquement au montant dû</b> :
+ * <h2>Exemption / réduction (business-rules.md §10, requirement 12)</h2>
+ * Le paramètre {@code exemptionRate} reçoit désormais le <b>taux de réduction
+ * résolu</b> pour le contexte de facturation : {@code DiscountService} sélectionne
+ * l'unique portée applicable la plus spécifique (Session &gt; Série &gt; Groupe) et
+ * fournit ce taux. Une exemption totale (membre d'un groupe exempté) n'est qu'un
+ * cas particulier : une réduction de portée Groupe au taux 1.00. Le calcul reste
+ * identique quelle que soit la portée d'origine.
+ *
+ * <p>Le taux est une fraction [0.00 ; 1.00] appliquée <b>uniquement au montant dû</b> :
  * {@code montant = base × (1 − taux)}. Un taux de 1.00 ramène les deux montants à
  * 0 — l'étudiant est donc toujours "à jour" (jamais en retard) quelle que soit la
  * présence.
@@ -55,8 +62,10 @@ public final class PaymentCostCalculator {
      * @param attendedSessions nombre de séances <b>présentes</b> déjà comptées
      *                         (cross-group / même matière, résolu en amont). Doit être >= 0.
      * @param pricePerSession  prix unitaire d'une séance. Non null, >= 0.
-     * @param exemptionRate    taux d'exemption sous forme de fraction [0.00 ; 1.00].
-     *                         Non null.
+     * @param exemptionRate    taux de réduction résolu (portée Session/Série/Groupe
+     *                         résolue par {@code DiscountService}), sous forme de
+     *                         fraction [0.00 ; 1.00]. Une exemption totale est le cas
+     *                         particulier d'un taux de 1.00. Non null.
      * @throws IllegalArgumentException si une contrainte ci-dessus est violée.
      */
     public PaymentCostCalculator(int plannedSessions,

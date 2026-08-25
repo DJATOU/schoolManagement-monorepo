@@ -8,9 +8,15 @@
     ⚠️ RATTRAPAGE : Paiement par session assistée uniquement
   </p>
 
-  <p><strong>{{ data.isCatchUp ? 'Nombre de sessions assistées' : 'Nombre de sessions créées' }} :</strong> {{ data.numberOfSessions }}</p>
-  <p><strong>Prix par session :</strong> {{ data.pricePerSession }} DA</p>
-  <p><strong>Coût total :</strong> {{ data.totalCost }} DA</p>
+  <p><strong>{{ data.isCatchUp ? 'Nombre de sessions assistées' : 'Nombre de séances facturées' }} :</strong> {{ data.numberOfSessions }}</p>
+  <!-- Séances non facturées : antérieures à l'inscription et non suivies. Sans ce rappel, le
+       coût total paraîtrait inférieur au coût de la série sans raison visible. -->
+  <p *ngIf="!data.isCatchUp && data.excludedSessions">
+    <strong>{{ 'payment.dialog.hints.excludedSessions' | translate:{ excluded: data.excludedSessions } }}</strong>
+    <span class="pcd-exclusion-reason">{{ 'payment.dialog.hints.exclusionReason' | translate }}</span>
+  </p>
+  <p><strong>Prix par session :</strong> {{ data.pricePerSession | number:'1.2-2' }} DA</p>
+  <p><strong>Coût total :</strong> {{ data.totalCost | number:'1.2-2' }} DA</p>
 
   <!-- Explication pour rattrapage -->
   <p *ngIf="data.isCatchUp" style="color: #666; font-size: 0.9em; font-style: italic;">
@@ -18,8 +24,40 @@
   </p>
 
   <hr>
-  <p><strong>Montant déjà payé :</strong> {{ data.totalPaid }} DA</p>
-  <p><strong>Montant restant à payer :</strong> {{ data.remainingAmount }} DA</p>
+
+  <!--
+    Répartition du versement : la série choisie ne reçoit que son dû, le surplus crédite les
+    séries suivantes. Le report étant automatique, ce récapitulatif est le dernier écran où
+    l'administrateur peut le constater avant validation (exigence 9.3).
+  -->
+  <div class="pcd-allocation" *ngIf="hasCarryOver">
+    <p class="pcd-allocation__title">{{ 'payment.dialog.allocation.title' | translate }}</p>
+    <p class="pcd-allocation__line" *ngIf="data.amountReceived !== undefined">
+      {{ 'payment.dialog.allocation.received' | translate:{
+            amount: (data.amountReceived | number:'1.2-2')
+          } }}
+    </p>
+    <p class="pcd-allocation__line">
+      {{ 'payment.dialog.allocation.allocated' | translate:{
+            amount: (data.amountAllocated | number:'1.2-2'),
+            series: data.seriesName
+          } }}
+    </p>
+    <p class="pcd-allocation__line" *ngFor="let carryOver of data.carryOvers">
+      {{ 'payment.dialog.allocation.carriedOver' | translate:{
+            amount: (carryOver.amount | number:'1.2-2'),
+            series: carryOver.seriesName
+          } }}
+    </p>
+    <p class="pcd-allocation__total">
+      {{ 'payment.dialog.allocation.carriedOverTotal' | translate:{
+            amount: (carriedOverTotal | number:'1.2-2')
+          } }}
+    </p>
+  </div>
+
+  <p><strong>Montant déjà payé :</strong> {{ data.totalPaid | number:'1.2-2' }} DA</p>
+  <p><strong>Montant restant à payer :</strong> {{ data.remainingAmount | number:'1.2-2' }} DA</p>
 
   <!-- Note rattrapage -->
   <p *ngIf="data.isCatchUp" style="color: red; font-weight: bold; margin: 10px 0;">
@@ -36,5 +74,5 @@
 </mat-dialog-content>
 <mat-dialog-actions>
   <button mat-button (click)="onCancel()">Cancel</button>
-  <button mat-raised-button color="primary" (click)="onConfirm()">Confirm</button>
+  <button mat-raised-button color="primary" (click)="onConfirm()" appAdminOnly>Confirm</button>
 </mat-dialog-actions>

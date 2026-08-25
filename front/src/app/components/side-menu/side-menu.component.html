@@ -16,17 +16,21 @@
         </mat-panel-title>
       </mat-expansion-panel-header>
       <div class="panel-content">
-        <button mat-list-item class="nav-item" routerLinkActive="active-link" [routerLinkActiveOptions]="{ exact: true }" [routerLink]="['/subscription']">
+        <button mat-list-item class="nav-item" routerLinkActive="active-link" [routerLinkActiveOptions]="{ exact: true }" [routerLink]="['/subscription']" appAdminOnly>
           <mat-icon class="item-icon">school</mat-icon>
           <span class="item-text">{{ 'SIDE_MENU.STUDENTS' | translate }}</span>
         </button>
-        <button mat-list-item class="nav-item" routerLinkActive="active-link" [routerLink]="['/teacher/new']">
+        <button mat-list-item class="nav-item" routerLinkActive="active-link" [routerLink]="['/teacher/new']" appAdminOnly>
           <mat-icon class="item-icon">workspace_premium</mat-icon>
           <span class="item-text">{{ 'SIDE_MENU.TEACHERS' | translate }}</span>
         </button>
-        <button mat-list-item class="nav-item" routerLinkActive="active-link" [routerLink]="['/group/new']">
+        <button mat-list-item class="nav-item" routerLinkActive="active-link" [routerLink]="['/group/new']" appAdminOnly>
           <mat-icon class="item-icon">groups_3</mat-icon>
           <span class="item-text">{{ 'SIDE_MENU.GROUPS' | translate }}</span>
+        </button>
+        <button mat-list-item class="nav-item" routerLinkActive="active-link" [routerLink]="['/import']" appAdminOnly>
+          <mat-icon class="item-icon">upload_file</mat-icon>
+          <span class="item-text">{{ 'SIDE_MENU.IMPORT' | translate }}</span>
         </button>
       </div>
     </mat-expansion-panel>
@@ -43,13 +47,15 @@
           <mat-icon class="item-icon">payments</mat-icon>
           <span class="item-text">{{ 'SIDE_MENU.PAYMENTS' | translate }}</span>
         </button>
-        <button mat-list-item class="nav-item">
-          <mat-icon class="item-icon">receipt_long</mat-icon>
-          <span class="item-text">{{ 'SIDE_MENU.FEES' | translate }}</span>
-        </button>
         <button mat-list-item class="nav-item" routerLinkActive="active-link" [routerLink]="['/discounts']">
           <mat-icon class="item-icon">local_offer</mat-icon>
           <span class="item-text">{{ 'SIDE_MENU.DISCOUNTS' | translate }}</span>
+        </button>
+        <!-- Recettes : masqué pour un VIEWER, l'API refuse de toute façon l'accès. -->
+        <button *appHasRole="'ADMIN'" mat-list-item class="nav-item" routerLinkActive="active-link"
+          [routerLink]="['/admin/revenue']">
+          <mat-icon class="item-icon">savings</mat-icon>
+          <span class="item-text">{{ 'SIDE_MENU.REVENUE' | translate }}</span>
         </button>
       </div>
     </mat-expansion-panel>
@@ -62,11 +68,7 @@
         </mat-panel-title>
       </mat-expansion-panel-header>
       <div class="panel-content">
-        <button mat-list-item class="nav-item">
-          <mat-icon class="item-icon">task_alt</mat-icon>
-          <span class="item-text">{{ 'SIDE_MENU.ATTENDANCE' | translate }}</span>
-        </button>
-        <button mat-list-item class="nav-item" routerLinkActive="active-link" [routerLink]="['/session/new']">
+        <button mat-list-item class="nav-item" routerLinkActive="active-link" [routerLink]="['/session/new']" appAdminOnly>
           <mat-icon class="item-icon">schedule</mat-icon>
           <span class="item-text">{{ 'SIDE_MENU.SESSIONS' | translate }}</span>
         </button>
@@ -74,17 +76,13 @@
           <mat-icon class="item-icon">event</mat-icon>
           <span class="item-text">{{ 'SIDE_MENU.CALENDAR' | translate }}</span>
         </button>
-        <button mat-list-item class="nav-item" routerLinkActive="active-link" [routerLink]="['/serie/new']">
-          <mat-icon class="item-icon">collections_bookmark</mat-icon>
-          <span class="item-text">{{ 'SIDE_MENU.SERIES' | translate }}</span>
-        </button>
         <button mat-list-item class="nav-item" routerLinkActive="active-link" [routerLink]="['/catch-ups']">
           <mat-icon class="item-icon">history_edu</mat-icon>
           <span class="item-text">{{ 'SIDE_MENU.CATCH_UPS' | translate }}</span>
         </button>
-        <button mat-list-item class="nav-item" routerLinkActive="active-link" [routerLink]="['/transfers']">
-          <mat-icon class="item-icon">swap_horiz</mat-icon>
-          <span class="item-text">{{ 'SIDE_MENU.TRANSFERS' | translate }}</span>
+        <button mat-list-item class="nav-item" routerLinkActive="active-link" [routerLink]="['/year-end']">
+          <mat-icon class="item-icon">event_available</mat-icon>
+          <span class="item-text">{{ 'SIDE_MENU.YEAR_END' | translate }}</span>
         </button>
       </div>
     </mat-expansion-panel>

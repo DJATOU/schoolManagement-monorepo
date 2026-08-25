@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, map, forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { StudentPaymentStatus, LateGroupDetails } from '../models/student-payment-status';
-import { API_BASE_URL } from '../app.config';
+import { API_BASE_URL } from '../api-base-url';
 
 /**
  * Service pour gérer le statut de paiement des étudiants
@@ -92,6 +92,9 @@ export class StudentPaymentStatusService {
     let totalDue = 0;
     let totalPaid = 0;
     let totalValidatedSessions = 0;
+    // Séances suivies mais couvertes par une exemption de 100 % : leur montant dû vaut 0,
+    // il faut donc les compter séparément pour ne pas les confondre avec « aucune séance ».
+    let exemptedSessions = 0;
 
     // DEBUG: Activer temporairement pour le premier étudiant
     const enableDebug = studentId === 1; // TODO: Retirer après test
@@ -111,6 +114,8 @@ export class StudentPaymentStatusService {
 
       // Analyser les séries de sessions du groupe
       for (const seriesStatus of (groupStatus.series || [])) {
+        const seriesExempted = seriesStatus.exempted === true;
+
         // Analyser les sessions de la série
         for (const sessionStatus of (seriesStatus.sessions || [])) {
           // Le backend ne renvoie QUE les sessions où l'étudiant a une fiche de présence
@@ -121,6 +126,10 @@ export class StudentPaymentStatusService {
 
           const amountDue = sessionStatus.amountDue || 0;
           const amountPaid = sessionStatus.amountPaid || 0;
+
+          if (isPayable && seriesExempted) {
+            exemptedSessions++;
+          }
 
           // Si cette session doit être payée
           if (isPayable && amountDue > 0) {
@@ -161,9 +170,14 @@ export class StudentPaymentStatusService {
     }
 
     // RÈGLE CORRIGÉE: Déterminer le statut global
-    let paymentStatus: 'GOOD' | 'LATE' | 'NA';
+    let paymentStatus: 'GOOD' | 'LATE' | 'EXEMPT' | 'NA';
 
-    if (totalDue === 0) {
+    if (totalDue === 0 && exemptedSessions > 0) {
+      // Rien à payer parce que l'étudiant est exempté, et non parce qu'il n'a pas de séance.
+      // Un étudiant exempté sur une série mais redevable sur une autre reste évalué
+      // normalement : totalDue > 0 l'emmène sur les branches GOOD / LATE.
+      paymentStatus = 'EXEMPT';
+    } else if (totalDue === 0) {
       // Aucune session validée/payable
       paymentStatus = 'NA';
     } else if (totalDue > totalPaid) {

@@ -3,8 +3,10 @@ import { Injectable } from '@angular/core';
 import { catchError, Observable, throwError } from 'rxjs';
 import { Payment } from '../models/payment/payment';
 import { PaymentDetail } from '../models/paymentDetail/paymentDetail';
+import { PaymentQuote } from '../models/payment/payment-quote';
+import { PaymentAllocationResult } from '../models/payment/payment-allocation';
 import { PageResponse } from '../models/common/page-response';
-import { API_BASE_URL } from '../app.config';
+import { API_BASE_URL } from '../api-base-url';
 
 /**
  * Service de gestion des paiements
@@ -26,6 +28,45 @@ export class PaymentService {
   private readonly baseUrl = `${API_BASE_URL}/api/payments`;
 
   constructor(private http: HttpClient) {}
+
+  /**
+   * Devis de paiement d'un étudiant pour une série, réduction appliquée.
+   *
+   * Backend: PaymentQuoteController.getQuote()
+   * Endpoint: GET /api/payments/quote?studentId={id}&seriesId={id}
+   *
+   * Source unique du montant proposé à la saisie et du plafond encaissable : le formulaire
+   * ne recalcule plus rien à partir du tarif catalogue, ce qui lui faisait ignorer les
+   * réductions.
+   */
+  getPaymentQuote(studentId: number, seriesId: number): Observable<PaymentQuote> {
+    const params = new HttpParams()
+      .set('studentId', studentId.toString())
+      .set('seriesId', seriesId.toString());
+
+    return this.http.get<PaymentQuote>(`${this.baseUrl}/quote`, { params }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  /**
+   * Devis de toutes les séries d'un groupe pour un étudiant, dans l'ordre d'ajout des séries.
+   *
+   * Backend: PaymentQuoteController.getQuotesForGroup()
+   * Endpoint: GET /api/payments/quote/group?studentId={id}&groupId={id}
+   *
+   * Permet de savoir d'avance quelles séries n'ont plus rien à encaisser, pour les présenter
+   * grisées dans le sélecteur. Une seule requête au lieu d'une par série.
+   */
+  getPaymentQuotesForGroup(studentId: number, groupId: number): Observable<PaymentQuote[]> {
+    const params = new HttpParams()
+      .set('studentId', studentId.toString())
+      .set('groupId', groupId.toString());
+
+    return this.http.get<PaymentQuote[]>(`${this.baseUrl}/quote/group`, { params }).pipe(
+      catchError(this.handleError)
+    );
+  }
 
   // =========================================================================
   // CRUD OPERATIONS (PaymentCrudService backend)
@@ -137,11 +178,17 @@ export class PaymentService {
    * Le backend distribue automatiquement le montant sur toutes les sessions
    * de la série en ordre chronologique.
    *
+   * Le montant est imputé sur la série visée à hauteur de son montant dû, puis la part
+   * excédentaire est reportée sur les séries suivantes. La réponse n'est donc plus une
+   * ligne de paiement mais la répartition complète du versement : le type était encore
+   * `Payment` alors que le serveur renvoie `PaymentAllocationResultDTO`, si bien que
+   * `response.id` et `response.paymentDate` étaient lus sur un objet qui ne les porte plus.
+   *
    * @param payment Données du paiement
-   * @returns Observable<Payment>
+   * @returns Observable<PaymentAllocationResult> part imputée et reports
    */
-  processPayment(payment: Payment): Observable<Payment> {
-    return this.http.post<Payment>(`${this.baseUrl}/process`, payment).pipe(
+  processPayment(payment: Payment): Observable<PaymentAllocationResult> {
+    return this.http.post<PaymentAllocationResult>(`${this.baseUrl}/process`, payment).pipe(
       catchError(this.handleError)
     );
   }
@@ -254,7 +301,7 @@ export class PaymentService {
   /**
    * @deprecated À supprimer - Utiliser createPayment() ou processPayment()
    */
-  addPayment(payment: Payment): Observable<Payment> {
+  addPayment(payment: Payment): Observable<PaymentAllocationResult> {
     console.warn('[DEPRECATED] Use createPayment() or processPayment() instead');
     return this.processPayment(payment);
   }

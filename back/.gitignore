@@ -43,3 +43,6 @@ uploads/
 # Logs
 *.log
 logs/
+
+# Base de données jqwik (artefact de test, regénéré à chaque exécution)
+.jqwik-database

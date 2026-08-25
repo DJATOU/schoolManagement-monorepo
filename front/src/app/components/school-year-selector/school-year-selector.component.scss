@@ -1,0 +1,72 @@
+.school-year-selector {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+
+  .selector-icon {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+  }
+
+  // Libellé fixe « Année scolaire » affiché à gauche du champ (non tronqué).
+  .selector-caption {
+    color: rgba(255, 255, 255, 0.95);
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  .selector-field {
+    width: 150px;
+
+    // Fond clair pour lisibilité sur la barre de navigation en dégradé.
+    ::ng-deep .mat-mdc-text-field-wrapper {
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 8px;
+    }
+
+    ::ng-deep .mat-mdc-form-field-infix {
+      min-height: 40px;
+      padding-top: 10px;
+      padding-bottom: 10px;
+    }
+
+    // Empêche le libellé sélectionné d'être tronqué et le garde sur une ligne.
+    ::ng-deep .mat-mdc-select-value {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+}
+
+// Badge « courant » dans le panneau déroulant (pas dans la zone sélectionnée).
+.current-badge {
+  margin-left: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #667eea;
+  text-transform: uppercase;
+}
+
+.school-year-select-panel {
+  .option-label {
+    font-weight: 500;
+  }
+}
+
+@media (max-width: 768px) {
+  .school-year-selector {
+    .selector-icon,
+    .selector-caption {
+      display: none;
+    }
+
+    .selector-field {
+      width: 130px;
+    }
+  }
+}

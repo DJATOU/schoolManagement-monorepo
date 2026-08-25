@@ -6,6 +6,7 @@ import { SideMenuComponent } from './components/side-menu/side-menu.component';
 import { StudentSearchComponent } from "./components/student/student-search/student-search.component";
 import { MatSidenav, MatSidenavContainer, MatSidenavContent } from '@angular/material/sidenav';
 import { SharedLayoutContainerComponent } from './components/shared/shared-layout-container/shared-layout-container.component';
+import { AuthService } from './services/auth.service';
 
 @Component({
     selector: 'app-root',
@@ -19,6 +20,9 @@ export class AppComponent {
   title = 'schoolManagement-front';
 
   isSidenavOpen = true;
+
+  /** Exposé au template pour afficher le shell uniquement quand l'utilisateur est connecté. */
+  constructor(public auth: AuthService) {}
 
   toggleSidenav() {
     this.isSidenavOpen = !this.isSidenavOpen;

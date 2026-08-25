@@ -1,52 +1,209 @@
-<h2 mat-dialog-title>{{ 'payment.dialog.title' | translate }}</h2>
-<mat-dialog-content>
-  <form [formGroup]="paymentForm" (ngSubmit)="onSubmit()">
-    <mat-form-field appearance="fill">
-      <mat-label>{{ 'payment.dialog.fields.group' | translate }}</mat-label>
-      <mat-select formControlName="groupId" required>
-        <mat-option
-          *ngFor="let group of groups"
-          [value]="group.id"
-          [class.rattrapage-option]="group.catchUp"
-        >
-          {{ group.name }}
-          <ng-container *ngIf="group.catchUp">
-            &nbsp;({{ 'payment.dialog.fields.catchUp' | translate }})
-          </ng-container>
-        </mat-option>
-      </mat-select>
-    </mat-form-field>
+<h2 mat-dialog-title class="payment-dialog__title">
+  <mat-icon>payments</mat-icon>
+  <span>{{ 'payment.dialog.title' | translate }}</span>
+</h2>
 
+<!--
+  Le formulaire enveloppe le contenu ET les actions : mat-dialog-content gère alors seul
+  le défilement et la barre de boutons reste toujours visible en bas de la fenêtre.
+-->
+<form [formGroup]="paymentForm" (ngSubmit)="onSubmit()" class="payment-form">
+  <mat-dialog-content class="payment-dialog__content">
+    <!--
+      Signalement d'un changement de groupe (exigences 10.2, 10.5). Strictement informatif : il
+      n'entre dans aucun validateur du formulaire et ne conditionne pas la soumission
+      (exigences 10.6, 10.7). Son chargement est autonome et n'attend pas les devis, donc il ne
+      retarde pas l'affichage du formulaire. Rien n'est rendu en l'absence de changement.
+    -->
+    <app-group-change-notice [studentId]="studentId"></app-group-change-notice>
 
-    <mat-form-field appearance="fill">
-      <mat-label>{{ 'payment.dialog.fields.sessionSeries' | translate }}</mat-label>
-      <mat-select formControlName="sessionSeriesId" required>
-        <mat-option *ngFor="let series of sessionSeries" [value]="series.id">{{ series.name }}</mat-option>
-      </mat-select>
-    </mat-form-field>
+    <div class="payment-grid">
+      <mat-form-field appearance="fill">
+        <mat-label>{{ 'payment.dialog.fields.group' | translate }}</mat-label>
+        <mat-select formControlName="groupId" required>
+          <mat-option
+            *ngFor="let group of groups"
+            [value]="group.id"
+            [class.rattrapage-option]="group.catchUp"
+          >
+            {{ group.name }}
+            <ng-container *ngIf="group.catchUp">
+              &nbsp;({{ 'payment.dialog.fields.catchUp' | translate }})
+            </ng-container>
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
 
-    <mat-form-field appearance="fill">
-      <mat-label>{{ 'payment.dialog.fields.amount' | translate }}</mat-label>
-      <input matInput formControlName="amountPaid" type="number" min="0" required>
-    </mat-form-field>
+      <mat-form-field appearance="fill">
+        <mat-label>{{ 'payment.dialog.fields.sessionSeries' | translate }}</mat-label>
+        <mat-select formControlName="sessionSeriesId" required>
+          <!-- Les séries arrivent déjà triées par ordre d'ajout : on ne les retrie pas.
+               Une série sans rien à encaisser est grisée ; l'infobulle est portée par un span
+               interne car une option désactivée ne reçoit pas les événements de survol. -->
+          <mat-option *ngFor="let series of sessionSeries" [value]="series.id"
+            [disabled]="isSeriesSettled(series.id)">
+            <span [matTooltip]="settledSeriesTooltip(series.id)"
+              [matTooltipDisabled]="!isSeriesSettled(series.id)"
+              matTooltipClass="payment-tooltip">
+              {{ series.name }}
+              <span class="series-settled-badge" *ngIf="isSeriesSettled(series.id)">
+                · {{ 'payment.dialog.seriesSettledBadge' | translate }}
+              </span>
+            </span>
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+    </div>
 
-    <mat-form-field appearance="fill">
-      <mat-label>{{ 'payment.dialog.fields.paymentMethod' | translate }}</mat-label>
-      <mat-select formControlName="paymentMethod" required>
-        <mat-option *ngFor="let method of paymentMethods" [value]="method.value">
-          {{ method.labelKey | translate }}
-        </mat-option>
-      </mat-select>
-    </mat-form-field>
+    <p class="quote-error" *ngIf="quoteError">{{ quoteError }}</p>
+
+    <!--
+      Réduction de l'étudiant, annoncée avant toute saisie : sans elle, l'administrateur
+      encaissait le plein tarif et créait un trop-perçu sans s'en apercevoir.
+    -->
+    <div class="discount-banner" *ngIf="hasDiscount && quote">
+      <mat-icon>{{ quote.exempted ? 'volunteer_activism' : 'local_offer' }}</mat-icon>
+      <span *ngIf="!quote.exempted">
+        {{ 'payment.dialog.discount.applied' | translate:{
+              percent: discountPercent,
+              net: quote.netPricePerSession,
+              gross: quote.grossPricePerSession
+            } }}
+      </span>
+      <span *ngIf="quote.exempted">{{ 'payment.dialog.discount.exempted' | translate }}</span>
+    </div>
+
+    <!--
+      Récapitulatif du dû, calculé par le serveur. Le décompte affiché est celui des séances
+      FACTURABLES : une séance tenue avant l'arrivée de l'étudiant et à laquelle il n'a pas
+      assisté ne lui est pas facturée. Afficher le nombre de séances de la série ferait
+      apparaître un coût incohérent avec le total.
+    -->
+    <div class="quote-summary" *ngIf="quote">
+      <span>{{ 'payment.dialog.hints.total' | translate:{
+            sessions: quote.billableSessions,
+            price: (quote.netPricePerSession | number:'1.2-2'),
+            total: (quote.monthTotalCost | number:'1.2-2')
+          } }}</span>
+      <span *ngIf="quote.amountPaid > 0">{{ 'payment.dialog.hints.alreadyPaid' | translate:{
+            paid: (quote.amountPaid | number:'1.2-2'),
+            remaining: (quote.remainingToPay | number:'1.2-2')
+          } }}</span>
+      <!-- Motif d'exclusion nommé : sans lui, un coût inférieur au coût nominal de la série
+           paraîtrait arbitraire et l'administrateur ne pourrait pas l'expliquer. -->
+      <span class="quote-summary__excluded" *ngIf="hasExcludedSessions">
+        <mat-icon>event_busy</mat-icon>
+        {{ 'payment.dialog.hints.excludedSessions' | translate:{ excluded: excludedSessions } }}
+        <span class="quote-summary__reason">
+          {{ 'payment.dialog.hints.exclusionReason' | translate }}
+        </span>
+      </span>
+      <!-- Série sur-encaissée avant l'entrée en vigueur du prorata : aucune reprise de données
+           n'est prévue, l'écart reste affiché tel quel. -->
+      <span class="quote-summary__excess" *ngIf="existingExcess > 0">
+        {{ 'payment.dialog.hints.existingExcess' | translate:{
+              excess: (existingExcess | number:'1.2-2')
+            } }}
+      </span>
+    </div>
+
+    <div class="full-series-block">
+      <mat-checkbox formControlName="fullSeriesPayment">
+        {{ 'payment.dialog.fields.fullSeries' | translate }}
+      </mat-checkbox>
+      <p class="full-series-hint" *ngIf="canPayFullSeries; else fullSeriesUnavailable">
+        {{ 'payment.dialog.hints.fullSeriesRemaining' | translate:{
+              remaining: (fullSeriesAmount | number:'1.2-2')
+            } }}
+      </p>
+      <ng-template #fullSeriesUnavailable>
+        <p class="full-series-hint">
+          {{ (quote && quote.maxPayable === 0 ? 'payment.dialog.hints.alreadySettled'
+                                              : 'payment.dialog.hints.fullSeriesUnavailable') | translate }}
+        </p>
+      </ng-template>
+    </div>
+
+    <div class="payment-grid">
+      <mat-form-field appearance="fill">
+        <mat-label>{{ 'payment.dialog.fields.amount' | translate }}</mat-label>
+        <!-- Le plafond de saisie est celui de la CHAÎNE des séries, pas de la série visée :
+             au-delà du dû de la série, le surplus est reporté sur les séries suivantes. -->
+        <input matInput formControlName="amountPaid" type="number" min="0"
+          [max]="chainMaxPayable" required>
+        <span matTextSuffix>DA</span>
+        <mat-hint *ngIf="quote && !paymentForm.get('amountPaid')?.hasError('max')">
+          {{ (isFullSeriesPayment ? 'payment.dialog.hints.fullSeriesAmount' : 'payment.dialog.hints.sessionPrice')
+              | translate:{ price: (netSessionPrice | number:'1.2-2') } }}
+        </mat-hint>
+        <!-- Refus du dépassement du maximum encaissable sur la chaîne. Quand une série de la
+             chaîne n'a aucune séance, la cause n'est pas le montant mais la série fermée : le
+             message nomme alors l'action corrective, comme le fait le serveur. -->
+        <mat-error *ngIf="paymentForm.get('amountPaid')?.hasError('max') && quote">
+          {{ exceedsChainKey | translate:{
+                max: (chainMaxPayable | number:'1.2-2'),
+                series: exceedsChainParams.series
+              } }}
+        </mat-error>
+        <!-- Un versement nul n'encaisse rien : il est refusé avant l'envoi, le serveur
+             appliquant la même règle. -->
+        <mat-error *ngIf="paymentForm.get('amountPaid')?.hasError('nonPositiveAmount')">
+          {{ nonPositiveAmountKey | translate }}
+        </mat-error>
+      </mat-form-field>
+
+      <mat-form-field appearance="fill">
+        <mat-label>{{ 'payment.dialog.fields.paymentMethod' | translate }}</mat-label>
+        <mat-select formControlName="paymentMethod" required>
+          <mat-option *ngFor="let method of paymentMethods" [value]="method.value">
+            {{ method.labelKey | translate }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+    </div>
+
+    <!--
+      Aperçu de la répartition, affiché dès que le montant saisi dépasse le plafond de la série
+      choisie. Le report est automatique et sans confirmation distincte : cet aperçu est la seule
+      occasion pour l'administrateur de constater qu'une partie du versement crédite une autre
+      série (exigence 9.3).
+    -->
+    <div class="allocation-preview" *ngIf="allocationPreview && allocationPreview.carryOvers.length > 0">
+      <p class="allocation-preview__title">
+        <mat-icon>call_split</mat-icon>
+        {{ 'payment.dialog.allocation.title' | translate }}
+      </p>
+      <p class="allocation-preview__line">
+        {{ 'payment.dialog.allocation.allocated' | translate:{
+              amount: (allocationPreview.allocated | number:'1.2-2'),
+              series: selectedSeriesName
+            } }}
+      </p>
+      <p class="allocation-preview__line" *ngFor="let carryOver of allocationPreview.carryOvers">
+        {{ 'payment.dialog.allocation.carriedOver' | translate:{
+              amount: (carryOver.amount | number:'1.2-2'),
+              series: carryOver.seriesName
+            } }}
+      </p>
+      <!-- Reliquat non plaçable : le serveur refuserait le versement EN TOTALITÉ, y compris la
+           part imputable. On le dit avant l'envoi, avec l'action corrective. -->
+      <p class="allocation-preview__blocked" *ngIf="allocationPreview.unplaceable > 0">
+        <mat-icon>report_problem</mat-icon>
+        {{ exceedsChainKey | translate:{
+              max: (chainMaxPayable | number:'1.2-2'),
+              series: exceedsChainParams.series
+            } }}
+      </p>
+    </div>
 
     <mat-form-field appearance="fill">
       <mat-label>{{ 'payment.dialog.fields.description' | translate }}</mat-label>
-      <textarea matInput formControlName="paymentDescription"></textarea>
+      <textarea matInput formControlName="paymentDescription" rows="2"></textarea>
     </mat-form-field>
+  </mat-dialog-content>
 
-    <div mat-dialog-actions>
-      <button mat-button type="button" (click)="onCancel()">{{ 'common.cancel' | translate }}</button>
-      <button mat-raised-button color="primary" type="submit">{{ 'common.confirm' | translate }}</button>
-    </div>
-  </form>
-</mat-dialog-content>
+  <mat-dialog-actions align="end" class="payment-dialog__actions">
+    <button mat-button type="button" (click)="onCancel()">{{ 'common.cancel' | translate }}</button>
+    <button mat-raised-button color="primary" type="submit" appAdminOnly>{{ 'common.confirm' | translate }}</button>
+  </mat-dialog-actions>
+</form>

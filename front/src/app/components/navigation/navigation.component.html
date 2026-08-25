@@ -52,13 +52,15 @@
     </div>
   </div>
 
+  <app-school-year-selector></app-school-year-selector>
+
   <div class="user-profile-pill" [matMenuTriggerFor]="userMenu">
     <img
       src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%233f51b5'/%3E%3Ccircle cx='50' cy='35' r='18' fill='white'/%3E%3Cellipse cx='50' cy='85' rx='30' ry='25' fill='white'/%3E%3C/svg%3E"
       alt="Admin" class="user-avatar" />
     <div class="user-info">
-      <span class="user-name">M. DJATOU</span>
-      <span class="user-role">{{ 'NAV.USER.ROLE' | translate }}</span>
+      <span class="user-name">{{ currentUser?.username || '—' }}</span>
+      <span class="user-role">{{ (currentUser?.role === 'ADMIN' ? 'AUTH.ROLES.ADMIN' : 'AUTH.ROLES.VIEWER') | translate }}</span>
     </div>
     <mat-icon class="dropdown-icon">expand_more</mat-icon>
   </div>
@@ -84,6 +86,10 @@
     <button mat-menu-item (click)="openSettings()">
       <mat-icon>settings</mat-icon>
       <span>{{ 'NAV.ACTIONS.SETTINGS' | translate }}</span>
+    </button>
+    <button mat-menu-item *ngIf="currentUser?.role === 'ADMIN'" (click)="openUserManagement()">
+      <mat-icon>manage_accounts</mat-icon>
+      <span>{{ 'AUTH.USERS.TITLE' | translate }}</span>
     </button>
     <mat-divider></mat-divider>
     <button mat-menu-item (click)="logout()">

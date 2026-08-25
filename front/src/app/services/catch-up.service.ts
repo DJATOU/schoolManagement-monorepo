@@ -1,8 +1,9 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { API_BASE_URL } from '../app.config';
+import { API_BASE_URL } from '../api-base-url';
 import { CatchUpRequest } from '../models/catchUp/catch-up-request';
+import { StudentAbsence } from '../models/catchUp/student-absence';
 import { Session } from '../models/session/session';
 
 @Injectable({
@@ -19,6 +20,18 @@ export class CatchUpService {
 
   getPendingRequests(): Observable<CatchUpRequest[]> {
     return this.http.get<CatchUpRequest[]>(`${this.apiUrl}/pending`);
+  }
+
+  /** Liste toutes les demandes de rattrapage (tous statuts). */
+  getAllRequests(): Observable<CatchUpRequest[]> {
+    return this.http.get<CatchUpRequest[]>(this.apiUrl);
+  }
+
+  /** Liste les absences d'un étudiant éligibles à une demande de rattrapage. */
+  getEligibleAbsences(studentId: number): Observable<StudentAbsence[]> {
+    return this.http.get<StudentAbsence[]>(`${this.apiUrl}/eligible-absences`, {
+      params: { studentId: studentId.toString() }
+    });
   }
 
   getRequestsByStudent(studentId: number): Observable<CatchUpRequest[]> {

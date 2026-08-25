@@ -1,5 +1,5 @@
 import { Component, Inject, OnInit } from '@angular/core';
-import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 import { Teacher } from '../../../models/teacher/teacher';
 import { CommonModule } from '@angular/common';
@@ -11,11 +11,14 @@ import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatTabsModule } from '@angular/material/tabs';
 import { TeacherService } from '../../../services/teacher.service';
 import { COMMUNICATION_OPTIONS, DEFAULT_NATIONALITY, NATIONALITIES } from '../../../utils/form-options';
 import { TranslateModule } from '@ngx-translate/core';
 import { SubjectService } from '../../../services/subject.service';
 import { Subject } from '../../../models/subject/subject';
+import { AdminOnlyDirective } from '../../../shared/admin-only.directive';
+import { SecureImageDirective } from '../../../shared/secure-image.directive';
 
 @Component({
   selector: 'app-edit-teacher-dialog',
@@ -32,7 +35,11 @@ import { Subject } from '../../../models/subject/subject';
     MatNativeDateModule,
     MatIconModule,
     MatTooltipModule,
-    TranslateModule
+    MatTabsModule,
+    TranslateModule,
+    AdminOnlyDirective
+  ,
+    SecureImageDirective
   ],
   templateUrl: './edit-teacher-dialog.component.html',
   styleUrls: ['./edit-teacher-dialog.component.scss']
@@ -42,6 +49,9 @@ export class EditTeacherDialogComponent implements OnInit {
   selectedFile: File | null = null;
   photoPreview: string | null = null;
   shouldClearPhoto: boolean = false;
+
+  /** Vrai si la photo référencée est introuvable : on affiche alors un visuel de repli. */
+  photoError = false;
 
   readonly communicationOptions = COMMUNICATION_OPTIONS;
   readonly nationalities = NATIONALITIES;
@@ -68,17 +78,21 @@ export class EditTeacherDialogComponent implements OnInit {
     }
 
     this.editTeacherForm = this.fb.group({
-      firstName: [this.data.teacher.firstName],
-      lastName: [this.data.teacher.lastName],
-      email: [this.data.teacher.email],
-      phoneNumber: [this.data.teacher.phoneNumber],
+      firstName: [this.data.teacher.firstName, Validators.required],
+      lastName: [this.data.teacher.lastName, Validators.required],
+      email: [this.data.teacher.email, [Validators.email]],
+      phoneNumber: [this.data.teacher.phoneNumber, Validators.required],
       dateOfBirth: [dateOfBirth],
       placeOfBirth: [this.data.teacher.placeOfBirth],
       gender: [this.data.teacher.gender],
       specialization: [this.data.teacher.specialization],
-      yearsOfExperience: [this.data.teacher.yearsOfExperience],
+      yearsOfExperience: [this.data.teacher.yearsOfExperience, [Validators.min(0)]],
       nationality: [this.data.teacher.nationality || DEFAULT_NATIONALITY],
-      communicationPreference: [this.data.teacher.communicationPreference]
+      communicationPreference: [this.data.teacher.communicationPreference],
+      // Adresse et ville : portées par le backend et saisies à l'inscription, elles
+      // étaient absentes de ce dialogue et donc impossibles à corriger.
+      address: [this.data.teacher.address],
+      city: [this.data.teacher.city]
     });
 
     // Afficher photo actuelle si elle existe
@@ -98,6 +112,7 @@ export class EditTeacherDialogComponent implements OnInit {
         this.photoPreview = e.target?.result as string;
       };
       reader.readAsDataURL(this.selectedFile);
+      this.photoError = false;
       this.shouldClearPhoto = false;
     }
   }
@@ -105,7 +120,16 @@ export class EditTeacherDialogComponent implements OnInit {
   clearPhoto(): void {
     this.selectedFile = null;
     this.photoPreview = null;
+    this.photoError = false;
     this.shouldClearPhoto = true;
+  }
+
+  /**
+   * La photo référencée est introuvable (fichier absent côté serveur) : on bascule sur un
+   * visuel de repli plutôt que d'afficher une image cassée.
+   */
+  onPhotoError(): void {
+    this.photoError = true;
   }
 
   onCancel(): void {
@@ -113,6 +137,11 @@ export class EditTeacherDialogComponent implements OnInit {
   }
 
   onSave(): void {
+    if (this.editTeacherForm.invalid) {
+      this.editTeacherForm.markAllAsTouched();
+      return;
+    }
+
     const formValues = this.editTeacherForm.value;
 
     // Convertir dateOfBirth en format ISO string si c'est un objet Date

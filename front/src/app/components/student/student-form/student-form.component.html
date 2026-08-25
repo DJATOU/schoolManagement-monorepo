@@ -144,7 +144,7 @@
   </mat-tab-group>
 
   <div class="button-container">
-    <button mat-raised-button color="primary" type="submit" class="submit-button">{{ 'COMMON.SUBMIT' | translate }}</button>
+    <button mat-raised-button color="primary" type="submit" class="submit-button" appAdminOnly>{{ 'COMMON.SUBMIT' | translate }}</button>
     <button mat-raised-button color="accent" type="button" class="clear-button" (click)="onClearForm()">{{ 'COMMON.CLEAR' | translate }}</button>
   </div>
 </form>

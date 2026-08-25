@@ -19,6 +19,8 @@ public interface GroupMapper {
     @Mapping(source = "level.name", target = "levelName")
     @Mapping(source = "subject.name", target = "subjectName")
     @Mapping(source = "price.price", target = "priceAmount")
+    @Mapping(source = "schoolYear.id", target = "schoolYearId")
+    @Mapping(source = "schoolYear.label", target = "schoolYearLabel")
     @Mapping(target = "isCatchUp", ignore = true)
     @Mapping(target = "studentIds", ignore = true)
     GroupDTO groupToGroupDTO(GroupEntity group);
@@ -28,6 +30,7 @@ public interface GroupMapper {
     @Mapping(source = "subjectId", target = "subject", qualifiedByName = "idToSubject")
     @Mapping(source = "priceId", target = "price", qualifiedByName = "idToPricing")
     @Mapping(source = "teacherId", target = "teacher", qualifiedByName = "idToTeacher")
+    @Mapping(source = "schoolYearId", target = "schoolYear", qualifiedByName = "idToSchoolYear")
     @Mapping(target = "createdBy", ignore = true)
     @Mapping(target = "updatedBy", ignore = true)
     @Mapping(target = "series", ignore = true)
@@ -44,6 +47,7 @@ public interface GroupMapper {
     @Mapping(target = "students", ignore = true)
     @Mapping(target = "subject", ignore = true)
     @Mapping(target = "teacher", ignore = true)
+    @Mapping(target = "schoolYear", ignore = true)
     void updateGroupFromDto(GroupDTO dto, @MappingTarget GroupEntity entity, @Context MappingContext context);
 
     @Named("idToGroupType")
@@ -85,6 +89,14 @@ public interface GroupMapper {
             return null;
         return context.getTeacherRepository().findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Teacher", id));
+    }
+
+    @Named("idToSchoolYear")
+    default SchoolYearEntity idToSchoolYear(Long id, @Context MappingContext context) {
+        if (id == null)
+            return null;
+        return context.getSchoolYearRepository().findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("SchoolYear", id));
     }
 
 }

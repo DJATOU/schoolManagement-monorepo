@@ -49,14 +49,14 @@
     <ng-container *ngIf="isLoading">
       <div class="loading-state">
         <mat-spinner></mat-spinner>
-        <p>Chargement des groupes...</p>
+        <p>{{ 'LIST_STATE.LOADING_GROUPS' | translate }}</p>
       </div>
     </ng-container>
 
     <ng-container *ngIf="!isLoading && filteredGroups.length === 0">
       <div class="empty-state">
         <mat-icon class="empty-icon">group_off</mat-icon>
-        <p>Aucun groupe trouvé.</p>
+        <p>{{ 'LIST_STATE.EMPTY_GROUPS' | translate }}</p>
       </div>
     </ng-container>
   </div>

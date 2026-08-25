@@ -7,12 +7,27 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { catchError, switchMap, tap, throwError } from 'rxjs';
+import { catchError, tap, throwError } from 'rxjs';
 import { CatchUpService } from '../../../services/catch-up.service';
-import { CatchUpRequest } from '../../../models/catchUp/catch-up-request';
 import { Session } from '../../../models/session/session';
-import { Attendance } from '../../../models/Attendance/attendance';
+import { AdminOnlyDirective } from '../../../shared/admin-only.directive';
 
+/** Données attendues par le dialogue de planification. */
+export interface CatchUpScheduleData {
+  requestId: number;
+  studentId: number;
+  originalSessionId: number;
+  originalSessionName?: string;
+  originalGroupId?: number;
+}
+
+/**
+ * Dialogue de planification d'une demande de rattrapage EXISTANTE (statut PENDING).
+ *
+ * On choisit une séance de rattrapage parmi les séances compatibles (même année, même type
+ * de groupe, même prix). Le groupe de rattrapage est déduit automatiquement de la séance
+ * choisie. La demande passe alors à l'état SCHEDULED.
+ */
 @Component({
   selector: 'app-catch-up-dialog',
   standalone: true,
@@ -24,42 +39,46 @@ import { Attendance } from '../../../models/Attendance/attendance';
     MatFormFieldModule,
     MatInputModule,
     MatSelectModule,
-    MatSnackBarModule
+    MatSnackBarModule,
+    AdminOnlyDirective
   ],
   template: `
     <h2 mat-dialog-title>Planifier un rattrapage</h2>
     <mat-dialog-content [formGroup]="catchUpForm" class="catch-up-content">
-      <div class="session-info" *ngIf="data.attendance">
-        <p><strong>Session manquée :</strong> {{ data.attendance.sessionId }} (Groupe {{ data.attendance.groupId }})</p>
+      <div class="session-info">
+        <p><strong>Séance manquée :</strong>
+          {{ data.originalSessionName || ('#' + data.originalSessionId) }}</p>
       </div>
       <mat-form-field appearance="fill">
-        <mat-label>Session de rattrapage</mat-label>
+        <mat-label>Séance de rattrapage</mat-label>
         <mat-select formControlName="catchUpSessionId" (selectionChange)="onSessionChange($event.value)">
           <mat-option *ngFor="let session of availableSessions" [value]="session.id">
-            {{ session.title || 'Session' }} - {{ session.sessionTimeStart | date:'mediumDate' }}
+            {{ session.title || 'Session' }}
+            <ng-container *ngIf="session.sessionTimeStart"> - {{ session.sessionTimeStart | date:'mediumDate' }}</ng-container>
+            <ng-container *ngIf="session.groupName"> ({{ session.groupName }})</ng-container>
           </mat-option>
         </mat-select>
       </mat-form-field>
-      <mat-form-field appearance="fill">
-        <mat-label>Groupe de rattrapage</mat-label>
-        <input matInput formControlName="catchUpGroupId" type="number" />
-      </mat-form-field>
+      <p *ngIf="loaded && availableSessions.length === 0" class="empty-hint">
+        Aucune séance compatible disponible (même année, même type de groupe et même prix).
+      </p>
       <mat-form-field appearance="fill">
         <mat-label>Notes</mat-label>
         <textarea matInput formControlName="notes"></textarea>
       </mat-form-field>
       <div class="helper-text">
-        <p>Le paiement sera associé uniquement à la session de rattrapage sélectionnée.</p>
+        <p>Le paiement sera associé uniquement à la séance de rattrapage sélectionnée.</p>
       </div>
     </mat-dialog-content>
     <mat-dialog-actions align="end">
       <button mat-button mat-dialog-close>Annuler</button>
-      <button mat-raised-button color="primary" (click)="scheduleCatchUp()" [disabled]="catchUpForm.invalid">Planifier</button>
+      <button mat-raised-button color="primary" (click)="scheduleCatchUp()" [disabled]="catchUpForm.invalid" appAdminOnly>Planifier</button>
     </mat-dialog-actions>
   `,
   styles: [
-    `.catch-up-content { display: flex; flex-direction: column; gap: 12px; }
+    `.catch-up-content { display: flex; flex-direction: column; gap: 12px; min-width: 360px; }
      .helper-text { font-size: 12px; color: #666; }
+     .empty-hint { font-size: 12px; color: #b00020; margin: -4px 0 4px; }
      .session-info { background: #f5f5f5; padding: 8px; border-radius: 4px; }
     `
   ]
@@ -67,33 +86,35 @@ import { Attendance } from '../../../models/Attendance/attendance';
 export class CatchUpDialogComponent implements OnInit {
   catchUpForm: FormGroup;
   availableSessions: Session[] = [];
+  loaded = false;
+  private catchUpGroupId: number | null = null;
 
   constructor(
     private fb: FormBuilder,
     private catchUpService: CatchUpService,
     private snackBar: MatSnackBar,
     public dialogRef: MatDialogRef<CatchUpDialogComponent>,
-    @Inject(MAT_DIALOG_DATA) public data: { studentId: number; attendance: Attendance }
+    @Inject(MAT_DIALOG_DATA) public data: CatchUpScheduleData
   ) {
     this.catchUpForm = this.fb.group({
       catchUpSessionId: [null, Validators.required],
-      catchUpGroupId: [null, Validators.required],
       notes: ['']
     });
   }
 
   ngOnInit(): void {
-    if (this.data.studentId && this.data.attendance?.sessionId) {
+    if (this.data.studentId && this.data.originalSessionId) {
       this.loadAvailableSessions();
     }
   }
 
   private loadAvailableSessions(): void {
     this.catchUpService
-      .getAvailableSessions(this.data.studentId, this.data.attendance.sessionId)
+      .getAvailableSessions(this.data.studentId, this.data.originalSessionId)
       .pipe(
-        tap(() => console.log('Loading available sessions for catch-up')),
+        tap(() => (this.loaded = true)),
         catchError(error => {
+          this.loaded = true;
           console.error('Erreur lors du chargement des sessions disponibles', error);
           this.snackBar.open('Impossible de charger les sessions de rattrapage', 'Fermer', { duration: 4000 });
           return throwError(() => error);
@@ -103,32 +124,27 @@ export class CatchUpDialogComponent implements OnInit {
   }
 
   onSessionChange(sessionId: number): void {
-    console.log('Session de rattrapage choisie', sessionId);
+    const session = this.availableSessions.find(s => s.id === sessionId);
+    this.catchUpGroupId = session?.groupId ?? null;
   }
 
   scheduleCatchUp(): void {
-    const formValue = this.catchUpForm.value;
-    const baseRequest: Partial<CatchUpRequest> = {
-      studentId: this.data.studentId,
-      originalSessionId: this.data.attendance.sessionId,
-      originalGroupId: this.data.attendance.groupId,
-      originalAttendanceId: this.data.attendance.id,
-      requestDate: new Date(),
-      status: 'PENDING',
-      notes: formValue.notes
-    };
+    const { catchUpSessionId } = this.catchUpForm.value;
+    if (this.catchUpGroupId == null) {
+      const session = this.availableSessions.find(s => s.id === catchUpSessionId);
+      this.catchUpGroupId = session?.groupId ?? null;
+    }
+    if (this.catchUpGroupId == null) {
+      this.snackBar.open('Groupe de rattrapage introuvable pour cette séance', 'Fermer', { duration: 4000 });
+      return;
+    }
 
     this.catchUpService
-      .createCatchUpRequest(baseRequest)
+      .scheduleCatchUp(this.data.requestId, catchUpSessionId, this.catchUpGroupId)
       .pipe(
-        switchMap(request =>
-          this.catchUpService.scheduleCatchUp(request.id!, formValue.catchUpSessionId, formValue.catchUpGroupId).pipe(
-            tap(() => console.log('Catch-up scheduled for request', request.id))
-          )
-        ),
         catchError(error => {
-          console.error('Erreur lors de la planification du rattrapage', error);
-          this.snackBar.open('Impossible de planifier le rattrapage', 'Fermer', { duration: 4000 });
+          const msg = error?.error?.message || 'Impossible de planifier le rattrapage';
+          this.snackBar.open(msg, 'Fermer', { duration: 5000 });
           return throwError(() => error);
         })
       )

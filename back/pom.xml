@@ -21,6 +21,9 @@
         <org.mapstruct.version>1.5.5.Final</org.mapstruct.version>
         <commons-lang3.version>3.18.0</commons-lang3.version>
         <logback.version>1.5.15</logback.version>
+        <jqwik.version>1.9.1</jqwik.version>
+        <jjwt.version>0.12.6</jjwt.version>
+        <jacoco.version>0.8.12</jacoco.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     </properties>
@@ -72,16 +75,18 @@
             <artifactId>spring-security-test</artifactId>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>jakarta.validation</groupId>
-            <artifactId>jakarta.validation-api</artifactId>
-            <version>3.0.2</version>
-        </dependency>
-        <dependency>
-            <groupId>org.hibernate.validator</groupId>
-            <artifactId>hibernate-validator</artifactId>
-            <version>6.2.0.Final</version>
-        </dependency>
+        <!--
+          jakarta.validation-api et hibernate-validator ne sont plus déclarés ici : leurs
+          versions sont gérées par spring-boot-starter-validation.
+
+          Ces deux dépendances étaient épinglées à jakarta.validation-api 3.0.2 et
+          hibernate-validator 6.2.0.Final. Or la branche 6.2 implémente javax.validation :
+          son jar ne déclare qu'un provider META-INF/services/javax.validation.spi.ValidationProvider.
+          Aucun provider Jakarta n'était donc présent, et TOUTES les annotations
+          jakarta.validation.constraints du projet étaient silencieusement inertes — @Valid sur
+          les contrôleurs ne validait rien. L'épinglage écrasait par ailleurs la version
+          cohérente (8.0.x) qu'apporte le starter.
+        -->
         <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
@@ -141,6 +146,36 @@
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
             <scope>test</scope>
+        </dependency>
+
+        <!-- jqwik : property-based testing (feature payment-attendance-rules).
+             Version alignée sur la JUnit Platform 1.11.x fournie par Spring Boot 3.4.1.
+             L'artefact agrégateur tire jqwik-api + jqwik-engine (moteur JUnit Platform). -->
+        <dependency>
+            <groupId>net.jqwik</groupId>
+            <artifactId>jqwik</artifactId>
+            <version>${jqwik.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- JWT : authentification stateless (feature authentication-authorization).
+             jjwt fournit l'émission/validation HS256 ; versions non gérées par le BOM. -->
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-api</artifactId>
+            <version>${jjwt.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-impl</artifactId>
+            <version>${jjwt.version}</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-jackson</artifactId>
+            <version>${jjwt.version}</version>
+            <scope>runtime</scope>
         </dependency>
     </dependencies>
 
@@ -215,6 +250,123 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+
+            <!-- JaCoCo : couverture de code pour la feature payment-attendance-rules.
+                 Objectif : 100 % lignes + branches sur les NOUVELLES classes métier
+                 (calculator, resolver, naming, rollover, catch-up, discount, refund,
+                 statut/validation de paiement + mappers écrits à la main).
+
+                 Portée : la règle `check` est limitée (includes) aux seules classes
+                 métier concernées. Le seuil 100 % lignes + branches est désormais
+                 APPLIQUÉ STRICTEMENT (tâche 19), y compris sur :
+                   - PaymentCostCalculator / PaymentCostResolver (calcul monétaire) ;
+                   - SeriesNamingService / SeriesRolloverService ;
+                   - CatchUpService / DiscountService / RefundService ;
+                   - PaymentStatusService (dérivation du retard, statut détaillé) ;
+                   - PaymentMapper (interface écrite à la main : résolution des
+                     références via MappingContext).
+
+                 EXCLUSION DOCUMENTÉE — code généré :
+                   Les classes `*MapperImpl` (CatchUpRequestMapperImpl, DiscountMapperImpl,
+                   RefundMapperImpl, PaymentMapperImpl) sont GÉNÉRÉES par MapStruct. Elles
+                   contiennent des gardes null défensives redondantes et INATTEIGNABLES
+                   (ex. un `if (x == null)` dans un helper privé déjà protégé par la
+                   méthode publique) qui rendent une couverture de branches à 100 %
+                   impossible sans code mort. Conformément à la politique « pas de code
+                   fictif pour couvrir du généré », seules les SOURCES écrites à la main
+                   sont soumises au seuil ; les `*MapperImpl` ne figurent pas dans les
+                   `includes`. Leur logique effective est néanmoins validée par les tests
+                   de mapper (CatchUpRequestMapperTest, DiscountMapperTest, RefundMapperTest,
+                   PaymentMapperTest). -->
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>${jacoco.version}</version>
+                <executions>
+                    <!-- Instrumente la JVM de test. -->
+                    <execution>
+                        <id>jacoco-prepare-agent</id>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <!-- Produit le rapport HTML/XML après les tests. -->
+                    <execution>
+                        <id>jacoco-report</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
+                    <!-- Vérifie le seuil de couverture sur les classes métier ciblées. -->
+                    <execution>
+                        <id>jacoco-check</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                        <configuration>
+                            <haltOnFailure>true</haltOnFailure>
+                            <rules>
+                                <rule>
+                                    <element>CLASS</element>
+                                    <!-- Classes métier nouvelles / modifiées concernées
+                                         par la feature, soumises au seuil 100 %. -->
+                                    <includes>
+                                        <include>com.school.management.service.payment.PaymentCostCalculator</include>
+                                        <include>com.school.management.service.payment.PaymentCostResolver</include>
+                                        <include>com.school.management.service.payment.PaymentStatusService</include>
+                                        <include>com.school.management.service.SeriesNamingService</include>
+                                        <include>com.school.management.service.SeriesRolloverService</include>
+                                        <include>com.school.management.service.CatchUpService</include>
+                                        <include>com.school.management.service.DiscountService</include>
+                                        <include>com.school.management.service.RefundService</include>
+                                        <include>com.school.management.mapper.PaymentMapper</include>
+                                        <!-- Feature prorata-billing-and-payment-carry-over
+                                             (tâche 9) : le résolveur de séances facturables porte
+                                             la règle du prorata, le service de plan porte celle
+                                             du plafonnement et du report. Ce sont les deux
+                                             composants dont une branche non testée redeviendrait
+                                             un trop-perçu. Le joker couvre l'interface, son
+                                             record imbriqué et l'implémentation. -->
+                                        <include>com.school.management.service.payment.BillableSessionsResolver*</include>
+                                        <include>com.school.management.service.payment.PaymentAllocationService</include>
+                                        <include>com.school.management.service.payment.AllocationPlan*</include>
+                                        <!-- Détecteur de changement de groupe (tâche 15.1) : la
+                                             valeur du signalement tient à son périmètre exact.
+                                             Une branche non testée y produit soit une alerte
+                                             permanente que personne ne lit, soit un changement
+                                             passé sous silence. -->
+                                        <include>com.school.management.service.group.GroupChangeDetector*</include>
+                                        <!-- Classes de sécurité écrites à la main (feature
+                                             authentication-authorization), soumises au seuil 100 %.
+                                             Le code généré *MapperImpl reste exclu. -->
+                                        <include>com.school.management.service.security.JwtService</include>
+                                        <include>com.school.management.service.security.AuthenticationService</include>
+                                        <include>com.school.management.service.security.UserAccountService</include>
+                                        <include>com.school.management.service.security.AppUserDetailsService</include>
+                                        <include>com.school.management.config.security.SecurityAuditorAware</include>
+                                        <include>com.school.management.config.security.InitialAdminRunner</include>
+                                        <include>com.school.management.mapper.UserMapper</include>
+                                    </includes>
+                                    <limits>
+                                        <limit>
+                                            <counter>LINE</counter>
+                                            <value>COVEREDRATIO</value>
+                                            <minimum>1.00</minimum>
+                                        </limit>
+                                        <limit>
+                                            <counter>BRANCH</counter>
+                                            <value>COVEREDRATIO</value>
+                                            <minimum>1.00</minimum>
+                                        </limit>
+                                    </limits>
+                                </rule>
+                            </rules>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>

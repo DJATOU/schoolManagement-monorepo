@@ -5,6 +5,19 @@
 
 echo "🚀 Starting School Management in DEV mode..."
 
+# S'assurer d'utiliser un JDK 21 (le projet cible Java 21).
+# Lombok plante avec un JDK plus ancien lors d'un build forké.
+if [ -x /usr/libexec/java_home ]; then
+    JAVA21_HOME=$(/usr/libexec/java_home -v 21 2>/dev/null)
+    if [ -n "$JAVA21_HOME" ]; then
+        export JAVA_HOME="$JAVA21_HOME"
+        echo "☕ Using JDK 21: $JAVA_HOME"
+    else
+        echo "⚠️  JDK 21 introuvable. Le build peut échouer (le projet cible Java 21)."
+        echo "💡 Installe-le, par ex: brew install --cask temurin@21"
+    fi
+fi
+
 # Charger les variables d'environnement depuis .env si le fichier existe
 if [ -f .env ]; then
     echo "📝 Loading environment variables from .env"

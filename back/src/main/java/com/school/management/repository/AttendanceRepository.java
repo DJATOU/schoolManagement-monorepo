@@ -15,6 +15,43 @@ public interface AttendanceRepository extends JpaRepository<AttendanceEntity, Lo
 
     long countByStudentIdAndSessionSeriesIdAndIsPresent(Long studentId, Long sessionSeriesId, boolean isPresent);
 
+    /**
+     * Compte les séances effectivement suivies (présent) par un étudiant dans le
+     * périmètre d'une série, tous groupes confondus. Ne compte que les fiches
+     * actives avec {@code isPresent = true}.
+     *
+     * @param studentId       l'identifiant de l'étudiant
+     * @param sessionSeriesId l'identifiant de la série de sessions
+     * @return le nombre de séances suivies (présent) dans la série
+     */
+    @Query("SELECT COUNT(a) FROM AttendanceEntity a WHERE a.student.id = :studentId " +
+            "AND a.sessionSeries.id = :sessionSeriesId AND a.isPresent = true AND a.active = true")
+    long countPresentForStudentAndSeries(@Param("studentId") Long studentId,
+            @Param("sessionSeriesId") Long sessionSeriesId);
+
+    /**
+     * Compte les séances suivies (présent) par un étudiant dans un groupe donné sur une plage
+     * de dates, bornes incluses.
+     *
+     * <p>Sert au <strong>seul</strong> signalement de changement de groupe (exigence 10.3), qui
+     * est informatif. Ce comptage par plage de dates ne doit alimenter aucun calcul monétaire :
+     * l'unité de facturation reste la série, et
+     * {@link #countPresentForStudentAndSeries(Long, Long)} en demeure la source.</p>
+     *
+     * @param studentId l'identifiant de l'étudiant
+     * @param groupId   l'identifiant du groupe
+     * @param from      début de la plage, inclus
+     * @param to        fin de la plage, incluse
+     * @return le nombre de séances suivies dans ce groupe sur la plage
+     */
+    @Query("SELECT COUNT(a) FROM AttendanceEntity a WHERE a.student.id = :studentId "
+            + "AND a.group.id = :groupId AND a.isPresent = true AND a.active = true "
+            + "AND a.session.sessionTimeStart BETWEEN :from AND :to")
+    long countPresentForStudentAndGroupBetween(@Param("studentId") Long studentId,
+                                               @Param("groupId") Long groupId,
+                                               @Param("from") java.util.Date from,
+                                               @Param("to") java.util.Date to);
+
     @Query("SELECT a FROM AttendanceEntity a WHERE a.session.id = :sessionId AND a.student.id = :studentId AND a.active = true ORDER BY a.id DESC LIMIT 1")
     Optional<AttendanceEntity> findBySessionIdAndStudentId(@Param("sessionId") Long sessionId,
             @Param("studentId") Long studentId);
@@ -43,6 +80,18 @@ public interface AttendanceRepository extends JpaRepository<AttendanceEntity, Lo
 
     List<AttendanceEntity> findByStudentIdAndActiveTrue(Long studentId);
 
+    /**
+     * Liste les absences actives d'un étudiant (fiches {@code isPresent = false}),
+     * triées par date de séance décroissante. Utilisé par le workflow de rattrapage
+     * pour proposer les séances manquées éligibles à une demande de rattrapage.
+     *
+     * @param studentId l'identifiant de l'étudiant
+     * @return la liste des absences actives de l'étudiant
+     */
+    @Query("SELECT a FROM AttendanceEntity a WHERE a.student.id = :studentId " +
+            "AND a.isPresent = false AND a.active = true ORDER BY a.session.sessionTimeStart DESC")
+    List<AttendanceEntity> findAbsencesByStudentId(@Param("studentId") Long studentId);
+
     // ===== Statistiques tableau de bord (sur période, via la date de session) =====
 
     @Query("SELECT COUNT(a) FROM AttendanceEntity a WHERE a.active = true AND a.isPresent = true " +
@@ -60,4 +109,28 @@ public interface AttendanceRepository extends JpaRepository<AttendanceEntity, Lo
     @Query("SELECT COUNT(a) FROM AttendanceEntity a WHERE a.active = true AND a.isCatchUp = true " +
             "AND a.session.sessionTimeStart BETWEEN :from AND :to")
     long countCatchUp(@Param("from") java.util.Date from, @Param("to") java.util.Date to);
+
+    // ===== Variantes filtrées par année scolaire (via attendance.session.group.schoolYear) =====
+
+    @Query("SELECT COUNT(a) FROM AttendanceEntity a WHERE a.active = true AND a.isPresent = true " +
+            "AND a.session.group.schoolYear.id = :schoolYearId AND a.session.sessionTimeStart BETWEEN :from AND :to")
+    long countPresentByYear(@Param("from") java.util.Date from, @Param("to") java.util.Date to,
+                            @Param("schoolYearId") Long schoolYearId);
+
+    @Query("SELECT COUNT(a) FROM AttendanceEntity a WHERE a.active = true AND a.isPresent = false " +
+            "AND a.isJustified = true AND a.session.group.schoolYear.id = :schoolYearId " +
+            "AND a.session.sessionTimeStart BETWEEN :from AND :to")
+    long countJustifiedAbsencesByYear(@Param("from") java.util.Date from, @Param("to") java.util.Date to,
+                                      @Param("schoolYearId") Long schoolYearId);
+
+    @Query("SELECT COUNT(a) FROM AttendanceEntity a WHERE a.active = true AND a.isPresent = false " +
+            "AND (a.isJustified = false OR a.isJustified IS NULL) AND a.session.group.schoolYear.id = :schoolYearId " +
+            "AND a.session.sessionTimeStart BETWEEN :from AND :to")
+    long countUnjustifiedAbsencesByYear(@Param("from") java.util.Date from, @Param("to") java.util.Date to,
+                                        @Param("schoolYearId") Long schoolYearId);
+
+    @Query("SELECT COUNT(a) FROM AttendanceEntity a WHERE a.active = true AND a.isCatchUp = true " +
+            "AND a.session.group.schoolYear.id = :schoolYearId AND a.session.sessionTimeStart BETWEEN :from AND :to")
+    long countCatchUpByYear(@Param("from") java.util.Date from, @Param("to") java.util.Date to,
+                            @Param("schoolYearId") Long schoolYearId);
 }

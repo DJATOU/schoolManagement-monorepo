@@ -1,10 +1,11 @@
 <mat-card class="student-card"
   [class.status-late-bg]="paymentStatus?.paymentStatus === 'LATE'"
-  [class.status-good-bg]="paymentStatus?.paymentStatus === 'GOOD'">
+  [class.status-good-bg]="paymentStatus?.paymentStatus === 'GOOD'"
+  [class.status-exempt-bg]="paymentStatus?.paymentStatus === 'EXEMPT'">
   <mat-card-content>
     <div class="student-info">
       <div class="student-avatar">
-        <img *ngIf="studentPhotoUrl && !hasImageError; else avatarInitials" [src]="studentPhotoUrl"
+        <img *ngIf="studentPhotoUrl && !hasImageError; else avatarInitials" [appSecureImage]="studentPhotoUrl"
           alt="Photo de l'étudiant" (error)="onImageError()" />
         <ng-template #avatarInitials>
           <div class="initials-avatar" [style.background-color]="avatarColor">{{ getInitials() }}</div>
@@ -28,6 +29,7 @@
           *ngIf="paymentStatus && paymentStatus.paymentStatus !== 'NA'"
           [class.status-good]="paymentStatus.paymentStatus === 'GOOD'"
           [class.status-late]="paymentStatus.paymentStatus === 'LATE'"
+          [class.status-exempt]="paymentStatus.paymentStatus === 'EXEMPT'"
           [matTooltip]="getPaymentTooltip()"
           [matTooltipDisabled]="paymentStatus.paymentStatus !== 'LATE'"
           matTooltipClass="payment-tooltip"

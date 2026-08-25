@@ -16,3 +16,8 @@
 ## Don't
 - Don't rename the `persistance` folder (intentional, used everywhere).
 - Don't translate existing French comments/messages.
+
+## Java version policy
+- Target the current Java LTS (Java 25). Use modern language features available up to that version.
+- Prefer LTS releases over the absolute latest non-LTS release for stability.
+- When upgrading, verify the Spring Boot version officially supports the target Java version before bumping.

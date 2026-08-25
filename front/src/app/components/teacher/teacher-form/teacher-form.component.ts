@@ -22,6 +22,7 @@ import { TranslateModule } from '@ngx-translate/core';
 import { COMMUNICATION_OPTIONS, DEFAULT_NATIONALITY, NATIONALITIES } from '../../../utils/form-options';
 import { SubjectService } from '../../../services/subject.service';
 import { Subject } from '../../../models/subject/subject';
+import { AdminOnlyDirective } from '../../../shared/admin-only.directive';
 
 @Component({
   selector: 'app-teacher-form',
@@ -40,7 +41,8 @@ import { Subject } from '../../../models/subject/subject';
     MatSnackBarModule,
     CommonModule,
     MatCardModule,
-    TranslateModule
+    TranslateModule,
+    AdminOnlyDirective
   ],
   templateUrl: './teacher-form.component.html',
   styleUrls: ['./teacher-form.component.scss'],

@@ -16,14 +16,17 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSelectModule } from '@angular/material/select';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { FormsModule } from '@angular/forms';
 import { GroupService } from '../../../services/group.service';
 import { LevelService } from '../../../services/level.service';
 import { StudentPaymentStatusService } from '../../../services/student-payment-status.service';
 import { Group } from '../../../models/group/group';
 import { Level } from '../../../models/level/level';
-import { forkJoin, of } from 'rxjs';
-import { catchError, map } from 'rxjs/operators';
+import { forkJoin, of, Subject } from 'rxjs';
+import { catchError, map, takeUntil } from 'rxjs/operators';
+import { SchoolYearContextService } from '../../../services/school-year-context.service';
+import { TranslateModule } from '@ngx-translate/core';
 
 interface StudentWithPayment extends Student {
   paymentStatus?: 'GOOD' | 'LATE' | 'NA';
@@ -39,7 +42,7 @@ interface StudentWithPayment extends Student {
     StudentListComponent, StudentListItemComponent, MatProgressSpinnerModule,
     FadeInDirective, ViewToggleComponent, ListHeaderComponent,
     MatButtonModule, MatIconModule, MatSelectModule,
-    MatFormFieldModule, FormsModule
+    MatFormFieldModule, MatSlideToggleModule, FormsModule, TranslateModule
   ]
 })
 export class StudentSearchComponent implements OnInit, OnDestroy, AfterViewInit {
@@ -63,6 +66,7 @@ export class StudentSearchComponent implements OnInit, OnDestroy, AfterViewInit 
 
   // Filter states
   showLateOnly = false;
+  showInactive = false;
   selectedGroupId: number | null = null;
   selectedLevelId: number | null = null;
   filtersVisible = false;
@@ -81,20 +85,35 @@ export class StudentSearchComponent implements OnInit, OnDestroy, AfterViewInit 
 
   private resizeObserver?: ResizeObserver;
 
+  /** Année scolaire sélectionnée (contexte global) appliquée au chargement des étudiants. */
+  private selectedSchoolYearId: number | null = null;
+
+  /** Désabonnement à la destruction du composant. */
+  private readonly destroy$ = new Subject<void>();
+
   constructor(
     private studentService: StudentService,
     private searchService: SearchService,
     private router: Router,
     private groupService: GroupService,
     private levelService: LevelService,
-    private paymentStatusService: StudentPaymentStatusService
+    private paymentStatusService: StudentPaymentStatusService,
+    private schoolYearContext: SchoolYearContextService
   ) { }
 
   ngOnInit(): void {
     this.pageSize = this.getSmartPageSize();
     this.listenToSearchEvents();
     this.loadFilterOptions();
-    this.loadAllStudents();
+
+    // Recharge la liste des étudiants à chaque changement d'année sélectionnée
+    // (historique figé pour une année passée, actifs pour l'année courante).
+    this.schoolYearContext.selectedSchoolYear$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((year) => {
+        this.selectedSchoolYearId = year?.id ?? null;
+        this.loadAllStudents();
+      });
   }
 
   ngAfterViewInit(): void {
@@ -109,6 +128,8 @@ export class StudentSearchComponent implements OnInit, OnDestroy, AfterViewInit 
     if (this.resizeObserver) {
       this.resizeObserver.disconnect();
     }
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   /**
@@ -267,7 +288,7 @@ export class StudentSearchComponent implements OnInit, OnDestroy, AfterViewInit 
         if (students.length === 1) {
           this.router.navigate(['/student', students[0].id]);
         } else {
-          this.allStudents = students as StudentWithPayment[];
+          this.allStudents = this.sortByName(students as StudentWithPayment[]);
           this.loadPaymentStatuses();
         }
       });
@@ -276,9 +297,34 @@ export class StudentSearchComponent implements OnInit, OnDestroy, AfterViewInit 
 
   loadAllStudents(): void {
     this.isLoading = true;
-    this.studentService.getStudents().subscribe(students => {
-      this.allStudents = students as StudentWithPayment[];
+    this.studentService.getStudents(this.selectedSchoolYearId, this.showInactive).subscribe(students => {
+      this.allStudents = this.sortByName(students as StudentWithPayment[]);
       this.loadPaymentStatuses();
+    });
+  }
+
+  /** Bascule l'affichage des étudiants désactivés (statut INACTIVE) et recharge la liste. */
+  onShowInactiveChange(show: boolean): void {
+    this.showInactive = show;
+    this.loadAllStudents();
+  }
+
+  /**
+   * Vrai si l'étudiant est désactivé (départ) : basé UNIQUEMENT sur le statut d'inscription
+   * INACTIVE. Le champ `active` est un ancien flag de soft-delete distinct et ne doit pas
+   * être confondu avec ce statut (sinon des étudiants ACTIVE mais active=false seraient
+   * badgés à tort).
+   */
+  isInactive(student: Student): boolean {
+    return student?.status === 'INACTIVE';
+  }
+
+  /** Tri alphabétique par défaut (nom puis prénom), insensible à la casse/accents. */
+  private sortByName(students: StudentWithPayment[]): StudentWithPayment[] {
+    return [...(students || [])].sort((a, b) => {
+      const an = `${a.lastName ?? ''} ${a.firstName ?? ''}`.trim();
+      const bn = `${b.lastName ?? ''} ${b.firstName ?? ''}`.trim();
+      return an.localeCompare(bn, 'fr', { sensitivity: 'base' });
     });
   }
 
@@ -286,6 +332,14 @@ export class StudentSearchComponent implements OnInit, OnDestroy, AfterViewInit 
    * Load payment statuses for all students
    */
   private loadPaymentStatuses(): void {
+    // Aucun étudiant : forkJoin([]) ne complète jamais, on court-circuite pour
+    // ne pas laisser le spinner de chargement bloqué (état vide affiché).
+    if (this.allStudents.length === 0) {
+      this.applyAllFilters();
+      this.isLoading = false;
+      return;
+    }
+
     const statusRequests = this.allStudents.map(student =>
       this.paymentStatusService.getStudentPaymentStatus(student.id!).pipe(
         map(status => ({ studentId: student.id, status: status.paymentStatus as 'GOOD' | 'LATE' | 'NA' })),
@@ -311,6 +365,13 @@ export class StudentSearchComponent implements OnInit, OnDestroy, AfterViewInit 
    */
   private applyAllFilters(): void {
     let filtered = [...this.allStudents];
+
+    // Étudiants désactivés : masqués par défaut ; lorsque le toggle est actif, on affiche
+    // UNIQUEMENT les désactivés (le backend renvoie alors actifs + inactifs, on ne garde
+    // que les inactifs pour une vue dédiée).
+    if (this.showInactive) {
+      filtered = filtered.filter(s => this.isInactive(s));
+    }
 
     // Filter by late payment
     if (this.showLateOnly) {

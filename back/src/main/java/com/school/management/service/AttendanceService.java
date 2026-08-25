@@ -28,6 +28,7 @@ public class AttendanceService {
     private final SessionRepository sessionRepository;
     private final SessionSeriesRepository sessionSeriesRepository;
     private final GroupRepository groupRepository;
+    private final StudentGroupRepository studentGroupRepository;
 
     // MappingContext pour AttendanceMapper
     private MappingContext mappingContext;
@@ -35,13 +36,15 @@ public class AttendanceService {
     @Autowired
     public AttendanceService(AttendanceRepository attendanceRepository, AttendanceMapper attendanceMapper,
             StudentRepository studentRepository, SessionRepository sessionRepository,
-            SessionSeriesRepository sessionSeriesRepository, GroupRepository groupRepository) {
+            SessionSeriesRepository sessionSeriesRepository, GroupRepository groupRepository,
+            StudentGroupRepository studentGroupRepository) {
         this.attendanceRepository = attendanceRepository;
         this.attendanceMapper = attendanceMapper;
         this.studentRepository = studentRepository;
         this.sessionRepository = sessionRepository;
         this.sessionSeriesRepository = sessionSeriesRepository;
         this.groupRepository = groupRepository;
+        this.studentGroupRepository = studentGroupRepository;
     }
 
     /**
@@ -57,6 +60,7 @@ public class AttendanceService {
                 null, // SubjectRepository
                 null, // PricingRepository
                 null, // TeacherRepository
+                null, // SchoolYearRepository
                 null, // RoomRepository
                 groupRepository,
                 sessionSeriesRepository,
@@ -111,8 +115,42 @@ public class AttendanceService {
                 throw new IllegalArgumentException("Attendance already exists for student ID "
                         + attendance.getStudent().getId() + " and session ID " + attendance.getSession().getId());
             }
+            normalizeCatchUpFlag(attendance);
         }
         return attendanceRepository.saveAll(Objects.requireNonNull(attendances));
+    }
+
+    /**
+     * Un rattrapage est une séance suivie dans un groupe dont l'étudiant n'est pas membre.
+     * Si l'étudiant est inscrit (affectation active) au groupe de la séance, la présence ne
+     * peut donc pas être un rattrapage, quoi qu'annonce le client.
+     *
+     * <p>Sans cette normalisation, un étudiant ajouté à la main sur une feuille de présence
+     * de son propre groupe (cas d'une inscription postérieure au début de la séance) était
+     * enregistré comme rattrapage. Toute la série basculait alors en mode rattrapage dans le
+     * calcul de paiement, avec un coût total et un seuil de retard différents.</p>
+     *
+     * <p>On ne fait que retirer le drapeau à tort : promouvoir une présence en rattrapage
+     * reste du ressort du flux rattrapage dédié.</p>
+     */
+    private void normalizeCatchUpFlag(AttendanceEntity attendance) {
+        if (!Boolean.TRUE.equals(attendance.getIsCatchUp())
+                || attendance.getGroup() == null
+                || attendance.getStudent() == null) {
+            return;
+        }
+
+        Long groupId = attendance.getGroup().getId();
+        Long studentId = attendance.getStudent().getId();
+        if (groupId == null || studentId == null) {
+            return;
+        }
+
+        if (studentGroupRepository.existsByGroupIdAndStudentIdAndActiveTrue(groupId, studentId)) {
+            LOGGER.info("Présence marquée rattrapage alors que l'étudiant {} est inscrit au groupe {} : "
+                    + "drapeau isCatchUp remis à false.", studentId, groupId);
+            attendance.setIsCatchUp(false);
+        }
     }
 
     @Transactional

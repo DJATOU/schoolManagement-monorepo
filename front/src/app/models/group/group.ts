@@ -20,6 +20,14 @@ export interface Group {
   studentIds?: Set<number>;
   pricing?: Pricing;
   catchUp?: boolean;
+
+  /**
+   * Année scolaire du groupe. La liste des groupes est filtrée sur l'année sélectionnée :
+   * sans ces champs, un groupe rattaché à une autre année s'affichait sur la fiche
+   * étudiante sans qu'on puisse comprendre pourquoi il restait introuvable dans la liste.
+   */
+  schoolYearId?: number;
+  schoolYearLabel?: string;
 }
 
    

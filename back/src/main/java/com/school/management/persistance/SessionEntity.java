@@ -28,9 +28,6 @@ public class SessionEntity extends BaseEntity {
     @Column(name = "session_type")
     private String sessionType;
 
-    @Column(name = "feedback_link") // A link to a feedback form or survey for the session
-    private String feedbackLink;
-
     @Column(name = "is_finished")
     private Boolean isFinished;
 

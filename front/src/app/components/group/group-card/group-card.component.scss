@@ -27,3 +27,23 @@
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   }
 }
+
+/* Groupe rattaché à une autre année scolaire que celle sélectionnée. */
+.group-card__year {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #fff7ed;
+  color: #9a3412;
+  font-size: 0.72rem;
+  font-weight: 600;
+
+  mat-icon {
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+  }
+}

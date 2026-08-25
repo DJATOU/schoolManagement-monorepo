@@ -1,0 +1,202 @@
+<div class="year-end-workflow">
+
+  <mat-card class="year-end-card">
+    <mat-card-header>
+      <mat-card-title>{{ 'yearEnd.title' | translate }}</mat-card-title>
+      <mat-card-subtitle>{{ 'yearEnd.subtitle' | translate }}</mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+
+      <!-- Chargement de l'aperçu -->
+      <div *ngIf="loadingPreview" class="year-end-loading">
+        <mat-spinner [diameter]="36"></mat-spinner>
+        <span>{{ 'yearEnd.loadingPreview' | translate }}</span>
+      </div>
+
+      <!-- Message d'erreur -->
+      <div *ngIf="errorMessage" class="year-end-error">
+        <mat-icon>error_outline</mat-icon>
+        <span>{{ errorMessage }}</span>
+      </div>
+
+      <!-- Aperçu + formulaire (avant exécution) -->
+      <ng-container *ngIf="!loadingPreview && preview && !result">
+
+        <!-- Paramètres de la nouvelle année -->
+        <section class="year-end-section">
+          <h3 class="year-end-section-title">{{ 'yearEnd.newYearSection' | translate }}</h3>
+          <div class="year-end-new-year">
+            <mat-form-field appearance="outline">
+              <mat-label>{{ 'yearEnd.newLabel' | translate }}</mat-label>
+              <input matInput [(ngModel)]="newLabel"
+                     [placeholder]="preview.proposedNextLabel">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>{{ 'yearEnd.startDate' | translate }}</mat-label>
+              <input matInput type="date" [(ngModel)]="startDate">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>{{ 'yearEnd.endDate' | translate }}</mat-label>
+              <input matInput type="date" [(ngModel)]="endDate">
+            </mat-form-field>
+          </div>
+        </section>
+
+        <!-- Filtres d'affichage (barre repliable, style calendrier) -->
+        <section class="year-end-section">
+          <h3 class="year-end-section-title">{{ 'yearEnd.studentsSection' | translate }}</h3>
+
+          <div class="ye-filters-header">
+            <button type="button" class="ye-filters-toggle" [class.is-open]="filtersOpen"
+                    (click)="toggleFilters()" [attr.aria-expanded]="filtersOpen">
+              <mat-icon class="ye-filters-toggle-icon">tune</mat-icon>
+              <span class="ye-filters-toggle-label">{{ 'yearEnd.filters' | translate }}</span>
+              <span class="ye-filters-count" *ngIf="activeFiltersCount > 0">{{ activeFiltersCount }}</span>
+              <mat-icon class="ye-filters-chevron">{{ filtersOpen ? 'expand_less' : 'expand_more' }}</mat-icon>
+            </button>
+
+            <button mat-button class="ye-filters-clear" *ngIf="activeFiltersCount > 0"
+                    (click)="clearFilters()" [matTooltip]="'yearEnd.clearFilters' | translate">
+              <mat-icon>restart_alt</mat-icon>
+            </button>
+
+            <span class="ye-count">
+              {{ filteredRows.length }} / {{ rows.length }} {{ 'yearEnd.studentsShown' | translate }}
+            </span>
+          </div>
+
+          <div class="ye-filters-panel" [class.open]="filtersOpen">
+            <div class="ye-filters-fields">
+              <mat-form-field appearance="outline" class="ye-filter-field" subscriptSizing="dynamic"
+                              [class.is-active]="filterLevelId != null">
+                <mat-icon matPrefix class="ye-filter-icon">school</mat-icon>
+                <mat-select [(ngModel)]="filterLevelId" [placeholder]="'yearEnd.filterLevel' | translate">
+                  <mat-option [value]="null">{{ 'yearEnd.allLevels' | translate }}</mat-option>
+                  <mat-option *ngFor="let l of levels" [value]="l.id">{{ l.name }}</mat-option>
+                </mat-select>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="ye-filter-field" subscriptSizing="dynamic"
+                              [class.is-active]="filterGroupId != null">
+                <mat-icon matPrefix class="ye-filter-icon">groups</mat-icon>
+                <mat-select [(ngModel)]="filterGroupId" [placeholder]="'yearEnd.filterGroup' | translate">
+                  <mat-option [value]="null">{{ 'yearEnd.allGroups' | translate }}</mat-option>
+                  <mat-option *ngFor="let g of groups" [value]="g.id">{{ g.name }}</mat-option>
+                </mat-select>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="ye-filter-field" subscriptSizing="dynamic"
+                              [class.is-active]="filterStudentTerm.trim().length > 0">
+                <mat-icon matPrefix class="ye-filter-icon">person</mat-icon>
+                <input matInput [(ngModel)]="filterStudentTerm"
+                       [placeholder]="'yearEnd.filterStudentPlaceholder' | translate">
+              </mat-form-field>
+            </div>
+          </div>
+        </section>
+
+        <!-- Tableau des décisions par étudiant -->
+        <table mat-table [dataSource]="filteredRows" class="year-end-table" *ngIf="filteredRows.length > 0">
+
+          <!-- Étudiant -->
+          <ng-container matColumnDef="student">
+            <th mat-header-cell *matHeaderCellDef>{{ 'yearEnd.student' | translate }}</th>
+            <td mat-cell *matCellDef="let row">{{ studentName(row) }}</td>
+          </ng-container>
+
+          <!-- Indicateur de revue (niveau le plus élevé) -->
+          <ng-container matColumnDef="review">
+            <th mat-header-cell *matHeaderCellDef>{{ 'yearEnd.review' | translate }}</th>
+            <td mat-cell *matCellDef="let row">
+              <span *ngIf="row.needsReview"
+                    class="year-end-review-badge"
+                    [matTooltip]="'yearEnd.needsReviewTooltip' | translate">
+                <mat-icon>flag</mat-icon>
+                {{ 'yearEnd.needsReview' | translate }}
+              </span>
+            </td>
+          </ng-container>
+
+          <!-- Décision -->
+          <ng-container matColumnDef="decision">
+            <th mat-header-cell *matHeaderCellDef>{{ 'yearEnd.decision' | translate }}</th>
+            <td mat-cell *matCellDef="let row">
+              <mat-form-field appearance="outline" class="year-end-decision-field">
+                <mat-select [(ngModel)]="row.decision">
+                  <mat-option *ngFor="let option of decisionOptions" [value]="option">
+                    {{ 'yearEnd.decisions.' + option | translate }}
+                  </mat-option>
+                </mat-select>
+              </mat-form-field>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+        </table>
+
+        <p *ngIf="rows.length === 0" class="year-end-empty">
+          {{ 'yearEnd.noStudents' | translate }}
+        </p>
+
+        <p *ngIf="rows.length > 0 && filteredRows.length === 0" class="year-end-empty">
+          {{ 'yearEnd.noStudentsFilter' | translate }}
+        </p>
+
+      </ng-container>
+
+      <!-- Résultat après exécution -->
+      <ng-container *ngIf="result">
+        <div class="year-end-result">
+          <h3>{{ 'yearEnd.result.title' | translate }}</h3>
+
+          <p>
+            <strong>{{ 'yearEnd.result.newYear' | translate }}:</strong>
+            {{ result.newYear.label }}
+          </p>
+
+          <p>
+            <strong>{{ 'yearEnd.result.appliedCount' | translate }}:</strong>
+            {{ result.appliedCount }}
+          </p>
+
+          <div class="year-end-review-list" *ngIf="result.reviewList?.length">
+            <h4>{{ 'yearEnd.result.reviewList' | translate }}</h4>
+            <mat-chip-set>
+              <mat-chip *ngFor="let student of result.reviewList">
+                {{ student.firstName }} {{ student.lastName }}
+              </mat-chip>
+            </mat-chip-set>
+          </div>
+
+          <p *ngIf="!result.reviewList?.length" class="year-end-empty">
+            {{ 'yearEnd.result.noReview' | translate }}
+          </p>
+        </div>
+      </ng-container>
+
+    </mat-card-content>
+
+    <mat-card-actions align="end">
+      <button mat-stroked-button
+              *ngIf="result"
+              (click)="loadPreview()">
+        {{ 'yearEnd.restart' | translate }}
+      </button>
+
+      <button mat-raised-button color="primary"
+              *ngIf="!result"
+              [disabled]="loadingPreview || running || rows.length === 0"
+              (click)="run()">
+        <mat-icon *ngIf="!running">play_arrow</mat-icon>
+        <mat-spinner *ngIf="running" [diameter]="20"></mat-spinner>
+        {{ 'yearEnd.run' | translate }}
+      </button>
+    </mat-card-actions>
+
+  </mat-card>
+
+</div>

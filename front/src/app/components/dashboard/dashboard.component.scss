@@ -278,3 +278,20 @@ $muted: #64748b;
   min-height: 320px;
   color: $muted;
 }
+
+/* Ligne de sous-ensemble : le décompte est déjà inclus dans une ligne au-dessus, il ne
+   s'additionne pas au total de la carte. */
+.seg-row--subset {
+  opacity: 0.85;
+
+  .seg-label {
+    font-style: italic;
+  }
+}
+
+.seg-note {
+  margin: 6px 0 0;
+  font-size: 0.7rem;
+  line-height: 1.3;
+  color: #9ca3af;
+}

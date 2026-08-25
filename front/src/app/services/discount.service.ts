@@ -1,9 +1,18 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
-import { API_BASE_URL } from '../app.config';
-import { PriceCalculation, StudentDiscount } from '../models/discount/student-discount';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { catchError, Observable, throwError } from 'rxjs';
+import { API_BASE_URL } from '../api-base-url';
+import { Discount, DiscountRequest } from '../models/discount/student-discount';
 
+/**
+ * Service des réductions (discounts).
+ *
+ * Aligné sur le backend (`DiscountController`) : listing (GET), création (POST),
+ * mise à jour du taux (PUT) et suppression (DELETE).
+ * Le taux est un décimal dans [0.00, 1.00]. Gestion d'erreur centralisée.
+ *
+ * @see DiscountController.java - /api/discounts
+ */
 @Injectable({
   providedIn: 'root'
 })
@@ -12,31 +21,48 @@ export class DiscountService {
 
   constructor(private http: HttpClient) {}
 
-  getAllDiscounts(): Observable<StudentDiscount[]> {
-    return this.http.get<StudentDiscount[]>(this.apiUrl);
+  /** Liste toutes les réductions. */
+  getAllDiscounts(): Observable<Discount[]> {
+    return this.http.get<Discount[]>(this.apiUrl).pipe(catchError(this.handleError));
   }
 
-  getStudentDiscounts(studentId: number): Observable<StudentDiscount[]> {
-    return this.http.get<StudentDiscount[]>(`${this.apiUrl}/student/${studentId}`);
+  /**
+   * Réductions d'un étudiant donné.
+   *
+   * Le filtre est appliqué par le serveur : la fiche étudiante doit pouvoir annoncer
+   * « 65 % de réduction » sans télécharger toutes les réductions de l'école.
+   */
+  getDiscountsForStudent(studentId: number): Observable<Discount[]> {
+    return this.http.get<Discount[]>(this.apiUrl, { params: { studentId } })
+      .pipe(catchError(this.handleError));
   }
 
-  addDiscount(discount: Partial<StudentDiscount>): Observable<StudentDiscount> {
-    return this.http.post<StudentDiscount>(this.apiUrl, discount);
+  /** Crée une réduction (portée + taux). */
+  addDiscount(discount: DiscountRequest): Observable<Discount> {
+    return this.http.post<Discount>(this.apiUrl, discount).pipe(catchError(this.handleError));
   }
 
-  updateDiscount(id: number, discount: Partial<StudentDiscount>): Observable<StudentDiscount> {
-    return this.http.put<StudentDiscount>(`${this.apiUrl}/${id}`, discount);
+  /**
+   * Met à jour le taux d'une réduction. Seul le taux est modifiable : changer la portée
+   * ou la cible revient à une autre réduction (supprimer puis recréer).
+   */
+  updateRate(id: number, rate: number): Observable<Discount> {
+    return this.http.put<Discount>(`${this.apiUrl}/${id}`, { rate }).pipe(catchError(this.handleError));
   }
 
-  deactivateDiscount(id: number): Observable<void> {
-    return this.http.patch<void>(`${this.apiUrl}/${id}/deactivate`, {});
+  /** Supprime définitivement une réduction. */
+  deleteDiscount(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/${id}`).pipe(catchError(this.handleError));
   }
 
-  calculateFinalPrice(studentId: number, groupId: number, basePrice: number): Observable<PriceCalculation> {
-    return this.http.post<PriceCalculation>(`${this.apiUrl}/calculate`, {
-      studentId,
-      groupId,
-      basePrice
-    });
+  private handleError(error: HttpErrorResponse): Observable<never> {
+    let message = 'Une erreur est survenue';
+    if (error.error instanceof ErrorEvent) {
+      message = `Erreur: ${error.error.message}`;
+    } else {
+      message = error.error?.message || `Code: ${error.status}`;
+    }
+    console.error('Discount Service Error:', message, error);
+    return throwError(() => new Error(message));
   }
 }

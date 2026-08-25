@@ -24,9 +24,6 @@ public class SessionDTO {
     @NotNull(message = "Session type is required")
     private String sessionType;
 
-    @NotNull(message = "Feedback link is required")
-    private String feedbackLink;
-
     private Boolean isFinished;
 
     @NotNull(message = "Session start time is required")

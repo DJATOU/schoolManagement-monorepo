@@ -224,6 +224,38 @@
   padding-bottom: 40px;
 }
 
+// Enveloppe d'un étudiant : porte le repère visuel "désactivé" (badge + grisage),
+// commun aux vues carte et liste. N'altère pas la mise en page de la grille (l'enveloppe
+// occupe la cellule et l'enfant conserve width:100%).
+.student-wrapper {
+  position: relative;
+  width: 100%;
+
+  &.is-inactive {
+    opacity: 0.6;
+
+    app-student-card,
+    app-student-list-item {
+      filter: grayscale(0.5);
+    }
+  }
+
+  .inactive-badge {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    z-index: 3;
+    background: #b00020;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 10px;
+    pointer-events: none;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  }
+}
+
 // Loading state
 .loading-state {
   display: flex;

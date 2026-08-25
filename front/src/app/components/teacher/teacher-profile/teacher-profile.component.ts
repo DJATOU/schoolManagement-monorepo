@@ -21,6 +21,9 @@ import { Group } from '../../../models/group/group';
 import { GroupCardComponent } from '../../group/group-card/group-card.component';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { ProfilePdfService } from '../../../services/profile-pdf.service';
+import { TranslateService } from '@ngx-translate/core';
+import { AdminOnlyDirective } from '../../../shared/admin-only.directive';
+import { SecureImageDirective } from '../../../shared/secure-image.directive';
 @Component({
   selector: 'app-teacher-profile',
   standalone: true,
@@ -36,7 +39,10 @@ import { ProfilePdfService } from '../../../services/profile-pdf.service';
     MatSelectModule,
     MatTooltipModule,
     MatExpansionModule,
-    GroupCardComponent
+    GroupCardComponent,
+    AdminOnlyDirective
+  ,
+    SecureImageDirective
   ],
   templateUrl: './teacher-profile.component.html',
   styleUrls: ['./teacher-profile.component.scss']
@@ -49,8 +55,6 @@ export class TeacherProfileComponent implements OnInit {
   hasImageError: boolean = false;
   avatarColor: string = '#6366f1';
   teacherGroups: Group[] = [];
-  levels: any[] = [];
-  groupTypes: any[] = [];
 
   // Colors for avatar backgrounds
   private readonly avatarColors = [
@@ -66,7 +70,8 @@ export class TeacherProfileComponent implements OnInit {
     private dialog: MatDialog,
     private snackBar: MatSnackBar,
     private groupService: GroupService,
-    private profilePdfService: ProfilePdfService
+    private profilePdfService: ProfilePdfService,
+    private translate: TranslateService
   ) {
     this.groupForm = this.fb.group({
       groupIds: [[]]
@@ -126,12 +131,21 @@ export class TeacherProfileComponent implements OnInit {
     this.teacherService.getTeacher(id).subscribe((teacher) => {
       this.teacher = teacher;
       this.loading = false;
-      // Générer l'URL complète de la photo en utilisant les variables d'environnement
-      if (this.teacher?.photo) {
-        this.teacherPhotoUrl = `${environment.apiUrl}${environment.imagesPath}${this.teacher.photo}`;
-      }
+      this.refreshPhotoUrl();
       this.setAvatarColor();
     });
+  }
+
+  /**
+   * Recalcule l'URL de la photo et réarme l'indicateur d'erreur, afin qu'une nouvelle
+   * photo s'affiche sans recharger la page (un échec précédent laissait sinon les
+   * initiales affichées). Le paramètre d'horodatage contourne le cache du navigateur.
+   */
+  private refreshPhotoUrl(): void {
+    this.hasImageError = false;
+    this.teacherPhotoUrl = this.teacher?.photo
+      ? `${environment.apiUrl}${environment.imagesPath}${this.teacher.photo}?t=${Date.now()}`
+      : '';
   }
 
   /**
@@ -163,7 +177,9 @@ export class TeacherProfileComponent implements OnInit {
 
   onEdit(): void {
     const dialogRef = this.dialog.open(EditTeacherDialogComponent, {
-      width: '600px',
+      width: '720px',
+      maxWidth: '95vw',
+      autoFocus: false,
       data: { teacher: this.teacher }
     });
 
@@ -175,7 +191,11 @@ export class TeacherProfileComponent implements OnInit {
             // If a new photo was selected, upload it
             if (result.file) {
               this.teacherService.uploadTeacherPhoto(updatedTeacher.id!, result.file).subscribe({
-                next: () => {
+                next: (filename: string) => {
+                  // Affichage immédiat : on applique le nom de fichier renvoyé sans
+                  // attendre le rechargement de la fiche.
+                  this.teacher = { ...updatedTeacher, photo: filename };
+                  this.refreshPhotoUrl();
                   this.getTeacherDetails(updatedTeacher.id!);
                   this.showSuccessMessage('Enseignant modifié avec succès.');
                 },
@@ -186,6 +206,7 @@ export class TeacherProfileComponent implements OnInit {
               });
             } else {
               this.teacher = updatedTeacher;
+              this.refreshPhotoUrl();
               this.showSuccessMessage('Enseignant modifié avec succès.');
             }
           },
@@ -198,26 +219,29 @@ export class TeacherProfileComponent implements OnInit {
     });
   }
 
+  /**
+   * Désactive l'enseignant après confirmation (suppression logique : l'historique est conservé).
+   */
   onDisable(): void {
-    // Confirmation dialog to disable student
     this.dialog.open(ConfirmationDialogComponent, {
       data: {
-        title: "Suppression d'un enseignant",
-        message: 'Voulez-vous vraiment supprimer cet enseignant?',
-        confirmText: 'Yes, delete',
-        cancelText: 'No, cancel',
+        title: this.translate.instant('CONFIRMATION_DIALOG.DISABLE_TEACHER.TITLE'),
+        message: this.translate.instant('CONFIRMATION_DIALOG.DISABLE_TEACHER.MESSAGE'),
+        confirmText: this.translate.instant('CONFIRMATION_DIALOG.DISABLE_TEACHER.CONFIRM'),
+        cancelText: this.translate.instant('CONFIRMATION_DIALOG.DISABLE_TEACHER.CANCEL'),
         confirmColor: 'warn'
       }
     }).afterClosed().subscribe((result: boolean) => {
       if (result) {
         this.teacherService.disableTeacher(this.teacher!.id || -1).subscribe({
-          next: (response) => {
-            console.log('Teacher disabled successfully:', response);
-            this.showSuccessMessage('Teacher disabled successfully.'); // Affichez le message de succès
+          next: () => {
+            this.showSuccessMessage(this.translate.instant('CONFIRMATION_DIALOG.DISABLE_TEACHER.SUCCESS'));
+            // Retour à la liste : la fiche d'un enseignant désactivé n'a plus lieu d'être affichée.
+            this.router.navigate(['/teacher']);
           },
           error: (error) => {
             console.error('Error disabling teacher:', error);
-            this.showErrorMessage('Error disabling teacher.'); // Affichez le message d'erreur
+            this.showErrorMessage(this.translate.instant('CONFIRMATION_DIALOG.DISABLE_TEACHER.ERROR'));
           }
         });
       }

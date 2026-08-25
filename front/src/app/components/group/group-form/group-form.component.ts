@@ -28,6 +28,7 @@ import { CommonModule } from '@angular/common';
 import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatCardModule } from '@angular/material/card';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { AdminOnlyDirective } from '../../../shared/admin-only.directive';
 
 @Component({
   selector: 'app-group-form',
@@ -46,7 +47,8 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
     MatSnackBarModule,
     CommonModule,
     MatCardModule,
-    TranslateModule
+    TranslateModule,
+    AdminOnlyDirective
   ],
   templateUrl: './group-form.component.html',
   styleUrls: ['./group-form.component.scss'],

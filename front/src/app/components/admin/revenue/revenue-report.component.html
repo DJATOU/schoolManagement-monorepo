@@ -1,0 +1,159 @@
+<div class="page-container">
+  <div class="header">
+    <div>
+      <h1>{{ 'revenue.report.title' | translate }}</h1>
+      <p>{{ 'revenue.report.subtitle' | translate }}</p>
+    </div>
+    <button mat-raised-button color="primary" (click)="exportToCSV()"
+      [disabled]="!report || report.rows.length === 0"
+      [matTooltip]="'revenue.report.exportTooltip' | translate">
+      <mat-icon>download</mat-icon>
+      {{ 'revenue.report.export' | translate }}
+    </button>
+  </div>
+
+  <mat-card class="filters-card">
+    <mat-card-content>
+      <form [formGroup]="filterForm" class="filters-grid">
+        <mat-form-field appearance="outline">
+          <mat-label>{{ 'revenue.report.axis' | translate }}</mat-label>
+          <mat-select formControlName="groupBy">
+            <mat-option *ngFor="let axis of axes" [value]="axis">{{ axisLabel(axis) }}</mat-option>
+          </mat-select>
+          <mat-icon matPrefix>insights</mat-icon>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>{{ 'payment.admin.filters.level' | translate }}</mat-label>
+          <mat-select formControlName="levelId">
+            <mat-option [value]="null">{{ 'payment.admin.filters.allMasculine' | translate }}</mat-option>
+            <mat-option *ngFor="let level of levels" [value]="level.id">{{ level.name }}</mat-option>
+          </mat-select>
+          <mat-icon matPrefix>school</mat-icon>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>{{ 'payment.admin.filters.group' | translate }}</mat-label>
+          <mat-select formControlName="groupId">
+            <mat-option [value]="null">{{ 'payment.admin.filters.allMasculine' | translate }}</mat-option>
+            <mat-option *ngFor="let group of filteredGroups" [value]="group.id">{{ group.name }}</mat-option>
+          </mat-select>
+          <mat-icon matPrefix>group</mat-icon>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>{{ 'payment.admin.filters.series' | translate }}</mat-label>
+          <mat-select formControlName="seriesId">
+            <mat-option [value]="null">{{ 'payment.admin.filters.allFeminine' | translate }}</mat-option>
+            <mat-option *ngFor="let serie of series" [value]="serie.id">{{ serie.name }}</mat-option>
+          </mat-select>
+          <mat-icon matPrefix>layers</mat-icon>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>{{ 'payment.admin.filters.dateFrom' | translate }}</mat-label>
+          <input matInput [matDatepicker]="pickerStart" formControlName="dateFrom">
+          <mat-datepicker-toggle matSuffix [for]="pickerStart"></mat-datepicker-toggle>
+          <mat-datepicker #pickerStart></mat-datepicker>
+          <mat-icon matPrefix>date_range</mat-icon>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>{{ 'payment.admin.filters.dateTo' | translate }}</mat-label>
+          <input matInput [matDatepicker]="pickerEnd" formControlName="dateTo"
+            [min]="filterForm.value.dateFrom">
+          <mat-datepicker-toggle matSuffix [for]="pickerEnd"></mat-datepicker-toggle>
+          <mat-datepicker #pickerEnd></mat-datepicker>
+          <mat-icon matPrefix>event_busy</mat-icon>
+        </mat-form-field>
+      </form>
+
+      <p class="date-note">{{ 'revenue.report.dateNote' | translate }}</p>
+
+      <div class="filter-actions">
+        <button mat-raised-button color="primary" type="button" (click)="load()">
+          <mat-icon>search</mat-icon>
+          <span>{{ 'payment.admin.filters.search' | translate }}</span>
+        </button>
+        <button mat-raised-button type="button" (click)="resetFilters()">
+          <mat-icon>clear_all</mat-icon>
+          <span>{{ 'payment.admin.filters.clear' | translate }}</span>
+        </button>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <div class="loading" *ngIf="isLoading">
+    <mat-progress-spinner mode="indeterminate" diameter="44"></mat-progress-spinner>
+  </div>
+
+  <ng-container *ngIf="!isLoading && report">
+    <!-- Encaissé brut, remboursé, net : le net est le seul chiffre de caisse. -->
+    <div class="totals">
+      <div class="total-card total-card--collected">
+        <span class="total-label">{{ 'revenue.report.totals.collected' | translate }}</span>
+        <span class="total-value">{{ formatAmount(report.totalCollected) }} {{ currencySuffix }}</span>
+      </div>
+      <div class="total-card total-card--refunded" *ngIf="hasRefunds">
+        <span class="total-label">{{ 'revenue.report.totals.refunded' | translate }}</span>
+        <span class="total-value">− {{ formatAmount(report.totalRefunded) }} {{ currencySuffix }}</span>
+      </div>
+      <div class="total-card total-card--net">
+        <span class="total-label">{{ 'revenue.report.totals.net' | translate }}</span>
+        <span class="total-value">{{ formatAmount(report.totalNet) }} {{ currencySuffix }}</span>
+      </div>
+    </div>
+
+    <p class="refund-note" *ngIf="hasRefunds">{{ 'revenue.report.refundNote' | translate }}</p>
+
+    <mat-card class="table-card">
+      <div class="table-header">
+        <h2>{{ axisLabel(report.groupBy) }}</h2>
+        <mat-chip [highlighted]="true">
+          {{ 'revenue.report.table.count' | translate: { count: report.rows.length } }}
+        </mat-chip>
+      </div>
+
+      <table mat-table [dataSource]="report.rows" class="mat-elevation-z2">
+        <ng-container matColumnDef="label">
+          <th mat-header-cell *matHeaderCellDef>{{ axisLabel(report.groupBy) }}</th>
+          <td mat-cell *matCellDef="let row">
+            <a *ngIf="groupLink(row) as link" [href]="link" target="_blank" class="row-link"
+              [matTooltip]="'revenue.report.table.openGroup' | translate">
+              <span class="row-label">{{ row.label }}</span>
+              <mat-icon class="open-icon">open_in_new</mat-icon>
+            </a>
+            <span *ngIf="!groupLink(row)" class="row-label">{{ row.label }}</span>
+            <span class="row-sublabel" *ngIf="row.subLabel"> · {{ row.subLabel }}</span>
+          </td>
+        </ng-container>
+
+        <!-- Part visuelle : on voit d'un coup d'œil qui pèse dans les recettes. -->
+        <ng-container matColumnDef="share">
+          <th mat-header-cell *matHeaderCellDef>{{ 'revenue.report.table.share' | translate }}</th>
+          <td mat-cell *matCellDef="let row">
+            <div class="share-cell">
+              <div class="share-bar"><div class="share-bar__fill" [style.width.%]="row.share"></div></div>
+              <span class="share-value">{{ row.share }} %</span>
+            </div>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="collected">
+          <th mat-header-cell *matHeaderCellDef>{{ 'revenue.report.table.collected' | translate }}</th>
+          <td mat-cell *matCellDef="let row">
+            <strong>{{ formatAmount(row.collected) }} {{ currencySuffix }}</strong>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns; sticky: true"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+      </table>
+
+      <div class="no-result" *ngIf="report.rows.length === 0">
+        <mat-icon>savings</mat-icon>
+        <span>{{ 'revenue.report.empty' | translate }}</span>
+      </div>
+    </mat-card>
+  </ng-container>
+</div>

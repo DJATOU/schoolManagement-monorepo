@@ -5,6 +5,7 @@ import { MatIcon } from '@angular/material/icon';
 import { Router } from '@angular/router';
 import { Group } from '../../../models/group/group';
 import { GroupService } from '../../../services/group.service';
+import { SecureImageDirective } from '../../../shared/secure-image.directive';
 
 @Component({
   selector: 'app-group-list',
@@ -14,6 +15,8 @@ import { GroupService } from '../../../services/group.service';
     MatCard,
     MatCardContent,
     MatIcon
+  ,
+    SecureImageDirective
   ],
   templateUrl: './group-list.component.html',
   styleUrl: './group-list.component.scss'
@@ -24,8 +27,8 @@ export class GroupListComponent implements OnInit {
   @Input() groupTypes: any[] = [];
 
   groupPhotoUrl: string = '';
-  level: string = '';
-  type: string = '';
+  level: string = '—';
+  type: string = '—';
   avatarColor: string = '#6366f1';
 
   // Colors for avatar backgrounds
@@ -51,12 +54,19 @@ export class GroupListComponent implements OnInit {
     }
   }
 
+  /**
+   * Résout le niveau et le type du groupe.
+   *
+   * <p>Les libellés fournis par le backend ({@code levelName} / {@code groupTypeName})
+   * sont prioritaires ; les tableaux de référence ne servent que de repli pour les
+   * écrans qui les chargent déjà.</p>
+   */
   private setLevelAndType(): void {
-    const foundLevel = this.levels.find(l => l.id === this.group.levelId);
-    this.level = foundLevel ? foundLevel.name : 'Unknown';
+    const levelFromLookup = this.levels.find(l => l.id === this.group.levelId)?.name;
+    const typeFromLookup = this.groupTypes.find(t => t.id === this.group.groupTypeId)?.name;
 
-    const foundType = this.groupTypes.find(t => t.id === this.group.groupTypeId);
-    this.type = foundType ? foundType.name : 'Unknown';
+    this.level = this.group.levelName || levelFromLookup || '—';
+    this.type = this.group.groupTypeName || typeFromLookup || '—';
   }
 
   private setAvatarColor(): void {

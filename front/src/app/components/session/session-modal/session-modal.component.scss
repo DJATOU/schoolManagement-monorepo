@@ -1,4 +1,314 @@
-.catch-up-label {
-    font-style: italic;
-    color: #ff5722; /* Couleur pour indiquer le rattrapage */
+:host {
+  --pf-primary: #4f46e5;
+  --pf-primary-soft: #eef2ff;
+  --pf-ink: #111827;
+  --pf-muted: #6b7280;
+  --pf-line: #eef0f4;
+}
+
+.modal-content {
+  padding: 0;
+  /* Pas de max-width figée : la largeur est décidée par l'appelant du dialogue.
+     Un plafond à 560px écrasait la ligne de présence et rognait « Justifié ». */
+}
+
+/* ===== En-tête (hero) ===== */
+.session-details-panel {
+  padding: 4px 4px 8px;
+}
+
+.session-hero {
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  border-radius: 14px;
+  padding: 14px 18px;
+  margin: 6px 4px 12px;
+  box-shadow: 0 6px 18px rgba(79, 70, 229, 0.25);
+}
+
+.session-title {
+  margin: 0;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.session-type-chip {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 2px 11px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.22);
+  border-radius: 999px;
+}
+
+/* ===== Grille de détails (2 colonnes, sans ascenseur) ===== */
+.detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 10px;
+  padding: 0 4px;
+}
+
+.detail-row {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 7px 8px;
+  border-radius: 10px;
+  transition: background 0.15s ease;
+  min-width: 0;
+
+  &.full {
+    grid-column: 1 / -1;
   }
+
+  &:hover {
+    background: #fafbff;
+  }
+}
+
+.detail-icon-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: 9px;
+  background: var(--pf-primary-soft);
+  color: var(--pf-primary);
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+}
+
+.arrow {
+  color: var(--pf-muted);
+  margin: 0 4px;
+  font-weight: 400;
+}
+
+.detail-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.detail-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--pf-muted);
+}
+
+.detail-value {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--pf-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Liens cliquables (groupe / enseignant / étudiant) */
+.detail-link,
+.student-name-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--pf-primary);
+  cursor: pointer;
+  text-decoration: none;
+  max-width: 100%;
+
+  > span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &:hover {
+    text-decoration: underline;
+
+    .open-icon {
+      opacity: 1;
+    }
+  }
+
+  .open-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    opacity: 0.55;
+    transition: opacity 0.15s ease;
+  }
+}
+
+/* ===== Onglet présences ===== */
+.students-card {
+  box-shadow: none;
+  margin-top: 8px;
+}
+
+.check-all {
+  margin: 4px 0 12px;
+  font-weight: 600;
+}
+
+/* Zone de défilement de la liste des étudiants. */
+.students-scroll {
+  max-height: 44vh;
+  overflow-y: auto;
+  /* La molette ne se propage pas au calendrier derrière le dialogue. */
+  overscroll-behavior: contain;
+  /* Évite le décalage de la mise en page à l'apparition de l'ascenseur. */
+  scrollbar-gutter: stable;
+  padding-right: 2px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(79, 70, 229, 0.35) transparent;
+
+  &::-webkit-scrollbar {
+    width: 10px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(79, 70, 229, 0.3);
+    border: 3px solid transparent;
+    border-radius: 999px;
+    background-clip: content-box;
+
+    &:hover {
+      background: rgba(79, 70, 229, 0.55);
+      background-clip: content-box;
+    }
+  }
+}
+
+/*
+  Grille plutôt que flex : les quatre colonnes gardent une largeur stable d'une ligne
+  à l'autre et la colonne « Justifié » ne peut plus être rognée.
+*/
+.student-list-item {
+  display: grid;
+  grid-template-columns: auto minmax(130px, 1fr) minmax(120px, 1.4fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+
+  &:nth-child(even) {
+    background: #fafbff;
+  }
+}
+
+.student-name-link {
+  min-width: 0;
+  font-weight: 500;
+}
+
+.student-name-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.justified-checkbox {
+  /* Le libellé ne doit ni passer à la ligne ni être coupé. */
+  white-space: nowrap;
+}
+
+/* Sous 620px, la note passe sur une deuxième ligne au lieu de tout comprimer. */
+@media (max-width: 620px) {
+  .student-list-item {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      "check name justified"
+      ".     note note";
+    row-gap: 6px;
+  }
+
+  .student-checkbox {
+    grid-area: check;
+  }
+
+  .student-name-link {
+    grid-area: name;
+  }
+
+  .justified-checkbox {
+    grid-area: justified;
+  }
+
+  .description-input {
+    grid-area: note;
+  }
+}
+
+.catch-up-label {
+  font-style: italic;
+  color: #ff5722;
+  margin-left: 6px;
+  font-weight: 500;
+}
+
+.description-input {
+  min-width: 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 13px;
+  outline: none;
+
+  &:focus {
+    border-color: var(--pf-primary);
+  }
+}
+
+/* ===== Actions ===== */
+mat-dialog-actions {
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  padding: 12px 8px 8px;
+  border-top: 1px solid var(--pf-line);
+  margin-top: 6px;
+}
+
+/* Bandeau lecture seule */
+.pf-readonly-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: #fff7ed;
+  color: #9a3412;
+  border-radius: 8px;
+  margin: 0 4px 8px;
+  font-size: 13px;
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+}
+
+/* Suppression de la séance : action destructive, mise en évidence en rouge. */
+.delete-session-btn:not([disabled]) {
+  color: #dc2626;
+}

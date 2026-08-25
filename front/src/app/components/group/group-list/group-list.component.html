@@ -2,7 +2,7 @@
   <mat-card-content>
     <div class="group-info">
       <div class="group-avatar">
-        <img *ngIf="groupPhotoUrl; else groupInitials" [src]="groupPhotoUrl" alt="Photo du groupe" class="group-photo"
+        <img *ngIf="groupPhotoUrl; else groupInitials" [appSecureImage]="groupPhotoUrl" alt="Photo du groupe" class="group-photo"
           (error)="onImageError()" />
         <ng-template #groupInitials>
           <div class="initials-avatar" [style.background-color]="avatarColor">
@@ -11,7 +11,7 @@
         </ng-template>
       </div>
       <div class="group-details">
-        <h4>{{ group.name || 'Unknown Group' }}</h4>
+        <h4>{{ group.name || '—' }}</h4>
         <p class="group-subtitle-mobile">{{ level }} · {{ type }}</p>
       </div>
       <div class="group-meta">

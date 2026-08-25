@@ -4,7 +4,6 @@ import com.school.management.dto.AttendanceDTO;
 import com.school.management.mapper.AttendanceMapper;
 import com.school.management.persistance.AttendanceEntity;
 import com.school.management.service.AttendanceService;
-import com.school.management.service.PatchService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,15 +19,11 @@ public class AttendanceController {
 
     private final AttendanceService attendanceService;
 
-    private final PatchService patchService;
-
     private final AttendanceMapper attendanceMapper;
 
     @Autowired
-    public AttendanceController(AttendanceService attendanceService, PatchService patchService,
-            AttendanceMapper attendanceMapper) {
+    public AttendanceController(AttendanceService attendanceService, AttendanceMapper attendanceMapper) {
         this.attendanceService = attendanceService;
-        this.patchService = patchService;
         this.attendanceMapper = attendanceMapper;
     }
 
@@ -65,15 +60,9 @@ public class AttendanceController {
         return ResponseEntity.ok(attendanceService.updateAttendance(id));
     }
 
-    @PatchMapping("/{id}")
-    public ResponseEntity<AttendanceDTO> patchAttendance(@PathVariable Long id,
-            @RequestBody Map<String, Object> updates) {
-        AttendanceEntity attendance = attendanceService.getAttendanceById(id);
-        patchService.applyPatch(attendance, updates);
-        AttendanceEntity updatedAttendance = attendanceService.save(attendance);
-        AttendanceDTO attendanceDTO = attendanceMapper.attendanceToAttendanceDTO(updatedAttendance);
-        return ResponseEntity.ok(attendanceDTO);
-    }
+    // PATCH /{id} générique retiré : il projetait une Map arbitraire du client sur l'entité
+    // (ModelMapper), donc n'importe quel champ d'une présence était écrasable. Aucun écran ne
+    // l'utilisait ; la désactivation passe par PATCH /deactivate/{sessionId}.
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteAttendance(@PathVariable Long id) {

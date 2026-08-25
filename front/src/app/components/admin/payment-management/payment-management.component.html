@@ -1,86 +1,149 @@
 <div class="page-container">
   <div class="header">
     <div>
-      <h1>Gestion des paiements</h1>
-      <p>Recherche et administration des paiements</p>
+      <h1>{{ 'payment.admin.page.title' | translate }}</h1>
+      <p>{{ 'payment.admin.page.subtitle' | translate }}</p>
     </div>
-    <button mat-raised-button color="primary" (click)="exportToCSV()">
+    <button mat-raised-button color="primary" (click)="exportToCSV()" [disabled]="dataSource.data.length === 0"
+      [matTooltip]="'payment.admin.page.exportTooltip' | translate">
       <mat-icon>download</mat-icon>
-      Exporter
+      {{ 'payment.admin.page.export' | translate }}
     </button>
   </div>
 
   <mat-card class="filters-card">
     <mat-card-header>
-      <mat-card-title>Filtres de recherche</mat-card-title>
+      <mat-card-title>{{ 'payment.admin.filters.title' | translate }}</mat-card-title>
     </mat-card-header>
     <mat-card-content>
+      <!--
+        Filtres en cascade, du plus général au plus précis : niveau → groupe → série,
+        puis étudiant restreint à ce périmètre. Chaque changement relance la recherche
+        automatiquement (léger délai pour ne pas multiplier les appels).
+      -->
       <form [formGroup]="filterForm" class="filters-grid">
         <mat-form-field appearance="outline">
-          <mat-label>Étudiant</mat-label>
-          <mat-select formControlName="studentId">
-            <mat-option [value]="null">Tous</mat-option>
-            <mat-option *ngFor="let student of students" [value]="student.id">
-              {{student.firstName}} {{student.lastName}}
-            </mat-option>
+          <mat-label>{{ 'payment.admin.filters.level' | translate }}</mat-label>
+          <mat-select formControlName="levelId">
+            <mat-option [value]="null">{{ 'payment.admin.filters.allMasculine' | translate }}</mat-option>
+            <mat-option *ngFor="let level of levels" [value]="level.id">{{level.name}}</mat-option>
           </mat-select>
-          <mat-icon matPrefix>person</mat-icon>
+          <mat-icon matPrefix>school</mat-icon>
         </mat-form-field>
 
         <mat-form-field appearance="outline">
-          <mat-label>Groupe</mat-label>
+          <mat-label>{{ 'payment.admin.filters.group' | translate }}</mat-label>
           <mat-select formControlName="groupId">
-            <mat-option [value]="null">Tous</mat-option>
-            <mat-option *ngFor="let group of groups" [value]="group.id">{{group.name}}</mat-option>
+            <mat-option [value]="null">{{ 'payment.admin.filters.allMasculine' | translate }}</mat-option>
+            <mat-option *ngFor="let group of filteredGroups" [value]="group.id">{{group.name}}</mat-option>
           </mat-select>
           <mat-icon matPrefix>group</mat-icon>
+          <mat-hint *ngIf="filterForm.value.levelId">
+            {{ 'payment.admin.filters.scopedByLevel' | translate: { count: filteredGroups.length } }}
+          </mat-hint>
         </mat-form-field>
 
         <mat-form-field appearance="outline">
-          <mat-label>Série</mat-label>
+          <mat-label>{{ 'payment.admin.filters.series' | translate }}</mat-label>
           <mat-select formControlName="sessionSeriesId">
-            <mat-option [value]="null">Toutes</mat-option>
-            <mat-option *ngFor="let serie of series" [value]="serie.id">{{serie.name}}</mat-option>
+            <mat-option [value]="null">{{ 'payment.admin.filters.allFeminine' | translate }}</mat-option>
+            <mat-option *ngFor="let serie of filteredSeries" [value]="serie.id">{{serie.name}}</mat-option>
           </mat-select>
           <mat-icon matPrefix>event_note</mat-icon>
+          <mat-hint *ngIf="filterForm.value.groupId">
+            {{ 'payment.admin.filters.scopedByGroup' | translate: { count: filteredSeries.length } }}
+          </mat-hint>
+        </mat-form-field>
+
+        <!-- Séance : activée seulement quand une série est sélectionnée. -->
+        <mat-form-field appearance="outline">
+          <mat-label>{{ 'payment.admin.filters.session' | translate }}</mat-label>
+          <mat-select formControlName="sessionId">
+            <mat-option [value]="null">{{ 'payment.admin.filters.allFeminine' | translate }}</mat-option>
+            <mat-option *ngFor="let session of sessions" [value]="session.id">
+              {{ sessionLabel(session) }}
+            </mat-option>
+          </mat-select>
+          <mat-icon matPrefix>event_available</mat-icon>
+          <mat-hint>
+            {{ (filterForm.get('sessionId')?.disabled
+                  ? 'payment.admin.filters.sessionNeedsSeries'
+                  : 'payment.admin.filters.scopedBySeries') | translate: { count: sessions.length } }}
+          </mat-hint>
+        </mat-form-field>
+
+        <!-- Autocomplétion : on tape le nom au lieu de dérouler des centaines de lignes. -->
+        <mat-form-field appearance="outline">
+          <mat-label>{{ 'payment.admin.filters.student' | translate }}</mat-label>
+          <input matInput [formControl]="studentSearch" [matAutocomplete]="studentAuto"
+            (focus)="onStudentFocus()"
+            [placeholder]="'payment.admin.filters.studentPlaceholder' | translate">
+          <mat-autocomplete #studentAuto="matAutocomplete" [displayWith]="studentLabel"
+            (optionSelected)="onStudentSelected($event.option.value)">
+            <mat-option *ngFor="let student of studentOptions" [value]="student">
+              {{ studentLabel(student) }}
+            </mat-option>
+            <mat-option *ngIf="studentOptions.length === 0" [disabled]="true">
+              {{ 'payment.admin.filters.noStudent' | translate }}
+            </mat-option>
+          </mat-autocomplete>
+          <mat-icon matPrefix>person</mat-icon>
+          <button matSuffix mat-icon-button *ngIf="studentSearch.value" (click)="clearStudent()"
+            [matTooltip]="'payment.admin.filters.clearStudent' | translate">
+            <mat-icon>close</mat-icon>
+          </button>
         </mat-form-field>
 
         <mat-form-field appearance="outline">
-          <mat-label>Statut</mat-label>
+          <mat-label>{{ 'payment.admin.filters.rowStatus' | translate }}</mat-label>
           <mat-select formControlName="active">
-            <mat-option [value]="null">Tous</mat-option>
-            <mat-option [value]="true">Actif</mat-option>
-            <mat-option [value]="false">Inactif</mat-option>
+            <mat-option [value]="null">{{ 'payment.admin.filters.allMasculine' | translate }}</mat-option>
+            <mat-option [value]="true">{{ 'payment.admin.rowStatus.active' | translate }}</mat-option>
+            <mat-option [value]="false">{{ 'payment.admin.rowStatus.inactive' | translate }}</mat-option>
           </mat-select>
           <mat-icon matPrefix>check_circle</mat-icon>
         </mat-form-field>
 
         <mat-form-field appearance="outline">
-          <mat-label>Date début</mat-label>
+          <mat-label>{{ 'payment.admin.filters.dateFrom' | translate }}</mat-label>
           <input matInput [matDatepicker]="pickerStart" formControlName="dateFrom">
           <mat-datepicker-toggle matSuffix [for]="pickerStart"></mat-datepicker-toggle>
           <mat-datepicker #pickerStart></mat-datepicker>
           <mat-icon matPrefix>date_range</mat-icon>
         </mat-form-field>
 
+        <!-- Borne haute : une plage est plus utile qu'un « depuis » sans fin. -->
         <mat-form-field appearance="outline">
-          <mat-label>Niveau</mat-label>
-          <mat-select formControlName="levelId">
-            <mat-option [value]="null">Tous</mat-option>
-            <mat-option *ngFor="let level of levels" [value]="level.id">{{level.name}}</mat-option>
-          </mat-select>
-          <mat-icon matPrefix>school</mat-icon>
+          <mat-label>{{ 'payment.admin.filters.dateTo' | translate }}</mat-label>
+          <input matInput [matDatepicker]="pickerEnd" formControlName="dateTo"
+            [min]="filterForm.value.dateFrom">
+          <mat-datepicker-toggle matSuffix [for]="pickerEnd"></mat-datepicker-toggle>
+          <mat-datepicker #pickerEnd></mat-datepicker>
+          <mat-icon matPrefix>event_busy</mat-icon>
         </mat-form-field>
       </form>
 
+      <!-- Rappel des filtres appliqués, retirables un par un. -->
+      <div class="active-filters" *ngIf="activeFilterChips.length > 0">
+        <span class="active-filters__label">{{ 'payment.admin.filters.active' | translate }}</span>
+        <span class="filter-chip" *ngFor="let chip of activeFilterChips">
+          {{ chip.label }}
+          <button type="button" class="filter-chip__remove" (click)="removeFilter(chip.key)"
+            [matTooltip]="'payment.admin.filters.removeFilter' | translate">
+            <mat-icon>close</mat-icon>
+          </button>
+        </span>
+      </div>
+
       <div class="filter-actions">
-        <button mat-raised-button color="primary" type="button" (click)="loadPaymentDetails()">
+        <button mat-raised-button color="primary" type="button" (click)="search()">
           <mat-icon>search</mat-icon>
-          <span>Rechercher</span>
+          <span>{{ 'payment.admin.filters.search' | translate }}</span>
         </button>
-        <button mat-raised-button type="button" (click)="resetFilters()">
+        <button mat-raised-button type="button" (click)="resetFilters()"
+          [disabled]="activeFilterChips.length === 0">
           <mat-icon>clear_all</mat-icon>
-          <span>Effacer</span>
+          <span>{{ 'payment.admin.filters.clear' | translate }}</span>
         </button>
       </div>
     </mat-card-content>
@@ -88,34 +151,36 @@
 
   <mat-card class="table-card">
     <div class="table-header">
-      <h2>Résultats</h2>
-      <mat-chip [highlighted]="true">{{totalElements}} paiement(s)</mat-chip>
+      <h2>{{ 'payment.admin.table.results' | translate }}</h2>
+      <mat-chip [highlighted]="true">
+        {{ 'payment.admin.table.count' | translate: { count: totalElements } }}
+      </mat-chip>
     </div>
 
     <div class="table-wrapper" *ngIf="!isLoading; else loading">
       <table mat-table [dataSource]="dataSource" class="mat-elevation-z2">
         <ng-container matColumnDef="id">
-          <th mat-header-cell *matHeaderCellDef> ID </th>
+          <th mat-header-cell *matHeaderCellDef> {{ 'payment.admin.table.id' | translate }} </th>
           <td mat-cell *matCellDef="let element"> {{element.id}} </td>
         </ng-container>
 
         <ng-container matColumnDef="student">
-          <th mat-header-cell *matHeaderCellDef> Étudiant </th>
+          <th mat-header-cell *matHeaderCellDef> {{ 'payment.admin.table.student' | translate }} </th>
           <td mat-cell *matCellDef="let element">
             <a [href]="'/student/' + element.studentId" target="_blank" class="table-link"
-              matTooltip="Ouvrir la fiche étudiant">
-              {{getStudentFullName(element)}}
+              [matTooltip]="'payment.admin.table.openStudent' | translate">
+              <span class="link-text">{{getStudentFullName(element)}}</span>
               <mat-icon class="open-icon">open_in_new</mat-icon>
             </a>
           </td>
         </ng-container>
 
         <ng-container matColumnDef="group">
-          <th mat-header-cell *matHeaderCellDef> Groupe </th>
+          <th mat-header-cell *matHeaderCellDef> {{ 'payment.admin.table.group' | translate }} </th>
           <td mat-cell *matCellDef="let element">
             <a *ngIf="element.groupId" [href]="'/group/' + element.groupId" target="_blank" class="table-link"
-              matTooltip="Ouvrir la fiche groupe">
-              {{element.groupName}}
+              [matTooltip]="element.groupName">
+              <span class="link-text">{{element.groupName}}</span>
               <mat-icon class="open-icon">open_in_new</mat-icon>
             </a>
             <span *ngIf="!element.groupId">-</span>
@@ -123,26 +188,33 @@
         </ng-container>
 
         <ng-container matColumnDef="series">
-          <th mat-header-cell *matHeaderCellDef> Série </th>
-          <td mat-cell *matCellDef="let element"> {{element.seriesName || '-'}} </td>
+          <th mat-header-cell *matHeaderCellDef> {{ 'payment.admin.table.series' | translate }} </th>
+          <td mat-cell *matCellDef="let element">
+            <span class="ellipsis" [matTooltip]="element.seriesName || ''">{{element.seriesName || '—'}}</span>
+          </td>
         </ng-container>
 
         <ng-container matColumnDef="session">
-          <th mat-header-cell *matHeaderCellDef> Session </th>
+          <th mat-header-cell *matHeaderCellDef> {{ 'payment.admin.table.session' | translate }} </th>
           <td mat-cell *matCellDef="let element">
-            {{element.sessionName || '-'}}
+            <span class="ellipsis">{{element.sessionName || '—'}}</span>
+            <span class="catch-up-tag" *ngIf="element.isCatchUp">
+              {{ 'payment.admin.table.catchUp' | translate }}
+            </span>
           </td>
         </ng-container>
 
         <ng-container matColumnDef="amount">
-          <th mat-header-cell *matHeaderCellDef> Montant </th>
+          <th mat-header-cell *matHeaderCellDef> {{ 'payment.admin.table.amount' | translate }} </th>
           <td mat-cell *matCellDef="let element">
-            <strong>{{element.amountPaid | currency:'DZD':'symbol':'1.0-0'}}</strong>
+            <!-- « DZD6,000 » (code ISO collé) était illisible : on garde le suffixe DA
+                 utilisé partout ailleurs dans l'application. -->
+            <strong class="amount-value">{{ element.amountPaid | number:'1.0-2' }} {{ currencySuffix }}</strong>
           </td>
         </ng-container>
 
         <ng-container matColumnDef="status">
-          <th mat-header-cell *matHeaderCellDef> Statut </th>
+          <th mat-header-cell *matHeaderCellDef> {{ 'payment.admin.table.rowStatus' | translate }} </th>
           <td mat-cell *matCellDef="let element">
             <mat-chip [color]="getStatusColor(element)" [highlighted]="true">
               {{getStatusLabel(element)}}
@@ -150,39 +222,77 @@
           </td>
         </ng-container>
 
-        <ng-container matColumnDef="dateCreation">
-          <th mat-header-cell *matHeaderCellDef> Créé le </th>
+        <!--
+          Statut du paiement parent : sans cette colonne, un versement rattaché à un
+          paiement ANNULÉ s'affichait « Actif », sans aucun indice de son annulation.
+        -->
+        <ng-container matColumnDef="paymentStatus">
+          <th mat-header-cell *matHeaderCellDef> {{ 'payment.admin.table.paymentStatus' | translate }} </th>
           <td mat-cell *matCellDef="let element">
-            {{element.dateCreation | date:'dd/MM/yyyy HH:mm'}}
-          </td>
-        </ng-container>
-
-        <ng-container matColumnDef="actions">
-          <th mat-header-cell *matHeaderCellDef class="actions-header"> Actions </th>
-          <td mat-cell *matCellDef="let element" class="actions-cell">
-            <button mat-icon-button color="primary" matTooltip="Modifier" (click)="openEditDialog(element)">
-              <mat-icon>edit</mat-icon>
-            </button>
-            <button mat-icon-button color="accent" matTooltip="Historique" (click)="openHistoryDialog(element)">
-              <mat-icon>history</mat-icon>
-            </button>
-            <button *ngIf="element.active" mat-icon-button color="warn" matTooltip="Supprimer définitivement"
-              (click)="deletePaymentDetail(element)">
-              <mat-icon>cancel</mat-icon>
-            </button>
-            <button *ngIf="!element.active && !element.permanentlyDeleted" mat-icon-button color="success"
-              matTooltip="Réactiver" (click)="reactivatePaymentDetail(element)">
-              <mat-icon>check_circle</mat-icon>
-            </button>
-            <span *ngIf="!element.active && element.permanentlyDeleted" class="deleted-label">
-              Supprimé définitivement
+            <span class="payment-status" [ngClass]="'payment-status--' + (element.paymentStatus || 'unknown')"
+              [matTooltip]="paymentStatusTooltip(element)">
+              {{ paymentStatusLabel(element) }}
             </span>
           </td>
         </ng-container>
 
-        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-        <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+        <ng-container matColumnDef="dateCreation">
+          <th mat-header-cell *matHeaderCellDef> {{ 'payment.admin.table.createdAt' | translate }} </th>
+          <td mat-cell *matCellDef="let element">
+            <!-- Date et heure sur deux lignes assumées, au lieu d'un retour à la ligne subi. -->
+            <div class="stamp">
+              <span class="stamp-date">{{ element.dateCreation | date:'dd/MM/yyyy' }}</span>
+              <span class="stamp-time">{{ element.dateCreation | date:'HH:mm' }}</span>
+            </div>
+          </td>
+        </ng-container>
+
+        <!--
+          stickyEnd : la colonne d'actions reste ancrée à droite. Sans cela, elle sortait
+          du cadre dès que le tableau devait défiler horizontalement et les boutons
+          étaient coupés.
+        -->
+        <ng-container matColumnDef="actions" stickyEnd>
+          <th mat-header-cell *matHeaderCellDef class="actions-header"> {{ 'payment.admin.table.actions' | translate }} </th>
+          <td mat-cell *matCellDef="let element" class="actions-cell">
+            <button mat-icon-button color="primary" [matTooltip]="'payment.admin.actions.edit' | translate"
+              (click)="openEditDialog(element)" appAdminOnly>
+              <mat-icon>edit</mat-icon>
+            </button>
+            <button mat-icon-button color="accent" [matTooltip]="'payment.admin.actions.history' | translate"
+              (click)="openHistoryDialog(element)">
+              <mat-icon>history</mat-icon>
+            </button>
+            <button *ngIf="element.active" mat-icon-button color="warn"
+              [matTooltip]="'payment.admin.actions.delete' | translate"
+              (click)="deletePaymentDetail(element)" appAdminOnly>
+              <mat-icon>delete_forever</mat-icon>
+            </button>
+            <button *ngIf="!element.active && !element.permanentlyDeleted" mat-icon-button color="success"
+              [matTooltip]="'payment.admin.actions.reactivate' | translate"
+              (click)="reactivatePaymentDetail(element)" appAdminOnly>
+              <mat-icon>check_circle</mat-icon>
+            </button>
+            <!-- Suppression définitive : aucune action possible. Une icône avec infobulle
+                 tient dans la colonne, contrairement au libellé complet qui la faisait
+                 déborder sur plusieurs lignes. -->
+            <mat-icon *ngIf="!element.active && element.permanentlyDeleted" class="deleted-mark"
+              [matTooltip]="'payment.admin.rowStatus.permanentlyDeleted' | translate">
+              block
+            </mat-icon>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns; sticky: true"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns;"
+          [class.row-inactive]="!row.active"></tr>
       </table>
+
+      <div class="no-result" *ngIf="dataSource.data.length === 0">
+        <mat-icon>receipt_long</mat-icon>
+        <span>{{ 'payment.admin.table.empty' | translate }}</span>
+      </div>
+
       <mat-paginator [length]="totalElements" [pageIndex]="pageIndex" [pageSize]="pageSize"
         [pageSizeOptions]="[5, 10, 20, 50]" (page)="onPageChange($event)" showFirstLastButtons>
       </mat-paginator>
@@ -190,7 +300,7 @@
     <ng-template #loading>
       <div class="loading">
         <mat-progress-spinner mode="indeterminate" diameter="50"></mat-progress-spinner>
-        <p>Chargement des paiements...</p>
+        <p>{{ 'payment.admin.table.loading' | translate }}</p>
       </div>
     </ng-template>
   </mat-card>

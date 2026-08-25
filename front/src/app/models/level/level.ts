@@ -4,6 +4,7 @@ export interface Level {
     id?: number;
     name: string;
     levelCode: string;
+    levelSequence?: number; // rang/ordre du niveau pour le passage (promotion)
     dateCreation?: Date; // Using string to represent LocalDateTime for simplicity
     dateUpdate?: Date; // Using string to represent LocalDateTime for simplicity
     createdBy?: string; // Optional since lombok.Value makes fields final and non-nullable

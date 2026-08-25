@@ -74,7 +74,6 @@ public interface StudentMapper {
     @Mapping(target = "createdBy", ignore = true)
     @Mapping(target = "dateCreation", ignore = true)
     @Mapping(target = "dateUpdate", ignore = true)
-    @Mapping(target = "description", ignore = true)
     @Mapping(target = "updatedBy", ignore = true)
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     void updateStudentFromDTO(StudentDTO dto, @MappingTarget StudentEntity entity, @Context MappingContext context);

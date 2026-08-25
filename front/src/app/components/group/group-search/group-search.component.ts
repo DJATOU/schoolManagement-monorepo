@@ -1,4 +1,4 @@
-import { Component, OnInit, ElementRef, ViewChild } from '@angular/core';
+import { Component, OnInit, OnDestroy, ElementRef, ViewChild } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -20,6 +20,9 @@ import { GroupListComponent } from '../group-list/group-list.component';
 import { SearchService } from '../../../services/SearchService ';
 import { ViewToggleComponent } from '../../shared/view-toggle/view-toggle.component';
 import { ListHeaderComponent } from '../../shared/list-header/list-header.component';
+import { TranslateModule } from '@ngx-translate/core';
+import { Subject, takeUntil } from 'rxjs';
+import { SchoolYearContextService } from '../../../services/school-year-context.service';
 
 @Component({
   selector: 'app-group-search',
@@ -38,12 +41,13 @@ import { ListHeaderComponent } from '../../shared/list-header/list-header.compon
     GroupCardComponent,
     GroupListComponent,
     ViewToggleComponent,
-    ListHeaderComponent
+    ListHeaderComponent,
+    TranslateModule
   ],
   templateUrl: './group-search.component.html',
   styleUrls: ['./group-search.component.scss']
 })
-export class GroupSearchComponent implements OnInit {
+export class GroupSearchComponent implements OnInit, OnDestroy {
   searchForm!: FormGroup;
   groups: Group[] = [];
   allGroups: Group[] = [];
@@ -68,13 +72,20 @@ export class GroupSearchComponent implements OnInit {
 
   @ViewChild('contentArea') contentArea!: ElementRef;
 
+  /** Année scolaire sélectionnée (contexte global) appliquée au chargement des groupes. */
+  private selectedSchoolYearId: number | null = null;
+
+  /** Désabonnement à la destruction du composant. */
+  private readonly destroy$ = new Subject<void>();
+
   constructor(
     private fb: FormBuilder,
     private groupService: GroupService,
     private levelService: LevelService,
     private groupTypeService: GroupTypeService,
     private searchService: SearchService,
-    private router: Router
+    private router: Router,
+    private schoolYearContext: SchoolYearContextService
   ) {
   }
 
@@ -86,7 +97,20 @@ export class GroupSearchComponent implements OnInit {
     this.pageSize = this.getSmartPageSize();
     this.loadSelectOptions();
     this.listenToSearchEvents();
-    this.loadAllGroups();
+
+    // Recharge la liste des groupes à chaque changement d'année sélectionnée
+    // (groupes de l'année choisie ; lecture seule pour une année passée).
+    this.schoolYearContext.selectedSchoolYear$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((year) => {
+        this.selectedSchoolYearId = year?.id ?? null;
+        this.loadAllGroups();
+      });
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   /**
@@ -119,7 +143,7 @@ export class GroupSearchComponent implements OnInit {
         if (groups.length === 1) {
           this.router.navigate(['/group', groups[0].id]);
         } else {
-          this.allGroups = groups;
+          this.allGroups = this.sortByName(groups);
           this.applyFilters();
         }
       });
@@ -128,11 +152,18 @@ export class GroupSearchComponent implements OnInit {
 
   loadAllGroups(): void {
     this.isLoading = true;
-    this.groupService.getGroups().subscribe(groups => {
-      this.allGroups = groups;
+    this.groupService.getGroups(this.selectedSchoolYearId ?? undefined).subscribe(groups => {
+      this.allGroups = this.sortByName(groups);
       this.applyFilters();
       this.isLoading = false;
     });
+  }
+
+  /** Tri alphabétique par défaut sur le nom du groupe, insensible à la casse/accents. */
+  private sortByName(groups: Group[]): Group[] {
+    return [...(groups || [])].sort((a, b) =>
+      (a.name ?? '').localeCompare(b.name ?? '', 'fr', { sensitivity: 'base' })
+    );
   }
 
   /**

@@ -1,10 +1,26 @@
+<h2 mat-dialog-title>
+  {{ 'payment.history.pdf.title' | translate }}
+  <span *ngIf="studentName"> — {{ studentName }}</span>
+</h2>
+
 <mat-dialog-content>
+  <div class="ph-loading" *ngIf="loading">
+    <mat-spinner diameter="36"></mat-spinner>
+  </div>
+
+  <p class="ph-error" *ngIf="!loading && errorMessage">{{ errorMessage }}</p>
+
+  <ng-container *ngIf="!loading && !errorMessage">
+    <p class="ph-empty" *ngIf="studentGroups.length === 0">
+      {{ 'payment.history.noGroup' | translate }}
+    </p>
+
     <!-- Sélection des groupes et séries -->
-    <mat-form-field appearance="fill">
+    <mat-form-field appearance="fill" *ngIf="studentGroups.length > 0">
       <mat-label>{{ 'payment.history.fields.groups' | translate }}</mat-label>
       <mat-select [(ngModel)]="selectedGroup" (selectionChange)="loadSessionSeries()">
-        <mat-option *ngFor="let group of studentGroups" [value]="group.id">
-          {{ group.name }}
+        <mat-option *ngFor="let group of studentGroups" [value]="group.groupId">
+          {{ group.groupName }}
         </mat-option>
       </mat-select>
     </mat-form-field>
@@ -12,20 +28,25 @@
     <mat-form-field appearance="fill" *ngIf="selectedGroup">
       <mat-label>{{ 'payment.history.fields.series' | translate }}</mat-label>
       <mat-select [(ngModel)]="selectedSeries" (selectionChange)="loadPaymentHistory()">
-        <mat-option *ngFor="let series of sessionSeries" [value]="series.id">
-          {{ series.name }}
+        <mat-option *ngFor="let series of sessionSeries" [value]="series.seriesId">
+          {{ series.seriesName }}
         </mat-option>
       </mat-select>
     </mat-form-field>
-  
+
+    <p class="ph-empty" *ngIf="selectedGroup && sessionSeries.length === 0">
+      {{ 'payment.history.noSeries' | translate }}
+    </p>
+
     <!-- Note de rattrapage -->
-    <div *ngIf="selectedSeries && isCatchUpSeries" style="background-color: #ffebee; padding: 10px; margin: 10px 0; border-left: 4px solid red;">
-      <p style="color: red; font-weight: bold; margin: 0;">
-        {{ 'payment.history.catchUpNotice.title' | translate }}
-      </p>
-      <p style="color: #666; font-size: 0.9em; margin: 5px 0 0 0;">
-        {{ 'payment.history.catchUpNotice.description' | translate }}
-      </p>
+    <div class="ph-notice ph-notice-catchup" *ngIf="selectedSeries && isCatchUpSeries">
+      <p class="ph-notice-title">{{ 'payment.history.catchUpNotice.title' | translate }}</p>
+      <p class="ph-notice-text">{{ 'payment.history.catchUpNotice.description' | translate }}</p>
+    </div>
+
+    <!-- Exemption : le total dû est nul, il n'y a rien à régler -->
+    <div class="ph-notice ph-notice-exempted" *ngIf="selectedSeries && isExemptedSeries">
+      <p class="ph-notice-title">{{ 'payment.history.exempted' | translate }}</p>
     </div>
 
     <!-- Résumé de la série -->
@@ -34,53 +55,102 @@
         'summary-partially-paid': seriesStatus === 'partiallyPaid',
         'summary-unpaid': seriesStatus === 'unpaid'
       }" class="series-summary" *ngIf="selectedSeries">
-      <p><strong>{{ 'payment.history.labels.status' | translate }} :</strong> {{ 'payment.history.status.' + seriesStatus | translate }}</p>
-      <p><strong>{{ isCatchUpSeries ? ('payment.history.labels.totalCatchUp' | translate) : ('payment.history.labels.total' | translate) }} :</strong> {{ seriesTotal | currency:'DA' }}</p>
-      <p><strong>{{ 'payment.history.labels.paid' | translate }} :</strong> {{ seriesPaid | currency:'DA' }}</p>
-      <p><strong>{{ 'payment.history.labels.remaining' | translate }} :</strong> {{ seriesRemaining | currency:'DA' }}</p>
+      <p><strong>{{ 'payment.history.labels.status' | translate }} :</strong>
+        {{ 'payment.history.status.' + seriesStatus | translate }}</p>
+      <!-- Coût au prorata : le total d'une série ordinaire porte les seules séances
+           facturables, il est nommé comme tel et accompagné de leur décompte. -->
+      <p><strong>{{ (isCatchUpSeries ? 'payment.history.labels.totalCatchUp' : 'payment.history.labels.seriesCost') | translate }} :</strong>
+        {{ seriesTotal | number:'1.2-2' }} {{ currencySuffix }}</p>
+      <!-- Le calcul énoncé en clair remplace le mot « prorata » : « 2 séances × 6 000 DA =
+           12 000 DA ». Replié sur le seul décompte si le prix unitaire n'est pas fourni. -->
+      <p *ngIf="unitPriceNet !== null">
+        {{ 'studentHistory.amounts.dueBreakdown' | translate: {
+             count: billableSessions,
+             price: (unitPriceNet | number:'1.2-2'),
+             total: (seriesTotal | number:'1.2-2')
+           } }}
+      </p>
+      <p *ngIf="unitPriceNet === null"><strong>{{ 'payment.history.labels.billableSessions' | translate }} :</strong>
+        {{ billableSessions }}</p>
+      <p><strong>{{ 'payment.history.labels.paid' | translate }} :</strong>
+        {{ seriesPaid | number:'1.2-2' }} {{ currencySuffix }}</p>
+      <p *ngIf="seriesOverpaid > 0"><strong>{{ 'payment.history.labels.allocated' | translate }} :</strong>
+        {{ seriesAllocated | number:'1.2-2' }} {{ currencySuffix }}</p>
+      <p *ngIf="seriesOverpaid > 0" class="ph-overpaid">
+        <strong>{{ 'payment.history.labels.overpaid' | translate }} :</strong>
+        {{ seriesOverpaid | number:'1.2-2' }} {{ currencySuffix }}
+        <span class="ph-overpaid-hint">{{ 'payment.history.overpaidHint' | translate }}</span>
+      </p>
+      <p><strong>{{ 'payment.history.labels.remaining' | translate }} :</strong>
+        {{ seriesRemaining | number:'1.2-2' }} {{ currencySuffix }}</p>
+      <p *ngIf="seriesRefunded > 0"><strong>{{ 'payment.history.labels.refunded' | translate }} :</strong>
+        {{ seriesRefunded | number:'1.2-2' }} {{ currencySuffix }}</p>
+      <!-- Séances écartées : visibles dans le tableau, mais hors dette. La note le dit en
+           mots, la teinte grise seule ne le dirait pas (exigences 11.3, 11.4). -->
+      <p *ngIf="excludedSessions > 0" class="ph-excluded-note">
+        <mat-icon aria-hidden="true">block</mat-icon>
+        {{ 'payment.history.excluded.summary' | translate: { count: excludedSessions } }}
+        <span class="ph-excluded-hint">{{ 'payment.history.excluded.notADebt' | translate }}</span>
+      </p>
     </div>
 
-    <!-- Tableau des sessions et des paiements -->
-    <table mat-table [dataSource]="paymentHistory" class="mat-elevation-z8">
-      <!-- Session Column -->
+    <!-- Tableau des séances de la série -->
+    <table mat-table [dataSource]="paymentHistory" class="mat-elevation-z8" *ngIf="selectedSeries">
       <ng-container matColumnDef="session">
         <th mat-header-cell *matHeaderCellDef>{{ 'payment.history.table.session' | translate }}</th>
         <td mat-cell *matCellDef="let payment" [ngClass]="{
-          'row-paid': payment.status === 'paid',
-          'row-partially-paid': payment.status === 'partiallyPaid',
-          'row-unpaid': payment.status === 'unpaid'
-        }"> {{ payment.sessionName }} </td>
+          'row-not-billed': payment.excluded || !payment.attendanceRecorded,
+          'row-paid': !payment.excluded && payment.attendanceRecorded && payment.status === 'paid',
+          'row-partially-paid': !payment.excluded && payment.attendanceRecorded && payment.status === 'partiallyPaid',
+          'row-unpaid': !payment.excluded && payment.attendanceRecorded && payment.status === 'unpaid'
+        }">
+          <!-- Badge textuel + icône : la distinction avec un impayé ne repose pas sur la
+               couleur, illisible pour un daltonien comme à l'impression noir et blanc. -->
+          <span class="ph-excluded-tag" *ngIf="payment.excluded"
+                [attr.title]="'payment.history.excluded.reason' | translate">
+            <mat-icon aria-hidden="true">block</mat-icon>
+            {{ 'payment.history.excluded.tag' | translate }}
+          </span>
+          <span class="ph-catchup-tag" *ngIf="payment.catchUp"
+                [attr.title]="'payment.history.excluded.catchUpBilled' | translate">
+            {{ 'payment.history.labels.catchUpPrefix' | translate }}
+          </span>
+          {{ payment.sessionName }}
+        </td>
       </ng-container>
-  
-      <!-- Payment Date Column -->
+
       <ng-container matColumnDef="paymentDate">
         <th mat-header-cell *matHeaderCellDef>{{ 'payment.history.table.paymentDate' | translate }}</th>
-        <td mat-cell *matCellDef="let payment"> {{ payment.paymentDate | date: 'mediumDate' }} </td>
+        <td mat-cell *matCellDef="let payment"> {{ payment.paymentDate ? (payment.paymentDate | date: 'mediumDate') : '—' }} </td>
       </ng-container>
-  
-      <!-- Amount Paid Column -->
+
       <ng-container matColumnDef="amountPaid">
         <th mat-header-cell *matHeaderCellDef>{{ 'payment.history.table.amountPaid' | translate }}</th>
         <td mat-cell *matCellDef="let payment" [ngClass]="{
-          'paid': payment.status === 'paid',
-          'partially-paid': payment.status === 'partiallyPaid',
-          'unpaid': payment.status === 'unpaid'
-        }"> {{ payment.amountPaid | currency:'DA' }} </td>
+          'paid': !payment.excluded && payment.attendanceRecorded && payment.status === 'paid',
+          'partially-paid': !payment.excluded && payment.attendanceRecorded && payment.status === 'partiallyPaid',
+          'unpaid': !payment.excluded && payment.attendanceRecorded && payment.status === 'unpaid'
+        }"> {{ payment.amountPaid | number:'1.2-2' }} {{ currencySuffix }} </td>
       </ng-container>
 
-      <!-- Payment Status Column -->
       <ng-container matColumnDef="paymentStatus">
         <th mat-header-cell *matHeaderCellDef>{{ 'payment.history.table.paymentStatus' | translate }}</th>
-        <td mat-cell *matCellDef="let payment"> {{ 'payment.history.status.' + payment.status | translate }} </td>
+        <td mat-cell *matCellDef="let payment"> {{ statusLabel(payment) }} </td>
       </ng-container>
 
       <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
       <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
     </table>
-  </mat-dialog-content>
 
-  <mat-dialog-actions align="end">
-    <button mat-button (click)="generatePdf()" [disabled]="!selectedSeries">{{ 'payment.history.actions.print' | translate }}</button>
-    <button mat-button (click)="dialogRef.close()">{{ 'common.cancel' | translate }}</button>
-  </mat-dialog-actions>
-  
+    <p class="ph-empty" *ngIf="selectedSeries && paymentHistory.data.length === 0">
+      {{ 'payment.history.table.empty' | translate }}
+    </p>
+  </ng-container>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="generatePdf()" [disabled]="!selectedSeries">
+    {{ 'payment.history.actions.print' | translate }}
+  </button>
+  <button mat-button (click)="dialogRef.close()">{{ 'common.cancel' | translate }}</button>
+</mat-dialog-actions>

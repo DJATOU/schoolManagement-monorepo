@@ -5,7 +5,6 @@ export interface Session {
   title: string;
   description?: string;
   sessionType: string;
-  feedbackLink?: string;
   sessionTimeStart: Date;
   sessionTimeEnd: Date;
   groupId: number;
@@ -21,5 +20,12 @@ export interface Session {
   roomName?: string;
   teacherName?: string;
   isFinished?: boolean;
+
+  /**
+   * Séance active. Une séance « supprimée » est en réalité désactivée
+   * (`active = false`) afin de conserver l'historique des présences et des paiements.
+   */
+  active?: boolean;
+
   students: Array<{ id: number; isPresent: boolean }>;
 }

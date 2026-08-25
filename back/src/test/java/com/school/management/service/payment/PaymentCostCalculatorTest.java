@@ -173,4 +173,52 @@ class PaymentCostCalculatorTest {
         assertThrows(NullPointerException.class, () -> calc.isMonthFullyPaid(null));
         assertThrows(IllegalArgumentException.class, () -> calc.isMonthFullyPaid(money("-5.00")));
     }
+
+    @Test
+    @DisplayName("Prix nul : tous les montants valent 0, jamais en retard, mois soldé")
+    void zeroPrice() {
+        PaymentCostCalculator calc = new PaymentCostCalculator(8, 8, money("0.00"), NO_EXEMPTION);
+
+        assertEquals(money("0.00"), calc.monthTotalCost());
+        assertEquals(money("0.00"), calc.amountDueSoFar());
+        assertFalse(calc.isLate(money("0.00")), "rien à payer → jamais en retard");
+        assertTrue(calc.isMonthFullyPaid(money("0.00")), "rien à payer → soldé");
+    }
+
+    @Test
+    @DisplayName("Zéro séance planifiée : total du mois nul, mois soldé à 0")
+    void zeroPlannedSessions() {
+        PaymentCostCalculator calc = new PaymentCostCalculator(0, 0, PRICE_30, NO_EXEMPTION);
+
+        assertEquals(money("0.00"), calc.monthTotalCost());
+        assertEquals(money("0.00"), calc.amountDueSoFar());
+        assertTrue(calc.isMonthFullyPaid(money("0.00")));
+    }
+
+    @Test
+    @DisplayName("Taux 0.00 : aucune réduction, montants au plein tarif")
+    void zeroRate() {
+        PaymentCostCalculator calc = new PaymentCostCalculator(8, 8, PRICE_30, money("0.00"));
+
+        assertEquals(money("240.00"), calc.monthTotalCost());
+        assertEquals(money("240.00"), calc.amountDueSoFar());
+    }
+
+    @Test
+    @DisplayName("Bornes de taux acceptées : 0.00 et 1.00 ne sont pas rejetées")
+    void rateBoundariesAccepted() {
+        // 0.00 et 1.00 sont dans l'intervalle [0.00 ; 1.00] → aucune exception.
+        new PaymentCostCalculator(8, 8, PRICE_30, money("0.00"));
+        new PaymentCostCalculator(8, 8, PRICE_30, money("1.00"));
+    }
+
+    @Test
+    @DisplayName("amountPaid nul accepté : versement de 0 est une entrée valide")
+    void zeroAmountPaidAccepted() {
+        PaymentCostCalculator calc = new PaymentCostCalculator(8, 4, PRICE_30, NO_EXEMPTION);
+
+        // 0 versé, 120 dû → en retard ; branche normalizedPaid avec signum == 0.
+        assertTrue(calc.isLate(money("0.00")));
+        assertFalse(calc.isMonthFullyPaid(money("0.00")));
+    }
 }

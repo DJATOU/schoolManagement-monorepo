@@ -8,6 +8,8 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { CatchUpService } from '../../../services/catch-up.service';
 import { CatchUpRequest } from '../../../models/catchUp/catch-up-request';
 import { CatchUpDialogComponent } from '../catch-up-dialog/catch-up-dialog.component';
+import { CatchUpCreateDialogComponent } from '../catch-up-create-dialog/catch-up-create-dialog.component';
+import { AdminOnlyDirective } from '../../../shared/admin-only.directive';
 
 @Component({
   selector: 'app-catch-up-list',
@@ -19,9 +21,15 @@ import { CatchUpDialogComponent } from '../catch-up-dialog/catch-up-dialog.compo
     MatSelectModule,
     MatSnackBarModule,
     MatDialogModule,
+    AdminOnlyDirective,
   ],
   template: `
-    <h2>Demandes de rattrapage</h2>
+    <div class="header">
+      <h2>Demandes de rattrapage</h2>
+      <button mat-raised-button color="primary" (click)="openCreateDialog()" appAdminOnly>
+        Nouvelle demande
+      </button>
+    </div>
     <div class="filters">
       <mat-select placeholder="Filtrer par statut" [(value)]="statusFilter" (valueChange)="applyFilter()">
         <mat-option value="ALL">Tous</mat-option>
@@ -47,16 +55,20 @@ import { CatchUpDialogComponent } from '../catch-up-dialog/catch-up-dialog.compo
       <ng-container matColumnDef="actions">
         <th mat-header-cell *matHeaderCellDef>Actions</th>
         <td mat-cell *matCellDef="let req">
-          <button mat-button color="primary" (click)="openScheduleDialog(req)" [disabled]="req.status !== 'PENDING'">Planifier</button>
-          <button mat-button color="accent" (click)="complete(req)" [disabled]="req.status !== 'SCHEDULED'">Compléter</button>
-          <button mat-button color="warn" (click)="cancel(req)">Annuler</button>
+          <button mat-button color="primary" (click)="openScheduleDialog(req)" [disabled]="req.status !== 'PENDING'" appAdminOnly>Planifier</button>
+          <button mat-button color="accent" (click)="complete(req)" [disabled]="req.status !== 'SCHEDULED'" appAdminOnly>Compléter</button>
+          <button mat-button color="warn" (click)="cancel(req)" appAdminOnly>Annuler</button>
         </td>
       </ng-container>
       <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
       <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
     </table>
   `,
-  styles: [`.filters { margin: 12px 0; } table { width: 100%; }`]
+  styles: [`
+    .header { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+    .filters { margin: 12px 0; }
+    table { width: 100%; }
+  `]
 })
 export class CatchUpListComponent implements OnInit {
   requests: CatchUpRequest[] = [];
@@ -71,7 +83,7 @@ export class CatchUpListComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.loadPending();
+    this.loadRequests();
   }
 
   applyFilter(): void {
@@ -82,8 +94,8 @@ export class CatchUpListComponent implements OnInit {
     this.filteredRequests = this.requests.filter(req => req.status === this.statusFilter);
   }
 
-  private loadPending(): void {
-    this.catchUpService.getPendingRequests().subscribe({
+  private loadRequests(): void {
+    this.catchUpService.getAllRequests().subscribe({
       next: requests => {
         this.requests = requests;
         this.applyFilter();
@@ -92,31 +104,33 @@ export class CatchUpListComponent implements OnInit {
     });
   }
 
+  openCreateDialog(): void {
+    this.dialog.open(CatchUpCreateDialogComponent, { width: '480px' })
+      .afterClosed()
+      .subscribe(created => {
+        if (created) {
+          this.loadRequests();
+        }
+      });
+  }
+
   openScheduleDialog(request: CatchUpRequest): void {
     this.dialog.open(CatchUpDialogComponent, {
-      data: { studentId: request.studentId, attendance: {
-        id: request.originalAttendanceId,
+      data: {
+        requestId: request.id,
         studentId: request.studentId,
-        sessionId: request.originalSessionId,
-        groupId: request.originalGroupId,
-        isPresent: false,
-        isJustified: true,
-        isCatchUp: false,
-        paymentStatus: 'PENDING',
-        dateCreation: new Date(),
-        dateUpdate: new Date(),
-        createdBy: '',
-        updatedBy: '',
-        active: true
-      }}
-    }).afterClosed().subscribe(() => this.loadPending());
+        originalSessionId: request.originalSessionId,
+        originalSessionName: request.originalSessionName,
+        originalGroupId: request.originalGroupId
+      }
+    }).afterClosed().subscribe(() => this.loadRequests());
   }
 
   complete(request: CatchUpRequest): void {
     this.catchUpService.completeCatchUp(request.id!).subscribe({
       next: () => {
         this.snackBar.open('Rattrapage complété', 'Fermer', { duration: 3000 });
-        this.loadPending();
+        this.loadRequests();
       }
     });
   }
@@ -125,7 +139,7 @@ export class CatchUpListComponent implements OnInit {
     this.catchUpService.cancelCatchUp(request.id!).subscribe({
       next: () => {
         this.snackBar.open('Rattrapage annulé', 'Fermer', { duration: 3000 });
-        this.loadPending();
+        this.loadRequests();
       }
     });
   }

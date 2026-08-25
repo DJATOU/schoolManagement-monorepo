@@ -1,0 +1,64 @@
+<div class="login-page">
+  <!-- Panneau marque -->
+  <aside class="brand-panel">
+    <div class="brand-content">
+      <div class="brand-logo">
+        <mat-icon>school</mat-icon>
+      </div>
+      <h1 class="brand-title">School Manager</h1>
+      <p class="brand-tagline">{{ 'AUTH.LOGIN.TAGLINE' | translate }}</p>
+    </div>
+    <div class="brand-glow brand-glow--1"></div>
+    <div class="brand-glow brand-glow--2"></div>
+  </aside>
+
+  <!-- Panneau formulaire -->
+  <main class="form-panel">
+    <div class="form-card">
+      <header class="form-header">
+        <h2>{{ 'AUTH.LOGIN.TITLE' | translate }}</h2>
+        <p>{{ 'AUTH.LOGIN.SUBTITLE' | translate }}</p>
+      </header>
+
+      <form [formGroup]="form" (ngSubmit)="submit()" class="login-form" novalidate>
+        <div class="error-banner" *ngIf="errorKey" role="alert">
+          <mat-icon>error_outline</mat-icon>
+          <span>{{ errorKey | translate }}</span>
+        </div>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>{{ 'AUTH.LOGIN.USERNAME' | translate }}</mat-label>
+          <mat-icon matPrefix>person</mat-icon>
+          <input matInput formControlName="username" autocomplete="username" />
+          <mat-error *ngIf="form.get('username')?.hasError('required')">
+            {{ 'AUTH.LOGIN.USERNAME_REQUIRED' | translate }}
+          </mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>{{ 'AUTH.LOGIN.PASSWORD' | translate }}</mat-label>
+          <mat-icon matPrefix>lock</mat-icon>
+          <input matInput [type]="hidePassword ? 'password' : 'text'"
+                 formControlName="password" autocomplete="current-password" />
+          <button mat-icon-button matSuffix type="button" (click)="hidePassword = !hidePassword"
+                  [attr.aria-label]="'AUTH.LOGIN.TOGGLE_PASSWORD' | translate">
+            <mat-icon>{{ hidePassword ? 'visibility_off' : 'visibility' }}</mat-icon>
+          </button>
+          <mat-error *ngIf="form.get('password')?.hasError('required')">
+            {{ 'AUTH.LOGIN.PASSWORD_REQUIRED' | translate }}
+          </mat-error>
+        </mat-form-field>
+
+        <button mat-flat-button color="primary" type="submit"
+                class="submit-btn full-width" [disabled]="loading">
+          <mat-spinner *ngIf="loading" diameter="20"></mat-spinner>
+          <span *ngIf="!loading">{{ 'AUTH.LOGIN.SUBMIT' | translate }}</span>
+        </button>
+      </form>
+
+      <footer class="form-footer">
+        <span>© {{ currentYear }} School Manager</span>
+      </footer>
+    </div>
+  </main>
+</div>

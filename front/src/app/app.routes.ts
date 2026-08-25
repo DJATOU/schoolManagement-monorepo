@@ -16,7 +16,6 @@ import { StudentProfileComponent } from './components/student/student-profile/st
 import { TeacherProfileComponent } from './components/teacher/teacher-profile/teacher-profile.component';
 import { TeacherSearchComponent } from './components/teacher/teacher-search/teacher-search.component';
 import { GroupSearchComponent } from './components/group/group-search/group-search.component';
-import { SerieFormComponent } from './components/serie/serie-form/serie-form.component';
 import { LevelTableComponent } from './components/level/level-table/level-table.component';
 import { RoomTableComponent } from './components/room/room-table/room-table.component';
 import { SubjectTableComponent } from './components/subject/subject-table/subject-table.component';
@@ -25,40 +24,61 @@ import { PricingTableComponent } from './components/pricing/pricing-table/pricin
 import { GroupProfileComponent } from './components/group/group-profile/group-profile.component';
 import { CatchUpListComponent } from './components/catch-up/catch-up-list/catch-up-list.component';
 import { DiscountListComponent } from './components/discount/discount-list/discount-list.component';
-import { TransferListComponent } from './components/transfer/transfer-list/transfer-list.component';
 import { PaymentManagementComponent } from './components/admin/payment-management/payment-management.component';
+import { RevenueReportComponent } from './components/admin/revenue/revenue-report.component';
+import { SeriesDetailComponent } from './components/serie/series-detail/series-detail.component';
+import { YearEndWorkflowComponent } from './components/year-end-workflow/year-end-workflow.component';
+import { ImportComponent } from './components/import/import.component';
+import { LoginComponent } from './components/auth/login/login.component';
+import { UserManagementComponent } from './components/auth/user-management/user-management.component';
+import { authGuard, roleGuard } from './services/auth.guard';
 
 export const routes: Routes = [
+  // Point d'accès public : écran de connexion (hors shell).
+  { path: 'login', component: LoginComponent },
+
   { path: '', redirectTo: '/dashboard', pathMatch: 'full' },
-  { path: 'dashboard', component: DashboardComponent },
-  { path: 'subscription', component: StudentFormComponent },
-  { path: 'student', component: StudentSearchComponent },
-  { path: 'teacher', component: TeacherSearchComponent },
-  { path: 'group', component: GroupSearchComponent },
-  { path: 'level/new', component: LevelFormComponent },
-  { path: 'room/new', component: RoomFormComponent },
-  { path: 'pricing/new', component: PricingFormComponent},
-  { path: 'subject/new', component: SubjectFormComponent },
-  { path: 'teacher/new', component: TeacherFormComponent },
-  { path: 'teacher/edit/:id', component: TeacherFormComponent },
-  { path: 'group/new', component: GroupFormComponent },
-  { path: 'group/edit/:id', component: GroupFormComponent },
-  { path: 'groupType/new', component: GroupTypeFormComponent },
-  { path: 'session/new', component: SessionFormComponent },
-  { path: 'serie/new', component: SerieFormComponent },
-  { path: 'calendar/new', component: CalendarComponent },
-  { path: 'level/table', component: LevelTableComponent},
-  { path: 'room/table', component: RoomTableComponent},
-  { path: 'subject/table', component: SubjectTableComponent},
-  { path: 'groupType/table', component: GroupTypeTableComponent},
-  { path: 'pricing/table', component: PricingTableComponent},
-  { path: 'student/:id', component: StudentProfileComponent },
-  { path: 'teacher/:id', component: TeacherProfileComponent},
-  { path: 'group/:id', component: GroupProfileComponent},
-  { path: 'catch-ups', component: CatchUpListComponent },
-  { path: 'discounts', component: DiscountListComponent },
-  { path: 'transfers', component: TransferListComponent },
-  { path: 'admin/payment-management', component: PaymentManagementComponent },
+  { path: 'dashboard', component: DashboardComponent, canActivate: [authGuard] },
+  { path: 'subscription', component: StudentFormComponent, canActivate: [authGuard] },
+  { path: 'student', component: StudentSearchComponent, canActivate: [authGuard] },
+  { path: 'teacher', component: TeacherSearchComponent, canActivate: [authGuard] },
+  { path: 'group', component: GroupSearchComponent, canActivate: [authGuard] },
+  { path: 'level/new', component: LevelFormComponent, canActivate: [authGuard] },
+  { path: 'level/edit/:id', component: LevelFormComponent, canActivate: [authGuard] },
+  { path: 'room/new', component: RoomFormComponent, canActivate: [authGuard] },
+  { path: 'room/edit/:id', component: RoomFormComponent, canActivate: [authGuard] },
+  { path: 'pricing/new', component: PricingFormComponent, canActivate: [authGuard] },
+  { path: 'pricing/edit/:id', component: PricingFormComponent, canActivate: [authGuard] },
+  { path: 'subject/new', component: SubjectFormComponent, canActivate: [authGuard] },
+  { path: 'subject/edit/:id', component: SubjectFormComponent, canActivate: [authGuard] },
+  { path: 'teacher/new', component: TeacherFormComponent, canActivate: [authGuard] },
+  { path: 'teacher/edit/:id', component: TeacherFormComponent, canActivate: [authGuard] },
+  { path: 'group/new', component: GroupFormComponent, canActivate: [authGuard] },
+  { path: 'group/edit/:id', component: GroupFormComponent, canActivate: [authGuard] },
+  { path: 'groupType/new', component: GroupTypeFormComponent, canActivate: [authGuard] },
+  { path: 'groupType/edit/:id', component: GroupTypeFormComponent, canActivate: [authGuard] },
+  { path: 'session/new', component: SessionFormComponent, canActivate: [authGuard] },
+  { path: 'calendar/new', component: CalendarComponent, canActivate: [authGuard] },
+  { path: 'level/table', component: LevelTableComponent, canActivate: [authGuard] },
+  { path: 'room/table', component: RoomTableComponent, canActivate: [authGuard] },
+  { path: 'subject/table', component: SubjectTableComponent, canActivate: [authGuard] },
+  { path: 'groupType/table', component: GroupTypeTableComponent, canActivate: [authGuard] },
+  { path: 'pricing/table', component: PricingTableComponent, canActivate: [authGuard] },
+  { path: 'student/:id', component: StudentProfileComponent, canActivate: [authGuard] },
+  { path: 'teacher/:id', component: TeacherProfileComponent, canActivate: [authGuard] },
+  { path: 'group/:groupId/series/:seriesId', component: SeriesDetailComponent, canActivate: [authGuard] },
+  { path: 'group/:id', component: GroupProfileComponent, canActivate: [authGuard] },
+  { path: 'catch-ups', component: CatchUpListComponent, canActivate: [authGuard] },
+  { path: 'discounts', component: DiscountListComponent, canActivate: [authGuard] },
+  { path: 'admin/payment-management', component: PaymentManagementComponent, canActivate: [roleGuard('ADMIN')] },
+  // Recettes : données financières, ADMIN uniquement (l'API l'exige aussi).
+  { path: 'admin/revenue', component: RevenueReportComponent, canActivate: [roleGuard('ADMIN')] },
+  { path: 'admin/users', component: UserManagementComponent, canActivate: [roleGuard('ADMIN')] },
+  { path: 'year-end', component: YearEndWorkflowComponent, canActivate: [authGuard] },
+  { path: 'import', component: ImportComponent, canActivate: [authGuard] },
+
+  // Toute route inconnue → login (le guard redirigera vers dashboard si déjà connecté).
+  { path: '**', redirectTo: '/login' },
 ];
   
   @NgModule({

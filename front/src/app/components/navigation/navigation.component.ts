@@ -17,6 +17,8 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatDividerModule } from '@angular/material/divider';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { TranslationService } from '../../services/translation.service';
+import { SchoolYearSelectorComponent } from '../school-year-selector/school-year-selector.component';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-navigation',
@@ -35,7 +37,8 @@ import { TranslationService } from '../../services/translation.service';
     MatTooltip,
     MatButtonModule,
     MatDividerModule,
-    TranslateModule
+    TranslateModule,
+    SchoolYearSelectorComponent
   ],
   templateUrl: './navigation.component.html',
   styleUrls: ['./navigation.component.scss']
@@ -58,7 +61,8 @@ export class NavigationComponent implements OnInit {
     private teacherService: TeacherService,
     private searchService: SearchService,
     public translationService: TranslationService,
-    private translate: TranslateService
+    private translate: TranslateService,
+    public authService: AuthService
   ) {}
 
   ngOnInit() {
@@ -201,7 +205,18 @@ export class NavigationComponent implements OnInit {
   }
 
   logout() {
+    this.authService.logout();
     this.router.navigate(['/login']);
+  }
+
+  /** Utilisateur courant (pour l'affichage du pill de profil). */
+  get currentUser() {
+    return this.authService.currentUser;
+  }
+
+  /** Ouvre la gestion des comptes (ADMIN). */
+  openUserManagement() {
+    this.router.navigate(['/admin/users']);
   }
 
   openSettings() {

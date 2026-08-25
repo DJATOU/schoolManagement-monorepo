@@ -1,15 +1,81 @@
-<h1 mat-dialog-title>Select a Student</h1>
-<div mat-dialog-content>
-  <mat-form-field appearance="fill" class="full-width">
-    <mat-label>Select Student</mat-label>
-    <mat-select [(ngModel)]="selectedStudent">
-      <mat-option *ngFor="let student of students" [value]="student">
-        {{ student.firstName }} {{ student.lastName }}
-      </mat-option>
-    </mat-select>
+<h2 mat-dialog-title class="dialog-title">
+  <mat-icon>person_add</mat-icon>
+  <span>{{ 'ADD_STUDENT_DIALOG.TITLE' | translate }}</span>
+</h2>
+
+<mat-dialog-content class="dialog-content">
+  <mat-form-field appearance="outline" class="search-field" subscriptSizing="dynamic">
+    <mat-icon matPrefix>search</mat-icon>
+    <input matInput #searchInput [(ngModel)]="searchTerm" (ngModelChange)="applySearch()"
+      [placeholder]="'ADD_STUDENT_DIALOG.SEARCH_PLACEHOLDER' | translate">
+    <button matSuffix mat-icon-button *ngIf="searchTerm" (click)="clearSearch()"
+      [matTooltip]="'ADD_STUDENT_DIALOG.CLEAR_SEARCH' | translate">
+      <mat-icon>close</mat-icon>
+    </button>
   </mat-form-field>
-</div>
-<div mat-dialog-actions>
-  <button mat-button (click)="onCancel()">Cancel</button>
-  <button mat-button color="primary" (click)="onConfirm()">Add</button>
-</div>
+
+  <p class="rule-hint">{{ 'ADD_STUDENT_DIALOG.HINT' | translate }}</p>
+
+  <!-- La sélection reste visible même si la recherche masque ensuite sa ligne. -->
+  <div class="selection-summary" *ngIf="selectedStudent">
+    <span class="summary-name">{{ fullName(selectedStudent) }}</span>
+    <span class="student-badge"
+          [class.student-badge--member]="isGroupMember(selectedStudent)"
+          [class.student-badge--catchup]="!isGroupMember(selectedStudent)">
+      {{ (isGroupMember(selectedStudent) ? 'ADD_STUDENT_DIALOG.BADGE_MEMBER' : 'ADD_STUDENT_DIALOG.BADGE_CATCH_UP') | translate }}
+    </span>
+    <button mat-icon-button class="summary-clear" (click)="clearSelection()"
+      [matTooltip]="'ADD_STUDENT_DIALOG.CLEAR_SELECTION' | translate">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <div class="list-toolbar" *ngIf="!loading && students.length > 0">
+    <span class="showing-count">
+      {{ 'ADD_STUDENT_DIALOG.SHOWING' | translate: { shown: filtered.length, total: students.length } }}
+    </span>
+  </div>
+
+  <div class="list-area" *ngIf="!loading; else loadingTpl">
+    <div class="students-list">
+      <ng-container *ngFor="let group of groups">
+        <div class="letter-header">{{ group.letter }}</div>
+
+        <button type="button" *ngFor="let student of group.students" class="student-row"
+          [class.selected]="isSelected(student)" (click)="select(student)">
+          <span class="row-avatar">{{ getInitials(student) }}</span>
+          <span class="row-name">{{ student.lastName }} {{ student.firstName }}</span>
+          <span class="student-badge"
+                [class.student-badge--member]="isGroupMember(student)"
+                [class.student-badge--catchup]="!isGroupMember(student)">
+            {{ (isGroupMember(student) ? 'ADD_STUDENT_DIALOG.BADGE_MEMBER' : 'ADD_STUDENT_DIALOG.BADGE_CATCH_UP') | translate }}
+          </span>
+          <mat-icon class="row-check" *ngIf="isSelected(student)">check_circle</mat-icon>
+        </button>
+      </ng-container>
+
+      <div class="empty" *ngIf="filtered.length === 0">
+        <mat-icon>person_off</mat-icon>
+        <p class="empty-title" *ngIf="searchTerm">
+          {{ 'ADD_STUDENT_DIALOG.NO_RESULT' | translate: { term: searchTerm } }}
+        </p>
+        <p class="empty-title" *ngIf="!searchTerm">{{ 'ADD_STUDENT_DIALOG.EMPTY' | translate }}</p>
+        <p class="empty-hint" *ngIf="searchTerm">{{ 'ADD_STUDENT_DIALOG.NO_RESULT_HINT' | translate }}</p>
+      </div>
+    </div>
+  </div>
+
+  <ng-template #loadingTpl>
+    <div class="loading">
+      <mat-spinner diameter="36"></mat-spinner>
+    </div>
+  </ng-template>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="onCancel()">{{ 'common.cancel' | translate }}</button>
+  <button mat-flat-button color="primary" (click)="onConfirm()" [disabled]="!selectedStudent" appAdminOnly>
+    <mat-icon>add</mat-icon>
+    {{ 'ADD_STUDENT_DIALOG.ADD' | translate }}
+  </button>
+</mat-dialog-actions>

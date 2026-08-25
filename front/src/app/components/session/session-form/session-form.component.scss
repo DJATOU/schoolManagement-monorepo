@@ -1,0 +1,101 @@
+// La mise en forme générale (form-container, form-title, tab-content, button-container)
+// est mutualisée dans src/styles/_forms.scss, comme pour les formulaires étudiant et
+// enseignant. Seul l'indice de planification est spécifique à ce formulaire.
+
+.timing-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: #6b7280;
+
+  mat-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    flex: 0 0 16px;
+    color: #9ca3af;
+  }
+}
+
+/* ===== Onglet Répétition ===== */
+.recurrence-label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #6b7280;
+}
+
+.recurrence-days {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Pastilles de jours : sélection au clic, plus rapide qu'une liste déroulante. */
+.day-chip {
+  padding: 7px 14px;
+  border: 1px solid #d7dbe6;
+  border-radius: 999px;
+  background: #fff;
+  color: #374151;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover {
+    border-color: #6366f1;
+  }
+
+  &--on {
+    background: #4f46e5;
+    border-color: #4f46e5;
+    color: #fff;
+  }
+}
+
+.recurrence-error {
+  margin: 6px 0 0;
+  font-size: 0.78rem;
+  color: #b91c1c;
+}
+
+.recurrence-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  border-radius: 10px;
+  background: rgba(99, 102, 241, 0.05);
+}
+
+.preview-result {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.85rem;
+}
+
+.preview-count {
+  font-weight: 700;
+  color: #047857;
+}
+
+.preview-skipped {
+  color: #c2410c;
+}
+
+.preview-conflicts {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  font-size: 0.78rem;
+  color: #6b7280;
+}

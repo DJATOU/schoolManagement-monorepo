@@ -31,6 +31,11 @@ export class LevelTableComponent implements DeleteCommand{
       cell: (element: Level) => `${element.levelCode}`,
     },
     {
+      columnDef: 'levelSequence',
+      header: 'Rang',
+      cell: (element: Level) => `${element.levelSequence ?? '—'}`,
+    },
+    {
       columnDef: 'description',
       header: 'Description',
       cell: (element: Level) => `${element.description}`,

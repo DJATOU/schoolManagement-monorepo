@@ -9,6 +9,10 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatMenuModule } from '@angular/material/menu';
 import { environment } from '../../../../environments/environment';
 import { StudentPaymentStatus } from '../../../models/student-payment-status';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { Tutor } from '../../../models/tutor/tutor';
+import { SecureImageDirective } from '../../../shared/secure-image.directive';
+import { buildLatePaymentTooltip } from '../../../utils/payment-status-tooltip';
 
 interface Profile {
   id: string;
@@ -24,7 +28,9 @@ interface Profile {
 @Component({
   selector: 'app-profile-card',
   standalone: true,
-  imports: [MatCardModule, CommonModule, MatButtonModule, MatTooltipModule, MatIconModule, MatChipsModule, MatMenuModule],
+  imports: [MatCardModule, CommonModule, MatButtonModule, MatTooltipModule, MatIconModule, MatChipsModule, MatMenuModule, TranslateModule,
+    SecureImageDirective
+  ],
   templateUrl: './profile-card.component.html',
   styleUrls: ['./profile-card.component.scss']
 })
@@ -32,6 +38,7 @@ export class ProfileCardComponent implements OnInit {
   @Input() profile!: Profile;
   @Input() profileType!: string;
   @Input() paymentStatus?: StudentPaymentStatus; // Statut de paiement (optionnel, uniquement pour les étudiants)
+  @Input() tutor?: Tutor | null; // Tuteur (optionnel, uniquement pour les étudiants)
   profilePhotoUrl: string = '';
   isFlipped: boolean = false;
   hasImageError: boolean = false;
@@ -43,7 +50,7 @@ export class ProfileCardComponent implements OnInit {
     '#eab308', '#22c55e', '#14b8a6', '#06b6d4', '#3b82f6'
   ];
 
-  constructor(private router: Router) { }
+  constructor(private router: Router, private translate: TranslateService) { }
 
   ngOnInit(): void {
     console.log('Profile data:', this.profile);
@@ -123,6 +130,18 @@ export class ProfileCardComponent implements OnInit {
   }
 
   /**
+   * Ouvre WhatsApp avec le numéro du tuteur.
+   */
+  openTutorWhatsApp(event: Event): void {
+    event.stopPropagation();
+    if (this.tutor?.phoneNumber) {
+      const cleanPhone = this.tutor.phoneNumber.replace(/[\s\-\(\)]/g, '');
+      const phoneNumber = cleanPhone.startsWith('+') ? cleanPhone : `+212${cleanPhone}`;
+      window.open(`https://wa.me/${phoneNumber}`, '_blank');
+    }
+  }
+
+  /**
    * Retourne l'icône appropriée selon le statut de paiement
    */
   getPaymentIcon(): string {
@@ -133,6 +152,8 @@ export class ProfileCardComponent implements OnInit {
         return 'check_circle';
       case 'LATE':
         return 'warning';
+      case 'EXEMPT':
+        return 'volunteer_activism';
       case 'NA':
         return 'remove_circle_outline';
       default:
@@ -141,43 +162,16 @@ export class ProfileCardComponent implements OnInit {
   }
 
   /**
-   * Retourne le label approprié selon le statut de paiement
+   * Retourne le label traduit du statut de paiement.
    */
   getPaymentLabel(): string {
-    if (!this.paymentStatus) return '';
-
-    switch (this.paymentStatus.paymentStatus) {
-      case 'GOOD':
-        return 'À jour';
-      case 'LATE':
-        return 'En retard';
-      case 'NA':
-        return 'N/A';
-      default:
-        return '';
-    }
+    const status = this.paymentStatus?.paymentStatus;
+    return status ? this.translate.instant(`PAYMENT_STATUS.${status}`) : '';
   }
 
-  /**
-   * Génère le texte du tooltip pour les retards de paiement
-   * Affiche la liste des groupes avec le nombre de sessions impayées et les montants
-   */
+  /** Détail des retards de paiement, mis en forme par l'utilitaire partagé. */
   getPaymentTooltip(): string {
-    if (!this.paymentStatus || this.paymentStatus.paymentStatus !== 'LATE') {
-      return '';
-    }
-
-    const lines: string[] = ['Paiements en retard:'];
-
-    for (const lateGroup of this.paymentStatus.lateGroups) {
-      const remaining = lateGroup.dueAmount - lateGroup.paidAmount;
-      lines.push(
-        `• ${lateGroup.groupName}: ${lateGroup.unpaidSessionsCount} session(s) - ` +
-        `Reste ${remaining.toFixed(2)} DA (${lateGroup.paidAmount.toFixed(2)}/${lateGroup.dueAmount.toFixed(2)} DA)`
-      );
-    }
-
-    return lines.join('\n');
+    return buildLatePaymentTooltip(this.paymentStatus, this.translate);
   }
 
   /**
