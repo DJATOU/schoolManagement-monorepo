@@ -84,6 +84,12 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/webjars/**",
                                 "/swagger-ui.html").permitAll()
+                        // Sonde de disponibilité : la vérification d'état de Docker interroge
+                        // ce point d'accès sans jeton (elle n'a pas de session pour en obtenir
+                        // un). Il ne divulgue rien : show-details=never limite la réponse à
+                        // {"status":"UP"}. Il n'est pas publié sur l'hôte et nginx ne relaie pas
+                        // /actuator, donc il reste confiné au réseau interne Docker.
+                        .requestMatchers("/actuator/health").permitAll()
                         // Gestion des comptes : ADMIN uniquement (avant les règles génériques)
                         .requestMatchers("/api/v1/users/**").hasRole("ADMIN")
                         // Encaissements : données financières réservées à ADMIN, y compris en

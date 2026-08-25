@@ -1,0 +1,31 @@
+# Contexte de build envoyé au démon Docker. Le build Maven se fait dans l'image :
+# les artefacts compilés localement n'ont pas à être transférés, et les inclure
+# risquerait de masquer une recompilation propre.
+target
+.git
+.gitignore
+.mvn
+mvnw
+mvnw.cmd
+
+# Secrets : ne doivent jamais entrer dans une image.
+.env
+.env.*
+!.env.example
+
+# Documentation et notes de travail : sans effet sur le JAR produit.
+*.md
+
+# Données d'exemple et scripts d'administration
+sample-csv
+reset-database.sql
+
+# Artefacts de test et outillage local
+.jqwik-database
+.idea
+.vscode
+.claude
+.DS_Store
+
+Dockerfile
+.dockerignore

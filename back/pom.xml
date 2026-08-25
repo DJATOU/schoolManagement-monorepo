@@ -45,6 +45,25 @@
             <artifactId>spring-boot-devtools</artifactId>
             <optional>true</optional>
         </dependency>
+        <!-- Actuator : exposé UNIQUEMENT pour /actuator/health, afin que Docker
+             puisse sonder la disponibilité du backend avant que nginx ne lui
+             transmette du trafic. Les autres points d'accès sont désactivés
+             dans application.properties. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+        <!-- Flyway : le schéma est désormais versionné. Sur une base vide, V1
+             crée les tables ; sur une base déjà peuplée, baseline-on-migrate
+             pose un repère et saute V1. Hibernate reste en validate en prod. -->
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-database-postgresql</artifactId>
+        </dependency>
         <dependency>
             <groupId>io.micrometer</groupId>
             <artifactId>micrometer-registry-dynatrace</artifactId>

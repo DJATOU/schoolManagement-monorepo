@@ -1,0 +1,146 @@
+# =====================================================================
+# Déploiement sur site — Mini PC Windows 11, réseau local, un seul site
+#
+# Trois services : PostgreSQL, le backend Spring Boot, et nginx qui sert le
+# front Angular tout en relayant l'API. Un seul port est publié (celui de
+# nginx) : le navigateur ne voit qu'une origine, donc aucune configuration CORS
+# n'entre en jeu et le backend n'est pas joignable depuis le réseau local.
+#
+# AUCUN SECRET DANS CE FICHIER. Toutes les valeurs sensibles proviennent du
+# fichier .env, qui n'est pas suivi par Git.
+# =====================================================================
+
+services:
+
+  # -------------------------------------------------------------------
+  # Base de données
+  # -------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: school-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      # Les libellés (noms d'étudiants, matières) sont en français : la collation
+      # doit trier les accents correctement dès l'initialisation du cluster, ce
+      # qui n'est plus modifiable ensuite sans recréer la base.
+      LANG: fr_FR.utf8
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    volumes:
+      # Volume nommé : les données survivent à docker compose down et à toute
+      # reconstruction des images.
+      - postgres-data:/var/lib/postgresql/data
+    # Aucun port publié : seul le backend accède à la base, par le réseau interne.
+    # Publier 5432 exposerait la base à tout le réseau local.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - school-net
+
+  # -------------------------------------------------------------------
+  # Backend Spring Boot
+  # -------------------------------------------------------------------
+  spring:
+    build:
+      context: ./back
+      dockerfile: Dockerfile
+    image: school-management-backend:latest
+    container_name: school-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        # Le backend n'est lancé qu'une fois la base réellement prête à accepter
+        # des connexions : Flyway ouvre une connexion dès le démarrage et
+        # échouerait sur une base encore en cours d'initialisation.
+        condition: service_healthy
+    environment:
+      # Profil dédié à la production. Il impose ddl-auto=validate : Hibernate
+      # vérifie le schéma, c'est Flyway qui le fait évoluer.
+      SPRING_PROFILES_ACTIVE: prod
+
+      # Connexion à la base — construite à partir du .env, jamais écrite en dur.
+      # L'hôte "postgres" est le nom du service, résolu par le DNS interne Docker.
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${DB_NAME}
+      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+
+      # Sécurité. Sans ces valeurs, l'application refuse de démarrer (fail-fast),
+      # ce qui est voulu : mieux vaut un démarrage impossible qu'une application
+      # en ligne avec un secret de développement.
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-3600000}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+
+      # Chemin des photos DANS le conteneur. Le dossier hôte correspondant est
+      # défini par UPLOAD_HOST_DIR ci-dessous : rien d'absolu n'est figé, et le
+      # chemin peut différer entre le poste de développement et le Mini PC.
+      UPLOAD_DIR: ${UPLOAD_DIR:-/app/uploads/images}
+
+      # Volontairement vide : front et API partagent une origine, les URLs de
+      # photos sont donc relatives et restent valables si l'IP de la machine change.
+      SERVER_BASE_URL: ${SERVER_BASE_URL:-}
+
+      # Horodatage des paiements et des séances en heure locale.
+      TZ: ${TZ:-Europe/Paris}
+    volumes:
+      # Dossier de l'hôte, et non volume nommé : la sauvegarde des photos se
+      # résume alors à copier ce dossier sur une clé USB, sans docker cp.
+      # UPLOAD_HOST_DIR permet un chemin différent sur chaque machine.
+      - ${UPLOAD_HOST_DIR}:${UPLOAD_DIR:-/app/uploads/images}
+    # Port non publié : nginx l'atteint par le réseau interne. L'API n'est donc
+    # pas exposée directement sur le réseau local.
+    expose:
+      - "8080"
+    healthcheck:
+      # Actuator n'expose que /health, sans détail. nginx ne relaie pas /actuator :
+      # ce point d'accès reste interne au réseau Docker.
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/actuator/health | grep -q UP"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      # Le premier démarrage inclut la migration Flyway : laisser le temps avant
+      # de déclarer le service en échec.
+      start_period: 90s
+    networks:
+      - school-net
+
+  # -------------------------------------------------------------------
+  # nginx — front statique + relais de l'API
+  # -------------------------------------------------------------------
+  nginx:
+    build:
+      context: ./front
+      dockerfile: Dockerfile
+    image: school-management-frontend:latest
+    container_name: school-nginx
+    restart: unless-stopped
+    depends_on:
+      spring:
+        # nginx n'accepte du trafic qu'une fois le backend prêt : sinon les
+        # premières requêtes repartiraient en 502.
+        condition: service_healthy
+    ports:
+      # Seul point d'entrée depuis le réseau local. HTTP_PORT vaut 80 par défaut ;
+      # le passer à 8081 dans .env si le port 80 est déjà pris sur la machine
+      # (à vérifier avec : netstat -ano | findstr :80).
+      - "${HTTP_PORT:-80}:80"
+    networks:
+      - school-net
+
+volumes:
+  # Données PostgreSQL. Volume nommé et distinct des photos : les deux jeux de
+  # données ont des cycles de vie et des besoins de sauvegarde différents.
+  postgres-data:
+    name: school-postgres-data
+
+networks:
+  school-net:
+    name: school-net
+    driver: bridge
