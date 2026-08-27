@@ -1,9 +1,11 @@
 package com.school.management.repository;
 
 import com.school.management.persistance.PaymentEntity;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -14,6 +16,21 @@ import java.util.Optional;
 
 @Repository
 public interface PaymentRepository extends JpaRepository<PaymentEntity, Long> {
+
+    /**
+     * Charge un paiement en verrou d'écriture, pour sérialiser les enregistrements de
+     * remboursement portant sur ce paiement (exigence 7.8).
+     *
+     * <p><strong>Pourquoi un verrou.</strong> Le plafond de remboursement se calcule en lisant la
+     * somme déjà remboursée, puis s'applique en écrivant un nouveau remboursement. Entre les deux,
+     * une demande concurrente peut lire le même plafond : les deux passent le contrôle et leur
+     * somme dépasse le montant versé. Deux onglets du navigateur suffisent à produire le cas, et le
+     * déploiement mono-instance n'en protège pas. Un dépassement de plafond est une perte d'argent,
+     * pas une gêne d'affichage : le verrou est donc pris même si la collision est rare.</p>
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT p FROM PaymentEntity p WHERE p.id = :id")
+    Optional<PaymentEntity> findByIdForUpdate(@Param("id") Long id);
 
     List<PaymentEntity> findAllByStudentIdOrderByPaymentDateDesc(Long studentId);
 

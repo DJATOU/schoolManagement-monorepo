@@ -49,15 +49,18 @@ public class BillableSessionsResolverImpl implements BillableSessionsResolver {
     private final SessionRepository sessionRepository;
     private final AttendanceRepository attendanceRepository;
     private final StudentGroupRepository studentGroupRepository;
+    private final CatchUpBillingQualifier catchUpBillingQualifier;
 
     public BillableSessionsResolverImpl(SessionSeriesRepository sessionSeriesRepository,
                                         SessionRepository sessionRepository,
                                         AttendanceRepository attendanceRepository,
-                                        StudentGroupRepository studentGroupRepository) {
+                                        StudentGroupRepository studentGroupRepository,
+                                        CatchUpBillingQualifier catchUpBillingQualifier) {
         this.sessionSeriesRepository = sessionSeriesRepository;
         this.sessionRepository = sessionRepository;
         this.attendanceRepository = attendanceRepository;
         this.studentGroupRepository = studentGroupRepository;
+        this.catchUpBillingQualifier = catchUpBillingQualifier;
     }
 
     /**
@@ -86,16 +89,39 @@ public class BillableSessionsResolverImpl implements BillableSessionsResolver {
                 attendanceRepository.findByStudentIdAndSessionSeriesIdAndActiveTrue(studentId, seriesId);
         Set<Long> attendedSessionIds = sessionIdsOf(attendances, false);
         Set<Long> presentSessionIds = sessionIdsOf(attendances, true);
+        Set<Long> nonCompensatorySessionIds = nonCompensatorySessionIdsOf(attendances);
+
+        // Vue des rattrapages de l'étudiant, tous groupes confondus : une séance rattrapée ailleurs
+        // n'apparaît pas dans les présences de cette série.
+        CatchUpBillingQualifier.CatchUpView catchUpView = catchUpBillingQualifier.view(studentId);
 
         List<SessionEntity> billable = new ArrayList<>();
         List<SessionEntity> excluded = new ArrayList<>();
+        Set<Long> compensatedAway = new HashSet<>();
         int attendedCount = 0;
 
         for (SessionEntity session : sessionRepository.findBySessionSeriesId(seriesId)) {
-            boolean hasAttendance = attendedSessionIds.contains(session.getId());
+            Long sessionId = session.getId();
+
+            // Exigences 2.3 et 2.11 : la séance est écartée seulement si TOUTES les présences
+            // actives qui la couvrent sont des rattrapages compensatoires. Une présence ordinaire
+            // suffit à la ramener dans les facturables : la gratuité ne vaut que si le rattrapage
+            // est la seule raison d'être là.
+            if (catchUpView.isFullyCompensated(sessionId)
+                    && !nonCompensatorySessionIds.contains(sessionId)) {
+                excluded.add(session);
+                compensatedAway.add(sessionId);
+                continue;
+            }
+
+            boolean hasAttendance = attendedSessionIds.contains(sessionId);
             if (hasAttendance || isOnOrAfterEnrolment(session, enrollmentDate)) {
                 billable.add(session);
-                if (presentSessionIds.contains(session.getId())) {
+                // Exigence 2.12 : une séance rattrapée ailleurs compte comme suivie ICI, dans sa
+                // série d'origine, alors que sa présence reste une absence. Sans cela, la séance
+                // consommée n'augmenterait le montant dû d'aucune série : ni de l'accueil, où elle
+                // est écartée, ni de l'origine, où l'étudiant était absent.
+                if (presentSessionIds.contains(sessionId) || catchUpView.isCompensatedAway(sessionId)) {
                     attendedCount++;
                 }
             } else {
@@ -104,7 +130,7 @@ public class BillableSessionsResolverImpl implements BillableSessionsResolver {
         }
 
         return new BillableSessions(List.copyOf(billable), List.copyOf(excluded),
-                attendedCount, enrolment.isPresent(), enrollmentDate);
+                attendedCount, enrolment.isPresent(), enrollmentDate, Set.copyOf(compensatedAway));
     }
 
     /** Inscription active de l'étudiant au groupe de la série, vide si le groupe est absent. */
@@ -140,6 +166,29 @@ public class BillableSessionsResolverImpl implements BillableSessionsResolver {
         Set<Long> ids = new HashSet<>();
         for (AttendanceEntity attendance : attendances) {
             if (onlyPresent && !Boolean.TRUE.equals(attendance.getIsPresent())) {
+                continue;
+            }
+            SessionEntity session = attendance.getSession();
+            if (session != null && session.getId() != null) {
+                ids.add(session.getId());
+            }
+        }
+        return ids;
+    }
+
+    /**
+     * Séances de cette série couvertes par une présence active qui <strong>n'est pas</strong> un
+     * rattrapage (exigence 2.11).
+     *
+     * <p>Sert à ne pas rendre gratuite une séance à laquelle l'étudiant a aussi assisté au titre de
+     * son inscription. Le test porte sur l'indicateur de rattrapage de la présence, et non sur la
+     * qualification : une présence ordinaire n'est jamais compensatoire, quelle que soit l'histoire
+     * du rattrapage qui la double.</p>
+     */
+    private Set<Long> nonCompensatorySessionIdsOf(List<AttendanceEntity> attendances) {
+        Set<Long> ids = new HashSet<>();
+        for (AttendanceEntity attendance : attendances) {
+            if (Boolean.TRUE.equals(attendance.getIsCatchUp())) {
                 continue;
             }
             SessionEntity session = attendance.getSession();

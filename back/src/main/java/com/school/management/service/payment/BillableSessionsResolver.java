@@ -4,6 +4,7 @@ import com.school.management.persistance.SessionEntity;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Séances d'une série réellement facturables à un étudiant.
@@ -46,7 +47,23 @@ public interface BillableSessionsResolver {
             List<SessionEntity> excluded,
             int attendedCount,
             boolean enrolled,
-            Date enrollmentDate) {
+            Date enrollmentDate,
+            Set<Long> compensatedAwaySessionIds) {
+
+        /**
+         * Détail sans séance écartée pour compensation.
+         *
+         * <p>Existe pour les appelants qui ne mettent pas en jeu le rattrapage — la majorité — afin
+         * qu'ils n'aient pas à nommer un ensemble vide. « Aucune séance compensée ailleurs » est le
+         * cas normal, pas un cas particulier.</p>
+         */
+        public BillableSessions(List<SessionEntity> billable,
+                               List<SessionEntity> excluded,
+                               int attendedCount,
+                               boolean enrolled,
+                               Date enrollmentDate) {
+            this(billable, excluded, attendedCount, enrolled, enrollmentDate, Set.of());
+        }
 
         /** Nombre de séances facturables : c'est le décompte qui remplace {@code total_sessions}. */
         public int billableCount() {
@@ -56,6 +73,17 @@ public interface BillableSessionsResolver {
         /** Nombre de séances écartées, exposé par le devis et l'historique. */
         public int excludedCount() {
             return excluded.size();
+        }
+
+        /**
+         * Vrai si cette séance a été écartée parce qu'elle est déjà facturée dans la série d'origine
+         * d'un rattrapage compensatoire (exigence 2.3).
+         *
+         * <p>Permet à l'historique de dire <em>pourquoi</em> une séance n'est pas facturée
+         * (exigence 2.9) : « écartée » sans raison ressemble à une erreur de calcul.</p>
+         */
+        public boolean isCompensatedAway(Long sessionId) {
+            return compensatedAwaySessionIds.contains(sessionId);
         }
     }
 }

@@ -115,14 +115,20 @@ class RepositoryQueriesIntegrationTest {
         return em.persist(attendance);
     }
 
+    /** Compteur de numéros de pièce, pour que chaque remboursement du test en porte un distinct. */
+    private int refundSequence = 0;
+
     private RefundEntity persistRefund(StudentEntity student,
                                        PaymentEntity payment,
                                        BigDecimal amount) {
+        // Le numéro de pièce est obligatoire et unique depuis la migration V2 : un remboursement
+        // sans numéro ne représente plus une situation possible en base.
         RefundEntity refund = RefundEntity.builder()
                 .student(student)
                 .payment(payment)
                 .amount(amount)
                 .refundDate(new Date())
+                .refundNumber(String.format("REMB-2026-%04d", ++refundSequence))
                 .build();
         return em.persist(refund);
     }

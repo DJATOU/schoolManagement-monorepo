@@ -350,6 +350,13 @@
                                              un trop-perçu. Le joker couvre l'interface, son
                                              record imbriqué et l'implémentation. -->
                                         <include>com.school.management.service.payment.BillableSessionsResolver*</include>
+                                        <!-- Feature absence-justification-and-refund-receipts :
+                                             le qualificateur décide si une séance rattrapée est
+                                             facturée côté accueil ou côté origine. Une branche non
+                                             testée y produit soit une double facturation, soit une
+                                             recette qui disparaît. -->
+                                        <include>com.school.management.service.payment.CatchUpBillingQualifier*</include>
+                                        <include>com.school.management.service.RefundNumberService</include>
                                         <include>com.school.management.service.payment.PaymentAllocationService</include>
                                         <include>com.school.management.service.payment.AllocationPlan*</include>
                                         <!-- Détecteur de changement de groupe (tâche 15.1) : la

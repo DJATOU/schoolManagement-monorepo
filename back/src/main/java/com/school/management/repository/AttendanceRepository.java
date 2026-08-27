@@ -16,6 +16,32 @@ public interface AttendanceRepository extends JpaRepository<AttendanceEntity, Lo
     long countByStudentIdAndSessionSeriesIdAndIsPresent(Long studentId, Long sessionSeriesId, boolean isPresent);
 
     /**
+     * Vrai s'il existe déjà une présence active de cet étudiant couvrant cette séance manquée.
+     *
+     * <p>Garantit qu'un rattrapage n'est enregistré qu'une fois par séance manquée (exigence 1.9).
+     * Deux rattrapages d'une même séance rendraient le décompte des séances suivies indéterminé.
+     * La règle est doublée d'un index unique partiel en base : ce contrôle applicatif sert à
+     * produire un message utile plutôt qu'une violation de contrainte.</p>
+     */
+    boolean existsByStudentIdAndMissedSessionIdAndActiveTrue(Long studentId, Long missedSessionId);
+
+    /**
+     * Présences de rattrapage actives d'un étudiant, tous groupes confondus.
+     *
+     * <p>Alimente {@code CatchUpBillingQualifier}, qui doit voir les rattrapages hors de la série
+     * évaluée : une séance rattrapée dans un autre groupe n'apparaît pas dans les présences de la
+     * série d'origine.</p>
+     *
+     * <p>Contrairement à {@code findByStudentIdAndIsCatchUp}, cette requête filtre sur {@code active}
+     * en base plutôt qu'en mémoire chez l'appelant : une présence désactivée ne fait pas partie de
+     * la définition d'une présence de rattrapage, et la laisser remonter obligeait chaque appelant à
+     * s'en souvenir.</p>
+     */
+    @Query("SELECT a FROM AttendanceEntity a WHERE a.student.id = :studentId "
+            + "AND a.isCatchUp = true AND a.active = true")
+    List<AttendanceEntity> findByStudentIdAndIsCatchUpTrueAndActiveTrue(@Param("studentId") Long studentId);
+
+    /**
      * Compte les séances effectivement suivies (présent) par un étudiant dans le
      * périmètre d'une série, tous groupes confondus. Ne compte que les fiches
      * actives avec {@code isPresent = true}.

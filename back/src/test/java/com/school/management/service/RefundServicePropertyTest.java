@@ -58,15 +58,29 @@ class RefundServicePropertyTest {
                 .build();
         when(paymentRepository.findById(PAYMENT_ID)).thenReturn(Optional.of(payment));
 
-        RefundService service = new RefundService(refundRepository, paymentRepository);
+        when(refundRepository.findMaxRankForPrefix(any())).thenReturn(0);
+        when(refundRepository.sumActiveRefundsForPayment(PAYMENT_ID)).thenReturn(BigDecimal.ZERO);
+        when(refundRepository.saveAndFlush(any(RefundEntity.class)))
+                .thenAnswer(inv -> inv.getArgument(0));
+        when(paymentRepository.findByIdForUpdate(PAYMENT_ID)).thenReturn(Optional.of(payment));
 
-        RefundRequestDTO dto = new RefundRequestDTO(PAYMENT_ID, STUDENT_ID, refund, null);
+        RefundService service = new RefundService(refundRepository, paymentRepository,
+                new RefundNumberService(refundRepository));
+
+        RefundRequestDTO dto = new RefundRequestDTO(PAYMENT_ID, STUDENT_ID, refund, null, "motif");
 
         // Le montant versé est normalisé à l'échelle 2 côté service ; comparer sur la même base.
         BigDecimal normalizedPaid = paid.setScale(2, RoundingMode.HALF_UP);
         BigDecimal normalizedRefund = refund.setScale(2, RoundingMode.HALF_UP);
 
-        if (normalizedRefund.compareTo(normalizedPaid) > 0) {
+        // Aucun remboursement préexistant dans ce scénario : le plafond cumulé égale le montant
+        // versé, et cette propriété reste donc valable telle qu'elle avait été écrite. Seule la
+        // borne basse a changé : un montant nul, autrefois accepté, est désormais refusé car il
+        // produirait une pièce de caisse sans objet.
+        boolean rejected = normalizedRefund.compareTo(normalizedPaid) > 0
+                || normalizedRefund.compareTo(new BigDecimal("0.01")) < 0;
+
+        if (rejected) {
             assertThatThrownBy(() -> service.create(dto))
                     .isInstanceOf(CustomServiceException.class)
                     .satisfies(e -> assertThat(((CustomServiceException) e).getStatus())

@@ -18,6 +18,7 @@ import com.school.management.repository.SessionRepository;
 import com.school.management.service.exception.CustomServiceException;
 import com.school.management.service.payment.PaymentStatusService;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.http.HttpStatus;
@@ -318,7 +319,9 @@ class CatchUpServiceTest {
         GroupEntity originalGroup = group(ORIGINAL_GROUP_ID, TYPE_ID, PRICE);
         GroupEntity catchUpGroup = group(CATCHUP_GROUP_ID, TYPE_ID, PRICE);
         SessionEntity originalSession = session(ORIGINAL_SESSION_ID, originalGroup);
-        SessionEntity catchUpSession = session(CATCHUP_SESSION_ID, catchUpGroup);
+        // La complétion exige désormais une séance de rattrapage rattachée à une série : sans
+        // elle, la présence créée échapperait au décompte des séances suivies.
+        SessionEntity catchUpSession = sessionWithSeries(CATCHUP_SESSION_ID, catchUpGroup, 700L);
         StudentEntity student = StudentEntity.builder().id(STUDENT_ID).build();
 
         CatchUpRequestEntity scheduled = CatchUpRequestEntity.builder()
@@ -346,6 +349,128 @@ class CatchUpServiceTest {
         assertThat(att.getSession()).isSameAs(catchUpSession);
         assertThat(att.getGroup()).isSameAs(catchUpGroup);
         assertThat(att.getMissedSession()).isSameAs(originalSession);
+    }
+
+    @Test
+    @DisplayName("Complétion refusée si la séance de rattrapage n'a pas de série (exigence 1.7)")
+    void complete_catchUpSessionWithoutSeries_throwsBadRequest() {
+        // Sans série, la présence créée échapperait au décompte des séances suivies et au devis,
+        // qui lisent tous deux les présences PAR SÉRIE : elle serait invisible pour la facturation.
+        GroupEntity catchUpGroup = group(CATCHUP_GROUP_ID, TYPE_ID, PRICE);
+        SessionEntity sansSerie = session(CATCHUP_SESSION_ID, catchUpGroup);
+        CatchUpRequestEntity scheduled = CatchUpRequestEntity.builder()
+                .id(REQUEST_ID)
+                .status(CatchUpStatus.SCHEDULED)
+                .student(StudentEntity.builder().id(STUDENT_ID).build())
+                .catchUpSession(sansSerie)
+                .catchUpGroup(catchUpGroup)
+                .build();
+        when(requestRepo.findById(REQUEST_ID)).thenReturn(Optional.of(scheduled));
+
+        assertThatThrownBy(() -> service.complete(REQUEST_ID))
+                .isInstanceOf(CustomServiceException.class)
+                .satisfies(e -> assertThat(((CustomServiceException) e).getStatus())
+                        .isEqualTo(HttpStatus.BAD_REQUEST))
+                .hasMessageContaining("aucune série");
+        // La demande reste dans son état antérieur et aucune présence n'est créée.
+        assertThat(scheduled.getStatus()).isEqualTo(CatchUpStatus.SCHEDULED);
+        verify(attendanceRepo, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Complétion refusée si la demande n'a aucune séance de rattrapage")
+    void complete_withoutCatchUpSession_throwsBadRequest() {
+        // Une demande planifiée sans séance n'est pas planifiable : le refus est le même que pour
+        // une séance sans série, puisque dans les deux cas aucune série ne peut être déterminée.
+        CatchUpRequestEntity scheduled = CatchUpRequestEntity.builder()
+                .id(REQUEST_ID)
+                .status(CatchUpStatus.SCHEDULED)
+                .student(StudentEntity.builder().id(STUDENT_ID).build())
+                .catchUpSession(null)
+                .build();
+        when(requestRepo.findById(REQUEST_ID)).thenReturn(Optional.of(scheduled));
+
+        assertThatThrownBy(() -> service.complete(REQUEST_ID))
+                .isInstanceOf(CustomServiceException.class)
+                .satisfies(e -> assertThat(((CustomServiceException) e).getStatus())
+                        .isEqualTo(HttpStatus.BAD_REQUEST));
+        assertThat(scheduled.getStatus()).isEqualTo(CatchUpStatus.SCHEDULED);
+        verify(attendanceRepo, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Complétion refusée si la séance manquée est déjà rattrapée (exigence 1.9)")
+    void complete_missedSessionAlreadyCaughtUp_throwsConflict() {
+        // Deux rattrapages d'une même séance manquée rendraient indéterminé lequel compense
+        // l'absence, donc le décompte des séances suivies.
+        GroupEntity originalGroup = group(ORIGINAL_GROUP_ID, TYPE_ID, PRICE);
+        GroupEntity catchUpGroup = group(CATCHUP_GROUP_ID, TYPE_ID, PRICE);
+        SessionEntity originalSession = session(ORIGINAL_SESSION_ID, originalGroup);
+        SessionEntity catchUpSession = sessionWithSeries(CATCHUP_SESSION_ID, catchUpGroup, 700L);
+        CatchUpRequestEntity scheduled = CatchUpRequestEntity.builder()
+                .id(REQUEST_ID)
+                .status(CatchUpStatus.SCHEDULED)
+                .student(StudentEntity.builder().id(STUDENT_ID).build())
+                .originalSession(originalSession)
+                .catchUpSession(catchUpSession)
+                .catchUpGroup(catchUpGroup)
+                .build();
+        when(requestRepo.findById(REQUEST_ID)).thenReturn(Optional.of(scheduled));
+        when(attendanceRepo.existsByStudentIdAndMissedSessionIdAndActiveTrue(
+                STUDENT_ID, ORIGINAL_SESSION_ID)).thenReturn(true);
+
+        assertThatThrownBy(() -> service.complete(REQUEST_ID))
+                .isInstanceOf(CustomServiceException.class)
+                .satisfies(e -> assertThat(((CustomServiceException) e).getStatus())
+                        .isEqualTo(HttpStatus.CONFLICT))
+                .hasMessageContaining("déjà enregistré");
+        assertThat(scheduled.getStatus()).isEqualTo(CatchUpStatus.SCHEDULED);
+        verify(attendanceRepo, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Complétion avec séance manquée mais sans étudiant : contrôle de doublon sauté")
+    void complete_withMissedSessionButNoStudent_skipsDuplicateCheck() {
+        // Le contrôle de doublon porte sur le couple (étudiant, séance manquée) : sans étudiant, il
+        // n'y a pas de couple, et l'interroger renverrait une réponse dénuée de sens.
+        GroupEntity originalGroup = group(ORIGINAL_GROUP_ID, TYPE_ID, PRICE);
+        GroupEntity catchUpGroup = group(CATCHUP_GROUP_ID, TYPE_ID, PRICE);
+        CatchUpRequestEntity scheduled = CatchUpRequestEntity.builder()
+                .id(REQUEST_ID)
+                .status(CatchUpStatus.SCHEDULED)
+                .student(null)
+                .originalSession(session(ORIGINAL_SESSION_ID, originalGroup))
+                .catchUpSession(sessionWithSeries(CATCHUP_SESSION_ID, catchUpGroup, 700L))
+                .catchUpGroup(catchUpGroup)
+                .build();
+        when(requestRepo.findById(REQUEST_ID)).thenReturn(Optional.of(scheduled));
+        when(requestRepo.save(any(CatchUpRequestEntity.class))).thenAnswer(i -> i.getArgument(0));
+
+        assertThat(service.complete(REQUEST_ID).getStatus()).isEqualTo(CatchUpStatus.COMPLETED);
+        verify(attendanceRepo, never())
+                .existsByStudentIdAndMissedSessionIdAndActiveTrue(any(), any());
+    }
+
+    @Test
+    @DisplayName("Complétion sans séance manquée ni étudiant : le contrôle de doublon est sauté")
+    void complete_withoutMissedSessionOrStudent_skipsDuplicateCheck() {
+        // Cas dégradé : sans séance manquée ou sans étudiant, il n'y a pas de couple à vérifier.
+        // La complétion doit aboutir plutôt que d'échouer sur un contrôle inapplicable.
+        GroupEntity catchUpGroup = group(CATCHUP_GROUP_ID, TYPE_ID, PRICE);
+        SessionEntity catchUpSession = sessionWithSeries(CATCHUP_SESSION_ID, catchUpGroup, 700L);
+        CatchUpRequestEntity scheduled = CatchUpRequestEntity.builder()
+                .id(REQUEST_ID)
+                .status(CatchUpStatus.SCHEDULED)
+                .student(null)
+                .originalSession(null)
+                .catchUpSession(catchUpSession)
+                .catchUpGroup(catchUpGroup)
+                .build();
+        when(requestRepo.findById(REQUEST_ID)).thenReturn(Optional.of(scheduled));
+        when(requestRepo.save(any(CatchUpRequestEntity.class))).thenAnswer(i -> i.getArgument(0));
+
+        assertThat(service.complete(REQUEST_ID).getStatus()).isEqualTo(CatchUpStatus.COMPLETED);
+        verify(attendanceRepo).save(any());
     }
 
     @Test

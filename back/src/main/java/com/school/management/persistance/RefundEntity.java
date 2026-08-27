@@ -48,4 +48,26 @@ public class RefundEntity extends BaseEntity {
     @Temporal(TemporalType.TIMESTAMP)
     @Column(name = "refund_date")
     private Date refundDate;
+
+    /**
+     * Motif du remboursement (exigence 6.1). Obligatoire à toute création nouvelle, contrôle
+     * appliqué par {@code RefundService}.
+     *
+     * <p>La colonne reste néanmoins nullable, et ce n'est pas un oubli : les remboursements
+     * enregistrés avant cette traçabilité n'ont pas de motif, et en fabriquer un mentirait sur ce
+     * qui a été saisi. Ils sont présentés avec la mention « Motif non renseigné (antérieur à la
+     * traçabilité) » (exigence 6.10).</p>
+     */
+    @Column(name = "reason", columnDefinition = "TEXT")
+    private String reason;
+
+    /**
+     * Numéro de pièce, de la forme {@code REMB-AAAA-NNNN} (exigences 6.4, 6.5).
+     *
+     * <p>Unique et immuable après création. L'unicité est portée par une contrainte de stockage et
+     * non par le calcul applicatif (exigence 6.6) : elle vaut ainsi quel que soit le nombre
+     * d'instances de l'application, et le service n'a qu'à rejouer sur collision.</p>
+     */
+    @Column(name = "refund_number", nullable = false, unique = true, length = 32)
+    private String refundNumber;
 }

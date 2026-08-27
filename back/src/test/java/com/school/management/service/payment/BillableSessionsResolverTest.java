@@ -11,6 +11,7 @@ import com.school.management.repository.SessionSeriesRepository;
 import com.school.management.repository.StudentGroupRepository;
 import com.school.management.service.exception.CustomServiceException;
 import com.school.management.service.payment.BillableSessionsResolver.BillableSessions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -55,8 +56,21 @@ class BillableSessionsResolverTest {
     @Mock private SessionRepository sessionRepository;
     @Mock private AttendanceRepository attendanceRepository;
     @Mock private StudentGroupRepository studentGroupRepository;
+    @Mock private CatchUpBillingQualifier catchUpBillingQualifier;
 
     @InjectMocks private BillableSessionsResolverImpl resolver;
+
+    /**
+     * Aucun rattrapage par défaut : ces tests portent sur la règle du prorata, pas sur la
+     * compensation. Le comportement en présence de rattrapages est couvert par
+     * {@code CatchUpBillingPropertyTest} et {@code CatchUpBillingQualifierTest}.
+     */
+    @BeforeEach
+    void aucunRattrapageParDefaut() {
+        org.mockito.Mockito.lenient()
+                .when(catchUpBillingQualifier.view(org.mockito.ArgumentMatchers.anyLong()))
+                .thenReturn(CatchUpBillingQualifier.CatchUpView.empty());
+    }
 
     // ------------------------------------------------------------------
     // Fabriques de données
@@ -371,5 +385,37 @@ class BillableSessionsResolverTest {
                 .isInstanceOf(UnsupportedOperationException.class);
         assertThatThrownBy(() -> result.excluded().add(intruder))
                 .isInstanceOf(UnsupportedOperationException.class);
+    }
+
+    @Test
+    @DisplayName("Séance couverte par un rattrapage compensatoire ET une présence ordinaire : "
+            + "elle reste facturable (exigence 2.11)")
+    void seanceAvecPresenceOrdinaireEtRattrapageCompensatoireResteFacturable() {
+        // La gratuité du rattrapage ne vaut que s'il est la SEULE raison d'être là. Un étudiant
+        // inscrit qui assiste à la séance au titre de son inscription la doit, même si un
+        // rattrapage compensatoire porte aussi sur cette séance.
+        givenSeries();
+        givenEnrolment(ENROLMENT_DATE);
+        SessionEntity seance = session(1L, date("2025-01-17"));
+        givenSessions(seance);
+
+        AttendanceEntity ordinaire = attendance(seance, true);
+        ordinaire.setIsCatchUp(false);
+        givenAttendances(ordinaire);
+
+        // Le qualificateur considère cette séance comme entièrement compensée...
+        org.mockito.Mockito.when(catchUpBillingQualifier.view(STUDENT_ID)).thenReturn(
+                new CatchUpBillingQualifier.CatchUpView(
+                        java.util.Map.of(1L, java.util.List.of(
+                                CatchUpBillingQualifier.Qualification.COMPENSATOIRE)),
+                        java.util.Set.of()));
+
+        BillableSessions result = resolver.resolve(STUDENT_ID, SERIES_ID);
+
+        // ... mais la présence ordinaire la ramène dans les facturables.
+        assertThat(result.billable()).extracting(SessionEntity::getId).containsExactly(1L);
+        assertThat(result.excluded()).isEmpty();
+        assertThat(result.attendedCount()).isEqualTo(1);
+        assertThat(result.isCompensatedAway(1L)).isFalse();
     }
 }

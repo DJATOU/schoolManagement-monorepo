@@ -206,7 +206,11 @@ class CatchUpServicePropertyTest {
         GroupEntity originalGroup = group(ORIGINAL_GROUP_ID, ORIGINAL_TYPE_ID, ORIGINAL_PRICE);
         GroupEntity catchUpGroup = group(ORIGINAL_GROUP_ID + 1, ORIGINAL_TYPE_ID, ORIGINAL_PRICE);
         SessionEntity originalSession = session(ORIGINAL_SESSION_ID, originalGroup);
+        // Séance de rattrapage rattachée à une série : la complétion l'exige.
         SessionEntity catchUpSession = session(CATCHUP_SESSION_ID, catchUpGroup);
+        SessionSeriesEntity catchUpSeries = new SessionSeriesEntity();
+        catchUpSeries.setId(700L);
+        catchUpSession.setSessionSeries(catchUpSeries);
         StudentEntity student = StudentEntity.builder().id(STUDENT_ID).build();
 
         CatchUpRequestEntity request = CatchUpRequestEntity.builder()

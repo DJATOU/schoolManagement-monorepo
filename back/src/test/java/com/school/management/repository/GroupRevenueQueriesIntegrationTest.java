@@ -216,6 +216,8 @@ class GroupRevenueQueriesIntegrationTest {
                 .payment(payment)
                 .amount(new BigDecimal("500.00"))
                 .refundDate(new Date())
+                // Numéro de pièce obligatoire depuis la migration V2.
+                .refundNumber("REMB-2026-0001")
                 .build());
         em.flush();
 

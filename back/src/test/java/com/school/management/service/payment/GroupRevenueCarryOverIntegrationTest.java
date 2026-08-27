@@ -58,7 +58,7 @@ import static org.assertj.core.api.Assertions.assertThat;
         "spring.jpa.hibernate.ddl-auto=create-drop",
         "spring.jpa.show-sql=false"
 })
-@Import({ BillableSessionsResolverImpl.class, DiscountService.class, PaymentCostResolver.class,
+@Import({ BillableSessionsResolverImpl.class, CatchUpBillingQualifierImpl.class, DiscountService.class, PaymentCostResolver.class,
         PaymentQuoteService.class, PaymentAllocationService.class, PaymentDistributionService.class,
         PaymentCarryOverService.class, PaymentProcessingService.class, GroupRevenueService.class,
         PaymentHistoryService.class })

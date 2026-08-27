@@ -12,6 +12,7 @@ import com.school.management.persistance.StudentGroupEntity;
 import com.school.management.service.DiscountService;
 import com.school.management.service.group.GroupChangeDetector.GroupChange;
 import com.school.management.service.payment.BillableSessionsResolverImpl;
+import com.school.management.service.payment.CatchUpBillingQualifierImpl;
 import com.school.management.service.payment.PaymentAllocationResult;
 import com.school.management.service.payment.PaymentAllocationService;
 import com.school.management.service.payment.PaymentCarryOverService;
@@ -35,6 +36,7 @@ import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -64,7 +66,7 @@ import static org.assertj.core.api.Assertions.assertThat;
         "spring.jpa.hibernate.ddl-auto=create-drop",
         "spring.jpa.show-sql=false"
 })
-@Import({ GroupChangeDetector.class, BillableSessionsResolverImpl.class, DiscountService.class,
+@Import({ GroupChangeDetector.class, BillableSessionsResolverImpl.class, CatchUpBillingQualifierImpl.class, DiscountService.class,
         PaymentCostResolver.class, PaymentQuoteService.class, PaymentAllocationService.class,
         PaymentDistributionService.class, PaymentCarryOverService.class,
         PaymentProcessingService.class })
@@ -267,8 +269,14 @@ class GroupChangeIsInformationalOnlyIntegrationTest {
     @DisplayName("Le détecteur reste hors du chemin d'encaissement : "
             + "PaymentProcessingService n'en dépend pas")
     void theDetectorStaysOutOfThePaymentPath() {
-        assertThat(Arrays.stream(PaymentProcessingService.class.getDeclaredFields())
-                .map(Field::getType))
+        // Le type de la liste est nommé explicitement : laissé à l'inférence, le joker de
+        // Field::getType produit un type capturé que tous les compilateurs n'acceptent pas dans
+        // doesNotContain.
+        List<Class<?>> typesDeChamps = Arrays.stream(PaymentProcessingService.class.getDeclaredFields())
+                .map(Field::getType)
+                .collect(Collectors.toList());
+
+        assertThat(typesDeChamps)
                 .as("un détecteur appelé pendant l'encaissement pourrait le ralentir ou le bloquer")
                 .doesNotContain(GroupChangeDetector.class);
     }

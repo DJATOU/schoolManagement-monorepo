@@ -252,15 +252,51 @@ public class CatchUpService {
                     HttpStatus.CONFLICT);
         }
 
+        SessionEntity catchUpSession = request.getCatchUpSession();
+
+        // Exigence 1.7 : sans série, la présence créée échapperait au décompte des séances suivies
+        // et au devis, qui lisent tous deux les présences PAR SÉRIE. Mieux vaut refuser la
+        // complétion que produire une présence invisible pour la facturation.
+        //
+        // Séance absente et séance sans série sont traitées ensemble : dans les deux cas aucune
+        // série ne peut être déterminée, et les distinguer n'aiderait pas l'administrateur, qui a
+        // la même correction à faire.
+        if (catchUpSession == null || catchUpSession.getSessionSeries() == null) {
+            throw new CustomServiceException(String.format(
+                    "La séance de rattrapage %s n'est rattachée à aucune série : complétion "
+                            + "impossible. Rattacher cette séance à une série, puis réessayer.",
+                    idOrNull(catchUpSession)),
+                    HttpStatus.BAD_REQUEST);
+        }
+        SessionSeriesEntity catchUpSeries = catchUpSession.getSessionSeries();
+
+        // Exigence 1.9 : deux rattrapages actifs de la même séance manquée rendraient le décompte
+        // des séances suivies indéterminé — laquelle des deux compense l'absence ?
+        SessionEntity missedSession = request.getOriginalSession();
+        Long studentId = request.getStudent() != null ? request.getStudent().getId() : null;
+        if (missedSession != null && studentId != null
+                && attendanceRepository.existsByStudentIdAndMissedSessionIdAndActiveTrue(
+                        studentId, missedSession.getId())) {
+            throw new CustomServiceException(String.format(
+                    "Un rattrapage est déjà enregistré pour la séance manquée %s : un seul "
+                            + "rattrapage par séance manquée est possible.", missedSession.getId()),
+                    HttpStatus.CONFLICT);
+        }
+
         request.setStatus(CatchUpStatus.COMPLETED);
         request.setCompletedDate(new Date());
 
         // Effet de bord : création de la présence de rattrapage (requirement 9.4, 9.7, 10.1).
+        // La présence d'origine n'est PAS modifiée (exigence 1.3) : elle reste une absence, et la
+        // mention « Rattrapée » est dérivée à l'affichage. Réécrire la présence effacerait le fait
+        // que l'étudiant n'était pas là.
         AttendanceEntity catchUpAttendance = AttendanceEntity.builder()
                 .student(request.getStudent())
-                .session(request.getCatchUpSession())
+                .session(catchUpSession)
+                // Exigence 1.1 : la série de la séance de rattrapage, dans la même transaction.
+                .sessionSeries(catchUpSeries)
                 .group(request.getCatchUpGroup())
-                .missedSession(request.getOriginalSession())
+                .missedSession(missedSession)
                 .isPresent(true)
                 .isCatchUp(true)
                 .build();
@@ -463,5 +499,10 @@ public class CatchUpService {
         Double priceA = (a.getPrice() != null) ? a.getPrice().getPrice() : null;
         Double priceB = (b.getPrice() != null) ? b.getPrice().getPrice() : null;
         return Objects.equals(priceA, priceB);
+    }
+
+    /** Identifiant d'une séance, ou {@code null} si la séance est absente. Sert aux messages. */
+    private static Long idOrNull(SessionEntity session) {
+        return session == null ? null : session.getId();
     }
 }
