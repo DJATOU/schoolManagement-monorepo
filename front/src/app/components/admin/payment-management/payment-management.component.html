@@ -263,6 +263,16 @@
               (click)="openHistoryDialog(element)">
               <mat-icon>history</mat-icon>
             </button>
+            <!--
+              Remboursement : rattaché au VERSEMENT, donc masqué en l'absence d'identifiant de
+              paiement ou sur une ligne annulée. appAdminOnly grise l'action pour un consultant —
+              le backend reste l'autorité, ce grisage n'est qu'une commodité.
+            -->
+            <button *ngIf="canRefund(element)" mat-icon-button color="warn"
+              [matTooltip]="'refund.dialog.title' | translate"
+              (click)="openRefundDialog(element)" appAdminOnly>
+              <mat-icon>currency_exchange</mat-icon>
+            </button>
             <button *ngIf="element.active" mat-icon-button color="warn"
               [matTooltip]="'payment.admin.actions.delete' | translate"
               (click)="deletePaymentDetail(element)" appAdminOnly>

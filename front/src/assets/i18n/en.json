@@ -419,7 +419,8 @@
     "close": "Close",
     "ok": "OK",
     "yes": "Yes",
-    "no": "No"
+    "no": "No",
+    "back": "Back"
   },
   "navigation": {
     "language": "Language"
@@ -1369,5 +1370,92 @@
     "leftGroup": "Group left: {{group}} · {{count}} session(s) attended that month",
     "joinedGroup": "Group joined: {{group}} · {{count}} session(s) attended that month",
     "hint": "For information: billing is unchanged, each series is computed separately. Adjust manually if needed."
+  },
+  "refund": {
+    "dialog": {
+      "title": "Record a refund",
+      "loading": "Loading payment amounts…",
+      "amountPaid": "Amount paid",
+      "alreadyRefunded": "Already refunded",
+      "refundableCap": "Refundable cap",
+      "nothingRefundable": "This payment has been fully refunded: nothing remains refundable.",
+      "amountLabel": "Amount to refund",
+      "amountRequired": "Amount is required",
+      "amountTooSmall": "Amount must be at least 0.01",
+      "exceedsCap": "Amount exceeds the refundable cap ({{cap}}).",
+      "reasonLabel": "Refund reason",
+      "reasonPlaceholder": "e.g. overpayment on the January series",
+      "reasonRequired": "A reason is required: cash leaving the till must be justifiable",
+      "submitButton": "Refund",
+      "confirmTitle": "Confirm the refund",
+      "confirmAmount": "Amount to return: {{amount}} DA",
+      "confirmReason": "Reason:",
+      "notReversible": "This operation cannot be undone in the application.",
+      "confirmButton": "Confirm and refund",
+      "saved": "Refund recorded",
+      "savedAmount": "{{amount}} DA returned to the beneficiary.",
+      "printReceipt": "Print receipt",
+      "downloadReceipt": "Download receipt",
+      "receiptFailed": "The refund is recorded, but its receipt could not be produced. It remains printable from the history."
+    },
+    "receipt": {
+      "title": "Refund receipt",
+      "number": "Document no. {{number}}",
+      "outflowNotice": "Cash outflow",
+      "duplicate": "DUPLICATE no. {{rank}} — {{date}}",
+      "amountRefunded": "Amount refunded",
+      "amountFormat": "{{amount}} DA",
+      "detailsHeading": "Beneficiary",
+      "student": "Student",
+      "group": "Group",
+      "series": "Series",
+      "reason": "Reason",
+      "noReason": "No reason recorded",
+      "paymentHeading": "Original payment",
+      "paymentAmount": "Amount paid",
+      "paymentDate": "Payment date",
+      "beneficiarySignature": "Beneficiary signature",
+      "adminSignature": "Administrator signature",
+      "footerNote": "This receipt certifies the handover of the stated amount. Please keep it."
+    }
+  },
+  "justification": {
+    "dialog": {
+      "title": "Edit justification",
+      "currentValue": "Current value",
+      "justified": "Justified",
+      "unjustified": "Unjustified",
+      "notSet": "Not recorded",
+      "newValue": "New value",
+      "commentLabel": "Comment (optional)",
+      "commentPlaceholder": "e.g. medical certificate handed in on 12/03",
+      "commentTooLong": "Comment must not exceed 500 characters",
+      "noFinancialEffect": "This change affects neither the series cost, nor the amount due, nor the payment status.",
+      "submitButton": "Save",
+      "unchanged": "The justification already had this value: nothing was changed.",
+      "saved": "Justification updated."
+    },
+    "audit": {
+      "title": "Change history",
+      "empty": "No change recorded.",
+      "from": "from",
+      "to": "to",
+      "by": "by",
+      "noComment": "No comment",
+      "lastModified": "Changed by {{author}} on {{date}}"
+    },
+    "billing": {
+      "stillBilled": "Session included in the series cost; justification does not change the amount due.",
+      "notInAmountDue": "Session not counted in the amount due so far.",
+      "purpose": "Justification supports disciplinary tracking and catch-up entitlement; it is not part of any amount calculation."
+    },
+    "catchUp": {
+      "caughtUp": "Caught up",
+      "caughtUpDetail": "Caught up on {{date}} in group {{group}}",
+      "missedSession": "Missed session of {{date}} ({{group}})",
+      "missedUnknown": "Missed session undetermined",
+      "billedElsewhere": "Already billed in series {{series}} ({{group}})",
+      "notBilled": "Not billed"
+    }
   }
 }

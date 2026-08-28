@@ -49,4 +49,37 @@ export interface SessionHistoryDTO {
      * complet surévaluerait la dette.
      */
     amountRemaining?: number;
-  }
+  
+    /**
+     * Séance manquée par l'étudiant, puis rattrapée dans un autre groupe.
+     *
+     * Porté par la séance MANQUÉE, pas par celle de rattrapage. La présence reste une absence :
+     * la mention « Rattrapée » est un affichage dérivé, jamais une réécriture de la feuille.
+     */
+    caughtUpElsewhere?: boolean;
+    /** Date de la séance de rattrapage. */
+    caughtUpOnDate?: string;
+    /** Groupe où la séance a été rattrapée. */
+    caughtUpInGroupName?: string;
+
+    /**
+     * Séance écartée parce qu'elle est déjà facturée dans la série d'origine du rattrapage
+     * compensatoire qui la couvre.
+     *
+     * À distinguer de `billable === false` : les deux se lisent « non facturée », mais seul
+     * celui-ci s'explique par « déjà payée ailleurs ». Sans ce motif, une séance suivie mais non
+     * facturée ressemble à une erreur de calcul.
+     */
+    billedInOriginSeries?: boolean;
+    originSeriesName?: string;
+    originGroupName?: string;
+    originSessionDate?: string;
+
+    /** Séance de rattrapage dont la séance manquée n'est pas déterminable. */
+    missedSessionUnknown?: boolean;
+
+    /** Auteur de la dernière modification de la justification, absent si jamais modifiée. */
+    justificationUpdatedBy?: string;
+    /** Horodatage de la dernière modification de la justification. */
+    justificationUpdatedAt?: string;
+}

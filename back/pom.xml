@@ -357,6 +357,17 @@
                                              recette qui disparaît. -->
                                         <include>com.school.management.service.payment.CatchUpBillingQualifier*</include>
                                         <include>com.school.management.service.RefundNumberService</include>
+                                        <!-- Justification d'absence : la trace conditionne la
+                                             réponse à une contestation de parent, et le rejeu
+                                             borné évite qu'une modification soit conservée sans
+                                             son historique. -->
+                                        <include>com.school.management.service.AttendanceJustificationService</include>
+                                        <include>com.school.management.service.JustificationRetryTemplate</include>
+                                        <!-- Reçu de remboursement : les mentions de repli et le
+                                             rang du duplicata sont résolus ici, et doivent être
+                                             identiques d'une impression à l'autre — c'est une
+                                             pièce comptable remise à une famille. -->
+                                        <include>com.school.management.service.RefundReceiptService</include>
                                         <include>com.school.management.service.payment.PaymentAllocationService</include>
                                         <include>com.school.management.service.payment.AllocationPlan*</include>
                                         <!-- Détecteur de changement de groupe (tâche 15.1) : la

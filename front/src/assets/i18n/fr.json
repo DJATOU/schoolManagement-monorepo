@@ -419,7 +419,8 @@
     "close": "Fermer",
     "ok": "OK",
     "yes": "Oui",
-    "no": "Non"
+    "no": "Non",
+    "back": "Retour"
   },
   "navigation": {
     "language": "Langue"
@@ -1369,5 +1370,92 @@
     "leftGroup": "Groupe quitté : {{group}} · {{count}} séance(s) suivie(s) ce mois-là",
     "joinedGroup": "Groupe rejoint : {{group}} · {{count}} séance(s) suivie(s) ce mois-là",
     "hint": "Information : la facturation reste inchangée, chaque série est calculée séparément. Ajustez manuellement si nécessaire."
+  },
+  "refund": {
+    "dialog": {
+      "title": "Enregistrer un remboursement",
+      "loading": "Chargement des montants du versement…",
+      "amountPaid": "Montant versé",
+      "alreadyRefunded": "Déjà remboursé",
+      "refundableCap": "Plafond remboursable",
+      "nothingRefundable": "Ce versement a été intégralement remboursé : plus rien n'est remboursable.",
+      "amountLabel": "Montant à rembourser",
+      "amountRequired": "Le montant est obligatoire",
+      "amountTooSmall": "Le montant doit être au moins de 0,01",
+      "exceedsCap": "Montant supérieur au plafond remboursable ({{cap}}).",
+      "reasonLabel": "Motif du remboursement",
+      "reasonPlaceholder": "Ex. : trop-perçu sur la série de janvier",
+      "reasonRequired": "Le motif est obligatoire : une sortie de caisse doit pouvoir être justifiée",
+      "submitButton": "Rembourser",
+      "confirmTitle": "Confirmer le remboursement",
+      "confirmAmount": "Montant à rendre : {{amount}} DA",
+      "confirmReason": "Motif :",
+      "notReversible": "Cette opération n'est pas annulable dans l'application.",
+      "confirmButton": "Confirmer et rembourser",
+      "saved": "Remboursement enregistré",
+      "savedAmount": "{{amount}} DA rendus au bénéficiaire.",
+      "printReceipt": "Imprimer le reçu",
+      "downloadReceipt": "Télécharger le reçu",
+      "receiptFailed": "Le remboursement est enregistré, mais son reçu n'a pas pu être produit. Il reste imprimable depuis l'historique."
+    },
+    "receipt": {
+      "title": "Reçu de remboursement",
+      "number": "Pièce n° {{number}}",
+      "outflowNotice": "Sortie de caisse",
+      "duplicate": "DUPLICATA n° {{rank}} — {{date}}",
+      "amountRefunded": "Montant remboursé",
+      "amountFormat": "{{amount}} DA",
+      "detailsHeading": "Bénéficiaire",
+      "student": "Étudiant",
+      "group": "Groupe",
+      "series": "Série",
+      "reason": "Motif",
+      "noReason": "Motif non renseigné",
+      "paymentHeading": "Versement d'origine",
+      "paymentAmount": "Montant versé",
+      "paymentDate": "Date du versement",
+      "beneficiarySignature": "Signature du bénéficiaire",
+      "adminSignature": "Signature de l'administrateur",
+      "footerNote": "Ce reçu atteste la remise de la somme indiquée. À conserver."
+    }
+  },
+  "justification": {
+    "dialog": {
+      "title": "Modifier la justification",
+      "currentValue": "Valeur actuelle",
+      "justified": "Justifiée",
+      "unjustified": "Non justifiée",
+      "notSet": "Non renseignée",
+      "newValue": "Nouvelle valeur",
+      "commentLabel": "Commentaire (facultatif)",
+      "commentPlaceholder": "Ex. : certificat médical remis le 12/03",
+      "commentTooLong": "Le commentaire ne doit pas dépasser 500 caractères",
+      "noFinancialEffect": "Cette modification ne change ni le coût de la série, ni le montant dû, ni le statut de paiement.",
+      "submitButton": "Enregistrer",
+      "unchanged": "La justification était déjà à cette valeur : rien n'a été modifié.",
+      "saved": "Justification modifiée."
+    },
+    "audit": {
+      "title": "Historique des modifications",
+      "empty": "Aucune modification enregistrée.",
+      "from": "de",
+      "to": "à",
+      "by": "par",
+      "noComment": "Sans commentaire",
+      "lastModified": "Modifiée par {{author}} le {{date}}"
+    },
+    "billing": {
+      "stillBilled": "Séance retenue dans le coût de la série ; la justification ne modifie pas le montant dû.",
+      "notInAmountDue": "Séance non comptée dans le montant dû à ce jour.",
+      "purpose": "La justification sert au suivi disciplinaire et au droit au rattrapage ; elle n'entre dans aucun calcul de montant."
+    },
+    "catchUp": {
+      "caughtUp": "Rattrapée",
+      "caughtUpDetail": "Rattrapée le {{date}} dans le groupe {{group}}",
+      "missedSession": "Séance manquée du {{date}} ({{group}})",
+      "missedUnknown": "Séance manquée non déterminée",
+      "billedElsewhere": "Déjà facturée dans la série {{series}} ({{group}})",
+      "notBilled": "Non facturée"
+    }
   }
 }

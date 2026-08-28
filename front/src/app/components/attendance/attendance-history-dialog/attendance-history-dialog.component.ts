@@ -6,7 +6,7 @@ import { AttendanceService } from '../../../services/attendance.service';
 import { SeriesService } from '../../../services/series.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { MAT_DIALOG_DATA, MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
@@ -14,6 +14,13 @@ import { MatOptionModule } from '@angular/material/core';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { StudentService } from '../../student/services/student.service';
 import { SessionService } from '../../../services/SessionService';
+import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { JustificationUpdateResult } from '../../../models/Attendance/justification';
+import { AdminOnlyDirective } from '../../../shared/admin-only.directive';
+import {
+  JustificationEditDialogComponent
+} from '../justification-edit-dialog/justification-edit-dialog.component';
 
 import pdfMake from 'pdfmake/build/pdfmake';
 import pdfFonts from 'pdfmake/build/vfs_fonts';
@@ -35,7 +42,10 @@ import { Content, TDocumentDefinitions } from 'pdfmake/interfaces';
     MatFormFieldModule,
     MatSelectModule,
     MatOptionModule,
-    MatTableModule
+    MatTableModule,
+    MatIconModule,
+    MatTooltipModule,
+    AdminOnlyDirective
   ]
 })
 export class AttendanceHistoryDialogComponent implements OnInit {
@@ -46,7 +56,8 @@ export class AttendanceHistoryDialogComponent implements OnInit {
   selectedGroup: number | null = null;
   selectedSeries: number | null = null;
 
-  displayedColumns: string[] = ['session', 'attendanceDate', 'isPresent', 'isJustified', 'description'];
+  displayedColumns: string[] = ['session', 'attendanceDate', 'isPresent', 'isJustified',
+    'description', 'actions'];
 
   studentName: string = '';
 
@@ -55,6 +66,7 @@ export class AttendanceHistoryDialogComponent implements OnInit {
     private studentService: StudentService,
     private seriesService: SeriesService,
     private sessionService: SessionService,
+    private dialog: MatDialog,
     public dialogRef: MatDialogRef<AttendanceHistoryDialogComponent>,
     @Inject(MAT_DIALOG_DATA) public data: { studentId: number }
   ) {}
@@ -140,6 +152,61 @@ export class AttendanceHistoryDialogComponent implements OnInit {
     } else {
       return 'row-not-justified';
     }
+  }
+
+  /**
+   * Libellé de la justification d'une absence.
+   *
+   * <p>Trois valeurs distinctes et non deux : « non renseignée » n'est pas « non justifiée ». Afficher
+   * un `null` comme un « Non » affirmerait une décision que personne n'a prise.</p>
+   *
+   * <p>Le libellé est textuel, et pas seulement porté par la couleur de ligne : celle-ci ne survit ni
+   * à une impression en noir et blanc ni au daltonisme.</p>
+   */
+  justificationLabel(attendance: Attendance): string {
+    if (attendance.isPresent) {
+      return '';
+    }
+    if (attendance.isJustified === null || attendance.isJustified === undefined) {
+      return 'Non renseignée';
+    }
+    return attendance.isJustified ? 'Justifiée' : 'Non justifiée';
+  }
+
+  /** Vrai si la justification de cette ligne est modifiable : seules les absences le sont. */
+  canEditJustification(attendance: Attendance): boolean {
+    return !attendance.isPresent && attendance.id != null;
+  }
+
+  /**
+   * Ouvre le dialogue de modification de la justification.
+   *
+   * <p>Le dialogue affiche lui-même que la modification ne change aucun montant, et charge la piste
+   * d'audit : c'est là que l'information arrive à temps, au moment du geste.</p>
+   */
+  editJustification(attendance: any): void {
+    if (!this.canEditJustification(attendance)) {
+      return;
+    }
+
+    this.dialog.open(JustificationEditDialogComponent, {
+      width: '520px',
+      maxWidth: '95vw',
+      autoFocus: false,
+      data: {
+        attendanceId: attendance.id,
+        justified: attendance.isJustified ?? null,
+        sessionName: attendance.sessionName,
+        sessionDate: attendance.sessionDate
+      }
+    }).afterClosed().subscribe((result?: JustificationUpdateResult) => {
+      if (!result) {
+        return;
+      }
+      // Mise à jour en place plutôt que rechargement complet : la justification n'affecte aucun
+      // montant, il n'y a donc rien d'autre à rafraîchir.
+      attendance.isJustified = result.justified;
+    });
   }
 
   // Méthode pour convertir l'image en Base64

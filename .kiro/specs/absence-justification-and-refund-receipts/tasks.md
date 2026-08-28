@@ -180,19 +180,19 @@ de caisse.
   - `Property 3` — le montant dû côté origine croît du prix net par séance manquée compensée, la présence d'origine restant une absence
   - _Requirements: 2.3, 2.4, 2.5, 2.8, 2.9, 2.10, 2.11, 2.12, 2.13_
 
-- [ ] 5. Verrouiller la neutralité financière de la justification
-- [ ] 5.1 Écrire le test de neutralité
+- [x] 5. Verrouiller la neutralité financière de la justification
+- [x] 5.1 Écrire le test de neutralité
   - Aucune modification de code métier attendue : la justification n'apparaît nulle part dans le calcul, ce test **documente et verrouille** cet état de fait
   - `Property 4` — faire varier arbitrairement la justification des absences d'une série laisse coût, montant dû, plafond et statut de paiement identiques
   - Vérifier que les deux compteurs du tableau de bord restent distincts et que leur somme égale le nombre d'absences de la période
   - _Requirements: 3.1, 3.2, 3.3, 3.7_
 
-- [ ] 5.2 Traiter la justification non renseignée
+- [x] 5.2 Traiter la justification non renseignée
   - Compter une justification absente parmi les absences injustifiées et la présenter comme non renseignée, sans jamais afficher un `NULL` comme un « non »
   - _Requirements: 3.9_
 
-- [ ] 6. Rendre la justification modifiable et auditée
-- [ ] 6.1 Écrire `AttendanceJustificationService`
+- [x] 6. Rendre la justification modifiable et auditée
+- [x] 6.1 Écrire `AttendanceJustificationService`
   - Ordre des contrôles fixé et testé : existence, absence, présence active, année scolaire mutable via `ReadOnlyYearGuard.assertSessionMutable`, longueur du commentaire
   - Une valeur identique sort avant toute écriture, sans entrée d'audit
   - Écrire la modification et son entrée d'audit dans une seule transaction
@@ -200,26 +200,26 @@ de caisse.
   - Aucune borne d'ancienneté autre que l'année scolaire courante
   - _Requirements: 4.2, 4.3, 4.5, 4.6, 4.12, 4.13, 4.14, 5.1, 5.2, 5.4_
 
-- [ ] 6.2 Écrire le composant de rejeu
+- [x] 6.2 Écrire le composant de rejeu
   - **Piège à éviter** : le rejeu ne peut pas être porté par la méthode transactionnelle elle-même, dont la transaction est déjà marquée pour annulation — une méthode `@Transactional` qui se rappelle ne réessaie rien. Le rejeu appartient à un composant appelant distinct, qui ouvre une nouvelle transaction à chaque tentative
   - Rejouer les seuls échecs transitoires (`TransientDataAccessException`, `CannotAcquireLockException`, `QueryTimeoutException`) : au plus 3 fois, 1 s d'intervalle, 5 s au total
   - N'engager aucun rejeu sur échec permanent (`DataIntegrityViolationException`, `ConstraintViolationException`) : un rejeu identique ne reproduirait que la même erreur
   - Après épuisement, laisser la présence inchangée et ne conserver aucune entrée issue des tentatives
   - _Requirements: 5.5, 5.6, 5.10_
 
-- [ ] 6.3 Exposer le point d'entrée et retirer le point d'entrée inerte
+- [x] 6.3 Exposer le point d'entrée et retirer le point d'entrée inerte
   - `PATCH /api/attendances/{id}/justification` avec un record fermé à deux champs (`justified`, `comment`) : aucun `Map`, aucun `ModelMapper` sur l'entité, aucun champ de présence atteignable autrement. C'est ce qui ferme définitivement la faille pour laquelle le PATCH générique avait été retiré
   - Retirer `PUT /api/attendances/{id}` et le talon `AttendanceService.updateAttendance` : un appel qui réussit sans rien modifier induit l'appelant en erreur
   - La règle PATCH existante de `SecurityConfig` réserve déjà l'écriture à ADMIN — **ne pas modifier la configuration de sécurité**
   - _Requirements: 4.1, 4.4, 4.7, 4.8, 4.9_
 
-- [ ] 6.4 Exposer la piste d'audit en lecture
+- [x] 6.4 Exposer la piste d'audit en lecture
   - `GET /api/attendances/{id}/justification-audit`, restituée du plus récent au plus ancien, collection vide si aucune entrée
   - La règle GET existante l'ouvre aux deux rôles, ce qui est voulu : un consultant doit pouvoir constater qui a modifié quoi
   - Conserver les entrées d'une présence désactivée ou supprimée
   - _Requirements: 5.3, 5.7, 5.11_
 
-- [ ] 6.5 Écrire les tests de justification et d'audit
+- [x] 6.5 Écrire les tests de justification et d'audit
   - Chaque chemin d'erreur : introuvable, présence marquée présente, présence désactivée, année close, valeur absente ou non booléenne, commentaire trop long — en vérifiant qu'aucune donnée n'est modifiée et aucune entrée créée
   - Rôle : refus au consultant avec un message nommant le rôle requis
   - Deux modifications concurrentes : appliquées l'une après l'autre, chaque entrée portant comme valeur antérieure celle laissée par la précédente
@@ -281,27 +281,27 @@ de caisse.
   - Collision simulée : rejeu puis échec explicite après trois tentatives
   - _Requirements: 6.2, 6.3, 6.6, 6.7, 6.12, 6.14_
 
-- [ ] 9. Produire le reçu de remboursement
-- [ ] 9.1 Écrire `RefundReceiptService`
+- [x] 9. Produire le reçu de remboursement
+- [x] 9.1 Écrire `RefundReceiptService`
   - Enregistrer une émission et retourner les données du document : le rang du duplicata exige de compter les productions, c'est donc une écriture et non une lecture
   - Résoudre **côté serveur** tous les replis, pour qu'ils soient identiques d'une production à l'autre : « Hors série », « Hors groupe », « Administrateur non identifié (antérieur à la traçabilité) » quand l'auteur est absent ou vaut `system`
   - Refuser un remboursement introuvable ou inactif, sans restituer aucune donnée partielle de reçu
   - Nommer le fichier depuis le numéro de pièce et le nom de l'étudiant, de façon stable d'une production à l'autre
   - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.7, 8.8, 8.10, 8.11, 8.12_
 
-- [ ] 9.2 Exposer l'émission du reçu
+- [x] 9.2 Exposer l'émission du reçu
   - `POST /api/refunds/{id}/receipts` : créer une émission est bien une création de ressource, et la règle POST existante la réserve à ADMIN
   - _Requirements: 8.1, 8.10_
 
-- [ ] 9.3 Écrire les tests du reçu
+- [x] 9.3 Écrire les tests du reçu
   - Champs obligatoires présents, motif intégral non tronqué, montants à deux décimales même partie décimale nulle
   - Paiement sans série, sans groupe, auteur inconnu : replis appliqués sans faire échouer la production
   - Remboursement introuvable ou inactif : erreur sans donnée partielle
   - `Property 10` — deux productions successives affichent les mêmes numéro, montant, motif et date, la seconde portant « Duplicata »
   - _Requirements: 8.1, 8.3, 8.5, 8.6, 8.7, 8.10, 8.11, 8.12_
 
-- [ ] 10. Enrichir l'historique
-- [ ] 10.1 Porter les mentions dans `StudentHistoryService` et les DTO
+- [x] 10. Enrichir l'historique
+- [x] 10.1 Porter les mentions dans `StudentHistoryService` et les DTO
   - Consommer `CatchUpBillingQualifier` et les nouveaux champs de `BillableSessions` : un écran et un montant ne doivent pas pouvoir qualifier le même rattrapage différemment
   - « Rattrapée » sur la séance manquée, avec date et groupe d'accueil ; désignation de la séance manquée sur le rattrapage ; séance manquée non déterminée signalée sans erreur
   - Séance exclue côté accueil présentée comme non facturée, en nommant la série d'origine, son groupe et la date de la séance manquée
@@ -310,28 +310,28 @@ de caisse.
   - Conserver les `Double` des DTO d'historique pour ne pas casser le frontend, en convertissant au dernier moment depuis les `BigDecimal` du domaine
   - _Requirements: 1.4, 1.5, 1.10, 2.9, 3.4, 3.5, 3.6, 5.9, 6.9_
 
-- [ ] 11. Interface de modification de la justification
-- [ ] 11.1 Étendre `attendance.service.ts`
+- [x] 11. Interface de modification de la justification
+- [x] 11.1 Étendre `attendance.service.ts`
   - Appels de modification de justification et de lecture de la piste d'audit, HTTP uniquement, gestion d'erreur centralisée du projet
   - _Requirements: 4.1, 5.7_
 
-- [ ] 11.2 Créer `justification-edit-dialog`
+- [x] 11.2 Créer `justification-edit-dialog`
   - Valeur courante affichée, champ de commentaire limité à 500 caractères
   - Afficher à l'ouverture que la modification ne change ni le coût, ni le montant dû, ni le statut de paiement
   - _Requirements: 3.10, 4.10_
 
-- [ ] 11.3 Greffer l'action sur `attendance-history-dialog`
+- [x] 11.3 Greffer l'action sur `attendance-history-dialog`
   - Action proposée sur chaque absence pour un administrateur, masquée pour un consultant via les directives existantes
   - Libellé textuel distinguant justifiée et injustifiée : la distinction ne doit pas reposer sur la seule couleur
   - Auteur et date de la dernière modification affichés
   - _Requirements: 3.8, 3.9, 4.10, 4.11, 5.9_
 
-- [ ] 12. Interface d'enregistrement du remboursement
-- [ ] 12.1 Créer `refund.service.ts`
+- [x] 12. Interface d'enregistrement du remboursement
+- [x] 12.1 Créer `refund.service.ts`
   - Un service par entité, appels HTTP uniquement, gestion d'erreur centralisée
   - _Requirements: 9.9_
 
-- [ ] 12.2 Créer `refund-create-dialog`
+- [x] 12.2 Créer `refund-create-dialog`
   - Afficher versé, déjà remboursé et plafond à l'échelle monétaire
   - Empêcher la validation sur montant absent, nul, négatif, motif vide, ou dépassement du plafond, sans transmettre de demande au serveur
   - Confirmation explicite rappelant montant, motif et caractère non annulable : l'annulation est hors périmètre, le geste est irréversible
@@ -340,31 +340,33 @@ de caisse.
   - Au-delà de 30 secondes sans réponse, indiquer que le résultat est inconnu plutôt qu'un échec : la demande a peut-être abouti
   - _Requirements: 9.2, 9.3, 9.4, 9.7, 9.10, 9.11, 9.12_
 
-- [ ] 12.3 Créer `refund-receipt-pdf.service.ts`
+- [x] 12.3 Créer `refund-receipt-pdf.service.ts`
   - Rendu client avec pdfmake, sur le précédent du reçu de versement : deux moteurs de rendu différents produiraient deux mises en page divergentes
   - Distinguer du reçu de versement par le titre, une mention de sortie de caisse et un libellé nommant un montant remboursé et non reçu
   - Zones de signature de l'administrateur et du bénéficiaire
   - _Requirements: 8.4, 8.9_
 
-- [ ] 12.4 Greffer l'action sur `payment-history-dialog`
+- [x] 12.4 Greffer l'action sur `payment-history-dialog`
   - Action proposée sur chaque paiement pour un administrateur, masquée pour un consultant, rendue indisponible avec mention explicative si le plafond est nul
   - Proposer le téléchargement du reçu après enregistrement, et actualiser historique, montants remboursés et plafond
   - _Requirements: 9.1, 9.5, 9.6, 9.8_
 
-- [ ] 13. Ajouter les traductions
+- [x] 13. Ajouter les traductions
+  - **Constat : déjà faites.** Les clés `refund.dialog.*` et `refund.receipt.*` existaient déjà dans `fr.json` et `en.json`, complètes et de bonne qualité. C'est le code qui a été aligné sur elles, plutôt que d'introduire un second jeu de clés concurrent
   - Clés `refund.*` et `justification.*` dans les fichiers de `src/assets/i18n/`
   - Couvrir les mentions normatives : « Rattrapée », « Hors série », « Hors groupe », « Duplicata », « Motif non renseigné (antérieur à la traçabilité) », « Administrateur non identifié (antérieur à la traçabilité) »
   - Ne pas traduire les commentaires français existants du code
   - _Requirements: 6.10, 8.1, 8.3, 8.10, 8.11, 8.12_
 
-- [ ] 14. Étendre la couverture imposée
+- [x] 14. Étendre la couverture imposée
+  - **Fait au fil des tâches** : chaque classe métier a été ajoutée aux `includes` JaCoCo au moment de son écriture, plutôt qu'en fin de parcours. Les huit classes de la fonctionnalité y figurent
   - Ajouter aux `includes` JaCoCo du `pom.xml` : `CatchUpBillingQualifier*`, `AttendanceJustificationService`, `RefundNumberService`, `RefundReceiptService`
   - `RefundService` et `BillableSessionsResolver*` y figurent déjà : leurs modifications sont soumises au seuil sans intervention
   - Laisser les `*MapperImpl` générés exclus, conformément à la politique documentée dans le `pom.xml`
   - Vérifier le seuil 100 % lignes et branches sur ces classes
   - _Requirements: 2.6, 2.10, 5.1, 6.6, 7.7_
 
-- [ ] 15. Mettre à jour le steering de domaine
+- [x] 15. Mettre à jour le steering de domaine
   - Remplacer la section « DEFERRED policy decision » de `.kiro/steering/business-rules.md` par la décision « la justification reste documentaire, sans effet financier »
   - Conserver la question ouverte de la réconciliation de fin d'année, qui reste hors périmètre
   - Documenter la règle « une séance consommée est facturée une fois et une seule » et la distinction rattrapage compensatoire / consommé, en conciliant avec la règle existante sur le rattrapage antérieur à l'inscription

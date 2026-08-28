@@ -26,6 +26,8 @@ import { GroupService } from '../../../services/group.service';
 import { EditPaymentDetailDialogComponent } from './dialogs/edit-payment-detail-dialog.component';
 import { PaymentDetailHistoryDialogComponent } from './dialogs/payment-detail-history-dialog.component';
 import { ReasonDialogComponent, ReasonDialogData } from './dialogs/reason-dialog.component';
+import { RefundCreateDialogComponent } from '../../payment/refund-create-dialog/refund-create-dialog.component';
+import { Refund } from '../../../models/refund/refund';
 import { LevelService } from '../../../services/level.service';
 import { SessionService } from '../../../services/SessionService';
 import { SeriesService } from '../../../services/series.service';
@@ -79,7 +81,8 @@ interface PaymentDetailView {
     TranslateModule,
     AdminOnlyDirective,
     EditPaymentDetailDialogComponent,
-    PaymentDetailHistoryDialogComponent
+    PaymentDetailHistoryDialogComponent,
+    RefundCreateDialogComponent
   ]
 })
 export class PaymentManagementComponent implements OnInit {
@@ -572,6 +575,58 @@ export class PaymentManagementComponent implements OnInit {
     this.dialog.open(PaymentDetailHistoryDialogComponent, {
       width: '600px',
       data: detail
+    });
+  }
+
+  /**
+   * Vrai si un remboursement peut être envisagé sur cette ligne.
+   *
+   * <p>Un remboursement se rattache au <strong>versement</strong> et non à sa ventilation par
+   * séance : sans identifiant de versement, il n'y a rien à rembourser. Une ligne désactivée ou
+   * supprimée est également exclue — rendre de l'argent sur un versement annulé n'a pas de sens.</p>
+   *
+   * <p>Le plafond réel n'est pas connu ici : il est chargé à l'ouverture du dialogue. Masquer
+   * l'action sur la seule foi d'un plafond supposé demanderait un appel par ligne affichée.</p>
+   */
+  canRefund(detail: PaymentDetailView): boolean {
+    return detail.paymentId != null && detail.active === true && !detail.permanentlyDeleted;
+  }
+
+  /**
+   * Ouvre le dialogue d'enregistrement d'un remboursement.
+   *
+   * <p>Le dialogue porte lui-même la confirmation, le verrouillage contre le double envoi et la
+   * proposition du reçu : rendre de l'argent est irréversible dans cette application, l'annulation
+   * d'un remboursement n'existant pas.</p>
+   */
+  openRefundDialog(detail: PaymentDetailView): void {
+    if (!this.canRefund(detail)) {
+      return;
+    }
+
+    this.dialog.open(RefundCreateDialogComponent, {
+      width: '520px',
+      maxWidth: '95vw',
+      autoFocus: false,
+      // Le dialogue ne doit pas se fermer par un clic à côté : une saisie de motif perdue par
+      // inadvertance est agaçante, et l'échappement reste disponible.
+      disableClose: true,
+      data: {
+        paymentId: detail.paymentId!,
+        studentId: detail.studentId,
+        studentName: this.getStudentFullName(detail),
+        seriesName: detail.seriesName
+      }
+    }).afterClosed().subscribe((refund?: Refund) => {
+      if (!refund) {
+        return;
+      }
+      // Les montants remboursés et le plafond affichés ailleurs ont changé : on recharge.
+      this.loadPaymentDetails();
+      this.snackBar.open(
+        this.translate.instant('refund.dialog.savedAmount', { amount: refund.amount.toFixed(2) }),
+        this.closeLabel,
+        { duration: 5000, horizontalPosition: 'center', verticalPosition: 'bottom' });
     });
   }
 

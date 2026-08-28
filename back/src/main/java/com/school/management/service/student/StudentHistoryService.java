@@ -303,10 +303,16 @@ public class StudentHistoryService {
                 ? overpaid.setScale(2, RoundingMode.HALF_UP).doubleValue()
                 : 0.0);
 
+        // Mentions de rattrapage : la même vue que celle consommée par le résolveur de séances
+        // facturables, afin qu'un écran et un montant ne puissent pas qualifier un rattrapage
+        // différemment. Résolue une fois par série, pas une fois par séance.
+        CatchUpMentions catchUpMentions = resolveCatchUpMentions(student.getId(), billable);
+
         // 4) Construire la liste finale de SessionHistoryDTO
         List<SessionHistoryDTO> sessionDTOs = filteredSessions.stream()
                 .map(session -> mapSessionEntityToDTO(session, student, paymentDetailMap, exempted,
-                        coverages, netSessionPrice, inclusionReasons.get(session.getId())))
+                        coverages, netSessionPrice, inclusionReasons.get(session.getId()),
+                        catchUpMentions))
                 .toList();
 
         dto.setSessions(sessionDTOs);
@@ -352,6 +358,137 @@ public class StudentHistoryService {
         }
         Date sessionDate = session.getSessionTimeStart();
         return sessionDate != null && !sessionDate.before(enrollmentDate);
+    }
+
+    /**
+     * Mentions de rattrapage d'une série, indexées par séance.
+     *
+     * @param caughtUpElsewhere séances manquées puis rattrapées ailleurs, avec le lieu et la date
+     *                          du rattrapage (exigence 1.4)
+     * @param billedInOrigin    séances de cette série écartées parce que déjà facturées dans la
+     *                          série d'origine d'un rattrapage compensatoire (exigence 2.9)
+     * @param unknownMissed     séances de rattrapage dont la séance manquée n'est pas déterminable
+     *                          (exigence 1.10)
+     */
+    private record CatchUpMentions(Map<Long, CaughtUpElsewhere> caughtUpElsewhere,
+                                   Map<Long, OriginBilling> billedInOrigin,
+                                   Set<Long> unknownMissed) {
+
+        static CatchUpMentions empty() {
+            return new CatchUpMentions(Map.of(), Map.of(), Set.of());
+        }
+    }
+
+    /** Où et quand une séance manquée a été rattrapée. */
+    private record CaughtUpElsewhere(Date caughtUpOn, String groupName) { }
+
+    /** Série d'origine qui facture une séance écartée côté accueil. */
+    private record OriginBilling(String seriesName, String groupName, Date sessionDate) { }
+
+    /**
+     * Résout les mentions de rattrapage d'une série pour un étudiant.
+     *
+     * <p>Deux sens sont nécessaires, et c'est ce qui rend cette résolution moins évidente qu'il n'y
+     * paraît. Vue depuis la série <strong>d'origine</strong>, une séance manquée puis rattrapée doit
+     * porter « Rattrapée » avec la date et le groupe d'accueil. Vue depuis la série
+     * <strong>d'accueil</strong>, la séance de rattrapage doit dire qu'elle est déjà facturée
+     * ailleurs, sans quoi une séance suivie mais non facturée ressemble à une erreur de calcul.</p>
+     *
+     * <p>Les rattrapages sont lus une fois par série, non une fois par séance : la vue du
+     * qualificateur est constante en nombre de requêtes, mais la parcourir par séance
+     * multiplierait inutilement le travail.</p>
+     */
+    private CatchUpMentions resolveCatchUpMentions(Long studentId, BillableSessions billable) {
+        List<AttendanceEntity> catchUps =
+                attendanceRepository.findByStudentIdAndIsCatchUpTrueAndActiveTrue(studentId);
+        if (catchUps.isEmpty()) {
+            return CatchUpMentions.empty();
+        }
+
+        Map<Long, CaughtUpElsewhere> caughtUp = new HashMap<>();
+        Map<Long, OriginBilling> billedInOrigin = new HashMap<>();
+        Set<Long> unknownMissed = new HashSet<>();
+
+        for (AttendanceEntity catchUp : catchUps) {
+            SessionEntity hostSession = catchUp.getSession();
+            SessionEntity missedSession = catchUp.getMissedSession();
+
+            if (missedSession == null || missedSession.getId() == null) {
+                // Exigence 1.10 : le signaler plutôt que d'afficher un vide, qui ressemblerait à une
+                // donnée perdue alors que c'est le lien qui manque.
+                if (hostSession != null && hostSession.getId() != null) {
+                    unknownMissed.add(hostSession.getId());
+                }
+                continue;
+            }
+
+            // Sens origine : la séance manquée porte la mention « Rattrapée ».
+            caughtUp.put(missedSession.getId(), new CaughtUpElsewhere(
+                    hostSession != null ? hostSession.getSessionTimeStart() : null,
+                    groupNameOf(catchUp.getGroup())));
+
+            // Sens accueil : la séance de rattrapage écartée nomme la série qui la facture. La
+            // condition s'appuie sur le verdict du résolveur, seule autorité sur l'exclusion.
+            if (hostSession != null && hostSession.getId() != null
+                    && billable.isCompensatedAway(hostSession.getId())) {
+                billedInOrigin.put(hostSession.getId(), new OriginBilling(
+                        missedSession.getSessionSeries() != null
+                                ? missedSession.getSessionSeries().getName() : null,
+                        groupNameOf(missedSession.getGroup()),
+                        missedSession.getSessionTimeStart()));
+            }
+        }
+
+        return new CatchUpMentions(Map.copyOf(caughtUp), Map.copyOf(billedInOrigin),
+                Set.copyOf(unknownMissed));
+    }
+
+    private String groupNameOf(GroupEntity group) {
+        return group != null ? group.getName() : null;
+    }
+
+    /** Reporte sur la séance les mentions de rattrapage qui la concernent. */
+    private void applyCatchUpMentions(SessionHistoryDTO dto, SessionEntity session,
+            CatchUpMentions mentions) {
+        Long sessionId = session.getId();
+        if (sessionId == null) {
+            return;
+        }
+
+        CaughtUpElsewhere caughtUp = mentions.caughtUpElsewhere().get(sessionId);
+        if (caughtUp != null) {
+            dto.setCaughtUpElsewhere(true);
+            dto.setCaughtUpOnDate(caughtUp.caughtUpOn());
+            dto.setCaughtUpInGroupName(caughtUp.groupName());
+        }
+
+        OriginBilling origin = mentions.billedInOrigin().get(sessionId);
+        if (origin != null) {
+            dto.setBilledInOriginSeries(true);
+            dto.setOriginSeriesName(origin.seriesName());
+            dto.setOriginGroupName(origin.groupName());
+            dto.setOriginSessionDate(origin.sessionDate());
+        }
+
+        if (mentions.unknownMissed().contains(sessionId)) {
+            dto.setMissedSessionUnknown(true);
+        }
+    }
+
+    /**
+     * Reporte l'auteur et la date de la dernière modification de la justification.
+     *
+     * <p>Lue depuis les colonnes d'audit de la présence plutôt que depuis le journal dédié : ce
+     * dernier exigerait une requête par séance affichée, pour une information d'appoint. Le journal
+     * complet reste consultable depuis le dialogue de modification, où il est le sujet.</p>
+     */
+    private void applyJustificationAudit(SessionHistoryDTO dto, AttendanceEntity attendance) {
+        if (attendance.getDateUpdate() == null) {
+            return;
+        }
+        dto.setJustificationUpdatedBy(attendance.getUpdatedBy());
+        dto.setJustificationUpdatedAt(
+                Date.from(attendance.getDateUpdate().atZone(java.time.ZoneId.systemDefault()).toInstant()));
     }
 
     /**
@@ -440,12 +577,16 @@ public class StudentHistoryService {
     private SessionHistoryDTO mapSessionEntityToDTO(SessionEntity session, StudentEntity student,
             Map<Long, PaymentDetailEntity> paymentDetailMap, boolean exempted,
             Map<Long, SessionCoverage> coverages, BigDecimal netSessionPrice,
-            BillingInclusionReason inclusionReason) {
+            BillingInclusionReason inclusionReason, CatchUpMentions catchUpMentions) {
         SessionHistoryDTO dto = new SessionHistoryDTO();
 
         // NOUVEAU (tâche 16.1) : propager l'exemption de la série sur chaque séance
         // (pilote la légende « Présent et exempté »).
         dto.setIsExempted(exempted);
+
+        // Mentions de rattrapage, renseignées avant le raccourci « séance dévalidée » : une séance
+        // désactivée qui a été rattrapée ailleurs mérite de le dire, comme les autres.
+        applyCatchUpMentions(dto, session, catchUpMentions);
 
         // Verdict de facturation et son motif, renseignés avant tout autre traitement : une
         // séance dévalidée sort par le raccourci ci-dessous, et elle a droit à cette
@@ -492,6 +633,10 @@ public class StudentHistoryService {
 
                 // catchUpSession => si attendance.isCatchUp = true
                 dto.setCatchUpSession(Boolean.TRUE.equals(attendance.getIsCatchUp()));
+
+                // Dernière modification de la justification (exigence 5.9) : c'est ce qui permet de
+                // répondre à un parent qui contexte, sans ouvrir un autre écran.
+                applyJustificationAudit(dto, attendance);
             }
         } else {
             dto.setAttendanceStatus(ATTENDANCE_UNKNOWN);

@@ -1,9 +1,15 @@
 package com.school.management.controller;
 
 import com.school.management.dto.AttendanceDTO;
+import com.school.management.dto.JustificationAuditDTO;
+import com.school.management.dto.JustificationUpdateRequest;
+import com.school.management.dto.JustificationUpdateResult;
 import com.school.management.mapper.AttendanceMapper;
 import com.school.management.persistance.AttendanceEntity;
+import com.school.management.service.AttendanceJustificationService;
 import com.school.management.service.AttendanceService;
+import com.school.management.service.JustificationRetryTemplate;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -11,7 +17,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/attendances")
@@ -21,10 +26,19 @@ public class AttendanceController {
 
     private final AttendanceMapper attendanceMapper;
 
+    private final AttendanceJustificationService attendanceJustificationService;
+
+    private final JustificationRetryTemplate justificationRetryTemplate;
+
     @Autowired
-    public AttendanceController(AttendanceService attendanceService, AttendanceMapper attendanceMapper) {
+    public AttendanceController(AttendanceService attendanceService,
+                                AttendanceMapper attendanceMapper,
+                                AttendanceJustificationService attendanceJustificationService,
+                                JustificationRetryTemplate justificationRetryTemplate) {
         this.attendanceService = attendanceService;
         this.attendanceMapper = attendanceMapper;
+        this.attendanceJustificationService = attendanceJustificationService;
+        this.justificationRetryTemplate = justificationRetryTemplate;
     }
 
     @Transactional(readOnly = true)
@@ -55,14 +69,43 @@ public class AttendanceController {
         return new ResponseEntity<>(attendanceMapper.attendanceToAttendanceDTO(savedAttendance), HttpStatus.CREATED);
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<AttendanceEntity> updateAttendance(@PathVariable Long id) {
-        return ResponseEntity.ok(attendanceService.updateAttendance(id));
+    // PUT /{id} retiré : il n'acceptait aucun corps de requête et rechargeait puis ré-enregistrait
+    // la présence sans rien modifier. Un appel qui réussit sans effet induit l'appelant en erreur —
+    // il croit avoir enregistré une correction qui n'a jamais eu lieu.
+    //
+    // PATCH /{id} générique retiré également : il projetait une Map arbitraire du client sur
+    // l'entité (ModelMapper), donc n'importe quel champ d'une présence était écrasable. La
+    // désactivation passe par PATCH /deactivate/{sessionId}, et la justification par le point
+    // d'entrée dédié ci-dessous, dont le corps est fermé à deux champs.
+
+    /**
+     * Modifie la justification d'une absence (exigences 4.1, 4.2).
+     *
+     * <p>Réservé à ADMIN par la règle PATCH de {@code SecurityConfig} : aucune annotation de
+     * sécurité n'est posée ici, pour ne pas dupliquer la règle en deux endroits susceptibles de
+     * diverger.</p>
+     *
+     * <p>Le rejeu sur échec passager est porté par {@link JustificationRetryTemplate} et non par le
+     * service : une méthode transactionnelle qui se rappelle elle-même ne réessaierait rien.</p>
+     */
+    @PatchMapping("/{id}/justification")
+    public ResponseEntity<JustificationUpdateResult> updateJustification(
+            @PathVariable Long id,
+            @Valid @RequestBody JustificationUpdateRequest request) {
+        return ResponseEntity.ok(justificationRetryTemplate.updateJustification(
+                id, request.justified(), request.comment()));
     }
 
-    // PATCH /{id} générique retiré : il projetait une Map arbitraire du client sur l'entité
-    // (ModelMapper), donc n'importe quel champ d'une présence était écrasable. Aucun écran ne
-    // l'utilisait ; la désactivation passe par PATCH /deactivate/{sessionId}.
+    /**
+     * Piste d'audit de la justification d'une absence (exigence 5.7).
+     *
+     * <p>Ouverte aux deux rôles par la règle GET existante, et c'est voulu : un consultant doit
+     * pouvoir constater qui a modifié quoi sans pouvoir le modifier lui-même.</p>
+     */
+    @GetMapping("/{id}/justification-audit")
+    public ResponseEntity<List<JustificationAuditDTO>> justificationAudit(@PathVariable Long id) {
+        return ResponseEntity.ok(attendanceJustificationService.auditTrail(id));
+    }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteAttendance(@PathVariable Long id) {

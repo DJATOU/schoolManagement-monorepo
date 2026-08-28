@@ -1,0 +1,145 @@
+<div class="dlg-hero">
+  <div class="dlg-hero-icon">
+    <mat-icon>currency_exchange</mat-icon>
+  </div>
+  <div class="dlg-hero-text">
+    <h2 class="dlg-title">{{ 'refund.dialog.title' | translate }}</h2>
+    <span class="dlg-subtitle" *ngIf="data.studentName">
+      {{ data.studentName }}<ng-container *ngIf="data.seriesName"> — {{ data.seriesName }}</ng-container>
+    </span>
+  </div>
+</div>
+
+<mat-dialog-content class="dlg-content">
+
+  <!-- Chargement du plafond : la saisie n'a pas de sens avant de le connaître. -->
+  <div class="loading" *ngIf="loadingCap">
+    <mat-spinner diameter="28"></mat-spinner>
+    <span>{{ 'refund.dialog.loading' | translate }}</span>
+  </div>
+
+  <ng-container *ngIf="!loadingCap">
+
+    <!--
+      Les trois montants sont affichés ensemble : un plafond sans son explication obligerait
+      l'administrateur à chercher ailleurs pourquoi il ne peut pas rendre davantage.
+    -->
+    <div class="cap-panel" *ngIf="cap">
+      <div class="cap-row">
+        <span class="cap-label">{{ 'refund.dialog.amountPaid' | translate }}</span>
+        <span class="cap-value">{{ cap.amountPaid | number:'1.2-2' }}</span>
+      </div>
+      <div class="cap-row">
+        <span class="cap-label">{{ 'refund.dialog.alreadyRefunded' | translate }}</span>
+        <span class="cap-value">{{ cap.alreadyRefunded | number:'1.2-2' }}</span>
+      </div>
+      <div class="cap-row total">
+        <span class="cap-label">{{ 'refund.dialog.refundableCap' | translate }}</span>
+        <span class="cap-value">{{ cap.refundableCap | number:'1.2-2' }}</span>
+      </div>
+    </div>
+
+    <!-- Plafond épuisé : on le dit explicitement plutôt que de laisser un formulaire qui échouera. -->
+    <div class="notice exhausted" *ngIf="capExhausted">
+      <mat-icon>info</mat-icon>
+      <span>{{ 'refund.dialog.nothingRefundable' | translate }}</span>
+    </div>
+
+    <form [formGroup]="form" *ngIf="!capExhausted && !confirming" id="refundForm"
+          (ngSubmit)="requestConfirmation()">
+
+      <label class="field-label" for="refundAmount">
+        {{ 'refund.dialog.amountLabel' | translate }}
+      </label>
+      <mat-form-field appearance="outline" class="full">
+        <input matInput id="refundAmount" formControlName="amount" type="number"
+               step="0.01" min="0.01" cdkFocusInitial
+               [placeholder]="'refund.dialog.amountPlaceholder' | translate">
+        <mat-error *ngIf="form.get('amount')?.hasError('required')">
+          {{ 'refund.dialog.amountRequired' | translate }}
+        </mat-error>
+        <mat-error *ngIf="form.get('amount')?.hasError('min')">
+          {{ 'refund.dialog.amountTooSmall' | translate }}
+        </mat-error>
+      </mat-form-field>
+
+      <!-- Dépassement signalé avec le plafond, pour que la correction soit évidente. -->
+      <div class="notice error" *ngIf="exceedsCap">
+        <mat-icon>warning</mat-icon>
+        <span>{{ 'refund.dialog.exceedsCap' | translate:{ cap: refundableCap | number:'1.2-2' } }}</span>
+      </div>
+
+      <label class="field-label" for="refundReason">
+        {{ 'refund.dialog.reasonLabel' | translate }}
+      </label>
+      <mat-form-field appearance="outline" class="full">
+        <textarea matInput id="refundReason" formControlName="reason" rows="3" required
+                  maxlength="500"
+                  [placeholder]="'refund.dialog.reasonPlaceholder' | translate"></textarea>
+        <mat-hint align="end">{{ form.get('reason')?.value?.length || 0 }} / 500</mat-hint>
+        <mat-error *ngIf="form.get('reason')?.hasError('required')">
+          {{ 'refund.dialog.reasonRequired' | translate }}
+        </mat-error>
+      </mat-form-field>
+      <p class="hint-note">{{ 'refund.dialog.reasonNote' | translate }}</p>
+    </form>
+
+    <!--
+      Confirmation explicite : rendre de l'argent est irréversible ici, l'annulation d'un
+      remboursement n'existant pas dans l'application.
+    -->
+    <div class="confirm-panel" *ngIf="confirming">
+      <mat-icon class="confirm-icon">report_problem</mat-icon>
+      <h3 class="confirm-title">{{ 'refund.dialog.confirmTitle' | translate }}</h3>
+      <p class="confirm-text">{{ confirmationAmount() }}</p>
+      <p class="confirm-reason">
+        <span class="confirm-reason-label">{{ 'refund.dialog.confirmReason' | translate }}</span>
+        {{ reason }}
+      </p>
+      <p class="confirm-warning">{{ 'refund.dialog.notReversible' | translate }}</p>
+    </div>
+
+    <!-- Erreur serveur : message conservé tel quel, il nomme les montants en jeu. -->
+    <div class="notice error" *ngIf="errorMessage && !outcomeUnknown">
+      <mat-icon>error_outline</mat-icon>
+      <span>{{ errorMessage }}</span>
+    </div>
+
+    <!--
+      Résultat inconnu, distinct d'un échec : la demande a peut-être abouti. Annoncer un échec
+      pousserait à ressaisir le remboursement, donc à le doubler. Le message du service porte déjà
+      cette nuance, on le réaffiche ici avec un ton visuel différent d'une erreur.
+    -->
+    <div class="notice unknown" *ngIf="outcomeUnknown">
+      <mat-icon>help_outline</mat-icon>
+      <span>{{ errorMessage }}</span>
+    </div>
+
+  </ng-container>
+</mat-dialog-content>
+
+<mat-dialog-actions class="dlg-actions">
+  <span class="spacer"></span>
+
+  <button mat-stroked-button type="button" (click)="dialogRef.close()" *ngIf="!confirming">
+    {{ 'common.cancel' | translate }}
+  </button>
+  <button mat-flat-button type="submit" form="refundForm" color="warn" class="danger-btn"
+          *ngIf="!confirming && !capExhausted" [disabled]="!canSubmit">
+    {{ 'refund.dialog.submitButton' | translate }}
+  </button>
+
+  <button mat-stroked-button type="button" (click)="cancelConfirmation()" *ngIf="confirming"
+          [disabled]="submitting">
+    {{ 'refund.dialog.back' | translate }}
+  </button>
+  <!--
+    La validation est indisponible pendant la requête : sans cela un double clic produit deux
+    remboursements, tous deux valides côté serveur.
+  -->
+  <button mat-flat-button type="button" color="warn" class="danger-btn" *ngIf="confirming"
+          (click)="confirmAndSubmit()" [disabled]="submitting">
+    <mat-spinner diameter="18" *ngIf="submitting"></mat-spinner>
+    <span *ngIf="!submitting">{{ 'refund.dialog.confirmButton' | translate }}</span>
+  </button>
+</mat-dialog-actions>

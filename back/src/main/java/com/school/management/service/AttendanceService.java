@@ -92,12 +92,10 @@ public class AttendanceService {
         return attendanceRepository.save(Objects.requireNonNull(attendance));
     }
 
-    public AttendanceEntity updateAttendance(Long id) {
-        AttendanceEntity existingAttendance = getAttendanceById(id);
-        // Update properties of existingAttendance using values from updatedAttendance
-        // ...
-        return attendanceRepository.save(Objects.requireNonNull(existingAttendance));
-    }
+    // updateAttendance(Long) retiré : c'était un talon qui rechargeait la présence puis la
+    // ré-enregistrait sans rien modifier. Il donnait l'illusion d'une mise à jour à tout appelant.
+    // La modification de la justification passe par AttendanceJustificationService, dont le
+    // périmètre est explicite et la trace obligatoire.
 
     public void deleteAttendance(Long id) {
         attendanceRepository.deleteById(Objects.requireNonNull(id));

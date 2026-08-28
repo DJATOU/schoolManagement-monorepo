@@ -65,4 +65,44 @@ public class SessionHistoryDTO {
      * soustraction dans le gabarit y installerait de l'arithmétique de facturation.</p>
      */
     private BigDecimal amountRemaining;
+    /**
+     * Séance manquée par l'étudiant, puis rattrapée dans un autre groupe (exigence 1.4).
+     *
+     * <p>Vrai sur la séance <strong>manquée</strong>, pas sur celle de rattrapage. La présence reste
+     * une absence : la mention « Rattrapée » est un affichage dérivé, jamais une réécriture de la
+     * feuille de présence.</p>
+     */
+    private Boolean caughtUpElsewhere;
+    /** Date de la séance de rattrapage, pour situer la mention « Rattrapée » (exigence 1.4). */
+    private Date caughtUpOnDate;
+    /** Groupe où la séance a été rattrapée (exigence 1.4). */
+    private String caughtUpInGroupName;
+    /**
+     * Séance de la série d'accueil écartée parce qu'elle est déjà facturée dans la série d'origine
+     * du rattrapage compensatoire qui la couvre (exigence 2.9).
+     *
+     * <p>Sans ce motif, une séance suivie mais non facturée ressemble à une erreur de calcul. Le
+     * distinguer de {@code billable = false} importe : les deux se lisent « non facturée », mais
+     * seul celui-ci s'explique par « déjà payée ailleurs ».</p>
+     */
+    private Boolean billedInOriginSeries;
+    /** Nom de la série d'origine qui facture cette séance (exigence 2.9). */
+    private String originSeriesName;
+    /** Groupe de la série d'origine (exigence 2.9). */
+    private String originGroupName;
+    /** Date de la séance manquée correspondante, côté série d'origine (exigence 2.9). */
+    private Date originSessionDate;
+    /**
+     * Séance de rattrapage dont la séance manquée n'est pas déterminable (exigence 1.10).
+     *
+     * <p>Le signaler explicitement évite de laisser croire à une donnée manquante à l'affichage :
+     * l'historique reste complet, c'est le lien vers la séance d'origine qui est absent.</p>
+     */
+    private Boolean missedSessionUnknown;
+    /**
+     * Auteur de la dernière modification de la justification, nul si jamais modifiée (exigence 5.9).
+     */
+    private String justificationUpdatedBy;
+    /** Horodatage de la dernière modification de la justification (exigence 5.9). */
+    private Date justificationUpdatedAt;
 }

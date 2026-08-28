@@ -2,11 +2,13 @@ package com.school.management.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.school.management.dto.RefundCapDTO;
+import com.school.management.dto.RefundReceiptDTO;
 import com.school.management.dto.RefundRequestDTO;
 import com.school.management.mapper.RefundMapperImpl;
 import com.school.management.persistance.PaymentEntity;
 import com.school.management.persistance.RefundEntity;
 import com.school.management.persistance.StudentEntity;
+import com.school.management.service.RefundReceiptService;
 import com.school.management.service.RefundService;
 import com.school.management.service.exception.CustomServiceException;
 import com.school.management.service.security.JwtService;
@@ -23,6 +25,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.Date;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -54,6 +57,9 @@ class RefundControllerIntegrationTest {
 
     @MockBean
     private RefundService refundService;
+
+    @MockBean
+    private RefundReceiptService refundReceiptService;
 
     // Filtre de sécurité auto-détecté par @WebMvcTest ; mocké pour satisfaire sa dépendance.
     @MockBean
@@ -166,6 +172,39 @@ class RefundControllerIntegrationTest {
                 "Paiement introuvable pour l'identifiant : 99", HttpStatus.NOT_FOUND));
 
         mockMvc.perform(get("/api/refunds/payment/99/cap"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("émission du reçu : 201 avec les données et le rang de production")
+    void issueReceipt_returns201WithReceiptData() throws Exception {
+        when(refundReceiptService.issue(2L)).thenReturn(new RefundReceiptDTO(
+                2L, "REMB-2026-0007", new Date(), new BigDecimal("60.00"),
+                "Trop-perçu sur la série de janvier", "Batoul", "Djatou",
+                new Date(), new BigDecimal("240.00"), "Maths 1ère année", "Série janvier",
+                "mme.martin", 1, LocalDateTime.of(2026, 3, 1, 10, 0),
+                "remb-2026-0007_batoul_djatou.pdf"));
+
+        mockMvc.perform(post("/api/refunds/{id}/receipts", 2L))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.refundNumber").value("REMB-2026-0007"))
+                .andExpect(jsonPath("$.amount").value(60.00))
+                .andExpect(jsonPath("$.reason").value("Trop-perçu sur la série de janvier"))
+                .andExpect(jsonPath("$.studentLastName").value("Djatou"))
+                .andExpect(jsonPath("$.seriesName").value("Série janvier"))
+                .andExpect(jsonPath("$.recordedBy").value("mme.martin"))
+                .andExpect(jsonPath("$.issuanceRank").value(1))
+                .andExpect(jsonPath("$.fileName").value("remb-2026-0007_batoul_djatou.pdf"));
+    }
+
+    @Test
+    @DisplayName("émission du reçu d'un remboursement absent ou inactif : 404")
+    void issueReceipt_whenRefundMissing_returns404() throws Exception {
+        when(refundReceiptService.issue(99L)).thenThrow(new CustomServiceException(
+                "Remboursement introuvable ou inactif pour l'identifiant : 99",
+                HttpStatus.NOT_FOUND));
+
+        mockMvc.perform(post("/api/refunds/{id}/receipts", 99L))
                 .andExpect(status().isNotFound());
     }
 }

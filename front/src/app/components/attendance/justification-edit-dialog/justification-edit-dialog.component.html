@@ -1,0 +1,114 @@
+<div class="dlg-hero">
+  <div class="dlg-hero-icon">
+    <mat-icon>fact_check</mat-icon>
+  </div>
+  <div class="dlg-hero-text">
+    <h2 class="dlg-title">Modifier la justification</h2>
+    <span class="dlg-subtitle" *ngIf="data.sessionName">
+      {{ data.sessionName }}<ng-container *ngIf="data.sessionDate">
+        — {{ data.sessionDate | date:'dd/MM/yyyy' }}</ng-container>
+    </span>
+  </div>
+</div>
+
+<mat-dialog-content class="dlg-content">
+
+  <!--
+    Mention affichée à l'ouverture, avant tout choix. L'ambiguïté a réellement produit l'attente
+    inverse (« justifié = non facturé ») : un administrateur qui croit exonérer une famille lui fait
+    une promesse que le système ne tient pas.
+  -->
+  <div class="notice neutral">
+    <mat-icon>info</mat-icon>
+    <div>
+      <strong>Sans effet sur les montants.</strong>
+      La justification sert au suivi disciplinaire et au droit au rattrapage. Elle ne change ni le
+      coût de la série, ni le montant dû, ni le statut de paiement.
+    </div>
+  </div>
+
+  <form [formGroup]="form" id="justificationForm" (ngSubmit)="submit()">
+
+    <span class="field-label">Valeur enregistrée</span>
+    <p class="current-value">{{ valueLabel(data.justified) }}</p>
+
+    <span class="field-label">Nouvelle valeur</span>
+    <!--
+      Choix explicite entre deux libellés textuels, et non une simple case à cocher : « justifiée » et
+      « non justifiée » sont deux affirmations distinctes, alors qu'une case décochée se confond avec
+      une valeur jamais renseignée.
+    -->
+    <mat-radio-group formControlName="justified" class="radio-group">
+      <mat-radio-button [value]="true">Justifiée</mat-radio-button>
+      <mat-radio-button [value]="false">Non justifiée</mat-radio-button>
+    </mat-radio-group>
+
+    <label class="field-label" for="justificationComment">Commentaire (facultatif)</label>
+    <mat-form-field appearance="outline" class="full">
+      <textarea matInput id="justificationComment" formControlName="comment" rows="3"
+                maxlength="500"
+                placeholder="Ex. : certificat médical remis le 12/03"></textarea>
+      <mat-hint align="end">{{ form.get('comment')?.value?.length || 0 }} / 500</mat-hint>
+    </mat-form-field>
+    <p class="hint-note">
+      Le commentaire est conservé dans l'historique : il explique la correction si elle est contestée
+      plus tard.
+    </p>
+  </form>
+
+  <!-- Erreur serveur : message conservé, il nomme la cause exacte du refus. -->
+  <div class="notice error" *ngIf="errorMessage && !outcomeUnknown">
+    <mat-icon>error_outline</mat-icon>
+    <span>{{ errorMessage }}</span>
+  </div>
+
+  <!-- Résultat inconnu, distinct d'un échec : la modification a peut-être abouti. -->
+  <div class="notice unknown" *ngIf="outcomeUnknown">
+    <mat-icon>help_outline</mat-icon>
+    <span>{{ errorMessage }} Vérifier l'historique ci-dessous avant de réessayer.</span>
+  </div>
+
+  <!-- Piste d'audit : c'est elle qui permet de répondre à une contestation de parent. -->
+  <div class="audit-section">
+    <span class="field-label">Historique des modifications</span>
+
+    <div class="loading" *ngIf="loadingAudit">
+      <mat-spinner diameter="20"></mat-spinner>
+      <span>Chargement…</span>
+    </div>
+
+    <p class="audit-empty" *ngIf="!loadingAudit && auditTrail.length === 0">
+      Aucune modification enregistrée : la valeur est celle de la saisie initiale.
+    </p>
+
+    <ul class="audit-list" *ngIf="!loadingAudit && auditTrail.length > 0">
+      <li class="audit-entry" *ngFor="let entry of auditTrail">
+        <div class="audit-line">
+          <span class="audit-change">
+            {{ valueLabel(entry.oldValue) }} → <strong>{{ valueLabel(entry.newValue) }}</strong>
+          </span>
+          <span class="audit-stamp">{{ entry.performedAt | date:'dd/MM/yyyy HH:mm' }}</span>
+        </div>
+        <div class="audit-author">par {{ entry.performedBy }}</div>
+        <div class="audit-comment" *ngIf="entry.comment">« {{ entry.comment }} »</div>
+      </li>
+    </ul>
+  </div>
+
+</mat-dialog-content>
+
+<mat-dialog-actions class="dlg-actions">
+  <span class="spacer"></span>
+  <button mat-stroked-button type="button" (click)="dialogRef.close()" [disabled]="submitting">
+    Annuler
+  </button>
+  <!--
+    La validation reste possible même sans changement de valeur : le serveur répond alors un succès
+    sans écriture, ce qui est plus simple à comprendre qu'un bouton grisé sans explication.
+  -->
+  <button mat-flat-button type="submit" form="justificationForm" color="primary"
+          [disabled]="!canSubmit">
+    <mat-spinner diameter="18" *ngIf="submitting"></mat-spinner>
+    <span *ngIf="!submitting">Enregistrer</span>
+  </button>
+</mat-dialog-actions>
