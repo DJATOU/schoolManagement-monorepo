@@ -13,13 +13,22 @@ public interface AttendanceMapper {
     @Mapping(source = "session.id", target = "sessionId")
     @Mapping(source = "sessionSeries.id", target = "sessionSeriesId")
     @Mapping(source = "group.id", target = "groupId")
+    @Mapping(source = "missedSession.id", target = "missedSessionId")
     AttendanceDTO attendanceToAttendanceDTO(AttendanceEntity attendance);
 
+    /**
+     * {@code missedSession} était absent de ce mapping, et c'est l'un des trois verrous qui
+     * produisaient le défaut de facturation : même si le client avait envoyé l'identifiant de la
+     * séance manquée, MapStruct laissait le lien nul. Le qualificateur de rattrapage retombait
+     * alors sur « aucune autre série ne facture cette séance » et le groupe d'accueil facturait,
+     * silencieusement.
+     */
     @Mapping(target = "id", ignore = true)
     @Mapping(source = "studentId", target = "student", qualifiedByName = "idToStudent")
     @Mapping(source = "sessionId", target = "session", qualifiedByName = "idToSession")
     @Mapping(source = "sessionSeriesId", target = "sessionSeries", qualifiedByName = "idToSessionSeries")
     @Mapping(source = "groupId", target = "group", qualifiedByName = "idToGroup")
+    @Mapping(source = "missedSessionId", target = "missedSession", qualifiedByName = "idToSession")
     AttendanceEntity attendanceDTOToAttendance(AttendanceDTO attendanceDTO, @Context MappingContext context);
 
     @Named("idToStudent")

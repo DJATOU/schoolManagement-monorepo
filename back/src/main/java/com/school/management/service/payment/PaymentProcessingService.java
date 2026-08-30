@@ -5,6 +5,7 @@ import com.school.management.persistance.PaymentEntity;
 import com.school.management.persistance.SessionEntity;
 import com.school.management.persistance.SessionSeriesEntity;
 import com.school.management.persistance.StudentEntity;
+import com.school.management.repository.AttendanceRepository;
 import com.school.management.repository.GroupRepository;
 import com.school.management.repository.PaymentRepository;
 import com.school.management.repository.SessionRepository;
@@ -69,6 +70,13 @@ public class PaymentProcessingService {
         private final SessionRepository sessionRepository;
         private final SessionSeriesRepository sessionSeriesRepository;
         private final StudentGroupRepository studentGroupRepository;
+
+        /**
+         * Présences de l'étudiant sur la série : elles rattachent au groupe un étudiant venu en
+         * rattrapage sans y être inscrit.
+         */
+        private final AttendanceRepository attendanceRepository;
+
         private final PaymentDistributionService distributionService;
 
         /** Source du prix net et du plafond encaissable, réduction comprise. */
@@ -87,6 +95,7 @@ public class PaymentProcessingService {
                         SessionRepository sessionRepository,
                         SessionSeriesRepository sessionSeriesRepository,
                         StudentGroupRepository studentGroupRepository,
+                        AttendanceRepository attendanceRepository,
                         PaymentDistributionService distributionService,
                         PaymentQuoteService paymentQuoteService,
                         PaymentAllocationService allocationService,
@@ -97,6 +106,7 @@ public class PaymentProcessingService {
                 this.sessionRepository = sessionRepository;
                 this.sessionSeriesRepository = sessionSeriesRepository;
                 this.studentGroupRepository = studentGroupRepository;
+                this.attendanceRepository = attendanceRepository;
                 this.distributionService = distributionService;
                 this.paymentQuoteService = paymentQuoteService;
                 this.allocationService = allocationService;
@@ -130,7 +140,7 @@ public class PaymentProcessingService {
                 GroupEntity group = groupRepository.findById(Objects.requireNonNull(groupId))
                                 .orElseThrow(() -> new CustomServiceException("Group not found with ID: " + groupId));
 
-                requireEnrolment(studentId, group);
+                requireEnrolmentOrCatchUp(studentId, group, sessionSeriesId);
 
                 sessionSeriesRepository.findById(Objects.requireNonNull(sessionSeriesId))
                                 .orElseThrow(() -> new CustomServiceException(
@@ -371,31 +381,53 @@ public class PaymentProcessingService {
         }
 
         /**
-         * Exige que l'étudiant soit — ou ait été — inscrit dans le groupe.
+         * Exige un rattachement de l'étudiant à la série visée : une inscription au groupe, ou
+         * une présence de rattrapage sur cette série.
          *
-         * <p>Aucun contrôle n'existait : on pouvait encaisser un versement pour un étudiant
-         * étranger au groupe. Son montant entrait alors dans l'encaissé du groupe sans entrer
-         * dans l'attendu, calculé sur les seuls membres, ce qui gonflait artificiellement le
-         * taux de recouvrement.</p>
+         * <p>Le contrôle protège d'un versement encaissé pour un étudiant étranger au groupe :
+         * son montant entrerait dans l'encaissé du groupe sans entrer dans l'attendu, calculé
+         * sur les seuls membres, ce qui gonflerait le taux de recouvrement.</p>
          *
-         * <p>On accepte volontairement une inscription <strong>inactive</strong> : un étudiant
-         * ayant quitté le groupe peut rester débiteur, et refuser son versement empêcherait de
-         * recouvrer sa dette. Seul l'étudiant n'ayant jamais été inscrit est rejeté.</p>
+         * <p>Une inscription <strong>inactive</strong> est acceptée : un étudiant ayant quitté le
+         * groupe peut rester débiteur, et refuser son versement empêcherait de recouvrer sa
+         * dette.</p>
          *
-         * @throws CustomServiceException (HTTP 400) si aucune inscription n'existe
+         * <p><strong>Le rattrapage est accepté sans inscription.</strong> Un étudiant venu
+         * rattraper une séance dans ce groupe a consommé cette séance : business-rules.md la
+         * déclare facturable, et {@code PaymentQuoteService} l'annonce comme telle
+         * ({@code catchUpOnly}, plafond égal au dû à ce jour). Exiger une inscription refusait
+         * l'encaissement d'un montant que l'application venait de présenter comme dû — le devis
+         * affichait « 1 séance × 2 000 DA » et la confirmation échouait. La présence de
+         * rattrapage vaut rattachement : elle est enregistrée sur la série, donc l'étudiant n'est
+         * pas étranger au groupe, et son coût est résolu par le même résolveur que celui des
+         * membres.</p>
+         *
+         * @throws CustomServiceException (HTTP 400) si l'étudiant n'a ni inscription ni présence
+         *                                de rattrapage sur la série
          */
-        private void requireEnrolment(Long studentId, GroupEntity group) {
+        private void requireEnrolmentOrCatchUp(Long studentId, GroupEntity group, Long sessionSeriesId) {
                 boolean everEnrolled = studentGroupRepository.findByGroupId(group.getId()).stream()
                                 .map(sg -> sg.getStudent())
                                 .filter(Objects::nonNull)
                                 .anyMatch(student -> studentId.equals(student.getId()));
-                if (!everEnrolled) {
-                        throw new CustomServiceException(String.format(
-                                        "L'étudiant %d n'est pas inscrit dans le groupe « %s » : "
-                                                        + "aucun versement ne peut y être encaissé.",
-                                        studentId, group.getName()),
-                                        HttpStatus.BAD_REQUEST);
+                if (everEnrolled) {
+                        return;
                 }
+
+                boolean attendedSeries = !attendanceRepository
+                                .findByStudentIdAndSessionSeriesIdAndActiveTrue(studentId, sessionSeriesId)
+                                .isEmpty();
+                if (attendedSeries) {
+                        return;
+                }
+
+                throw new CustomServiceException(String.format(
+                                "L'étudiant %d n'est ni inscrit dans le groupe « %s » ni présent en "
+                                                + "rattrapage sur cette série : aucun versement ne peut y "
+                                                + "être encaissé. Inscrivez-le au groupe, ou enregistrez sa "
+                                                + "présence sur la séance rattrapée.",
+                                studentId, group.getName()),
+                                HttpStatus.BAD_REQUEST);
         }
 
         /**

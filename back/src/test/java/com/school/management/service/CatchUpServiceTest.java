@@ -165,8 +165,16 @@ class CatchUpServiceTest {
                         .isEqualTo(HttpStatus.NOT_FOUND));
     }
 
+    /**
+     * Une séance manquée impayée <strong>n'empêche plus</strong> la demande : le retard est
+     * reporté sur la demande pour être affiché à côté de la décision « déjà payée ».
+     *
+     * <p>Ce test asseyait auparavant le comportement inverse (400). La règle acculait
+     * l'administrateur : elle lui refusait un rattrapage qu'il venait d'accorder, au motif d'un
+     * impayé dont il avait connaissance. Le renseigner lui laisse la décision.</p>
+     */
     @Test
-    void create_missedSessionNotPaid_throwsBadRequest() {
+    void create_missedSessionNotPaid_isAllowedAndReportsOverdue() {
         GroupEntity group = group(ORIGINAL_GROUP_ID, TYPE_ID, PRICE);
         SessionEntity original = sessionWithSeries(ORIGINAL_SESSION_ID, group, MISSED_SERIES_ID);
         AttendanceEntity att = attendance(ATTENDANCE_ID, true);
@@ -176,10 +184,25 @@ class CatchUpServiceTest {
         when(paymentStatusService.isStudentPaymentOverdueForSeries(STUDENT_ID, MISSED_SERIES_ID))
                 .thenReturn(true); // en retard → non payé
 
-        assertThatThrownBy(() -> service.create(dto(null)))
-                .isInstanceOf(CustomServiceException.class)
-                .satisfies(e -> assertThat(((CustomServiceException) e).getStatus())
-                        .isEqualTo(HttpStatus.BAD_REQUEST));
+        CatchUpRequestEntity created = service.create(dto(null));
+
+        assertThat(created.getStatus()).isEqualTo(CatchUpStatus.PENDING);
+        assertThat(created.getMissedSessionOverdue()).isTrue();
+    }
+
+    /** Série d'origine à jour : la demande est créée et ne signale aucun retard. */
+    @Test
+    void create_missedSessionPaid_reportsNoOverdue() {
+        GroupEntity group = group(ORIGINAL_GROUP_ID, TYPE_ID, PRICE);
+        SessionEntity original = sessionWithSeries(ORIGINAL_SESSION_ID, group, MISSED_SERIES_ID);
+        AttendanceEntity att = attendance(ATTENDANCE_ID, true);
+
+        when(attendanceRepo.findById(ATTENDANCE_ID)).thenReturn(Optional.of(att));
+        when(sessionRepo.findById(ORIGINAL_SESSION_ID)).thenReturn(Optional.of(original));
+        when(paymentStatusService.isStudentPaymentOverdueForSeries(STUDENT_ID, MISSED_SERIES_ID))
+                .thenReturn(false);
+
+        assertThat(service.create(dto(null)).getMissedSessionOverdue()).isFalse();
     }
 
     @Test

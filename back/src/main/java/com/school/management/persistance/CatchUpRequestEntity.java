@@ -85,4 +85,18 @@ public class CatchUpRequestEntity extends BaseEntity {
     // Notes libres
     @Column(name = "notes")
     private String notes;
+
+    /**
+     * La série de la séance manquée était-elle en retard de paiement au moment de la demande ?
+     *
+     * <p>Champ <strong>informatif</strong>, destiné à être affiché à côté de la décision « déjà
+     * payée » : l'administrateur voit l'état du paiement et tranche. Un impayé refusait
+     * auparavant la demande, ce qui interdisait d'accorder un rattrapage pourtant décidé.</p>
+     *
+     * <p>Il n'entre dans <strong>aucun</strong> calcul monétaire : la facturation reste résolue
+     * par série via le résolveur de séances facturables, à partir de la décision stockée sur la
+     * présence.</p>
+     */
+    @Column(name = "missed_session_overdue")
+    private Boolean missedSessionOverdue;
 }

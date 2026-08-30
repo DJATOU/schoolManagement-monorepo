@@ -77,18 +77,19 @@ public class CatchUpService {
      *   <li>la fiche de présence d'origine doit exister (sinon 404) ;</li>
      *   <li>le droit au rattrapage ne doit pas être explicitement révoqué
      *       ({@code catchUpRight == Boolean.FALSE}) — {@code null} est traité comme vrai
-     *       (défaut de l'entité) ;</li>
-     *   <li>la séance manquée doit être payée par l'étudiant : on vérifie via
-     *       {@link PaymentStatusService#isStudentPaymentOverdueForSeries(Long, Long)} que
-     *       l'étudiant n'est pas en retard sur la série de la séance manquée. Si la séance
-     *       d'origine n'a pas de série, la vérification de paiement est ignorée (aucune
-     *       série facturable pour évaluer le retard).</li>
+     *       (défaut de l'entité).</li>
      * </ul>
      *
+     * <p><strong>Un impayé ne bloque plus la demande.</strong> Le retard de paiement de la série
+     * d'origine était opposé à l'administrateur (400), ce qui lui interdisait d'accorder un
+     * rattrapage pourtant décidé. Il est désormais résolu puis <em>porté par la demande</em>
+     * ({@code missedSessionOverdue}) pour être affiché à côté de la décision « déjà payée » :
+     * une information, pas un veto.</p>
+     *
      * @param dto données de création
-     * @return la demande persistée à l'état PENDING
-     * @throws CustomServiceException (404) si la fiche de présence d'origine est introuvable
-     * @throws CustomServiceException (400) si le droit au rattrapage est révoqué ou la séance non payée
+     * @return la demande persistée à l'état PENDING, portant l'état de paiement de la série d'origine
+     * @throws CustomServiceException (404) si la fiche de présence ou la séance est introuvable
+     * @throws CustomServiceException (400) si le droit au rattrapage a été révoqué
      */
     @Transactional
     public CatchUpRequestEntity create(CatchUpRequestDTO dto) {
@@ -113,20 +114,17 @@ public class CatchUpService {
                         "Séance introuvable pour l'identifiant : " + dto.originalSessionId(),
                         HttpStatus.NOT_FOUND));
 
-        // Requirement 7.5 : la séance manquée doit être payée (étudiant non en retard sur la série).
-        SessionSeriesEntity missedSeries = originalSession.getSessionSeries();
-        if (missedSeries != null) {
-            boolean overdue = paymentStatusService.isStudentPaymentOverdueForSeries(
-                    dto.studentId(), missedSeries.getId());
-            if (overdue) {
-                throw new CustomServiceException(
-                        "La séance manquée n'est pas payée : le rattrapage ne peut pas être demandé.",
-                        HttpStatus.BAD_REQUEST);
-            }
-        } else {
-            LOGGER.debug("Séance d'origine {} sans série : vérification de paiement ignorée.",
-                    originalSession.getId());
-        }
+        // État de paiement de la série d'origine : RENSEIGNÉ, jamais opposé.
+        //
+        // Cette vérification refusait la demande (400 « La séance manquée n'est pas payée »).
+        // C'est le type de règle rigide qui accule l'administrateur : une famille en retard de
+        // paiement se voyait refuser un rattrapage que l'école venait de lui accorder, sans
+        // recours. Le retard est désormais porté par la demande pour être AFFICHÉ à côté de la
+        // décision « déjà payée », que l'administrateur tranche lui-même.
+        //
+        // Le droit au rattrapage explicitement révoqué continue, lui, de bloquer : c'est une
+        // décision déjà prise par un administrateur, pas une conséquence mécanique d'un impayé.
+        boolean missedSessionOverdue = resolveMissedSessionOverdue(dto.studentId(), originalSession);
 
         // Groupe d'origine : celui du DTO si fourni, sinon celui de la séance manquée.
         GroupEntity originalGroup = originalSession.getGroup();
@@ -141,9 +139,28 @@ public class CatchUpService {
                 .status(CatchUpStatus.PENDING)
                 .requestDate(new Date())
                 .notes(dto.notes())
+                .missedSessionOverdue(missedSessionOverdue)
                 .build();
 
         return catchUpRequestRepository.save(request);
+    }
+
+    /**
+     * La série de la séance manquée est-elle en retard de paiement pour cet étudiant ?
+     *
+     * <p>Réponse <strong>informative</strong> : elle accompagne la demande pour être affichée à
+     * côté de la décision « déjà payée », et ne conditionne aucune écriture. Une séance manquée
+     * sans série ne permet pas d'évaluer un retard — aucune série ne la facture — et n'est donc
+     * pas signalée comme en retard.</p>
+     */
+    private boolean resolveMissedSessionOverdue(Long studentId, SessionEntity originalSession) {
+        SessionSeriesEntity missedSeries = originalSession.getSessionSeries();
+        if (missedSeries == null) {
+            LOGGER.debug("Séance d'origine {} sans série : aucun retard de paiement à signaler.",
+                    originalSession.getId());
+            return false;
+        }
+        return paymentStatusService.isStudentPaymentOverdueForSeries(studentId, missedSeries.getId());
     }
 
     // ------------------------------------------------------------------
@@ -465,6 +482,14 @@ public class CatchUpService {
      * ({@code School_Year}), le même type de groupe ({@code Group_Type}) ET le même prix par
      * séance ({@code Price_Per_Session}). La contrainte d'année interdit tout rattrapage
      * inter-années : on ne rattrape une séance manquée que dans un groupe de la même année.
+     *
+     * <p><strong>À ne pas confondre avec le test de routage.</strong> Cette méthode répond à
+     * « <em>où</em> ce rattrapage peut-il se dérouler ? » — une question d'organisation, qui
+     * compare l'effectif ({@code Group_Type}) et le tarif. Décider s'il s'agit d'un rattrapage
+     * relève d'un autre test, porté par {@code CatchUpRoutingService} : celui-là compare le
+     * <em>niveau</em> et la <em>matière</em>, et gouverne la facturation. Les deux notions
+     * portent malencontreusement le mot « type » dans le langage courant ; elles ne se
+     * recouvrent pas, et router sur celle-ci facturerait au mauvais groupe.</p>
      *
      * @param original  groupe d'origine
      * @param candidate groupe candidat

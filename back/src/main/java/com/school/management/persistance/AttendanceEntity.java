@@ -52,4 +52,32 @@ public class AttendanceEntity extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "missed_session_id")
     private SessionEntity missedSession;
+
+    /**
+     * État de facturation du rattrapage. Nul pour une présence ordinaire.
+     *
+     * <p>Distingue un rattrapage dont la facturation est décidée d'un rattrapage dont personne n'a
+     * rien décidé — confusion qui faisait facturer la séance au groupe d'accueil par défaut, y
+     * compris quand l'étudiant l'avait déjà payée dans son propre groupe.</p>
+     */
+    @Column(name = "catch_up_billing_state")
+    @Enumerated(EnumType.STRING)
+    private CatchUpBillingState catchUpBillingState;
+
+    /**
+     * La séance manquée était-elle déjà payée dans sa série d'origine ?
+     *
+     * <p><strong>Volontairement nullable, et {@code null} n'est pas un défaut :</strong> c'est
+     * l'absence de décision. Une valeur par défaut serait relue par personne, et le jour où elle
+     * serait fausse l'erreur passerait inaperçue — c'est-à-dire exactement le scénario de double
+     * facturation que ce champ existe pour empêcher. Tant qu'il est nul, le rattrapage reste
+     * {@link CatchUpBillingState#PENDING} et ne facture rien.</p>
+     *
+     * <p>La valeur est <strong>stockée</strong>, jamais recalculée à la lecture : une décision prise
+     * à un instant donné est une donnée, comme une date. La recalculer depuis l'état de paiement
+     * rendrait le coût d'une série sensible aux versements faits sur une autre, et le résultat
+     * dépendrait de l'ordre d'évaluation.</p>
+     */
+    @Column(name = "missed_session_already_paid")
+    private Boolean missedSessionAlreadyPaid;
 }

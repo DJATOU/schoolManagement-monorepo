@@ -3,6 +3,7 @@ package com.school.management.service;
 import com.school.management.dto.AttendanceDTO;
 import com.school.management.mapper.AttendanceMapper;
 import com.school.management.persistance.AttendanceEntity;
+import com.school.management.persistance.CatchUpBillingState;
 import com.school.management.repository.*;
 import com.school.management.shared.mapper.MappingContext;
 import jakarta.annotation.PostConstruct;
@@ -30,6 +31,13 @@ public class AttendanceService {
     private final GroupRepository groupRepository;
     private final StudentGroupRepository studentGroupRepository;
 
+    /**
+     * Décide si une présence hors groupe est un vrai rattrapage (place réservée ailleurs) ou une
+     * séance à facturer sur place. Le test porte sur le niveau et la matière, jamais sur le type
+     * de groupe, qui désigne l'effectif.
+     */
+    private final CatchUpRoutingService catchUpRoutingService;
+
     // MappingContext pour AttendanceMapper
     private MappingContext mappingContext;
 
@@ -37,7 +45,8 @@ public class AttendanceService {
     public AttendanceService(AttendanceRepository attendanceRepository, AttendanceMapper attendanceMapper,
             StudentRepository studentRepository, SessionRepository sessionRepository,
             SessionSeriesRepository sessionSeriesRepository, GroupRepository groupRepository,
-            StudentGroupRepository studentGroupRepository) {
+            StudentGroupRepository studentGroupRepository,
+            CatchUpRoutingService catchUpRoutingService) {
         this.attendanceRepository = attendanceRepository;
         this.attendanceMapper = attendanceMapper;
         this.studentRepository = studentRepository;
@@ -45,6 +54,7 @@ public class AttendanceService {
         this.sessionSeriesRepository = sessionSeriesRepository;
         this.groupRepository = groupRepository;
         this.studentGroupRepository = studentGroupRepository;
+        this.catchUpRoutingService = catchUpRoutingService;
     }
 
     /**
@@ -113,9 +123,75 @@ public class AttendanceService {
                 throw new IllegalArgumentException("Attendance already exists for student ID "
                         + attendance.getStudent().getId() + " and session ID " + attendance.getSession().getId());
             }
+            // L'ordre compte : on retire d'abord le drapeau posé à tort sur un membre du groupe,
+            // puis on classe ce qui reste un rattrapage. Router avant normaliserait un membre.
             normalizeCatchUpFlag(attendance);
+            routeCatchUpBilling(attendance);
         }
         return attendanceRepository.saveAll(Objects.requireNonNull(attendances));
+    }
+
+    /**
+     * Classe une présence de rattrapage : vrai rattrapage à préciser, ou séance facturée sur place.
+     *
+     * <p>C'est ici que se refermait le défaut d'origine. L'écran de validation marquait rattrapage
+     * tout étudiant non membre du groupe, sans jamais demander quelle séance était rattrapée ; la
+     * présence était donc enregistrée sans séance manquée, le qualificateur retombait sur « aucune
+     * autre série ne facture cette séance » et le groupe d'accueil facturait — même lorsque
+     * l'étudiant avait déjà payé la séance dans son propre groupe.</p>
+     *
+     * <p>Le classement est fait <strong>par le serveur</strong>, seul à connaître les inscriptions
+     * de l'étudiant. Deux issues, aucune ambiguïté :</p>
+     * <ul>
+     *   <li>une place lui est réservée dans un groupe de même niveau et même matière → la présence
+     *       est {@code PENDING} : elle ne facture rien tant que la séance manquée et la décision
+     *       « déjà payée » ne sont pas renseignées, et n'empêche pas la validation de la séance
+     *       pour les autres étudiants ;</li>
+     *   <li>aucun groupe de même niveau et même matière → {@code HOST_BILLED} : la séance lui est
+     *       facturée sur place, comme à un membre. Aucune séance manquée n'est attendue, et son
+     *       absence est ici voulue.</li>
+     * </ul>
+     *
+     * <p>Une présence déjà classée par le flux rattrapage dédié n'est pas reclassée : ce flux a posé
+     * la séance manquée et la décision, cet écran n'a rien à en redire.</p>
+     */
+    private void routeCatchUpBilling(AttendanceEntity attendance) {
+        if (!Boolean.TRUE.equals(attendance.getIsCatchUp())
+                || attendance.getCatchUpBillingState() != null) {
+            return;
+        }
+
+        Long studentId = attendance.getStudent() == null ? null : attendance.getStudent().getId();
+        Long groupId = resolveHostGroupId(attendance);
+        if (studentId == null || groupId == null) {
+            // Sans étudiant ni groupe d'accueil, aucun test n'est possible. La présence reste sans
+            // état : elle sera visible comme telle, plutôt que classée sur une hypothèse.
+            LOGGER.warn("Présence de rattrapage sans étudiant ou sans groupe : classement impossible.");
+            return;
+        }
+
+        CatchUpRoutingService.RoutingVerdict verdict = catchUpRoutingService.route(studentId, groupId);
+        if (verdict == CatchUpRoutingService.RoutingVerdict.TRUE_CATCH_UP) {
+            attendance.setCatchUpBillingState(CatchUpBillingState.PENDING);
+            LOGGER.info("Rattrapage à préciser : étudiant {}, groupe d'accueil {} — la séance manquée "
+                    + "et la décision « déjà payée » restent à renseigner.", studentId, groupId);
+        } else {
+            attendance.setCatchUpBillingState(CatchUpBillingState.HOST_BILLED);
+            LOGGER.info("Séance facturée sur place : étudiant {}, groupe d'accueil {} — aucun groupe "
+                    + "de même niveau et même matière, donc aucune séance manquée à rattraper.",
+                    studentId, groupId);
+        }
+    }
+
+    /** Groupe où la séance se déroule : celui de la présence, sinon celui de la séance. */
+    private Long resolveHostGroupId(AttendanceEntity attendance) {
+        if (attendance.getGroup() != null && attendance.getGroup().getId() != null) {
+            return attendance.getGroup().getId();
+        }
+        if (attendance.getSession() != null && attendance.getSession().getGroup() != null) {
+            return attendance.getSession().getGroup().getId();
+        }
+        return null;
     }
 
     /**

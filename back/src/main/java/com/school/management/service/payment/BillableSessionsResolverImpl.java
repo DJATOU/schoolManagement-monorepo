@@ -1,6 +1,7 @@
 package com.school.management.service.payment;
 
 import com.school.management.persistance.AttendanceEntity;
+import com.school.management.persistance.CatchUpBillingState;
 import com.school.management.persistance.GroupEntity;
 import com.school.management.persistance.SessionEntity;
 import com.school.management.persistance.SessionSeriesEntity;
@@ -90,6 +91,7 @@ public class BillableSessionsResolverImpl implements BillableSessionsResolver {
         Set<Long> attendedSessionIds = sessionIdsOf(attendances, false);
         Set<Long> presentSessionIds = sessionIdsOf(attendances, true);
         Set<Long> nonCompensatorySessionIds = nonCompensatorySessionIdsOf(attendances);
+        Set<Long> pendingSessionIds = pendingSessionIdsOf(attendances);
 
         // Vue des rattrapages de l'étudiant, tous groupes confondus : une séance rattrapée ailleurs
         // n'apparaît pas dans les présences de cette série.
@@ -102,6 +104,18 @@ public class BillableSessionsResolverImpl implements BillableSessionsResolver {
 
         for (SessionEntity session : sessionRepository.findBySessionSeriesId(seriesId)) {
             Long sessionId = session.getId();
+
+            // Rattrapage à préciser : la séance est INERTE. Elle n'entre ni dans les facturables,
+            // ni dans les écartées, et n'alimente pas le décompte des séances suivies.
+            //
+            // Ne pas la ranger parmi les écartées, malgré l'apparente commodité : une séance
+            // écartée est une décision PRISE (« déjà facturée ailleurs »), que l'interface annonce
+            // comme telle. Une séance à préciser n'est pas décidée. Les confondre reproduirait le
+            // défaut d'étiquetage qui présentait une séance à venir comme non facturée, et surtout
+            // rendrait la gratuité définitive : l'administrateur n'aurait plus rien à trancher.
+            if (pendingSessionIds.contains(sessionId)) {
+                continue;
+            }
 
             // Exigences 2.3 et 2.11 : la séance est écartée seulement si TOUTES les présences
             // actives qui la couvrent sont des rattrapages compensatoires. Une présence ordinaire
@@ -189,6 +203,29 @@ public class BillableSessionsResolverImpl implements BillableSessionsResolver {
         Set<Long> ids = new HashSet<>();
         for (AttendanceEntity attendance : attendances) {
             if (Boolean.TRUE.equals(attendance.getIsCatchUp())) {
+                continue;
+            }
+            SessionEntity session = attendance.getSession();
+            if (session != null && session.getId() != null) {
+                ids.add(session.getId());
+            }
+        }
+        return ids;
+    }
+
+    /**
+     * Séances couvertes par un rattrapage <strong>à préciser</strong>.
+     *
+     * <p>Tant que la séance manquée et la décision « déjà payée » ne sont pas renseignées, rien ne
+     * permet de dire si cette séance est due au groupe d'accueil ou déjà payée ailleurs. La
+     * facturer serait un pari, l'écarter en serait un autre : elle reste donc hors du calcul, et
+     * l'interface la signale comme à préciser. C'est la seule issue qui ne fabrique pas une dette
+     * ni une gratuité que personne n'a décidée.</p>
+     */
+    private Set<Long> pendingSessionIdsOf(List<AttendanceEntity> attendances) {
+        Set<Long> ids = new HashSet<>();
+        for (AttendanceEntity attendance : attendances) {
+            if (attendance.getCatchUpBillingState() != CatchUpBillingState.PENDING) {
                 continue;
             }
             SessionEntity session = attendance.getSession();

@@ -289,6 +289,59 @@ class BillableSessionsResolverTest {
     }
 
     // ------------------------------------------------------------------
+    // Rattrapage à préciser : cas limites du relevé des séances concernées
+    // ------------------------------------------------------------------
+
+    @Test
+    @DisplayName("Rattrapage à préciser sans séance rattachée → ignoré, le calcul reste inchangé")
+    void pendingCatchUpWithoutSessionIsIgnored() {
+        SessionEntity billableSession = session(1L, date("2025-01-17"));
+        givenSeries();
+        givenEnrolment(ENROLMENT_DATE);
+        givenSessions(billableSession);
+
+        // Une présence à préciser dont la séance est absente ne peut désigner aucune séance à
+        // neutraliser. L'ignorer est la seule issue : la laisser passer ferait échouer le relevé
+        // sur un NullPointerException, et donc tout le calcul de coût de l'étudiant.
+        AttendanceEntity pendingWithoutSession = new AttendanceEntity();
+        pendingWithoutSession.setActive(true);
+        pendingWithoutSession.setIsCatchUp(true);
+        pendingWithoutSession.setCatchUpBillingState(
+                com.school.management.persistance.CatchUpBillingState.PENDING);
+
+        givenAttendances(attendance(billableSession, true), pendingWithoutSession);
+
+        BillableSessions result = resolver.resolve(STUDENT_ID, SERIES_ID);
+
+        assertThat(result.billable()).extracting(SessionEntity::getId).containsExactly(1L);
+        assertThat(result.excluded()).isEmpty();
+        assertThat(result.attendedCount()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("Rattrapage à préciser dont la séance n'a pas d'identifiant → ignoré")
+    void pendingCatchUpWithoutSessionIdIsIgnored() {
+        SessionEntity billableSession = session(1L, date("2025-01-17"));
+        givenSeries();
+        givenEnrolment(ENROLMENT_DATE);
+        givenSessions(billableSession);
+
+        AttendanceEntity pendingWithoutId = new AttendanceEntity();
+        pendingWithoutId.setActive(true);
+        pendingWithoutId.setIsCatchUp(true);
+        pendingWithoutId.setCatchUpBillingState(
+                com.school.management.persistance.CatchUpBillingState.PENDING);
+        pendingWithoutId.setSession(session(null, date("2025-01-18")));
+
+        givenAttendances(attendance(billableSession, true), pendingWithoutId);
+
+        BillableSessions result = resolver.resolve(STUDENT_ID, SERIES_ID);
+
+        assertThat(result.billable()).extracting(SessionEntity::getId).containsExactly(1L);
+        assertThat(result.attendedCount()).isEqualTo(1);
+    }
+
+    // ------------------------------------------------------------------
     // Exigence 1.6 : séance ajoutée après coup
     // ------------------------------------------------------------------
 

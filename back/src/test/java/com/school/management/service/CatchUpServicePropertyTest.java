@@ -56,7 +56,13 @@ class CatchUpServicePropertyTest {
     // Property 16 — Catch-up creation preconditions
     // ------------------------------------------------------------------
 
-    // Feature: payment-attendance-rules, Property 16: For any catch-up request creation attempt, the request is rejected when the original attendance's Catch_Up_Right is false, and rejected when the missed session is not paid.
+    // Feature: catch-up-billing-routing, Property 16: For any catch-up request creation attempt, the
+    // request is rejected only when the original attendance's Catch_Up_Right is false; an unpaid
+    // missed session never blocks the request and is reported on the request instead.
+    //
+    // L'impayé était auparavant un veto (400). Il est devenu une information portée par la demande :
+    // le test vérifie donc les deux faces, refus sur droit révoqué ET acceptation malgré l'impayé.
+    // Sans cette seconde assertion, la suppression du veto passerait inaperçue.
     @Property(tries = 100)
     void property16_creationPreconditions(
             @ForAll boolean rightGranted,
@@ -90,15 +96,62 @@ class CatchUpServicePropertyTest {
         CatchUpRequestDTO dto = new CatchUpRequestDTO(
                 STUDENT_ID, ORIGINAL_SESSION_ID, ORIGINAL_GROUP_ID, ATTENDANCE_ID, null);
 
-        if (rightGranted && paid) {
+        if (rightGranted) {
+            // L'impayé n'empêche plus rien : la demande est créée quel que soit l'état du paiement.
             CatchUpRequestEntity created = service.create(dto);
             assertThat(created.getStatus()).isEqualTo(CatchUpStatus.PENDING);
             assertThat(created.getRequestDate()).isNotNull();
+            // Le retard est reporté sur la demande pour être affiché, et reflète fidèlement l'état
+            // du paiement : c'est ce report qui remplace le veto.
+            assertThat(created.getMissedSessionOverdue()).isEqualTo(!paid);
         } else {
+            // Seul le droit au rattrapage explicitement révoqué bloque : c'est une décision
+            // d'administrateur, pas une conséquence mécanique d'un impayé.
             assertThatThrownBy(() -> service.create(dto))
                     .isInstanceOf(CustomServiceException.class)
                     .satisfies(e -> assertThat(((CustomServiceException) e).getStatus())
                             .isEqualTo(HttpStatus.BAD_REQUEST));
+        }
+    }
+
+    /**
+     * Une séance manquée sans série ne permet pas d'évaluer un retard : aucune série ne la
+     * facture. Ce cas est le second côté de la branche de {@code resolveMissedSessionOverdue},
+     * et la classe est sous seuil JaCoCo 100 % lignes+branches.
+     */
+    @Property(tries = 100)
+    void property16b_missedSessionWithoutSeriesIsNeverOverdue(@ForAll boolean rightGranted) {
+
+        CatchUpRequestRepository requestRepo = mock(CatchUpRequestRepository.class);
+        AttendanceRepository attendanceRepo = mock(AttendanceRepository.class);
+        SessionRepository sessionRepo = mock(SessionRepository.class);
+        PaymentStatusService paymentStatusService = mock(PaymentStatusService.class);
+        when(requestRepo.save(any(CatchUpRequestEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        GroupEntity originalGroup = group(ORIGINAL_GROUP_ID, ORIGINAL_TYPE_ID, ORIGINAL_PRICE);
+        // Aucune série sur la séance manquée : le cas que le veto « ignorait » silencieusement.
+        SessionEntity originalSession = session(ORIGINAL_SESSION_ID, originalGroup);
+
+        AttendanceEntity attendance = AttendanceEntity.builder()
+                .id(ATTENDANCE_ID)
+                .isPresent(false)
+                .catchUpRight(rightGranted)
+                .build();
+
+        when(attendanceRepo.findById(ATTENDANCE_ID)).thenReturn(Optional.of(attendance));
+        when(sessionRepo.findById(ORIGINAL_SESSION_ID)).thenReturn(Optional.of(originalSession));
+
+        CatchUpService service = new CatchUpService(requestRepo, attendanceRepo, sessionRepo, paymentStatusService);
+        CatchUpRequestDTO dto = new CatchUpRequestDTO(
+                STUDENT_ID, ORIGINAL_SESSION_ID, ORIGINAL_GROUP_ID, ATTENDANCE_ID, null);
+
+        if (rightGranted) {
+            assertThat(service.create(dto).getMissedSessionOverdue()).isFalse();
+            // Le service de statut n'est pas interrogé : sans série, il n'y a rien à évaluer.
+            org.mockito.Mockito.verifyNoInteractions(paymentStatusService);
+        } else {
+            assertThatThrownBy(() -> service.create(dto))
+                    .isInstanceOf(CustomServiceException.class);
         }
     }
 

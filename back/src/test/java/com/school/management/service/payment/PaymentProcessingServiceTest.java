@@ -6,6 +6,7 @@ import com.school.management.persistance.PaymentEntity;
 import com.school.management.persistance.SessionSeriesEntity;
 import com.school.management.persistance.StudentEntity;
 import com.school.management.persistance.StudentGroupEntity;
+import com.school.management.repository.AttendanceRepository;
 import com.school.management.repository.GroupRepository;
 import com.school.management.repository.PaymentRepository;
 import com.school.management.repository.SessionRepository;
@@ -80,6 +81,11 @@ class PaymentProcessingServiceTest {
     @Mock private SessionRepository sessionRepository;
     @Mock private SessionSeriesRepository sessionSeriesRepository;
     @Mock private StudentGroupRepository studentGroupRepository;
+    /**
+     * Présences de la série : elles rattachent au groupe un étudiant venu en rattrapage sans y
+     * être inscrit, second motif d'acceptation d'un versement à côté de l'inscription.
+     */
+    @Mock private AttendanceRepository attendanceRepository;
     @Mock private PaymentDistributionService distributionService;
     @Mock private PaymentQuoteService paymentQuoteService;
     @Mock private PaymentAllocationService allocationService;
@@ -97,7 +103,8 @@ class PaymentProcessingServiceTest {
     void setUp() {
         service = new PaymentProcessingService(paymentRepository, studentRepository, groupRepository,
                 sessionRepository, sessionSeriesRepository, studentGroupRepository,
-                distributionService, paymentQuoteService, allocationService, carryOverService);
+                attendanceRepository, distributionService, paymentQuoteService, allocationService,
+                carryOverService);
 
         student = new StudentEntity();
         student.setId(STUDENT_ID);
