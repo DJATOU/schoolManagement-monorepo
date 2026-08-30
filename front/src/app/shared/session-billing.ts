@@ -32,6 +32,12 @@ const ATTENDANCE_RECORDED = ['PRESENT', 'ABSENT'];
  * </ol>
  */
 export function isExcludedSession(session: SessionHistoryDTO): boolean {
+  // Un rattrapage à préciser n'est PAS une séance écartée : rien n'a encore été décidé. Le
+  // classer ici l'annoncerait « non facturée » à l'écran, donc comme une gratuité acquise, et
+  // l'administrateur n'aurait plus rien à trancher — exactement l'inverse du but de cet état.
+  if (isPendingCatchUp(session)) {
+    return false;
+  }
   if (session.inclusionReason !== undefined && session.inclusionReason !== null) {
     return session.inclusionReason === 'EXCLUDED';
   }
@@ -49,8 +55,31 @@ export function isExcludedSession(session: SessionHistoryDTO): boolean {
  */
 export function isBillableUnpaid(session: SessionHistoryDTO): boolean {
   return !isExcludedSession(session)
+    // Un rattrapage à préciser ne facture rien tant que la décision n'est pas prise : le compter
+    // comme impayé afficherait une dette que personne n'a encore établie.
+    && !isPendingCatchUp(session)
     && session.isExempted !== true
     && (session.paymentStatus === 'UNPAID' || session.paymentStatus === 'PARTIAL');
+}
+
+/**
+ * Vrai lorsque la séance est un rattrapage dont la facturation reste à préciser.
+ *
+ * <p>Troisième catégorie, à côté de « facturée » et « écartée » : elle ne pèse sur aucun montant,
+ * et c'est ce qui la rend inoffensive tant que l'administrateur n'a pas tranché. Elle doit
+ * néanmoins être <strong>visible</strong> — une séance consommée que personne ne facture est un
+ * oubli en puissance.</p>
+ */
+export function isPendingCatchUp(session: SessionHistoryDTO): boolean {
+  return session.catchUpBillingState === 'PENDING';
+}
+
+/**
+ * Vrai lorsque la séance est facturée au groupe d'accueil faute de groupe de même niveau et même
+ * matière : l'étudiant a consommé une séance que personne d'autre ne lui facture.
+ */
+export function isBilledAtHostGroup(session: SessionHistoryDTO): boolean {
+  return session.billedAtHostGroup === true || session.catchUpBillingState === 'HOST_BILLED';
 }
 
 /**
@@ -83,7 +112,11 @@ export function countBillableSessions(series: SeriesHistoryDTO): number {
   if (series.billableSessions !== undefined && series.billableSessions !== null) {
     return series.billableSessions;
   }
-  return (series.sessions ?? []).filter(session => !isExcludedSession(session)).length;
+  // Repli : un rattrapage à préciser n'est ni facturable ni écarté, il ne compte donc dans aucun
+  // des deux décomptes. L'inclure gonflerait le coût annoncé d'une séance non encore décidée.
+  return (series.sessions ?? [])
+    .filter(session => !isExcludedSession(session) && !isPendingCatchUp(session))
+    .length;
 }
 
 /** Nombre de séances écartées de la facturation, pour la note d'explication du prorata. */

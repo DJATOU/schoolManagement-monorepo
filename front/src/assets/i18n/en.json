@@ -241,7 +241,8 @@
     "SUBJECTS": "Subjects",
     "GROUP_TYPES": "Group Types",
     "PRICING": "Pricing",
-    "REVENUE": "Revenue"
+    "REVENUE": "Revenue",
+    "CATCH_UP_BILLING": "Catch-ups to decide"
   },
   "DATATABLE": {
     "PRINT": "Print",
@@ -377,7 +378,11 @@
     "DELETE_CONFIRM": "Delete session",
     "DELETE_SUCCESS": "Session deleted successfully.",
     "DELETE_ERROR": "Error while deleting the session.",
-    "DELETE_FINISHED_HINT": "Validated session: unvalidate it before deleting."
+    "DELETE_FINISHED_HINT": "Validated session: unvalidate it before deleting.",
+    "CATCH_UP_PENDING": "To be decided",
+    "CATCH_UP_PENDING_HINT": "Catch-up awaiting a decision: indicate which session was missed and whether it was already paid. Nothing is billed until the decision is made. You can validate the session right away.",
+    "CATCH_UP_HOST_BILLED": "Billed here",
+    "CATCH_UP_HOST_BILLED_HINT": "The student belongs to no group of the same level and subject: no seat is reserved elsewhere, so the session is billed in this group."
   },
   "STUDENT_FORM": {
     "TITLE": "Student registration",
@@ -1041,7 +1046,12 @@
       "noSeries": "This group has no series.",
       "exempted": "Exempt student: nothing is due for this series.",
       "overpaidHint": "(paid beyond the amount due)",
-      "attendancePending": "{{status}} — upcoming session, attendance not recorded"
+      "attendancePending": "{{status}} — upcoming session, attendance not recorded",
+      "pendingDecision": {
+        "tag": "To be decided",
+        "reason": "Catch-up awaiting a decision — no billing decided",
+        "hint": "The missed session and the \"already paid\" decision still need to be indicated. This is not a debt."
+      }
     }
   },
   "calendar": {
@@ -1342,14 +1352,19 @@
         "unknownAttendance": "Attendance not recorded",
         "presentUnpaid": "Present and unpaid",
         "presentExempted": "Present and exempt",
-        "excludedSession": "Session not billed: not attended, held before enrolment"
+        "excludedSession": "Session not billed: not attended, held before enrolment",
+        "pendingDecisionSession": "Catch-up awaiting a decision — no billing decided yet"
       },
-      "amountAllocatedAndOverpaid": "Allocated: {{allocated}} DA — Overpaid: {{overpaid}} DA"
+      "amountAllocatedAndOverpaid": "Allocated: {{allocated}} DA — Overpaid: {{overpaid}} DA",
+      "pendingDecisionSession": "To be decided: {{name}}"
     },
     "seriesLabel": "Series",
     "totalPaid": "Total paid",
     "allocated": "Allocated",
-    "overpaid": "Overpaid"
+    "overpaid": "Overpaid",
+    "pendingDecisionTag": "To be decided",
+    "pendingDecisionHint": "Catch-up awaiting a decision: neither a debt nor a waiver. The missed session and the billing decision still need to be indicated.",
+    "billedAtHostGroup": "billed here"
   },
   "pricing": {
     "table": {
@@ -1478,6 +1493,49 @@
       "missedUnknown": "Missed session undetermined",
       "billedElsewhere": "Already billed in series {{series}} ({{group}})",
       "notBilled": "Not billed"
+    }
+  },
+  "CATCH_UP_BILLING": {
+    "LIST": {
+      "TITLE": "Catch-ups awaiting a decision",
+      "SUBTITLE": "Each row is an attended session that nobody bills yet. Indicate the missed session and whether it was already paid.",
+      "EMPTY": "No catch-up awaiting a decision.",
+      "RESOLVE": "Decide",
+      "RESOLVE_HINT": "Indicate the missed session and the billing decision"
+    },
+    "DIALOG": {
+      "RESOLVE_TITLE": "Decide a catch-up billing",
+      "CORRECT_TITLE": "Correct a catch-up billing",
+      "STEP_MISSED_SESSION": "1. Which session is being caught up?",
+      "STEP_ALREADY_PAID": "2. Was that session already paid?",
+      "ALREADY_PAID_HINT": "Billing stays anchored to the missed session, in its origin group. No answer is preselected: the choice is yours.",
+      "ALREADY_PAID_YES": "Already paid — do not re-bill",
+      "ALREADY_PAID_NO": "To be billed",
+      "NO_ELIGIBLE_ABSENCE": "No absence to catch up in a group of the same level and subject.",
+      "AUDIT_TITLE": "Decision history",
+      "SAVE_RESOLUTION": "Save the decision",
+      "SAVE_CORRECTION": "Save the correction"
+    },
+    "FIELDS": {
+      "STUDENT": "Student",
+      "HOST_SESSION": "Attended session",
+      "HOST_GROUP": "Host group",
+      "MISSED_SESSION": "Missed session",
+      "COMMENT": "Comment",
+      "ACTIONS": "Actions",
+      "LEVEL_SUBJECT": "Level {{level}} — subject {{subject}}",
+      "LEVEL_SUBJECT_SHORT": "Level / subject"
+    },
+    "AUDIT": {
+      "MISSED_SESSION": "Missed session",
+      "ALREADY_PAID": "Already paid"
+    },
+    "MESSAGES": {
+      "RESOLVED": "Billing decision saved.",
+      "CORRECTED": "Correction saved."
+    },
+    "ERRORS": {
+      "MISSING_CONTEXT": "This catch-up is linked to neither a student nor a group: no missed session can be offered."
     }
   }
 }

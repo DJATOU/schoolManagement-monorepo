@@ -33,8 +33,17 @@
   border-left: 3px dashed rgba(0, 0, 0, 0.35);
 }
 
+/* Rattrapage à préciser : liseré continu ambre, distinct du tireté des séances écartées. La
+   forme du repère sépare donc les deux catégories même sans la couleur. */
+.row-pending-decision {
+  background-color: #fffbeb;
+  color: #92400e;
+  border-left: 3px solid #f59e0b;
+}
+
 /* Badge « Non facturée » : libellé + icône, la couleur ne porte jamais seule le sens. */
 .ph-excluded-tag,
+.ph-pending-decision-tag,
 .ph-catchup-tag {
   display: inline-flex;
   align-items: center;
@@ -62,6 +71,14 @@
 .ph-catchup-tag {
   background-color: #ffa200;
   color: #fff;
+}
+
+/* Badge « À préciser » : bordure continue, pour ne pas se confondre avec le tireté de
+   « non facturée » — deux catégories voisines à l'œil, opposées quant à la dette. */
+.ph-pending-decision-tag {
+  background-color: #fffbeb;
+  color: #92400e;
+  border: 1px solid #f59e0b;
 }
 
 /* Note de bas de récapitulatif : dit en mots que ces séances ne sont pas une dette. */

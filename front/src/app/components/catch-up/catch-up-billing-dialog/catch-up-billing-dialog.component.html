@@ -1,0 +1,94 @@
+<h2 mat-dialog-title class="cub-title">
+  <mat-icon aria-hidden="true">fact_check</mat-icon>
+  {{ (isCorrection ? 'CATCH_UP_BILLING.DIALOG.CORRECT_TITLE' : 'CATCH_UP_BILLING.DIALOG.RESOLVE_TITLE') | translate }}
+</h2>
+
+<mat-dialog-content>
+  <!-- Contexte : de quel rattrapage parle-t-on. Niveau et matière sont affichés parce qu'ils
+       sont les deux dimensions du test qui a classé cette présence en vrai rattrapage. -->
+  <div class="cub-context">
+    <p><strong>{{ 'CATCH_UP_BILLING.FIELDS.STUDENT' | translate }} :</strong> {{ data.pending.studentName || '—' }}</p>
+    <p><strong>{{ 'CATCH_UP_BILLING.FIELDS.HOST_SESSION' | translate }} :</strong>
+      {{ data.pending.sessionTitle || '—' }}
+      <span *ngIf="data.pending.sessionDate"> — {{ data.pending.sessionDate | date: 'mediumDate' }}</span>
+    </p>
+    <p><strong>{{ 'CATCH_UP_BILLING.FIELDS.HOST_GROUP' | translate }} :</strong> {{ data.pending.hostGroupName || '—' }}</p>
+    <p class="cub-routing">
+      {{ 'CATCH_UP_BILLING.FIELDS.LEVEL_SUBJECT' | translate: {
+           level: (data.pending.levelName || '—'),
+           subject: (data.pending.subjectName || '—')
+         } }}
+    </p>
+  </div>
+
+  <div class="cub-loading" *ngIf="loading">
+    <mat-spinner diameter="32"></mat-spinner>
+  </div>
+
+  <p class="cub-error" *ngIf="errorMessage">{{ errorMessage | translate }}</p>
+
+  <ng-container *ngIf="!loading">
+    <!-- Aucune absence proposable : le dire explicitement. Une liste vide laisserait croire à un
+         chargement raté, alors que le cas est réel — l'étudiant n'a aucune absence non résolue
+         dans un groupe de même niveau et même matière. -->
+    <p class="cub-empty" *ngIf="absences.length === 0">
+      {{ 'CATCH_UP_BILLING.DIALOG.NO_ELIGIBLE_ABSENCE' | translate }}
+    </p>
+
+    <ng-container *ngIf="absences.length > 0">
+      <!-- Décision 1 : quelle séance manquée. C'est elle qui porte la facturation, dans son
+           groupe d'origine. -->
+      <h3 class="cub-step">{{ 'CATCH_UP_BILLING.DIALOG.STEP_MISSED_SESSION' | translate }}</h3>
+      <mat-form-field appearance="fill" class="cub-field">
+        <mat-label>{{ 'CATCH_UP_BILLING.FIELDS.MISSED_SESSION' | translate }}</mat-label>
+        <mat-select [(ngModel)]="selectedMissedSessionId" required>
+          <mat-option *ngFor="let absence of absences" [value]="absence.sessionId">
+            {{ absence.sessionTitle || '—' }}
+            <span *ngIf="absence.sessionDate"> — {{ absence.sessionDate | date: 'mediumDate' }}</span>
+            <span *ngIf="absence.groupName"> ({{ absence.groupName }})</span>
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <!-- Décision 2 : déjà payée ? AUCUNE présélection. Un défaut serait une décision prise à
+           la place de l'administrateur, et jamais relue. -->
+      <h3 class="cub-step">{{ 'CATCH_UP_BILLING.DIALOG.STEP_ALREADY_PAID' | translate }}</h3>
+      <p class="cub-hint">{{ 'CATCH_UP_BILLING.DIALOG.ALREADY_PAID_HINT' | translate }}</p>
+      <mat-radio-group class="cub-radio-group" [(ngModel)]="alreadyPaid">
+        <mat-radio-button [value]="true">
+          {{ 'CATCH_UP_BILLING.DIALOG.ALREADY_PAID_YES' | translate }}
+        </mat-radio-button>
+        <mat-radio-button [value]="false">
+          {{ 'CATCH_UP_BILLING.DIALOG.ALREADY_PAID_NO' | translate }}
+        </mat-radio-button>
+      </mat-radio-group>
+
+      <mat-form-field appearance="fill" class="cub-field">
+        <mat-label>{{ 'CATCH_UP_BILLING.FIELDS.COMMENT' | translate }}</mat-label>
+        <textarea matInput rows="2" [(ngModel)]="comment"></textarea>
+      </mat-form-field>
+
+      <!-- Piste d'audit, en correction uniquement : elle répond à « qui a décidé quoi, quand ». -->
+      <ng-container *ngIf="isCorrection && auditTrail.length > 0">
+        <h3 class="cub-step">{{ 'CATCH_UP_BILLING.DIALOG.AUDIT_TITLE' | translate }}</h3>
+        <ul class="cub-audit">
+          <li *ngFor="let entry of auditTrail">
+            <span class="cub-audit-field">{{ 'CATCH_UP_BILLING.AUDIT.' + entry.field | translate }}</span>
+            <span class="cub-audit-change">{{ entry.oldValue || '—' }} → {{ entry.newValue || '—' }}</span>
+            <span class="cub-audit-meta">{{ entry.performedBy }} — {{ entry.performedAt | date: 'short' }}</span>
+            <span class="cub-audit-comment" *ngIf="entry.comment">{{ entry.comment }}</span>
+          </li>
+        </ul>
+      </ng-container>
+    </ng-container>
+  </ng-container>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="cancel()">{{ 'common.cancel' | translate }}</button>
+  <!-- Inactif tant que les deux décisions ne sont pas prises : c'est la traduction visible de
+       « aucune valeur par défaut ». -->
+  <button mat-raised-button color="primary" (click)="save()" [disabled]="!canSave">
+    {{ (isCorrection ? 'CATCH_UP_BILLING.DIALOG.SAVE_CORRECTION' : 'CATCH_UP_BILLING.DIALOG.SAVE_RESOLUTION') | translate }}
+  </button>
+</mat-dialog-actions>

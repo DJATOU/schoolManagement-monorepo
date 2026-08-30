@@ -1,0 +1,64 @@
+<mat-card class="cubl-card fade-in">
+  <h2 class="cubl-title">
+    <mat-icon aria-hidden="true">help_outline</mat-icon>
+    {{ 'CATCH_UP_BILLING.LIST.TITLE' | translate }}
+  </h2>
+  <p class="cubl-subtitle">{{ 'CATCH_UP_BILLING.LIST.SUBTITLE' | translate }}</p>
+
+  <div class="cubl-loading" *ngIf="loading">
+    <mat-spinner diameter="36"></mat-spinner>
+  </div>
+
+  <p class="cubl-error" *ngIf="!loading && errorMessage">{{ errorMessage }}</p>
+
+  <ng-container *ngIf="!loading && !errorMessage">
+    <!-- Liste vide : c'est le bon état, et il mérite d'être dit clairement plutôt que laissé
+         à un tableau sans ligne. -->
+    <p class="cubl-empty" *ngIf="pending.length === 0">
+      <mat-icon aria-hidden="true">check_circle</mat-icon>
+      {{ 'CATCH_UP_BILLING.LIST.EMPTY' | translate }}
+    </p>
+
+    <table mat-table [dataSource]="pending" class="mat-elevation-z2" *ngIf="pending.length > 0">
+      <ng-container matColumnDef="student">
+        <th mat-header-cell *matHeaderCellDef>{{ 'CATCH_UP_BILLING.FIELDS.STUDENT' | translate }}</th>
+        <td mat-cell *matCellDef="let row">{{ row.studentName || '—' }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="session">
+        <th mat-header-cell *matHeaderCellDef>{{ 'CATCH_UP_BILLING.FIELDS.HOST_SESSION' | translate }}</th>
+        <td mat-cell *matCellDef="let row">
+          {{ row.sessionTitle || '—' }}
+          <span class="cubl-date" *ngIf="row.sessionDate"> — {{ row.sessionDate | date: 'mediumDate' }}</span>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="hostGroup">
+        <th mat-header-cell *matHeaderCellDef>{{ 'CATCH_UP_BILLING.FIELDS.HOST_GROUP' | translate }}</th>
+        <td mat-cell *matCellDef="let row">{{ row.hostGroupName || '—' }}</td>
+      </ng-container>
+
+      <!-- Niveau et matière : les deux dimensions qui ont classé cette présence en vrai
+           rattrapage. Les afficher rend le routage vérifiable au lieu d'opaque. -->
+      <ng-container matColumnDef="levelSubject">
+        <th mat-header-cell *matHeaderCellDef>{{ 'CATCH_UP_BILLING.FIELDS.LEVEL_SUBJECT_SHORT' | translate }}</th>
+        <td mat-cell *matCellDef="let row">
+          {{ row.levelName || '—' }} / {{ row.subjectName || '—' }}
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef>{{ 'CATCH_UP_BILLING.FIELDS.ACTIONS' | translate }}</th>
+        <td mat-cell *matCellDef="let row">
+          <button mat-raised-button color="primary" (click)="resolve(row)" appAdminOnly
+                  [matTooltip]="'CATCH_UP_BILLING.LIST.RESOLVE_HINT' | translate">
+            {{ 'CATCH_UP_BILLING.LIST.RESOLVE' | translate }}
+          </button>
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="columns"></tr>
+      <tr mat-row *matRowDef="let row; columns: columns;"></tr>
+    </table>
+  </ng-container>
+</mat-card>

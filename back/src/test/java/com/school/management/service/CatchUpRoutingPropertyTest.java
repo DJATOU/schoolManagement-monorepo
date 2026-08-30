@@ -17,8 +17,10 @@ import com.school.management.repository.StudentGroupRepository;
 import com.school.management.repository.StudentRepository;
 import com.school.management.repository.SubjectRepository;
 import com.school.management.service.CatchUpRoutingService.RoutingVerdict;
+import com.school.management.service.exception.CustomServiceException;
 import net.jqwik.api.ForAll;
 import net.jqwik.api.Property;
+import org.springframework.http.HttpStatus;
 import net.jqwik.api.lifecycle.AfterContainer;
 import net.jqwik.api.lifecycle.BeforeContainer;
 import org.springframework.boot.WebApplicationType;
@@ -39,6 +41,7 @@ import java.time.ZoneId;
 import java.util.Date;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Test de propriété (jqwik) du routage des rattrapages, en intégration H2 réelle.
@@ -197,6 +200,74 @@ class CatchUpRoutingPropertyTest {
         assertThat(routingService.route(member.getId(), hostGroup.getId()))
                 .as("le groupe d'accueil ne peut pas fonder son propre rattrapage")
                 .isEqualTo(RoutingVerdict.HOST_BILLED);
+    }
+
+    /**
+     * Un groupe d'accueil incomplet ne peut fonder aucune correspondance : le verdict est
+     * « facturée sur place ».
+     *
+     * <p>Ce repli va dans le même sens que celui du qualificateur — facturer plutôt que perdre
+     * silencieusement une recette — et il est ici le seul défendable : sans niveau, sans matière ou
+     * sans année, rien ne permet d'affirmer qu'une place est réservée ailleurs. Les trois champs
+     * sont testés séparément parce que chacun ouvre sa propre branche : n'en couvrir qu'un
+     * laisserait les deux autres au hasard d'une régression.</p>
+     */
+    @Property(tries = 100)
+    void property1b_incompleteHostGroupIsBilledOnSite(
+            @ForAll boolean withLevel,
+            @ForAll boolean withSubject,
+            @ForAll boolean withYear) {
+
+        resetDatabase();
+
+        LevelEntity level = levelRepository.save(LevelEntity.builder().name("Niveau").build());
+        SubjectEntity subject = subjectRepository.save(SubjectEntity.builder().name("Matière").build());
+        SchoolYearEntity year = schoolYearRepository.save(schoolYear("2000-2001", 2000, true));
+
+        // Groupe d'accueil éventuellement privé de l'une de ses trois caractéristiques.
+        GroupEntity hostGroup = groupRepository.save(GroupEntity.builder()
+                .name("Groupe d'accueil incomplet")
+                .level(withLevel ? level : null)
+                .subject(withSubject ? subject : null)
+                .schoolYear(withYear ? year : null)
+                .build());
+
+        // L'étudiant est inscrit à un groupe PARFAITEMENT correspondant : si le verdict est
+        // « facturée sur place », c'est bien l'incomplétude du groupe d'accueil qui l'a produit.
+        GroupEntity originGroup = groupRepository.save(GroupEntity.builder()
+                .name("Groupe d'origine complet")
+                .level(level).subject(subject).schoolYear(year)
+                .build());
+
+        StudentEntity student = studentRepository.save(StudentEntity.builder()
+                .firstName("Étudiant").lastName("Incomplet").build());
+        studentGroupRepository.save(StudentGroupEntity.builder()
+                .student(student).group(originGroup).build());
+
+        RoutingVerdict verdict = routingService.route(student.getId(), hostGroup.getId());
+
+        boolean complete = withLevel && withSubject && withYear;
+        assertThat(verdict)
+                .as("niveau=%s, matière=%s, année=%s sur le groupe d'accueil",
+                        withLevel, withSubject, withYear)
+                .isEqualTo(complete ? RoutingVerdict.TRUE_CATCH_UP : RoutingVerdict.HOST_BILLED);
+    }
+
+    /** Un groupe d'accueil introuvable est une erreur d'appel, pas un cas de facturation. */
+    @Property(tries = 100)
+    void property1c_unknownHostGroupIsRejected(@ForAll long unknownGroupId) {
+        resetDatabase();
+
+        StudentEntity student = studentRepository.save(StudentEntity.builder()
+                .firstName("Étudiant").lastName("Sans groupe").build());
+
+        // Un identifiant qui n'existe pas : le service doit le dire, et non renvoyer un verdict
+        // qui laisserait facturer une séance rattachée à rien.
+        long absentId = Math.abs(unknownGroupId % 1_000_000) + 500_000;
+        assertThatThrownBy(() -> routingService.route(student.getId(), absentId))
+                .isInstanceOf(CustomServiceException.class)
+                .satisfies(e -> assertThat(((CustomServiceException) e).getStatus())
+                        .isEqualTo(HttpStatus.NOT_FOUND));
     }
 
     private void resetDatabase() {

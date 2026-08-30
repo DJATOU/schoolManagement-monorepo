@@ -241,7 +241,8 @@
     "SUBJECTS": "Matières",
     "GROUP_TYPES": "Types de Groupes",
     "PRICING": "Tarification",
-    "REVENUE": "Recettes"
+    "REVENUE": "Recettes",
+    "CATCH_UP_BILLING": "Rattrapages à préciser"
   },
   "DATATABLE": {
     "PRINT": "Imprimer",
@@ -377,7 +378,11 @@
     "DELETE_CONFIRM": "Supprimer la séance",
     "DELETE_SUCCESS": "Séance supprimée avec succès.",
     "DELETE_ERROR": "Erreur lors de la suppression de la séance.",
-    "DELETE_FINISHED_HINT": "Séance validée : dévalidez-la avant de la supprimer."
+    "DELETE_FINISHED_HINT": "Séance validée : dévalidez-la avant de la supprimer.",
+    "CATCH_UP_PENDING": "À préciser",
+    "CATCH_UP_PENDING_HINT": "Rattrapage à préciser : indiquez la séance manquée et si elle était déjà payée. Rien n'est facturé tant que la décision n'est pas prise. Vous pouvez valider la séance sans attendre.",
+    "CATCH_UP_HOST_BILLED": "Facturée sur place",
+    "CATCH_UP_HOST_BILLED_HINT": "L'étudiant n'appartient à aucun groupe du même niveau et de la même matière : aucune place ne lui est réservée ailleurs, la séance lui est donc facturée dans ce groupe."
   },
   "STUDENT_FORM": {
     "TITLE": "Inscription d'un étudiant",
@@ -1041,7 +1046,12 @@
       "noSeries": "Ce groupe ne contient aucune série.",
       "exempted": "Étudiant exempté : aucun montant n'est dû pour cette série.",
       "overpaidHint": "(versé au-delà du montant dû)",
-      "attendancePending": "{{status}} — séance à venir, présence non saisie"
+      "attendancePending": "{{status}} — séance à venir, présence non saisie",
+      "pendingDecision": {
+        "tag": "À préciser",
+        "reason": "Rattrapage à préciser — aucune facturation décidée",
+        "hint": "La séance manquée et la décision « déjà payée » restent à indiquer. Ce n'est pas une dette."
+      }
     }
   },
   "calendar": {
@@ -1342,14 +1352,19 @@
         "unknownAttendance": "Présence non renseignée",
         "presentUnpaid": "Présent et non payé",
         "presentExempted": "Présent et exempté",
-        "excludedSession": "Séance non facturée : non présent, antérieure à l'inscription"
+        "excludedSession": "Séance non facturée : non présent, antérieure à l'inscription",
+        "pendingDecisionSession": "Rattrapage à préciser — aucune facturation décidée à ce jour"
       },
-      "amountAllocatedAndOverpaid": "Affecté : {{allocated}} DA — Trop-perçu : {{overpaid}} DA"
+      "amountAllocatedAndOverpaid": "Affecté : {{allocated}} DA — Trop-perçu : {{overpaid}} DA",
+      "pendingDecisionSession": "À préciser : {{name}}"
     },
     "seriesLabel": "Série",
     "totalPaid": "Total versé",
     "allocated": "Affecté",
-    "overpaid": "Trop-perçu"
+    "overpaid": "Trop-perçu",
+    "pendingDecisionTag": "À préciser",
+    "pendingDecisionHint": "Rattrapage à préciser : ni dette, ni gratuité. La séance manquée et la décision de facturation restent à indiquer.",
+    "billedAtHostGroup": "facturée sur place"
   },
   "pricing": {
     "table": {
@@ -1478,6 +1493,49 @@
       "missedUnknown": "Séance manquée non déterminée",
       "billedElsewhere": "Déjà facturée dans la série {{series}} ({{group}})",
       "notBilled": "Non facturée"
+    }
+  },
+  "CATCH_UP_BILLING": {
+    "LIST": {
+      "TITLE": "Rattrapages à préciser",
+      "SUBTITLE": "Chaque ligne est une séance suivie que personne ne facture encore. Indiquez la séance manquée et si elle était déjà payée.",
+      "EMPTY": "Aucun rattrapage en attente de décision.",
+      "RESOLVE": "Préciser",
+      "RESOLVE_HINT": "Indiquer la séance manquée et la décision de facturation"
+    },
+    "DIALOG": {
+      "RESOLVE_TITLE": "Préciser la facturation d'un rattrapage",
+      "CORRECT_TITLE": "Corriger la facturation d'un rattrapage",
+      "STEP_MISSED_SESSION": "1. Quelle séance est rattrapée ?",
+      "STEP_ALREADY_PAID": "2. Cette séance était-elle déjà payée ?",
+      "ALREADY_PAID_HINT": "La facturation reste rattachée à la séance manquée, dans son groupe d'origine. Aucune réponse n'est présélectionnée : le choix vous appartient.",
+      "ALREADY_PAID_YES": "Déjà payée — ne pas refacturer",
+      "ALREADY_PAID_NO": "À facturer",
+      "NO_ELIGIBLE_ABSENCE": "Aucune absence à rattraper dans un groupe du même niveau et de la même matière.",
+      "AUDIT_TITLE": "Historique des décisions",
+      "SAVE_RESOLUTION": "Enregistrer la décision",
+      "SAVE_CORRECTION": "Enregistrer la correction"
+    },
+    "FIELDS": {
+      "STUDENT": "Étudiant",
+      "HOST_SESSION": "Séance suivie",
+      "HOST_GROUP": "Groupe d'accueil",
+      "MISSED_SESSION": "Séance manquée",
+      "COMMENT": "Commentaire",
+      "ACTIONS": "Actions",
+      "LEVEL_SUBJECT": "Niveau {{level}} — matière {{subject}}",
+      "LEVEL_SUBJECT_SHORT": "Niveau / matière"
+    },
+    "AUDIT": {
+      "MISSED_SESSION": "Séance manquée",
+      "ALREADY_PAID": "Déjà payée"
+    },
+    "MESSAGES": {
+      "RESOLVED": "Décision de facturation enregistrée.",
+      "CORRECTED": "Correction enregistrée."
+    },
+    "ERRORS": {
+      "MISSING_CONTEXT": "Ce rattrapage n'est rattaché ni à un étudiant ni à un groupe : impossible de proposer une séance manquée."
     }
   }
 }

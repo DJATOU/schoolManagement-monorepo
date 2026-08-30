@@ -1,5 +1,6 @@
 package com.school.management.dto.session;
 
+import com.school.management.persistance.CatchUpBillingState;
 import lombok.*;
 
 import java.math.BigDecimal;
@@ -105,4 +106,28 @@ public class SessionHistoryDTO {
     private String justificationUpdatedBy;
     /** Horodatage de la dernière modification de la justification (exigence 5.9). */
     private Date justificationUpdatedAt;
+
+    /**
+     * État de facturation du rattrapage : {@code PENDING}, {@code RESOLVED} ou {@code HOST_BILLED}.
+     * Nul pour une présence ordinaire.
+     *
+     * <p>Il faut le distinguer des trois motifs voisins que l'interface affiche déjà, sans quoi la
+     * ligne redevient ambiguë :</p>
+     * <ul>
+     *   <li>{@code billable = false} — écartée, décision <em>prise</em> ;</li>
+     *   <li>{@code billedInOriginSeries} — écartée parce que <em>déjà payée ailleurs</em> ;</li>
+     *   <li>{@code PENDING} — <em>rien n'est décidé</em>, et la séance ne facture rien pour
+     *       l'instant. Ce n'est ni une dette, ni une gratuité acquise.</li>
+     * </ul>
+     */
+    private CatchUpBillingState catchUpBillingState;
+
+    /**
+     * Séance facturée au groupe d'accueil faute de groupe de même niveau et même matière (Cas 2).
+     *
+     * <p>Le motif doit être affiché : facturer sur place une séance suivie par un étudiant qui n'est
+     * pas membre du groupe paraît arbitraire sans lui. Il énonce la raison exacte — aucune place
+     * n'était réservée ailleurs, donc personne d'autre ne facture cette séance.</p>
+     */
+    private Boolean billedAtHostGroup;
 }

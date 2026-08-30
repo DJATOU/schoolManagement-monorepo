@@ -20,7 +20,8 @@ import {
   countBillableSessions,
   countExcludedSessions,
   isCatchUpBilled,
-  isExcludedSession
+  isExcludedSession,
+  isPendingCatchUp
 } from '../../../../shared/session-billing';
 
 // Importations pour pdfMake
@@ -53,6 +54,13 @@ interface SessionPaymentRow {
    * couleur près.
    */
   excluded: boolean;
+  /**
+   * Rattrapage dont la facturation reste à préciser : ni dette, ni gratuité acquise.
+   *
+   * Troisième catégorie, distincte d'`excluded` : celle-ci porte une décision prise, celle-là
+   * l'absence de décision. Les confondre annoncerait une gratuité que personne n'a accordée.
+   */
+  pendingDecision: boolean;
 }
 
 /**
@@ -195,7 +203,8 @@ export class PaymentHistoryDialogComponent implements OnInit {
       status: this.toDisplayStatus(session.paymentStatus),
       catchUp: isCatchUpBilled(session),
       attendanceRecorded: session.attendanceStatus === 'PRESENT' || session.attendanceStatus === 'ABSENT',
-      excluded: isExcludedSession(session)
+      excluded: isExcludedSession(session),
+      pendingDecision: isPendingCatchUp(session)
     }));
   }
 
@@ -264,6 +273,11 @@ export class PaymentHistoryDialogComponent implements OnInit {
   }
 
   private getFillColorForRow(row: SessionPaymentRow): string {
+    // Rattrapage à préciser : ambre, distinct du gris des séances écartées. Le libellé porte
+    // l'information ; la teinte ne fait que signaler qu'une décision est attendue.
+    if (row.pendingDecision) {
+      return '#fef3c7';
+    }
     // Séance non facturée : aucune alerte de couleur. Le libellé de la colonne « statut »
     // porte l'information, la teinte seule ne suffirait pas à la distinguer d'un impayé.
     if (row.excluded) {
@@ -290,6 +304,9 @@ export class PaymentHistoryDialogComponent implements OnInit {
    */
   private rowTitle(row: SessionPaymentRow): string {
     const name = row.sessionName || '—';
+    if (row.pendingDecision) {
+      return `${this.translate.instant('payment.history.pendingDecision.tag')} — ${name}`;
+    }
     if (row.excluded) {
       return `${this.translate.instant('payment.history.excluded.tag')} — ${name}`;
     }
@@ -313,6 +330,11 @@ export class PaymentHistoryDialogComponent implements OnInit {
    * avance est licite. Le statut de paiement reste donc celui du serveur.</p>
    */
   statusLabel(row: SessionPaymentRow): string {
+    // Rattrapage à préciser : ni « non facturée » (gratuité décidée), ni un statut de paiement
+    // (dette établie). La décision reste à prendre, et le libellé doit le dire tel quel.
+    if (row.pendingDecision) {
+      return this.translate.instant('payment.history.pendingDecision.reason');
+    }
     if (row.excluded) {
       return this.translate.instant('payment.history.excluded.reason');
     }

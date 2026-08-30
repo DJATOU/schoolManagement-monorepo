@@ -56,6 +56,7 @@ describe('PaymentHistoryDialogComponent', () => {
       catchUp: false,
       attendanceRecorded: true,
       excluded: false,
+      pendingDecision: false,
       ...over
     });
 
@@ -74,6 +75,25 @@ describe('PaymentHistoryDialogComponent', () => {
 
     it('rend le statut du serveur pour une séance dont la présence est saisie', () => {
       expect(component.statusLabel(row({ status: 'paid' }))).toBe('payment.history.status.paid');
+    });
+
+    /**
+     * Un rattrapage à préciser n'est ni une dette ni une gratuité : son libellé doit être
+     * distinct des deux autres, sinon la ligne annonce une décision que personne n'a prise.
+     */
+    it('distingue un rattrapage à préciser d\'une séance écartée et d\'un impayé', () => {
+      const pending = component.statusLabel(row({ pendingDecision: true, status: 'unpaid' }));
+
+      expect(pending).toBe('payment.history.pendingDecision.reason');
+      expect(pending).not.toBe('payment.history.excluded.reason');
+      expect(pending).not.toBe('payment.history.status.unpaid');
+    });
+
+    it('donne la priorité à « à préciser » sur « écartée » quand les deux sont vrais', () => {
+      // Le serveur ne devrait pas produire cette combinaison, mais l'ordre des tests ne doit pas
+      // dépendre de cette confiance : la décision non prise primera toujours.
+      expect(component.statusLabel(row({ pendingDecision: true, excluded: true })))
+        .toBe('payment.history.pendingDecision.reason');
     });
   });
 });

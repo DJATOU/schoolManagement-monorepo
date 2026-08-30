@@ -10,7 +10,8 @@ import {
   countBillableSessions,
   countExcludedSessions,
   isCatchUpBilled,
-  isExcludedSession
+  isExcludedSession,
+  isPendingCatchUp
 } from '../../../shared/session-billing';
 
 @Injectable({
@@ -21,6 +22,9 @@ export class PdfGeneratorService {
   // Couleur dédiée à la légende « Présent et exempté » (réduction 100 %).
   // Bleu distinct des autres couleurs de la légende.
   private static readonly EXEMPTED_PRESENT_COLOR = '#1e88e5';
+
+  /** Teinte des rattrapages à préciser : ambre, distincte du gris des séances écartées. */
+  private static readonly PENDING_DECISION_COLOR = '#fef3c7';
 
   constructor(private translate: TranslateService) {
     (pdfMake as any).vfs = pdfFonts.pdfMake.vfs;
@@ -148,6 +152,12 @@ export class PdfGeneratorService {
             [
               { text: this.t('excludedTag'), bold: true },
               { text: this.t('pdf.legend.excludedSession') }
+            ],
+            // Rattrapage à préciser : la légende le nomme, car en noir et blanc sa teinte ambre
+            // ne se distingue pas des autres fonds clairs.
+            [
+              { text: this.t('pendingDecisionTag'), bold: true },
+              { text: this.t('pdf.legend.pendingDecisionSession') }
             ]
           ]
         },
@@ -446,8 +456,13 @@ export class PdfGeneratorService {
       // (exigences 11.3, 11.5). Le fond gris seul ne distinguerait pas la première d'une
       // séance due, notamment à l'impression noir et blanc.
       const excluded = isExcludedSession(session);
+      const pendingDecision = isPendingCatchUp(session);
       let sessionTitle: string;
-      if (excluded) {
+      if (pendingDecision) {
+        // À préciser : sur un document remis à la famille, il faut dire que rien n'est encore
+        // facturé, sans annoncer ni dette ni gratuité.
+        sessionTitle = this.t('pdf.pendingDecisionSession', { name: session.sessionName || '—' });
+      } else if (excluded) {
         sessionTitle = this.t('pdf.excludedSession', { name: session.sessionName || '—' });
       } else if (isCatchUpBilled(session)) {
         sessionTitle = this.t('pdf.catchUpSession', { name: session.sessionName || '—' });
@@ -462,10 +477,16 @@ export class PdfGeneratorService {
 
       // Statut de paiement : une séance écartée n'en a pas. Le code « UNPAID » que le
       // serveur renvoie par défaut la faisait imprimer « Non payé », donc comme une dette.
-      const paymentText = excluded
-        ? this.t('excludedTag')
-        : this.label('payment', session.paymentStatus);
-      const amountText = excluded
+      // Un rattrapage à préciser n'en a pas davantage : sa facturation n'est pas décidée.
+      let paymentText: string;
+      if (pendingDecision) {
+        paymentText = this.t('pendingDecisionTag');
+      } else if (excluded) {
+        paymentText = this.t('excludedTag');
+      } else {
+        paymentText = this.label('payment', session.paymentStatus);
+      }
+      const amountText = (excluded || pendingDecision)
         ? '—'
         : this.t('pdf.amount', { amount: this.amount(session.amountPaid) });
 
@@ -513,6 +534,12 @@ export class PdfGeneratorService {
     // et la colonne de paiement portent l'étiquette « non facturée » (exigence 11.4).
     if (isExcludedSession(session)) {
       return '#f5f5f5';
+    }
+
+    // Rattrapage à préciser : teinte ambre distincte du gris des séances écartées. Le rouge
+    // « non payé » serait une fausse alerte, le gris annoncerait une gratuité décidée.
+    if (isPendingCatchUp(session)) {
+      return PdfGeneratorService.PENDING_DECISION_COLOR;
     }
 
     // Présent et exempté (réduction 100 %) : couleur dédiée, prioritaire sur le vert « payé ».

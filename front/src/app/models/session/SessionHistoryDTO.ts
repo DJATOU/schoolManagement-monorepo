@@ -82,4 +82,22 @@ export interface SessionHistoryDTO {
     justificationUpdatedBy?: string;
     /** Horodatage de la dernière modification de la justification. */
     justificationUpdatedAt?: string;
+
+    /**
+     * État de facturation du rattrapage. Absent pour une présence ordinaire.
+     *
+     * À distinguer des motifs voisins, sans quoi la ligne redevient ambiguë :
+     * - `billable === false` : écartée, décision **prise** ;
+     * - `billedInOriginSeries` : écartée car **déjà payée ailleurs** ;
+     * - `PENDING` : **rien n'est décidé**. Ni une dette, ni une gratuité acquise.
+     */
+    catchUpBillingState?: 'PENDING' | 'RESOLVED' | 'HOST_BILLED';
+
+    /**
+     * Séance facturée au groupe d'accueil faute de groupe de même niveau et même matière.
+     *
+     * Facturer sur place une séance suivie par un non-membre paraît arbitraire sans ce motif :
+     * il énonce la raison exacte — aucune place n'était réservée ailleurs.
+     */
+    billedAtHostGroup?: boolean;
 }

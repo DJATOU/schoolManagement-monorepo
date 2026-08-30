@@ -105,6 +105,21 @@
                  [matTooltip]="'SESSION_MODAL.OPEN_NEW_TAB' | translate">
                 <span class="student-name-text">{{ student.firstName }} {{ student.lastName }}</span>
                 <span *ngIf="student.isCatchUp" class="catch-up-label">{{ 'SESSION_MODAL.CATCH_UP' | translate }}</span>
+                <!-- Rattrapage à préciser : la séance est consommée mais personne ne la facture
+                     encore. Le badge la rend visible sans empêcher la validation de la séance
+                     pour les autres étudiants — le pointage doit rester rapide. -->
+                <span *ngIf="student.catchUpBillingState === 'PENDING'" class="catch-up-pending-label"
+                      [matTooltip]="'SESSION_MODAL.CATCH_UP_PENDING_HINT' | translate">
+                  <mat-icon aria-hidden="true">help_outline</mat-icon>
+                  {{ 'SESSION_MODAL.CATCH_UP_PENDING' | translate }}
+                </span>
+                <!-- Cas 2 : aucun groupe de même niveau et même matière, la séance est facturée
+                     sur place. Le motif doit être dit, sinon la facturation d'un non-membre
+                     paraît arbitraire. -->
+                <span *ngIf="student.catchUpBillingState === 'HOST_BILLED'" class="catch-up-host-label"
+                      [matTooltip]="'SESSION_MODAL.CATCH_UP_HOST_BILLED_HINT' | translate">
+                  {{ 'SESSION_MODAL.CATCH_UP_HOST_BILLED' | translate }}
+                </span>
                 <mat-icon class="open-icon">open_in_new</mat-icon>
               </a>
 

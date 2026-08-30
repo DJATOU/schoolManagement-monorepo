@@ -1,0 +1,94 @@
+.cub-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cub-context {
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  border-left: 3px solid var(--pf-primary, #3f51b5);
+  background: #f8fafc;
+  border-radius: 4px;
+
+  p {
+    margin: 2px 0;
+    font-size: 13px;
+  }
+}
+
+/* Niveau et matière : les deux dimensions du test de routage. Mises en évidence pour que la
+   décision reste vérifiable par le lecteur, et non prise sur parole. */
+.cub-routing {
+  margin-top: 6px !important;
+  font-style: italic;
+  color: #475569;
+}
+
+.cub-step {
+  margin: 16px 0 4px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.cub-hint {
+  margin: 0 0 8px;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.cub-field {
+  width: 100%;
+}
+
+.cub-radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.cub-loading {
+  display: flex;
+  justify-content: center;
+  padding: 16px 0;
+}
+
+.cub-error {
+  color: #b91c1c;
+  font-size: 13px;
+}
+
+.cub-empty {
+  font-style: italic;
+  color: #64748b;
+}
+
+.cub-audit {
+  margin: 0;
+  padding-left: 16px;
+  font-size: 12px;
+
+  li {
+    margin-bottom: 6px;
+  }
+}
+
+.cub-audit-field {
+  font-weight: 600;
+  margin-right: 6px;
+}
+
+.cub-audit-change {
+  margin-right: 6px;
+}
+
+.cub-audit-meta {
+  color: #64748b;
+}
+
+.cub-audit-comment {
+  display: block;
+  color: #475569;
+  font-style: italic;
+}

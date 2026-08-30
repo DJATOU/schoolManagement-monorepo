@@ -204,6 +204,10 @@ private loadAttendanceData(): void {
                     existingStudent.isJustified = attendance.isJustified ?? false;
                     existingStudent.isCatchUp = attendance.isCatchUp ?? existingStudent.isCatchUp;
                     existingStudent.description = attendance.description ?? '';
+                    // État de facturation décidé par le serveur : il pilote le badge
+                    // « à préciser », qui rend visible une séance consommée que personne ne
+                    // facture encore.
+                    existingStudent.catchUpBillingState = attendance.catchUpBillingState;
                 } else {
                     // Ajouter uniquement les étudiants qui ne sont pas encore dans la liste
                     this.studentService.getStudentById(attendance.studentId).subscribe((student: Student) => {
@@ -212,7 +216,8 @@ private loadAttendanceData(): void {
                             isPresent: attendance.isPresent,
                             isJustified: attendance.isJustified ?? false,
                             isCatchUp: attendance.isCatchUp ?? false,
-                            description: attendance.description ?? ''
+                            description: attendance.description ?? '',
+                            catchUpBillingState: attendance.catchUpBillingState
                         });
                     });
                 }
@@ -450,6 +455,13 @@ openAddStudentDialog(): void {
           // Un rattrapage, c'est une séance suivie dans un groupe dont l'étudiant n'est
           // pas membre. S'il est inscrit à ce groupe, la présence est ordinaire : la
           // marquer en rattrapage ferait basculer toute la série en calcul rattrapage.
+          //
+          // Ce drapeau ne dit QUE cela : « suivie hors de son groupe ». Il ne décide plus de
+          // la facturation. C'est le serveur qui classe la présence à l'enregistrement — vrai
+          // rattrapage à préciser, ou séance facturée sur place — car lui seul connaît les
+          // inscriptions de l'étudiant. Le client décidait auparavant, sans jamais demander
+          // quelle séance était rattrapée : la séance finissait facturée au groupe d'accueil
+          // sans que personne ne l'ait choisi.
           const isGroupMember = groupMemberIds.includes(selectedStudent.id as number);
 
           this.sessionData.students.push({

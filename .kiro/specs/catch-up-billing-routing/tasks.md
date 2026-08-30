@@ -160,7 +160,7 @@ test ne peut pas atteindre fait échouer le seuil. `AttendanceService`, `Attenda
     - `@Property(tries = 100)`, H2, séries et présences générées.
     - **Validates : PENDING inerte, série comme unité de facturation**
 
-- [ ] 5. Complétion : quelle séance manquée + déjà payée
+- [x] 5. Complétion : quelle séance manquée + déjà payée
   - [x] 5.1 Remplacer le véto « séance non payée » par une information dans `CatchUpService.create`
     - Le blocage actuel (400 « La séance manquée n'est pas payée ») est retiré : l'état de
       paiement de la série d'origine est **relayé** à l'appelant pour être affiché à côté du
@@ -170,7 +170,7 @@ test ne peut pas atteindre fait échouer le seuil. `AttendanceService`, `Attenda
       tests existants à jour dans la même tâche.
     - _Exigences : l'administrateur n'est jamais acculé_
 
-  - [ ] 5.2 Implémenter la résolution d'un rattrapage `PENDING`
+  - [x] 5.2 Implémenter la résolution d'un rattrapage `PENDING`
     - Exige les deux décisions : `missedSessionId` (obligatoire) et `missedSessionAlreadyPaid`
       (obligatoire, **aucun défaut** — l'absence de décision laisse l'état `PENDING`).
       Passe l'état à `RESOLVED`.
@@ -181,13 +181,13 @@ test ne peut pas atteindre fait échouer le seuil. `AttendanceService`, `Attenda
       lit la décision stockée.
     - _Exigences : choix explicite sans défaut, réutilisation des chemins existants_
 
-  - [ ] 5.3 Restreindre `getEligibleAbsences` aux groupes de même niveau+matière
+  - [x] 5.3 Restreindre `getEligibleAbsences` aux groupes de même niveau+matière
     - Le sélecteur de séance manquée ne propose que les absences non résolues des groupes
       passant le test de la tâche 1. Proposer une absence d'un autre niveau ou d'une autre
       matière permettrait de créer un lien que le modèle interdit.
     - _Exigences : sélecteur cohérent avec le test déterminant_
 
-  - [ ] 5.4 Écrire le property test « la décision stockée gouverne, la date ne décide plus seule »
+  - [x] 5.4 Écrire le property test « la décision stockée gouverne, la date ne décide plus seule »
     - **Property 4 : la décision « déjà payée » est respectée telle qu'elle a été prise** — pour
       tout rattrapage `RESOLVED`, « déjà payée » ⇒ la séance d'accueil n'est pas facturée et la
       séance manquée reste facturée dans sa série d'origine ; « à facturer » ⇒ la séance
@@ -198,7 +198,7 @@ test ne peut pas atteindre fait échouer le seuil. `AttendanceService`, `Attenda
     - `@Property(tries = 100)`, H2.
     - **Validates : ancrage à la séance manquée, pas de double facturation, aucune récursion entre séries**
 
-  - [ ] 5.5 Écrire le property test d'unicité du rattrapage par séance manquée
+  - [x] 5.5 Écrire le property test d'unicité du rattrapage par séance manquée
     - **Property 5 : une séance manquée n'est rattrapée qu'une fois** — pour toute séance
       manquée, une seconde résolution active vers cette même séance est refusée (409) et l'état
       existant reste inchangé.
@@ -206,21 +206,21 @@ test ne peut pas atteindre fait échouer le seuil. `AttendanceService`, `Attenda
     - `@Property(tries = 100)`, H2.
     - **Validates : décompte des séances suivies déterminé**
 
-- [ ] 6. Traçabilité et correction après coup
-  - [ ] 6.1 Créer le journal d'audit du rattrapage
+- [x] 6. Traçabilité et correction après coup
+  - [x] 6.1 Créer le journal d'audit du rattrapage
     - Table et entité sur le modèle **exact** de `attendance_justification_audit` : valeur avant,
       valeur après, auteur, horodatage, commentaire. Le journal **survit à la suppression** de la
       présence auditée — c'est après la disparition d'une donnée qu'on a besoin de savoir qui l'a
       modifiée. Migration Flyway.
     - _Exigences : trace complète, correction traçable_
 
-  - [ ] 6.2 Implémenter la correction d'un rattrapage résolu
+  - [x] 6.2 Implémenter la correction d'un rattrapage résolu
     - Point d'entrée réservé à l'ADMIN permettant de changer la séance manquée ou la décision
       « déjà payée », chaque changement écrivant une entrée d'audit. Les invariants de 5.2
       s'appliquent à la correction.
     - _Exigences : l'administrateur peut corriger son erreur_
 
-  - [ ] 6.3 Écrire le property test de traçabilité des corrections
+  - [x] 6.3 Écrire le property test de traçabilité des corrections
     - **Property 6 : toute correction laisse une trace immuable** — pour toute suite de
       corrections, le journal contient une entrée par changement effectif, avec valeur avant et
       après, auteur et horodatage ; aucune entrée n'est modifiée ni supprimée par une correction
@@ -229,13 +229,13 @@ test ne peut pas atteindre fait échouer le seuil. `AttendanceService`, `Attenda
     - `@Property(tries = 100)`, H2.
     - **Validates : trace obligatoire, auditabilité**
 
-- [ ] 7. Checkpoint — build et tests backend (Java 21)
+- [x] 7. Checkpoint — build et tests backend (Java 21)
   - Depuis `back/` : `bash build.sh clean verify`. Vérifier que le seuil JaCoCo 100 % est tenu sur
     `BillableSessionsResolver*`, `CatchUpBillingQualifier*` et `CatchUpService`. Poser une question
     à l'utilisateur en cas de souci.
 
-- [ ] 8. Exposer le routage et la complétion par l'API
-  - [ ] 8.1 Contrôleur mince pour les rattrapages en attente
+- [x] 8. Exposer le routage et la complétion par l'API
+  - [x] 8.1 Contrôleur mince pour les rattrapages en attente
     - Liste des rattrapages `PENDING` (étudiant, groupe d'accueil, séance, date), résolution, et
       correction. Logique dans les services, contrôleur mince. Écritures réservées à l'ADMIN par
       la chaîne de sécurité existante.
@@ -243,57 +243,57 @@ test ne peut pas atteindre fait échouer le seuil. `AttendanceService`, `Attenda
       libellés LAZY **dans** la transaction.
     - _Exigences : liste des rattrapages à préciser_
 
-  - [ ] 8.2 Relayer l'état et les mentions dans `SessionHistoryDTO`
+  - [x] 8.2 Relayer l'état et les mentions dans `SessionHistoryDTO`
     - Exposer l'état de facturation et, en Cas 2, le motif « facturée sur place — aucun groupe de
       même niveau et même matière ». Les mentions de rattrapage existantes
       (`billedInOriginSeries`, `caughtUpElsewhere`) sont conservées.
     - _Exigences : le cas est visible à l'écran_
 
-- [ ] 9. Frontend — pointage non bloquant et complétion
-  - [ ] 9.1 Retirer la décision du `session-modal` et afficher « à préciser »
+- [x] 9. Frontend — pointage non bloquant et complétion
+  - [x] 9.1 Retirer la décision du `session-modal` et afficher « à préciser »
     - Le composant n'écrit plus `isCatchUp: !isGroupMember` comme un verdict : il soumet la
       présence et affiche l'état renvoyé par le serveur. Un rattrapage `PENDING` porte un badge
       visible et **ne bloque pas** la validation de la séance pour les autres étudiants.
     - _Exigences : routage serveur, pointage rapide préservé_
 
-  - [ ] 9.2 Implémenter l'écran de complétion
+  - [x] 9.2 Implémenter l'écran de complétion
     - Sélecteur de séance manquée alimenté par `getEligibleAbsences` (déjà filtré en 5.3), et
       choix « Déjà payée, ne pas refacturer » / « À facturer » **sans présélection**. L'état de
       paiement de la série d'origine est affiché à titre d'information, sans empêcher la
       validation. Bouton d'enregistrement inactif tant que les deux décisions ne sont pas prises.
     - _Exigences : choix explicite sans défaut, information et non blocage_
 
-  - [ ] 9.3 Implémenter la liste des rattrapages à préciser
+  - [x] 9.3 Implémenter la liste des rattrapages à préciser
     - Vue listant les `PENDING` avec accès direct à la complétion, et un service dédié
       (un service par entité, gestion d'erreur centralisée selon le motif de
       `payment.service.ts`).
     - _Exigences : le cas est visible et corrigeable_
 
-  - [ ] 9.4 Afficher les mentions dans l'historique et le reçu
+  - [x] 9.4 Afficher les mentions dans l'historique et le reçu
     - Ligne d'un rattrapage en attente : « à préciser — non facturée pour l'instant », distincte
       de « non facturée » (décidée) et de « non payée » (dette). Cas 2 : « facturée sur place ».
     - Réutiliser `shared/session-billing.ts` afin que les trois vues (fenêtre de paiement,
       historique complet, PDF) tranchent identiquement.
     - _Exigences : ne pas rejouer la confusion d'étiquettes déjà corrigée_
 
-  - [ ] 9.5 Écrire les tests frontend de la complétion et du badge
+  - [x] 9.5 Écrire les tests frontend de la complétion et du badge
     - Aucune présélection du choix « déjà payée » ; enregistrement impossible tant que les deux
       décisions manquent ; badge « à préciser » présent sans bloquer la validation.
     - _Exigences : choix explicite sans défaut_
 
-- [ ] 10. Ajouter les traductions i18n FR + EN
+- [x] 10. Ajouter les traductions i18n FR + EN
   - Clés des nouveaux libellés (état à préciser, écran de complétion, choix « déjà payée »,
     mention Cas 2, liste des rattrapages en attente, messages d'audit) dans `fr.json` et `en.json`.
   - Ne pas traduire les commentaires et messages français existants.
   - _Exigences : i18n FR+EN à parité_
 
-  - [ ] 10.1 Vérifier la parité des clés FR/EN
+  - [x] 10.1 Vérifier la parité des clés FR/EN
     - `fr.json` et `en.json` possèdent exactement les mêmes clés (le test de parité existant
       couvre ce point).
     - _Exigences : parité i18n_
 
-- [ ] 11. Correction des données existantes — rapport d'abord, jamais d'UPDATE aveugle
-  - [ ] 11.1 Produire le rapport en lecture seule
+- [x] 11. Correction des données existantes — rapport d'abord, jamais d'UPDATE aveugle
+  - [x] 11.1 Produire le rapport en lecture seule
     - Pour chaque présence `is_catch_up = true AND active AND missed_session_id IS NULL` :
       étudiant, séance et groupe d'accueil **avec niveau et matière**, ses groupes d'inscription
       **avec niveau et matière**, verdict du test de la tâche 1, montant déjà encaissé sur la
@@ -306,21 +306,35 @@ test ne peut pas atteindre fait échouer le seuil. `AttendanceService`, `Attenda
     - **Aucune écriture dans cette tâche.**
     - _Exigences : correction appliquée en connaissance de cause_
 
-  - [ ] 11.2 Appliquer la migration unique après validation
+  - [x] 11.2 ABANDONNÉE — aucune migration de données (enregistrements de test)
+    - Décision du propriétaire produit, après lecture du rapport 11.1 : les 4 enregistrements sont
+      des données de test, et le déploiement (Mini PC) part d'une base vide. Corriger des lignes
+      qui n'atteindront jamais la production n'apporte rien.
+    - Le rapport 11.1 a rempli son rôle : il a confirmé que le test niveau + matière classe
+      correctement les 4 en Cas 2, sans changement de montant. C'est le **modèle** qui est ainsi
+      validé, et la correction des lignes jetables n'y ajoutait rien.
+    - La correctness de la feature repose sur les property tests et sur ce rapport, non sur la
+      réparation de données temporaires.
+    - Le script `back/reports/catch-up-billing-audit-report.sql` reste disponible : il est
+      ré-exécutable si le cas se présentait sur une base réelle.
+    - _Exigences : pas d'UPDATE aveugle sur des lignes portant de l'argent — respectée par
+      l'abandon même de l'écriture_
+
+<!-- Contenu d'origine de 11.2, conservé pour mémoire si le cas survenait sur une base réelle :
     - Poser l'état `HOST_BILLED` et le libellé de trace sur les seuls enregistrements validés par
       le propriétaire produit. Aucun montant modifié : la facturation sur place est déjà correcte
       pour ces lignes. Script Flyway idempotent, ciblant des identifiants explicites plutôt qu'un
       prédicat large.
     - Ne pas lancer cette tâche avant la validation explicite du rapport 11.1.
-    - _Exigences : pas d'UPDATE aveugle sur des lignes portant de l'argent_
+-->
 
-- [ ] 12. Étendre la couverture JaCoCo aux nouvelles classes
+- [x] 12. Étendre la couverture JaCoCo aux nouvelles classes
   - Ajouter aux `includes` de `jacoco-check` (`back/pom.xml`) `CatchUpRoutingService` et le service
     de résolution/correction des rattrapages, en excluant le code généré `*MapperImpl`
     conformément à la politique existante.
   - _Exigences : zone monétaire sous seuil_
 
-- [ ] 13. Consigner la règle dans le référentiel métier
+- [x] 13. Consigner la règle dans le référentiel métier
   - Compléter `.kiro/steering/business-rules.md` : le test déterminant niveau+matière, sa
     distinction avec `group_types` (effectif), le bornage à l'année scolaire, l'acceptation des
     inscriptions inactives, les deux cas de routage, et le caractère explicite de la décision
@@ -328,7 +342,7 @@ test ne peut pas atteindre fait échouer le seuil. `AttendanceService`, `Attenda
     absente d'ici sera contredite par la prochaine évolution.
   - _Exigences : décisions tracées hors du code_
 
-- [ ] 14. Checkpoint final — build, tests et couverture
+- [x] 14. Checkpoint final — build, tests et couverture
   - Depuis `back/` : `bash build.sh clean verify`. Puis
     `cd front && npm test -- --watch=false --browsers=ChromeHeadless`.
   - Vérifier que tous les tests passent et que le seuil JaCoCo est tenu. Poser une question à
@@ -343,6 +357,9 @@ test ne peut pas atteindre fait échouer le seuil. `AttendanceService`, `Attenda
   véto de `CatchUpService`). Aucune branche défensive inatteignable.
 - `CatchUpBillingQualifier.qualify()` — la comparaison de dates et le repli vers `CONSOMME` — n'est
   modifié par **aucune** tâche de ce plan.
-- La tâche 11.2 est bloquée par une validation humaine explicite de la tâche 11.1.
+- La tâche 11.2 a été **abandonnée** après lecture du rapport 11.1 : les enregistrements concernés
+  sont des données de test, et le déploiement part d'une base vide. Le rapport avait déjà rempli son
+  rôle en confirmant que le test niveau + matière les classe tous en Cas 2, sans changement de
+  montant.
 - Tous les builds backend s'exécutent depuis `back/` en Java 21 : lancé depuis la racine,
   `build.sh` échoue silencieusement avec un code de sortie 0.

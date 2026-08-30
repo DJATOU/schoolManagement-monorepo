@@ -213,10 +213,24 @@
                           && !showJustifiedColumn(series)">
                       ({{ getJustificationText(session) }})
                     </span>
+                    <!-- Cas 2 : facturée sur place, faute de groupe de même niveau et même
+                         matière. Sans ce motif, facturer un non-membre paraît arbitraire. -->
+                    <span class="fh-inline-reason" *ngIf="session.billedAtHostGroup">
+                      {{ 'studentHistory.billedAtHostGroup' | translate }}
+                    </span>
                   </span>
                 </td>
                 <td *ngIf="showJustifiedColumn(series)">{{ getJustificationText(session) || '—' }}</td>
                 <td class="fh-num">
+                  <!-- Rattrapage à préciser : aucun montant, car aucune décision. Afficher un
+                       « 0 DA » laisserait croire à une gratuité acquise, et un montant dû à une
+                       dette établie. Ni l'un ni l'autre n'est vrai tant que rien n'est tranché. -->
+                  <ng-container *ngIf="sessionState(session) === 'PENDING_DECISION'">
+                    <span class="fh-pending-decision-amount"
+                          [attr.title]="'studentHistory.pendingDecisionHint' | translate">
+                      {{ sessionAmountLabel(session) }}
+                    </span>
+                  </ng-container>
                   <ng-container *ngIf="sessionState(session) === 'NOT_BILLED'">
                     <span class="fh-not-billed-amount">
                       {{ 'studentHistory.excludedTag' | translate }}

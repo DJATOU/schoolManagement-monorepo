@@ -447,6 +447,33 @@ public class StudentHistoryService {
         return group != null ? group.getName() : null;
     }
 
+    /**
+     * Reporte l'état de facturation du rattrapage porté par la présence de l'étudiant.
+     *
+     * <p>La présence est cherchée parmi celles de la séance, actives et appartenant à cet étudiant :
+     * l'état est propre au couple (étudiant, séance) et non à la séance, deux étudiants pouvant être
+     * l'un membre et l'autre en rattrapage sur la même séance.</p>
+     *
+     * <p>{@code billedAtHostGroup} n'est renseigné que pour {@code HOST_BILLED} : c'est le seul cas
+     * dont la facturation demande une explication à l'écran, puisqu'elle porte sur un étudiant non
+     * membre du groupe.</p>
+     */
+    private void applyCatchUpBillingState(SessionHistoryDTO dto, SessionEntity session,
+            StudentEntity student) {
+        session.getAttendances().stream()
+                .filter(AttendanceEntity::isActive)
+                .filter(a -> a.getStudent() != null && a.getStudent().getId().equals(student.getId()))
+                .map(AttendanceEntity::getCatchUpBillingState)
+                .filter(Objects::nonNull)
+                .findFirst()
+                .ifPresent(state -> {
+                    dto.setCatchUpBillingState(state);
+                    if (state == CatchUpBillingState.HOST_BILLED) {
+                        dto.setBilledAtHostGroup(true);
+                    }
+                });
+    }
+
     /** Reporte sur la séance les mentions de rattrapage qui la concernent. */
     private void applyCatchUpMentions(SessionHistoryDTO dto, SessionEntity session,
             CatchUpMentions mentions) {
@@ -593,6 +620,11 @@ public class StudentHistoryService {
         // information comme les autres (exigences 11.3, 11.5).
         dto.setInclusionReason(inclusionReason);
         dto.setBillable(inclusionReason != BillingInclusionReason.EXCLUDED);
+
+        // État de facturation du rattrapage, lu sur la présence de l'étudiant pour CETTE séance.
+        // Sans lui, une séance à préciser s'afficherait comme une séance ordinaire non payée : le
+        // lecteur y verrait une dette là où aucune décision n'a encore été prise.
+        applyCatchUpBillingState(dto, session, student);
 
         // Si la session n'est plus active (= dévalidée)
         if (Boolean.FALSE.equals(session.getActive())) {

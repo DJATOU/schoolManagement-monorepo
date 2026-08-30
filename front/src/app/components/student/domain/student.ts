@@ -26,6 +26,12 @@ export interface Student {
     isJustified?: boolean;
     description?: string;
     isCatchUp ?: boolean;
+    /**
+     * État de facturation du rattrapage, relayé par le serveur pour la feuille de présence.
+     * Pilote le badge « à préciser » : une séance consommée que personne ne facture encore doit
+     * être visible, sans pour autant bloquer la validation de la séance.
+     */
+    catchUpBillingState?: 'PENDING' | 'RESOLVED' | 'HOST_BILLED';
     /** Statut d'inscription : ACTIVE (par défaut) ou INACTIVE (étudiant désactivé/parti). */
     status?: 'ACTIVE' | 'INACTIVE' | string;
     active?: boolean;

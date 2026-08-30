@@ -430,6 +430,8 @@ public class CatchUpService {
      *
      * @param studentId identifiant de l'étudiant
      * @return la liste des absences éligibles, sous forme de {@link StudentAbsenceDTO}
+     * @see CatchUpBillingResolutionService#eligibleMissedSessions(Long, Long) restriction au niveau
+     *      et à la matière du groupe d'accueil, appliquée par le sélecteur de séance manquée
      */
     @Transactional(readOnly = true)
     public List<StudentAbsenceDTO> getEligibleAbsences(Long studentId) {

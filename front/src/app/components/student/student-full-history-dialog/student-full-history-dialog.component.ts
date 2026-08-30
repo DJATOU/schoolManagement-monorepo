@@ -15,7 +15,8 @@ import {
   countBillableSessions,
   countExcludedSessions,
   isCatchUpBilled,
-  isExcludedSession
+  isExcludedSession,
+  isPendingCatchUp
 } from '../../../shared/session-billing';
 
 /**
@@ -123,6 +124,8 @@ export class StudentFullHistoryDialogComponent implements OnInit {
    */
   getSessionRowClass(session: SessionHistoryDTO): string {
     switch (this.sessionState(session)) {
+      case 'PENDING_DECISION':
+        return 'row-pending-decision';
       case 'NOT_BILLED':
         return 'row-not-billed';
       case 'EXEMPTED':
@@ -160,6 +163,10 @@ export class StudentFullHistoryDialogComponent implements OnInit {
    */
   sessionAmountLabel(session: SessionHistoryDTO): string {
     switch (this.sessionState(session)) {
+      // « À préciser » et non « non facturée » : la seconde formule annoncerait une gratuité
+      // décidée, alors que la décision reste à prendre.
+      case 'PENDING_DECISION':
+        return this.translate.instant('studentHistory.pendingDecisionTag');
       case 'NOT_BILLED':
         return this.translate.instant('studentHistory.excludedTag');
       case 'EXEMPTED':
@@ -293,7 +300,13 @@ export class StudentFullHistoryDialogComponent implements OnInit {
    * <p>`EXEMPTED` précède `PAID` : une séance exemptée n'a pas été payée, elle n'était pas
    * due. Les confondre attribuerait à la famille un règlement qu'elle n'a pas fait.</p>
    */
-  sessionState(session: SessionHistoryDTO): 'NOT_BILLED' | 'EXEMPTED' | 'PAID' | 'DUE' {
+  sessionState(session: SessionHistoryDTO): 'PENDING_DECISION' | 'NOT_BILLED' | 'EXEMPTED' | 'PAID' | 'DUE' {
+    // Rattrapage à préciser : ni dette ni gratuité acquise. Il précède tous les autres tests,
+    // car aucun d'eux ne s'applique à une séance dont la facturation n'est pas décidée — la
+    // classer « non facturée » annoncerait une gratuité, « due » une dette inexistante.
+    if (isPendingCatchUp(session)) {
+      return 'PENDING_DECISION';
+    }
     if (isExcludedSession(session)) {
       return 'NOT_BILLED';
     }

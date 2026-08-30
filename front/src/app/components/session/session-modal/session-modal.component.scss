@@ -267,6 +267,44 @@
   font-weight: 500;
 }
 
+/* Rattrapage à préciser : signalé par un texte ET une icône, jamais par la seule couleur —
+   illisible pour un daltonien comme à l'impression noir et blanc. */
+.catch-up-pending-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: 6px;
+  padding: 1px 8px;
+  border: 1px solid #f59e0b;
+  border-radius: 12px;
+  background: #fffbeb;
+  color: #92400e;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+
+  mat-icon {
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+  }
+}
+
+/* Facturée sur place : information neutre, pas une alerte. Aucune décision n'est attendue. */
+.catch-up-host-label {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 6px;
+  padding: 1px 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
 .description-input {
   min-width: 0;
   border: 1px solid #e5e7eb;

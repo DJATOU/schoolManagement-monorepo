@@ -386,6 +386,19 @@
                                         <include>com.school.management.config.security.SecurityAuditorAware</include>
                                         <include>com.school.management.config.security.InitialAdminRunner</include>
                                         <include>com.school.management.mapper.UserMapper</include>
+                                        <!-- Feature catch-up-billing-routing : les deux services
+                                             qui décident où va l'argent d'une séance suivie hors
+                                             groupe. Le routeur classe la présence (même niveau et
+                                             même matière ⇒ vrai rattrapage, sinon facturée sur
+                                             place) ; le service de résolution enregistre les deux
+                                             décisions et leur trace. Une branche non testée dans
+                                             l'un ou l'autre reproduit exactement le défaut que
+                                             cette feature corrige : une facturation décidée par
+                                             défaut, au mauvais groupe, sans que personne ne l'ait
+                                             choisie. Le joker couvre les enums imbriqués
+                                             (RoutingVerdict). -->
+                                        <include>com.school.management.service.CatchUpRoutingService*</include>
+                                        <include>com.school.management.service.CatchUpBillingResolutionService</include>
                                     </includes>
                                     <limits>
                                         <limit>

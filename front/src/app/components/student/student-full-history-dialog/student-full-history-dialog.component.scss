@@ -362,6 +362,16 @@ mat-dialog-content {
 }
 .row-exempted { background-color: rgba($color-exempted, 0.14); }
 
+/* Rattrapage à préciser : liseré ambre continu, distinct du tireté des séances écartées. La
+   ligne attend une décision — ce n'est ni une dette, ni une gratuité acquise. */
+.row-pending-decision {
+  background-color: #fffbeb;
+
+  td:first-child {
+    border-left: 3px solid #f59e0b;
+  }
+}
+
 /* Colonnes de montants alignées à droite : des chiffres comparés se lisent alignés. */
 .fh-table .fh-num {
   text-align: right;
@@ -412,6 +422,13 @@ mat-dialog-content {
 
 /* Séance non facturée : le montant est remplacé par la mention, jamais par « 0 DA » — un
    zéro se lirait comme une dette soldée. */
+/* Rattrapage à préciser : la mention remplace le montant. Un « 0 DA » annoncerait une gratuité
+   décidée, un montant dû une dette établie ; les deux seraient faux avant la décision. */
+.fh-pending-decision-amount {
+  font-weight: 600;
+  color: #92400e;
+}
+
 .fh-not-billed-amount {
   font-style: italic;
   color: rgba(0, 0, 0, 0.5);

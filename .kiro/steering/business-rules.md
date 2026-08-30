@@ -183,6 +183,78 @@ Deux points d'implémentation qui ont valeur de règle :
 Un seul rattrapage est possible par couple (étudiant, séance manquée) : deux rattrapages d'une même
 séance rendraient indéterminé lequel compense l'absence.
 
+## Rattrapage : le test déterminant est NIVEAU + MATIÈRE — TRANCHÉ
+
+**Question posée** : quand une présence hors groupe est-elle un vrai rattrapage, et quand est-elle
+une séance à facturer sur place ?
+
+**Décision du propriétaire produit** : un vrai rattrapage suppose qu'une **place soit réservée
+ailleurs**. Le test est donc l'existence d'une inscription de l'étudiant à un **autre groupe de même
+niveau ET même matière**, dans la **même année scolaire**.
+
+```
+même niveau + même matière + même année, autre groupe  →  CAS 1, vrai rattrapage
+sinon                                                  →  CAS 2, facturée sur place
+```
+
+- **CAS 1** — la facturation reste **ancrée à la séance manquée dans son groupe d'origine**. La
+  présence d'accueil est enregistrée « à préciser » : elle ne facture rien tant que la séance
+  manquée et la décision « déjà payée » ne sont pas renseignées.
+- **CAS 2** — aucune place n'est réservée nulle part, donc **personne d'autre ne facture cette
+  séance** : elle est facturée au groupe d'accueil, comme à un membre. L'absence de séance manquée
+  est ici **voulue**, et non un lien oublié. C'est la distinction que l'ancien modèle ne pouvait pas
+  exprimer, et son absence produisait une facturation par défaut, silencieuse.
+
+⚠ **« Type de groupe » est un faux ami.** `group_types` désigne l'**effectif** (petit / moyen /
+grand / individuel) et **n'intervient pas** dans ce test. Un groupe de maths de 1re année et un
+groupe d'anglais de 3e année peuvent partager le même type. Router sur le type facturerait au mauvais
+groupe. L'effectif et le prix servent à un **autre** test, celui de `CatchUpService.isCompatible` :
+celui-là dit **où** un rattrapage peut se dérouler, le test niveau + matière dit **si** c'en est un.
+
+Deux bornes délibérées :
+
+- **même année scolaire** : un rattrapage concerne une séance manquée cette année et rattrapée cette
+  année. Un groupe de l'année précédente n'ouvre aucun droit ;
+- **inscription clôturée comprise** : un étudiant ayant quitté un groupe reste débiteur, règle déjà
+  admise pour l'encaissement. Refuser son inscription clôturée requalifierait son rattrapage en
+  séance facturable sur place, donc le ferait payer deux fois.
+
+## La décision « déjà payée » est explicite — TRANCHÉ
+
+**Question posée** : le système doit-il déduire des dates si la séance manquée était déjà payée, ou
+l'administrateur doit-il trancher ?
+
+**Décision du propriétaire produit : choix explicite, aucune valeur par défaut.** Un défaut juste
+dans la plupart des cas n'est jamais relu, et le jour où il est faux l'erreur passe inaperçue — c'est
+exactement le scénario de double facturation que cette règle existe pour empêcher.
+
+- La décision est **stockée**, jamais recalculée à la lecture. Une décision prise à un instant donné
+  est une **donnée**, comme une date : la recalculer depuis l'état de paiement rendrait le coût d'une
+  série sensible aux versements faits sur une autre, et le résultat dépendrait de l'ordre
+  d'évaluation.
+- L'état « non tranché » est **représentable** (valeur nulle) : c'est ce qui permet de n'avoir aucun
+  défaut. Un `false` implicite déciderait à la place de l'administrateur.
+- La décision est **corrigeable**, et chaque changement effectif laisse une trace immuable — valeur
+  avant, valeur après, auteur, horodatage, commentaire. La trace **survit à la suppression de la
+  présence auditée** : c'est justement après la disparition d'une donnée qu'on a besoin de savoir qui
+  l'a modifiée.
+- Un **impayé n'interdit pas** un rattrapage. Le retard de la série d'origine est **affiché** à côté
+  de la décision, jamais opposé à l'administrateur : lui refuser un rattrapage que l'école vient
+  d'accorder l'acculerait sans recours. Seul un droit au rattrapage **explicitement révoqué** bloque,
+  car c'est une décision d'administrateur et non une conséquence mécanique d'un impayé.
+
+**Le routage est décidé côté serveur**, seul à connaître les inscriptions de l'étudiant. L'écran de
+validation d'une séance marquait auparavant lui-même rattrapage tout étudiant non membre du groupe,
+sans jamais demander quelle séance était rattrapée : la séance finissait facturée au groupe d'accueil
+sans que personne ne l'ait choisi. Une décision monétaire prise dans le navigateur n'est ni testable
+ni fiable.
+
+**Un rattrapage « à préciser » est inerte** : il n'entre ni dans les séances facturables ni dans les
+séances écartées, et n'alimente pas le décompte des séances suivies. Il ne doit pas être présenté
+comme « non facturée » — ce serait annoncer une gratuité décidée — ni comme un impayé, ce serait
+annoncer une dette. Il doit en revanche rester **visible** : une séance consommée que personne ne
+facture est un oubli en puissance.
+
 ## DEFERRED policy decision — do NOT hardcode an assumption
 
 At month / year end, does a student owe for sessions they were **absent** from?

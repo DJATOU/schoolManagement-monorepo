@@ -26,6 +26,45 @@ public interface AttendanceRepository extends JpaRepository<AttendanceEntity, Lo
     boolean existsByStudentIdAndMissedSessionIdAndActiveTrue(Long studentId, Long missedSessionId);
 
     /**
+     * Même contrôle d'unicité, mais en <strong>ignorant une présence donnée</strong>.
+     *
+     * <p>Indispensable à la correction : réaffecter un rattrapage à une séance manquée doit vérifier
+     * qu'aucune <em>autre</em> présence ne couvre déjà cette séance. Avec la variante ci-dessus, une
+     * correction qui redésigne la même séance manquée se heurterait à elle-même et serait refusée,
+     * alors qu'elle ne crée aucun doublon.</p>
+     */
+    @Query("SELECT CASE WHEN COUNT(a) > 0 THEN true ELSE false END FROM AttendanceEntity a "
+            + "WHERE a.student.id = :studentId AND a.missedSession.id = :missedSessionId "
+            + "AND a.active = true AND a.id <> :excludedAttendanceId")
+    boolean existsOtherCatchUpForMissedSession(@Param("studentId") Long studentId,
+                                               @Param("missedSessionId") Long missedSessionId,
+                                               @Param("excludedAttendanceId") Long excludedAttendanceId);
+
+    /**
+     * Rattrapages à préciser : présences actives dont la facturation n'est pas encore tranchée.
+     *
+     * <p>Cette liste est consultée <strong>pour être vidée</strong> : chaque ligne est une séance
+     * consommée que personne ne facture encore. La laisser invisible reviendrait à reproduire le
+     * défaut d'origine sous une autre forme — non plus une facturation silencieuse, mais un oubli
+     * silencieux.</p>
+     *
+     * <p>Ordre chronologique de séance : l'administrateur traite ce qui a eu lieu d'abord, et la
+     * liste ne se réordonne pas d'une consultation à l'autre.</p>
+     */
+    /**
+     * <p>La séance est jointe en {@code LEFT JOIN} et non par navigation implicite
+     * ({@code a.session.sessionTimeStart}), qui produit une jointure interne : une présence dont la
+     * séance a été supprimée disparaissait alors de la liste. Or c'est exactement la ligne qu'il
+     * faut voir — une séance consommée, non facturée, et désormais sans repère. La faire disparaître
+     * transformerait le défaut d'origine en oubli définitif.</p>
+     */
+    @Query("SELECT a FROM AttendanceEntity a LEFT JOIN a.session s "
+            + "WHERE a.catchUpBillingState = com.school.management.persistance.CatchUpBillingState.PENDING "
+            + "AND a.active = true "
+            + "ORDER BY s.sessionTimeStart ASC NULLS LAST, a.id ASC")
+    List<AttendanceEntity> findPendingCatchUps();
+
+    /**
      * Présences de rattrapage actives d'un étudiant, tous groupes confondus.
      *
      * <p>Alimente {@code CatchUpBillingQualifier}, qui doit voir les rattrapages hors de la série

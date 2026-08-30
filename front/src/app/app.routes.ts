@@ -23,6 +23,7 @@ import { GroupTypeTableComponent } from './components/groupType/group-type-table
 import { PricingTableComponent } from './components/pricing/pricing-table/pricing-table.component';
 import { GroupProfileComponent } from './components/group/group-profile/group-profile.component';
 import { CatchUpListComponent } from './components/catch-up/catch-up-list/catch-up-list.component';
+import { CatchUpBillingListComponent } from './components/catch-up/catch-up-billing-list/catch-up-billing-list.component';
 import { DiscountListComponent } from './components/discount/discount-list/discount-list.component';
 import { PaymentManagementComponent } from './components/admin/payment-management/payment-management.component';
 import { RevenueReportComponent } from './components/admin/revenue/revenue-report.component';
@@ -69,6 +70,9 @@ export const routes: Routes = [
   { path: 'group/:groupId/series/:seriesId', component: SeriesDetailComponent, canActivate: [authGuard] },
   { path: 'group/:id', component: GroupProfileComponent, canActivate: [authGuard] },
   { path: 'catch-ups', component: CatchUpListComponent, canActivate: [authGuard] },
+  // Lecture ouverte à VIEWER : constater qu'une décision de facturation est en attente n'est pas
+  // la prendre. Les actions d'écriture sont grisées par appAdminOnly et refusées par le serveur.
+  { path: 'catch-up-billing', component: CatchUpBillingListComponent, canActivate: [authGuard] },
   { path: 'discounts', component: DiscountListComponent, canActivate: [authGuard] },
   { path: 'admin/payment-management', component: PaymentManagementComponent, canActivate: [roleGuard('ADMIN')] },
   // Recettes : données financières, ADMIN uniquement (l'API l'exige aussi).

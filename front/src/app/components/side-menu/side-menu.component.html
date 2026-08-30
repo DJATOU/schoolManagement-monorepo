@@ -80,6 +80,12 @@
           <mat-icon class="item-icon">history_edu</mat-icon>
           <span class="item-text">{{ 'SIDE_MENU.CATCH_UPS' | translate }}</span>
         </button>
+        <!-- Rattrapages à préciser : la liste doit être atteignable en un clic, sinon les
+             décisions en attente restent invisibles et deviennent des oublis. -->
+        <button mat-list-item class="nav-item" routerLinkActive="active-link" [routerLink]="['/catch-up-billing']">
+          <mat-icon class="item-icon">help_outline</mat-icon>
+          <span class="item-text">{{ 'SIDE_MENU.CATCH_UP_BILLING' | translate }}</span>
+        </button>
         <button mat-list-item class="nav-item" routerLinkActive="active-link" [routerLink]="['/year-end']">
           <mat-icon class="item-icon">event_available</mat-icon>
           <span class="item-text">{{ 'SIDE_MENU.YEAR_END' | translate }}</span>
