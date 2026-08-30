@@ -152,7 +152,7 @@ property-test sont **obligatoires** (non marquées optionnelles).
     `SecurityConfig`.
   - _Requirements: 2.1, 2.3, 9.1_
 
-- [ ] 10. Checkpoint — build et tests backend (Java 21)
+- [x] 10. Checkpoint — build et tests backend (Java 21)
   - Lancer `bash back/build.sh clean test`. S'assurer que tous les tests passent ; poser une
     question à l'utilisateur en cas de souci.
 
@@ -273,7 +273,7 @@ property-test sont **obligatoires** (non marquées optionnelles).
     - `@Property(tries = 100)`, `SecurityContext` simulé (authentifié / anonyme), entités persistées en H2.
     - **Validates: Requirements 8.1, 8.2, 8.3, 8.4**
 
-- [ ] 16. Checkpoint — build et tests backend complets (Java 21)
+- [x] 16. Checkpoint — build et tests backend complets (Java 21)
   - Lancer `bash back/build.sh clean test`. S'assurer que tous les tests passent ; poser une
     question à l'utilisateur en cas de souci.
 
@@ -347,7 +347,7 @@ property-test sont **obligatoires** (non marquées optionnelles).
     le code généré `*MapperImpl` conformément à la politique existante.
   - _Requirements: 5.1, 5.2, 7.1, 8.1_
 
-- [ ] 22. Checkpoint final — build, tests et couverture (Java 21)
+- [x] 22. Checkpoint final — build, tests et couverture (Java 21)
   - Lancer `bash back/build.sh clean verify` (backend, Java 21) et
     `cd front && npm test -- --watch=false --browsers=ChromeHeadless` (frontend).
   - S'assurer que tous les tests passent et que le seuil de couverture JaCoCo est respecté sur les

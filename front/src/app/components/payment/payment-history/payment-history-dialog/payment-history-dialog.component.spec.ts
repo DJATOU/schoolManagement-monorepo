@@ -37,4 +37,43 @@ describe('PaymentHistoryDialogComponent', () => {
     expect(component.selectedSeries).toBeFalsy();
     expect(component.sessionSeries).toEqual([]);
   });
+
+  /**
+   * Une séance à venir n'est pas une séance écartée.
+   *
+   * <p>Les deux cas partageaient le même libellé : une séance postérieure à l'inscription,
+   * facturée et déjà réglée, mais dont la feuille de présence n'est pas encore saisie,
+   * s'annonçait « non présent — séance antérieure à l'inscription, non facturée », en
+   * contradiction avec le coût de la série affiché au-dessus. La présence n'étant saisie
+   * qu'après la séance, son absence ne dit rien de la facturation.</p>
+   */
+  describe('statusLabel', () => {
+    const row = (over: Partial<Parameters<typeof component.statusLabel>[0]> = {}) => ({
+      sessionName: 'passif voice 1',
+      paymentDate: null,
+      amountPaid: 0,
+      status: 'unpaid' as const,
+      catchUp: false,
+      attendanceRecorded: true,
+      excluded: false,
+      ...over
+    });
+
+    // Le harnais ne charge pas les fichiers de traduction : `instant()` renvoie la clé
+    // demandée. C'est la clé qui est donc vérifiée, et c'est bien elle qui porte le bug.
+    it('n\'annonce pas le motif d\'exclusion pour une séance réglée sans présence saisie', () => {
+      const label = component.statusLabel(row({ attendanceRecorded: false, status: 'paid', amountPaid: 2000 }));
+
+      expect(label).not.toBe('payment.history.excluded.reason');
+      expect(label).toBe('payment.history.attendancePending');
+    });
+
+    it('réserve le motif d\'exclusion aux séances réellement écartées', () => {
+      expect(component.statusLabel(row({ excluded: true }))).toBe('payment.history.excluded.reason');
+    });
+
+    it('rend le statut du serveur pour une séance dont la présence est saisie', () => {
+      expect(component.statusLabel(row({ status: 'paid' }))).toBe('payment.history.status.paid');
+    });
+  });
 });

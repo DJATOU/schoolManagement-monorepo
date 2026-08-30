@@ -111,45 +111,37 @@ export class GroupFormComponent implements OnInit {
     }
   }
 
-  flattenFormData(data: any, parentKey: string = ''): { label: string, value: any }[] {
-    let result: { label: string, value: any }[] = [];
-    Object.keys(data).forEach(key => {
-      const newKey = parentKey ? `${parentKey} - ${key}` : key;
-      const value = data[key];
-      if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-        result = result.concat(this.flattenFormData(value, newKey));
-      } else if (Array.isArray(value)) {
-        result.push({ label: newKey, value: value.join(', ') });
-      } else {
-        result.push({ label: newKey, value: value });
-      }
-    });
-    return result;
+  /**
+   * Construit le récapitulatif attendu par {@link SummaryDialogComponent} : une liste
+   * d'entrées « Section - champ ». Les identifiants sont remplacés par les libellés, sinon
+   * la relecture avant enregistrement ne montrerait que des nombres.
+   *
+   * <p>Les noms de champs employés ici sont ceux du dictionnaire de traduction
+   * (SUMMARY.FIELDS), et non les noms de contrôles suffixés « Id » : « Type de groupe »
+   * plutôt que « Group Type Id ».</p>
+   */
+  private buildSummary(): { label: string; value: any }[] {
+    const value = (path: string) => this.groupForm.get(path)?.value;
+
+    return [
+      { label: 'basicInformation - name', value: value('basicInformation.name') },
+      { label: 'basicInformation - groupType', value: this.getGroupNameById(value('basicInformation.groupTypeId')) },
+      { label: 'basicInformation - level', value: this.getLevelNameById(value('basicInformation.levelId')) },
+      { label: 'basicInformation - subject', value: this.getSubjectNameById(value('basicInformation.subjectId')) },
+      { label: 'additionalDetails - sessionNumberPerSerie', value: value('additionalDetails.sessionNumberPerSerie') },
+      { label: 'additionalDetails - price', value: this.getPriceById(value('additionalDetails.priceId')) },
+      { label: 'additionalDetails - teacher', value: this.getTeacherNameById(value('additionalDetails.teacherId')) },
+      { label: 'additionalDetails - description', value: value('additionalDetails.description') },
+      { label: 'additionalDetails - photo', value: this.selectedFile?.name }
+    ];
   }
 
   onSubmit(): void {
     if (this.groupForm.valid) {
-      const formData = {
-        basicInformation: {
-          name: this.groupForm.get('basicInformation.name')?.value,
-          groupTypeId: this.getGroupNameById(this.groupForm.get('basicInformation.groupTypeId')?.value),
-          levelId: this.getLevelNameById(this.groupForm.get('basicInformation.levelId')?.value),
-          subjectId: this.getSubjectNameById(this.groupForm.get('basicInformation.subjectId')?.value),
-        },
-        additionalDetails: {
-          sessionNumberPerSerie: this.groupForm.get('additionalDetails.sessionNumberPerSerie')?.value,
-          priceId: this.getPriceById(this.groupForm.get('additionalDetails.priceId')?.value),
-          description: this.groupForm.get('additionalDetails.description')?.value,
-          teacherId: this.getTeacherNameById(this.groupForm.get('additionalDetails.teacherId')?.value)
-        }
-      };
-  
-      const flattenedData = this.flattenFormData(formData);
-      console.log('Form Data:', formData);
-      console.log('Flattened Data:', flattenedData);
-  
       const dialogRef = this.dialog.open(SummaryDialogComponent, {
-        data: flattenedData
+        width: '520px',
+        maxWidth: '95vw',
+        data: this.buildSummary()
       });
   
       dialogRef.afterClosed().subscribe(result => {
@@ -196,7 +188,9 @@ export class GroupFormComponent implements OnInit {
         }
       });
     } else {
-      console.warn('The form is not valid.');
+      // Sans ce marquage, aucun champ ne signalait ce qui manquait : le bouton
+      // « Enregistrer » paraissait mort et la popup ne s'ouvrait jamais.
+      this.groupForm.markAllAsTouched();
       this.showErrorMessage('groupForm.messages.invalid');
     }
   }

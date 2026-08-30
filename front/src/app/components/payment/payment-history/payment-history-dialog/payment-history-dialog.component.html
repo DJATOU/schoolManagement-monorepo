@@ -98,10 +98,13 @@
     <table mat-table [dataSource]="paymentHistory" class="mat-elevation-z8" *ngIf="selectedSeries">
       <ng-container matColumnDef="session">
         <th mat-header-cell *matHeaderCellDef>{{ 'payment.history.table.session' | translate }}</th>
+        <!-- « Non facturée » ne vaut que pour une séance écartée. Une séance encore sans
+             feuille de présence est simplement à venir : elle garde la teinte de son
+             paiement, sinon une séance réglée d'avance s'affichait comme non facturée. -->
         <td mat-cell *matCellDef="let payment" [ngClass]="{
-          'row-not-billed': payment.excluded || !payment.attendanceRecorded,
-          'row-paid': !payment.excluded && payment.attendanceRecorded && payment.status === 'paid',
-          'row-partially-paid': !payment.excluded && payment.attendanceRecorded && payment.status === 'partiallyPaid',
+          'row-not-billed': payment.excluded,
+          'row-paid': !payment.excluded && payment.status === 'paid',
+          'row-partially-paid': !payment.excluded && payment.status === 'partiallyPaid',
           'row-unpaid': !payment.excluded && payment.attendanceRecorded && payment.status === 'unpaid'
         }">
           <!-- Badge textuel + icône : la distinction avec un impayé ne repose pas sur la
@@ -127,8 +130,8 @@
       <ng-container matColumnDef="amountPaid">
         <th mat-header-cell *matHeaderCellDef>{{ 'payment.history.table.amountPaid' | translate }}</th>
         <td mat-cell *matCellDef="let payment" [ngClass]="{
-          'paid': !payment.excluded && payment.attendanceRecorded && payment.status === 'paid',
-          'partially-paid': !payment.excluded && payment.attendanceRecorded && payment.status === 'partiallyPaid',
+          'paid': !payment.excluded && payment.status === 'paid',
+          'partially-paid': !payment.excluded && payment.status === 'partiallyPaid',
           'unpaid': !payment.excluded && payment.attendanceRecorded && payment.status === 'unpaid'
         }"> {{ payment.amountPaid | number:'1.2-2' }} {{ currencySuffix }} </td>
       </ng-container>

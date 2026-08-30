@@ -409,7 +409,17 @@
     "MARITAL_STATUS": "Statut matrimonial",
     "SINGLE": "Célibataire",
     "MARRIED": "Marié",
-    "COMMUNICATION": "Préférences de communication"
+    "COMMUNICATION": "Préférences de communication",
+    "MESSAGES": {
+      "INVALID": "Veuillez remplir correctement tous les champs obligatoires.",
+      "CREATED": "Enseignant créé avec succès !",
+      "CREATE_ERROR": "Une erreur est survenue lors de la création de l'enseignant.",
+      "UPDATED": "Enseignant modifié avec succès !",
+      "UPDATED_WITH_PHOTO": "Enseignant modifié avec succès avec une photo.",
+      "PHOTO_UPLOAD_FAILED": "Enseignant modifié mais l'envoi de la photo a échoué.",
+      "UPDATE_ERROR": "Une erreur est survenue lors de la modification de l'enseignant.",
+      "LOAD_ERROR": "Impossible de charger les données de l'enseignant."
+    }
   },
   "common": {
     "clear": "Effacer",
@@ -592,7 +602,9 @@
       "professionalDetails": "Informations professionnelles",
       "sessionDetails": "Détails de la séance",
       "sessionTiming": "Planification",
-      "identifiers": "Affectation"
+      "identifiers": "Affectation",
+      "additionalDetails": "Détails supplémentaires",
+      "recurrence": "Répétition"
     },
     "FIELDS": {
       "firstName": "Prénom",
@@ -620,7 +632,16 @@
       "duration": "Durée",
       "group": "Groupe",
       "room": "Salle",
-      "teacher": "Enseignant"
+      "teacher": "Enseignant",
+      "name": "Nom du groupe",
+      "groupType": "Type de groupe",
+      "subject": "Matière",
+      "price": "Prix",
+      "sessionNumberPerSerie": "Séances par série",
+      "photo": "Photo",
+      "days": "Jours",
+      "until": "Jusqu'au",
+      "count": "Nombre de séances"
     }
   },
   "tutorForm": {
@@ -1019,7 +1040,8 @@
       "noGroup": "Cet étudiant n'est inscrit à aucun groupe.",
       "noSeries": "Ce groupe ne contient aucune série.",
       "exempted": "Étudiant exempté : aucun montant n'est dû pour cette série.",
-      "overpaidHint": "(versé au-delà du montant dû)"
+      "overpaidHint": "(versé au-delà du montant dû)",
+      "attendancePending": "{{status}} — séance à venir, présence non saisie"
     }
   },
   "calendar": {

@@ -409,7 +409,17 @@
     "MARITAL_STATUS": "Marital status",
     "SINGLE": "Single",
     "MARRIED": "Married",
-    "COMMUNICATION": "Communication preferences"
+    "COMMUNICATION": "Communication preferences",
+    "MESSAGES": {
+      "INVALID": "Please fill in all required fields correctly.",
+      "CREATED": "Teacher created successfully!",
+      "CREATE_ERROR": "An error occurred while creating the teacher.",
+      "UPDATED": "Teacher updated successfully!",
+      "UPDATED_WITH_PHOTO": "Teacher updated successfully with photo.",
+      "PHOTO_UPLOAD_FAILED": "Teacher updated but photo upload failed.",
+      "UPDATE_ERROR": "An error occurred while updating the teacher.",
+      "LOAD_ERROR": "Unable to load teacher data."
+    }
   },
   "common": {
     "clear": "Clear",
@@ -592,7 +602,9 @@
       "professionalDetails": "Professional information",
       "sessionDetails": "Session details",
       "sessionTiming": "Scheduling",
-      "identifiers": "Assignment"
+      "identifiers": "Assignment",
+      "additionalDetails": "Additional details",
+      "recurrence": "Recurrence"
     },
     "FIELDS": {
       "firstName": "First name",
@@ -620,7 +632,16 @@
       "duration": "Duration",
       "group": "Group",
       "room": "Room",
-      "teacher": "Teacher"
+      "teacher": "Teacher",
+      "name": "Group name",
+      "groupType": "Group type",
+      "subject": "Subject",
+      "price": "Price",
+      "sessionNumberPerSerie": "Sessions per series",
+      "photo": "Photo",
+      "days": "Days",
+      "until": "Until",
+      "count": "Number of sessions"
     }
   },
   "tutorForm": {
@@ -1019,7 +1040,8 @@
       "noGroup": "This student is not enrolled in any group.",
       "noSeries": "This group has no series.",
       "exempted": "Exempt student: nothing is due for this series.",
-      "overpaidHint": "(paid beyond the amount due)"
+      "overpaidHint": "(paid beyond the amount due)",
+      "attendancePending": "{{status}} — upcoming session, attendance not recorded"
     }
   },
   "calendar": {

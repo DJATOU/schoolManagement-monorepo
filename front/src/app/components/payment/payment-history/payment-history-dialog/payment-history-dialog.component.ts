@@ -266,7 +266,12 @@ export class PaymentHistoryDialogComponent implements OnInit {
   private getFillColorForRow(row: SessionPaymentRow): string {
     // Séance non facturée : aucune alerte de couleur. Le libellé de la colonne « statut »
     // porte l'information, la teinte seule ne suffirait pas à la distinguer d'un impayé.
-    if (row.excluded || !row.attendanceRecorded) {
+    if (row.excluded) {
+      return '#f5f5f5'; // Gris
+    }
+    // Séance à venir dont la présence n'est pas saisie : le rouge « non payé » serait une
+    // fausse alerte, mais un règlement déjà encaissé doit rester visible comme tel.
+    if (!row.attendanceRecorded && row.status === 'unpaid') {
       return '#f5f5f5'; // Gris
     }
     switch (row.status) {
@@ -299,10 +304,22 @@ export class PaymentHistoryDialogComponent implements OnInit {
    *
    * <p>Le libellé nomme le motif — non présent, non facturée — au lieu du seul « non
    * facturée » : c'est ce qui empêche de la lire comme un impayé (exigences 11.3, 11.4).</p>
+   *
+   * <p><strong>Une séance sans feuille de présence n'est pas une séance écartée.</strong> Les
+   * deux cas partageaient ce message, si bien qu'une séance à venir, facturée et déjà réglée
+   * s'annonçait « non présent — séance antérieure à l'inscription, non facturée », en
+   * contradiction avec le coût de la série affiché juste au-dessus. La présence n'est saisie
+   * qu'après la séance : son absence ne dit rien de la facturation, et le paiement par
+   * avance est licite. Le statut de paiement reste donc celui du serveur.</p>
    */
   statusLabel(row: SessionPaymentRow): string {
-    if (row.excluded || !row.attendanceRecorded) {
+    if (row.excluded) {
       return this.translate.instant('payment.history.excluded.reason');
+    }
+    if (!row.attendanceRecorded) {
+      return this.translate.instant('payment.history.attendancePending', {
+        status: this.translate.instant('payment.history.status.' + row.status)
+      });
     }
     return this.translate.instant('payment.history.status.' + row.status);
   }
