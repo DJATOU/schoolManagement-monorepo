@@ -1,0 +1,57 @@
+/*
+  Bandeau informatif de changement de groupe.
+
+  Les tons ambrés et le rayon de bordure reprennent ceux déjà utilisés pour les informations
+  de facturation non bloquantes (séances non facturées du formulaire de versement) : aucune
+  nouvelle variable de couleur n'est introduite. La bordure épaisse à gauche et l'icône
+  assurent la lisibilité sans reposer sur la seule couleur.
+*/
+@import '../../../../styles/variables';
+
+.group-change-notice {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-left: 4px solid #b45309;
+  border-radius: $border-radius;
+  background: #fef3c7;
+  color: #92400e;
+  font-size: 0.85rem;
+}
+
+.group-change-notice__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-weight: 600;
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+}
+
+.group-change-notice__item {
+  margin: 6px 0 0;
+}
+
+.group-change-notice__month {
+  margin: 0;
+  font-weight: 500;
+  /* Le mois vient d'une locale : la capitale initiale n'est pas garantie selon la langue. */
+  text-transform: capitalize;
+}
+
+.group-change-notice__groups {
+  margin: 2px 0 0;
+  padding-left: 1.25rem;
+  line-height: 1.4;
+}
+
+/* Rappel que la facturation n'est pas touchée : l'ajustement reste manuel. */
+.group-change-notice__hint {
+  margin: 8px 0 0;
+  font-size: 0.78rem;
+  font-style: italic;
+}

@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { GroupType } from '../models/GroupType/groupType';
-import { API_BASE_URL } from '../app.config';
+import { API_BASE_URL } from '../api-base-url';
 
 
 @Injectable({
@@ -19,6 +19,16 @@ export class GroupTypeService {
 
   getAllGroupTypes(): Observable<GroupType[]> {
     return this.http.get<GroupType[]>(this.apiUrl);
+  }
+
+  /** Récupère un type de groupe par identifiant (mode modification du formulaire). */
+  getGroupTypeById(id: number): Observable<GroupType> {
+    return this.http.get<GroupType>(`${this.apiUrl}/${id}`);
+  }
+
+  /** Met à jour un type de groupe existant. */
+  updateGroupType(id: number, groupType: GroupType): Observable<GroupType> {
+    return this.http.put<GroupType>(`${this.apiUrl}/${id}`, groupType);
   }
 
   

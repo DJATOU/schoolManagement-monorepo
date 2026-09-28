@@ -63,7 +63,8 @@
 
   .filters-grid {
     display: grid;
-    grid-template-columns: repeat(6, 1fr);
+    /* 7 filtres : la grille s'adapte au lieu d'être figée à 6 colonnes. */
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
     gap: 12px;
     margin-bottom: 16px;
 
@@ -71,16 +72,60 @@
       width: 100%;
     }
 
-    @media (max-width: 1400px) {
-      grid-template-columns: repeat(3, 1fr);
-    }
-
-    @media (max-width: 900px) {
-      grid-template-columns: repeat(2, 1fr);
-    }
-
     @media (max-width: 600px) {
       grid-template-columns: 1fr;
+    }
+  }
+
+  /* ===== Rappel des filtres appliqués ===== */
+  .active-filters {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .active-filters__label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #6b7280;
+  }
+
+  .filter-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding: 3px 4px 3px 10px;
+    border-radius: 999px;
+    background: #eef2ff;
+    border: 1px solid rgba(79, 70, 229, 0.22);
+    color: #3730a3;
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  .filter-chip__remove {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+
+    &:hover {
+      background: rgba(79, 70, 229, 0.16);
+    }
+
+    mat-icon {
+      font-size: 14px;
+      width: 14px;
+      height: 14px;
     }
   }
 
@@ -138,48 +183,90 @@
   .table-wrapper {
     overflow: auto;
     max-width: 100%;
+    /* Le défilement du tableau ne fait pas défiler la page derrière. */
+    overscroll-behavior-x: contain;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(79, 70, 229, 0.35) transparent;
+
+    &::-webkit-scrollbar {
+      height: 10px;
+      width: 10px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: rgba(79, 70, 229, 0.3);
+      border: 3px solid transparent;
+      border-radius: 999px;
+      background-clip: content-box;
+
+      &:hover {
+        background: rgba(79, 70, 229, 0.55);
+        background-clip: content-box;
+      }
+    }
   }
 
   table {
     width: 100%;
-    min-width: 900px;
+    min-width: 1080px;
 
     th {
       font-weight: 600;
       font-size: 13px;
       color: #333;
       background-color: #f5f5f5;
+      white-space: nowrap;
     }
 
     td {
       font-size: 13px;
     }
 
+    /* Aucune cellule ne se replie sur deux lignes : on tronque proprement à la place. */
+    .ellipsis,
+    .link-text {
+      display: block;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
     .mat-column-id {
-      max-width: 60px;
+      width: 56px;
       text-align: center;
+      color: #9ca3af;
     }
 
     .mat-column-student {
-      min-width: 150px;
+      width: 170px;
+      max-width: 170px;
       font-weight: 500;
     }
 
     .mat-column-group {
-      min-width: 150px;
+      width: 150px;
+      max-width: 150px;
     }
 
     .mat-column-series {
-      min-width: 180px;
+      width: 200px;
+      max-width: 200px;
     }
 
     .mat-column-session {
-      min-width: 180px;
+      width: 160px;
+      max-width: 160px;
     }
 
     .mat-column-amount {
-      min-width: 120px;
+      width: 120px;
       text-align: right;
+      white-space: nowrap;
 
       strong {
         color: #2e7d32;
@@ -188,17 +275,35 @@
     }
 
     .mat-column-status {
-      min-width: 110px;
+      width: 110px;
       text-align: center;
     }
 
     .mat-column-dateCreation {
-      min-width: 140px;
+      width: 110px;
+      white-space: nowrap;
     }
 
     .mat-column-actions {
-      min-width: 180px;
+      width: 150px;
     }
+  }
+
+  /* Ligne désactivée : atténuée, elle ne compte plus dans les soldes. */
+  .row-inactive td {
+    opacity: 0.62;
+  }
+
+  /* Horodatage : date puis heure, alignées et lisibles. */
+  .stamp {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.25;
+  }
+
+  .stamp-time {
+    font-size: 11px;
+    color: #6b7280;
   }
 
   .actions-header,
@@ -206,23 +311,52 @@
     text-align: center;
   }
 
+  /*
+    Colonne d'actions ancrée à droite (stickyEnd) : elle reste visible pendant le
+    défilement horizontal. Le fond opaque et la bordure évitent que le contenu des
+    colonnes défilantes apparaisse au travers.
+  */
+  th.mat-column-actions,
+  td.mat-column-actions {
+    box-shadow: -6px 0 8px -6px rgba(0, 0, 0, 0.18);
+  }
+
+  td.mat-column-actions {
+    background: #fff;
+  }
+
+  th.mat-column-actions {
+    background: #f5f5f5;
+  }
+
   .actions-cell {
+    /* Les trois boutons tiennent sur une seule ligne, sans repli. */
+    white-space: nowrap;
+
     button {
-      margin: 0 2px;
+      margin: 0;
+      width: 36px;
+      height: 36px;
+      padding: 0;
+
+      mat-icon {
+        font-size: 19px;
+        width: 19px;
+        height: 19px;
+      }
 
       &.mat-mdc-icon-button.mat-success {
         color: #4caf50;
       }
     }
 
-    .deleted-label {
-      color: #999;
-      font-size: 11px;
-      font-style: italic;
-      display: inline-block;
-      padding: 4px 8px;
-      background-color: #f5f5f5;
-      border-radius: 4px;
+    .deleted-mark {
+      color: #b91c1c;
+      opacity: 0.65;
+      font-size: 19px;
+      width: 19px;
+      height: 19px;
+      vertical-align: middle;
     }
   }
 
@@ -232,13 +366,20 @@
 
   // Clickable links in table
   .table-link {
-    display: inline-flex;
+    display: flex;
     align-items: center;
     gap: 4px;
+    min-width: 0;
     color: #1976d2;
     text-decoration: none;
     cursor: pointer;
     transition: all 0.2s ease;
+
+    /* L'icône restait poussée à l'extrémité de la cellule pendant que le nom se
+       repliait sur deux lignes ; elle est maintenant collée au texte. */
+    .open-icon {
+      flex: 0 0 auto;
+    }
 
     &:hover {
       color: #1565c0;
@@ -344,5 +485,77 @@
       min-width: 800px;
       font-size: 12px;
     }
+  }
+}
+
+/* ===== Statut du paiement parent ===== */
+.table-card table .mat-column-paymentStatus {
+  min-width: 110px;
+  text-align: center;
+}
+
+.payment-status {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.payment-status--PENDING {
+  background: #f3f4f6;
+  color: #4b5563;
+}
+
+.payment-status--IN_PROGRESS {
+  background: rgba(249, 115, 22, 0.14);
+  color: #c2410c;
+}
+
+.payment-status--COMPLETED {
+  background: rgba(16, 185, 129, 0.15);
+  color: #047857;
+}
+
+/* Annulé : mis en évidence, un versement annulé ne compte plus dans les soldes. */
+.payment-status--CANCELLED {
+  background: rgba(239, 68, 68, 0.14);
+  color: #b91c1c;
+}
+
+.payment-status--unknown {
+  background: #f3f4f6;
+  color: #9ca3af;
+}
+
+/* Marque « rattrapage » accolée au nom de la séance. */
+.catch-up-tag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(249, 115, 22, 0.14);
+  color: #c2410c;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+/* État vide distinct de l'état de chargement. */
+.no-result {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 32px 16px;
+  color: #6b7280;
+
+  mat-icon {
+    font-size: 32px;
+    width: 32px;
+    height: 32px;
+    opacity: 0.5;
   }
 }

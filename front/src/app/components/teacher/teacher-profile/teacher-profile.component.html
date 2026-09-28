@@ -4,7 +4,7 @@
     <div class="pf-header pf-header--teacher">
       <div class="pf-identity">
         <div class="pf-avatar">
-          <img *ngIf="teacherPhotoUrl && !hasImageError; else teacherInitials" [src]="teacherPhotoUrl"
+          <img *ngIf="teacherPhotoUrl && !hasImageError; else teacherInitials" [appSecureImage]="teacherPhotoUrl"
             alt="Photo de l'enseignant" (error)="onImageError()">
           <ng-template #teacherInitials>
             <div class="pf-initials" [style.background-color]="avatarColor">{{ getInitials() }}</div>
@@ -19,14 +19,15 @@
       </div>
 
       <div class="pf-header-buttons">
-        <button mat-icon-button class="pf-hb pf-hb-edit" (click)="onEdit()" matTooltip="Modifier le profil">
+        <button mat-icon-button class="pf-hb pf-hb-edit" (click)="onEdit()" matTooltip="Modifier le profil" appAdminOnly>
           <mat-icon>edit</mat-icon>
         </button>
         <button mat-icon-button class="pf-hb pf-hb-print" (click)="printProfilePdf()" matTooltip="Imprimer la fiche (PDF)">
           <mat-icon>print</mat-icon>
         </button>
-        <button mat-icon-button class="pf-hb pf-hb-danger" (click)="onDisable()" matTooltip="Supprimer le compte">
-          <mat-icon>delete</mat-icon>
+        <button mat-icon-button class="pf-hb pf-hb-danger" (click)="onDisable()"
+          matTooltip="Désactiver l'enseignant (historique conservé)" appAdminOnly>
+          <mat-icon>block</mat-icon>
         </button>
       </div>
     </div>
@@ -65,8 +66,7 @@
       </mat-expansion-panel-header>
       <div class="pf-cards-scroll">
         <div class="pf-cards" *ngIf="teacherGroups.length > 0; else noGroups">
-          <app-group-card *ngFor="let group of teacherGroups" [group]="group" [levels]="levels"
-            [groupTypes]="groupTypes">
+          <app-group-card *ngFor="let group of teacherGroups" [group]="group">
           </app-group-card>
         </div>
         <ng-template #noGroups>

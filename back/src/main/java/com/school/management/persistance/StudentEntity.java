@@ -6,6 +6,7 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -83,4 +84,10 @@ public class StudentEntity extends PersonEntity {
     @Min(0)
     @Max(100)
     private Double averageScore;
+
+    // Statut de l'étudiant (actif par défaut lors de l'inscription)
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status")
+    @Builder.Default
+    private StudentStatus status = StudentStatus.ACTIVE;
 }

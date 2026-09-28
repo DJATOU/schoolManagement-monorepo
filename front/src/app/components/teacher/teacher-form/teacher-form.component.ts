@@ -15,13 +15,14 @@ import { MatOptionModule } from '@angular/material/core';
 import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { ReactiveFormsModule } from '@angular/forms';
-import { CommonModule } from '@angular/common';
+import { CommonModule, DatePipe } from '@angular/common';
 import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatCardModule } from '@angular/material/card';
-import { TranslateModule } from '@ngx-translate/core';
-import { COMMUNICATION_OPTIONS, DEFAULT_NATIONALITY, NATIONALITIES } from '../../../utils/form-options';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { COMMUNICATION_OPTIONS, DEFAULT_NATIONALITY, GENDER_LABEL_KEYS, MARITAL_STATUS_LABEL_KEYS, NATIONALITIES } from '../../../utils/form-options';
 import { SubjectService } from '../../../services/subject.service';
 import { Subject } from '../../../models/subject/subject';
+import { AdminOnlyDirective } from '../../../shared/admin-only.directive';
 
 @Component({
   selector: 'app-teacher-form',
@@ -40,11 +41,12 @@ import { Subject } from '../../../models/subject/subject';
     MatSnackBarModule,
     CommonModule,
     MatCardModule,
-    TranslateModule
+    TranslateModule,
+    AdminOnlyDirective
   ],
   templateUrl: './teacher-form.component.html',
   styleUrls: ['./teacher-form.component.scss'],
-  providers: [TeacherService]
+  providers: [TeacherService, DatePipe]
 })
 export class TeacherFormComponent implements OnInit {
   selectedFile: File | null = null;
@@ -63,7 +65,9 @@ export class TeacherFormComponent implements OnInit {
     public dialog: MatDialog,
     private snackBar: MatSnackBar,
     private route: ActivatedRoute,
-    private router: Router
+    private router: Router,
+    private translate: TranslateService,
+    private datePipe: DatePipe
   ) {
     this.teacherForm = this.fb.group({
       basicInformation: this.fb.group({
@@ -140,7 +144,7 @@ export class TeacherFormComponent implements OnInit {
       },
       error: (error) => {
         console.error('Error loading teacher:', error);
-        this.showErrorMessage('Error loading teacher data.');
+        this.showErrorMessage('TEACHER_FORM.MESSAGES.LOAD_ERROR');
       }
     });
   }
@@ -153,81 +157,115 @@ export class TeacherFormComponent implements OnInit {
   }
 
 
-  flattenFormData(data: any, parentKey: string = ''): { label: string, value: any }[] {
-    let result: { label: string, value: any }[] = [];
-    Object.keys(data).forEach(key => {
-      const newKey = parentKey ? `${parentKey} - ${key}` : key;
-      const value = data[key];
-      if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-        result = result.concat(this.flattenFormData(value, newKey));
-      } else if (Array.isArray(value)) {
-        result.push({ label: newKey, value: value.join(', ') });
-      } else {
-        result.push({ label: newKey, value: value });
+  /**
+   * Construit le récapitulatif attendu par {@link SummaryDialogComponent} : une liste
+   * d'entrées « Section - champ », avec les codes remplacés par leurs libellés traduits
+   * (sexe, moyen de communication, statut matrimonial) et la date de naissance formatée.
+   */
+  private buildSummary(): { label: string; value: any }[] {
+    const value = (path: string) => this.teacherForm.get(path)?.value;
+
+    return [
+      { label: 'basicInformation - firstName', value: value('basicInformation.firstName') },
+      { label: 'basicInformation - lastName', value: value('basicInformation.lastName') },
+      { label: 'basicInformation - gender', value: this.optionLabel(value('basicInformation.gender'), GENDER_LABEL_KEYS) },
+      { label: 'basicInformation - photo', value: this.selectedFile?.name },
+      { label: 'contactInformation - email', value: value('contactInformation.email') },
+      { label: 'contactInformation - phoneNumber', value: value('contactInformation.phoneNumber') },
+      { label: 'contactInformation - nationality', value: value('contactInformation.nationality') },
+      {
+        label: 'contactInformation - communicationPreference',
+        value: this.communicationLabel(value('contactInformation.communicationPreference'))
+      },
+      {
+        label: 'contactInformation - dateOfBirth',
+        value: this.datePipe.transform(value('contactInformation.dateOfBirth'), 'd MMMM y') ?? ''
+      },
+      { label: 'contactInformation - placeOfBirth', value: value('contactInformation.placeOfBirth') },
+      { label: 'contactInformation - address', value: value('contactInformation.address') },
+      { label: 'contactInformation - city', value: value('contactInformation.city') },
+      { label: 'professionalDetails - specialization', value: value('professionalDetails.specialization') },
+      { label: 'professionalDetails - yearsOfExperience', value: value('professionalDetails.yearsOfExperience') },
+      {
+        label: 'professionalDetails - maritalStatus',
+        value: this.optionLabel(value('professionalDetails.maritalStatus'), MARITAL_STATUS_LABEL_KEYS)
       }
-    });
-    return result;
+    ];
+  }
+
+  /** Libellé traduit d'un code de liste déroulante (vide si le code est absent). */
+  private optionLabel(code: string, labelKeys: Record<string, string>): string {
+    return code ? this.translate.instant(labelKeys[code] ?? code) : '';
+  }
+
+  /** Libellé traduit du moyen de communication (la valeur stockée est un code). */
+  private communicationLabel(code: string): string {
+    const option = this.communicationOptions.find(o => o.value === code);
+    return option ? this.translate.instant(option.labelKey) : '';
   }
 
   onSubmit(): void {
     if (this.isEditMode) {
       // MODE ÉDITION
       if (this.teacherForm.valid) {
+        // Le formulaire ne comporte que ces trois sections ; l'ancien code étalait aussi
+        // un groupe « otherInformation » inexistant, ce qui ne produisait rien.
         const teacherData = {
           id: this.teacherId,
           ...this.teacherForm.get('basicInformation')?.value,
           ...this.teacherForm.get('contactInformation')?.value,
-          ...this.teacherForm.get('professionalDetails')?.value,
-          ...this.teacherForm.get('otherInformation')?.value
+          ...this.teacherForm.get('professionalDetails')?.value
         };
 
-        this.teacherService.updateTeacher(this.teacherId!, teacherData).subscribe({
-          next: (response) => {
-            console.log('Teacher updated:', response);
+        // Une modification écrase des données existantes : elle mérite la même
+        // relecture avant écriture que la création.
+        const dialogRef = this.dialog.open(SummaryDialogComponent, {
+          width: '520px',
+          maxWidth: '95vw',
+          data: this.buildSummary()
+        });
 
-            // Upload photo si sélectionnée
-            if (this.selectedFile) {
-              this.teacherService.uploadTeacherPhoto(this.teacherId!, this.selectedFile).subscribe({
-                next: (filename) => {
-                  console.log('Photo uploaded:', filename);
-                  this.showSuccessMessage('Teacher updated successfully with photo.');
-                  this.router.navigate(['/teacher', this.teacherId]);
-                },
-                error: (error) => {
-                  console.error('Error uploading photo:', error);
-                  this.showErrorMessage('Teacher updated but photo upload failed.');
-                  this.router.navigate(['/teacher', this.teacherId]);
-                }
-              });
-            } else {
-              this.showSuccessMessage('Teacher updated successfully.');
-              this.router.navigate(['/teacher', this.teacherId]);
-            }
-          },
-          error: (error) => {
-            console.error('Error updating teacher:', error);
-            this.showErrorMessage('Error updating teacher.');
+        dialogRef.afterClosed().subscribe(confirmed => {
+          if (!confirmed) {
+            return;
           }
+          this.teacherService.updateTeacher(this.teacherId!, teacherData).subscribe({
+            next: () => {
+              // Upload photo si sélectionnée
+              if (this.selectedFile) {
+                this.teacherService.uploadTeacherPhoto(this.teacherId!, this.selectedFile).subscribe({
+                  next: () => {
+                    this.showSuccessMessage('TEACHER_FORM.MESSAGES.UPDATED_WITH_PHOTO');
+                    this.router.navigate(['/teacher', this.teacherId]);
+                  },
+                  error: (error) => {
+                    console.error('Error uploading photo:', error);
+                    this.showErrorMessage('TEACHER_FORM.MESSAGES.PHOTO_UPLOAD_FAILED');
+                    this.router.navigate(['/teacher', this.teacherId]);
+                  }
+                });
+              } else {
+                this.showSuccessMessage('TEACHER_FORM.MESSAGES.UPDATED');
+                this.router.navigate(['/teacher', this.teacherId]);
+              }
+            },
+            error: (error) => {
+              console.error('Error updating teacher:', error);
+              this.showErrorMessage('TEACHER_FORM.MESSAGES.UPDATE_ERROR');
+            }
+          });
         });
       } else {
-        this.showErrorMessage('The form is not valid.');
+        this.teacherForm.markAllAsTouched();
+        this.showErrorMessage('TEACHER_FORM.MESSAGES.INVALID');
       }
     } else {
       // MODE CRÉATION
       if (this.teacherForm.valid) {
-        const formData = {
-          basicInformation: this.teacherForm.get('basicInformation')?.value,
-          contactInformation: this.teacherForm.get('contactInformation')?.value,
-          professionalDetails: this.teacherForm.get('professionalDetails')?.value,
-          otherInformation: this.teacherForm.get('otherInformation')?.value,
-          photo: this.selectedFile?.name
-        };
-
-        const flattenedData = this.flattenFormData(formData).filter(item => item.label !== 'basicInformation - photo');;
-        console.log(flattenedData);
-
         const dialogRef = this.dialog.open(SummaryDialogComponent, {
-          data: flattenedData
+          width: '520px',
+          maxWidth: '95vw',
+          data: this.buildSummary()
         });
 
         dialogRef.afterClosed().subscribe(result => {
@@ -245,23 +283,22 @@ export class TeacherFormComponent implements OnInit {
             });
 
             this.teacherService.createTeacher(formDataToSubmit).subscribe({
-              next: (response) => {
-                console.log('Teacher created:', response);
+              next: () => {
                 this.onClearForm();
-                this.showSuccessMessage('Teacher created successfully.');
+                this.showSuccessMessage('TEACHER_FORM.MESSAGES.CREATED');
               },
               error: (error) => {
                 console.error('Error creating teacher:', error);
-                this.showErrorMessage('Error creating teacher.');
+                this.showErrorMessage('TEACHER_FORM.MESSAGES.CREATE_ERROR');
               }
             });
-          } else {
-            console.warn('Form submission was cancelled.');
           }
         });
       } else {
-        console.warn('The form is not valid.');
-        this.showErrorMessage('The form is not valid.');
+        // Sans ce marquage, aucun champ ne signalait ce qui manquait : le bouton
+        // « Soumettre » paraissait mort et la popup ne s'ouvrait jamais.
+        this.teacherForm.markAllAsTouched();
+        this.showErrorMessage('TEACHER_FORM.MESSAGES.INVALID');
       }
     }
   }
@@ -272,15 +309,15 @@ export class TeacherFormComponent implements OnInit {
     this.selectedFile = null;
   }
 
-  showSuccessMessage(message: string): void {
-    this.snackBar.open(message, 'OK', {
+  showSuccessMessage(messageKey: string): void {
+    this.snackBar.open(this.translate.instant(messageKey), this.translate.instant('common.ok'), {
       duration: 3000,
       panelClass: ['snack-bar-success']
     });
   }
 
-  showErrorMessage(message: string): void {
-    this.snackBar.open(message, 'OK', {
+  showErrorMessage(messageKey: string): void {
+    this.snackBar.open(this.translate.instant(messageKey), this.translate.instant('common.ok'), {
       duration: 3000,
       panelClass: ['snack-bar-error']
     });

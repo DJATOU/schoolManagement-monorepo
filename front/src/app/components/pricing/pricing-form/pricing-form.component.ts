@@ -16,6 +16,9 @@ import { ReactiveFormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatCardModule } from '@angular/material/card';
+import { ActivatedRoute, Router } from '@angular/router';
+import { TranslateModule } from '@ngx-translate/core';
+import { AdminOnlyDirective } from '../../../shared/admin-only.directive';
 
 @Component({
   selector: 'app-pricing-form',
@@ -31,7 +34,9 @@ import { MatCardModule } from '@angular/material/card';
     MatTabsModule,
     MatSnackBarModule,
     CommonModule,
-    MatCardModule
+    MatCardModule,
+    AdminOnlyDirective,
+    TranslateModule
   ],
   templateUrl: './pricing-form.component.html',
   styleUrls: ['./pricing-form.component.scss'],
@@ -40,11 +45,16 @@ import { MatCardModule } from '@angular/material/card';
 export class PricingFormComponent implements OnInit {
   pricingForm!: FormGroup;
 
+  /** Identifiant du tarif en cours de modification (null en mode création). */
+  editingId: number | null = null;
+
   constructor(
     private fb: FormBuilder,
     private pricingService: PricingService,
     public dialog: MatDialog,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private route: ActivatedRoute,
+    private router: Router
   ) {}
 
   ngOnInit(): void {
@@ -54,6 +64,21 @@ export class PricingFormComponent implements OnInit {
       expirationDate: ['', Validators.required],
       description: ['']
     });
+
+    // Mode modification : un identifiant est présent dans l'URL (pricing/edit/:id).
+    const idParam = this.route.snapshot.paramMap.get('id');
+    if (idParam) {
+      this.editingId = Number(idParam);
+      this.pricingService.getPricingById(this.editingId).subscribe({
+        next: (pricing) => this.pricingForm.patchValue({
+          price: pricing.price ?? '',
+          effectiveDate: pricing.effectiveDate ?? '',
+          expirationDate: pricing.expirationDate ?? '',
+          description: pricing.description ?? ''
+        }),
+        error: () => this.showErrorMessage('Erreur lors du chargement du tarif.')
+      });
+    }
   }
 
   flattenFormData(data: any, parentKey: string = ''): { label: string, value: any }[] {
@@ -100,17 +125,31 @@ export class PricingFormComponent implements OnInit {
             description: formData.basicInformation.description ?? ''
           };
 
-          this.pricingService.createPricing(pricing).subscribe({
-            next: (pricing) => {
-              console.log('Pricing created:', pricing);
-              this.onClearForm();
-              this.showSuccessMessage('Pricing created successfully.');
-            },
-            error: (error) => {
-              console.error('Error creating pricing:', error);
-              this.showErrorMessage('Error creating pricing.');
-            }
-          });
+          if (this.editingId) {
+            // Mode modification : mise à jour du tarif existant.
+            this.pricingService.updatePricing(this.editingId, pricing).subscribe({
+              next: () => {
+                this.showSuccessMessage('Tarif mis à jour avec succès.');
+                this.router.navigate(['/pricing/table']);
+              },
+              error: (error) => {
+                console.error('Error updating pricing:', error);
+                this.showErrorMessage('Erreur lors de la mise à jour du tarif.');
+              }
+            });
+          } else {
+            this.pricingService.createPricing(pricing).subscribe({
+              next: (created) => {
+                console.log('Pricing created:', created);
+                this.onClearForm();
+                this.showSuccessMessage('Pricing created successfully.');
+              },
+              error: (error) => {
+                console.error('Error creating pricing:', error);
+                this.showErrorMessage('Error creating pricing.');
+              }
+            });
+          }
         } else {
           console.warn('Form submission was cancelled.');
         }

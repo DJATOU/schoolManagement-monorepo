@@ -1,0 +1,19 @@
+<div class="school-year-selector">
+  <mat-icon class="selector-icon">event</mat-icon>
+  <span class="selector-caption">{{ 'schoolYear.selector.label' | translate }}</span>
+  <mat-form-field appearance="outline" class="selector-field" subscriptSizing="dynamic">
+    <mat-select
+      [value]="selectedSchoolYearId"
+      (selectionChange)="onSchoolYearChange($event.value)"
+      [matTooltip]="'schoolYear.selector.tooltip' | translate"
+      panelClass="school-year-select-panel">
+      <mat-select-trigger>{{ selectedSchoolYearLabel }}</mat-select-trigger>
+      <mat-option *ngFor="let year of schoolYears" [value]="year.id">
+        <span class="option-label">{{ year.label }}</span>
+        <span *ngIf="year.isCurrent" class="current-badge">
+          {{ 'schoolYear.selector.current' | translate }}
+        </span>
+      </mat-option>
+    </mat-select>
+  </mat-form-field>
+</div>

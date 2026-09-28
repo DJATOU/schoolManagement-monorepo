@@ -1,7 +1,7 @@
 <mat-card class="app-entity-card group-card" (click)="navigateToGroupProfile()">
   <div class="app-entity-card__body profile-card-content">
     <div class="app-entity-card__avatar profile-photo">
-      <img *ngIf="groupPhotoUrl; else groupInitials" [src]="groupPhotoUrl" alt="Photo du groupe" class="group-photo"
+      <img *ngIf="groupPhotoUrl; else groupInitials" [appSecureImage]="groupPhotoUrl" alt="Photo du groupe" class="group-photo"
         (error)="onImageError()">
       <ng-template #groupInitials>
         <div class="initials-avatar" [style.background-color]="avatarColor">
@@ -11,12 +11,21 @@
     </div>
     <div class="profile-info">
       <mat-card-title class="app-entity-card__title profile-name">
-        {{ group.name || 'Unknown Group' }}
+        {{ group.name || '—' }}
       </mat-card-title>
       <mat-card-subtitle class="app-entity-card__subtitle profile-subtitle">
-        <div>Level: {{ level }}</div>
-        <div>Type: {{ type }}</div>
+        <div>{{ 'COMMON.LEVEL' | translate }} : {{ level }}</div>
+        <div>{{ 'EDIT_GROUP.TYPE' | translate }} : {{ type }}</div>
+        <div *ngIf="group.subjectName">{{ 'EDIT_GROUP.SUBJECT' | translate }} : {{ group.subjectName }}</div>
       </mat-card-subtitle>
+      <!-- Le groupe appartient à une autre année scolaire : il n'apparaît donc pas dans la
+           liste des groupes, filtrée sur l'année sélectionnée. On l'annonce plutôt que de
+           laisser l'utilisateur le chercher. -->
+      <div class="group-card__year" *ngIf="outsideSelectedYear"
+        [matTooltip]="'GROUP_CARD.otherYearTooltip' | translate">
+        <mat-icon>history</mat-icon>
+        {{ 'GROUP_CARD.otherYear' | translate: { year: group.schoolYearLabel || '—' } }}
+      </div>
     </div>
   </div>
 </mat-card>

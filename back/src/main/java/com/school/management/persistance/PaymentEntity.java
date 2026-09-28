@@ -48,6 +48,10 @@ public class PaymentEntity extends BaseEntity {
     @Column(name = "payment_method")
     private String paymentMethod;
 
+    // Note libre facultative associée au paiement
+    @Column(name = "notes", length = 1000)
+    private String notes;
+
     @ManyToOne
     @JoinColumn(name = "session_series_id")
     private SessionSeriesEntity sessionSeries;

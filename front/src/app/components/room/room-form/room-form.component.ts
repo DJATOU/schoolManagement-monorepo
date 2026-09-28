@@ -3,13 +3,15 @@ import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
-import { RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Room } from '../../../models/room/room';
 import { RoomService } from '../../../services/room.service';
 import { SummaryDialogComponent } from '../../summary-dialog/summary-dialog.component';
 import { MatTabsModule } from '@angular/material/tabs';
+import { TranslateModule } from '@ngx-translate/core';
+import { AdminOnlyDirective } from '../../../shared/admin-only.directive';
 
 @Component({
   selector: 'app-room-form',
@@ -24,7 +26,9 @@ import { MatTabsModule } from '@angular/material/tabs';
 // application bootstrap logic and remove the `HttpClientModule` import from this component.
 HttpClientModule,
     RouterModule,
-    MatTabsModule
+    MatTabsModule,
+    AdminOnlyDirective,
+    TranslateModule
   ],
   templateUrl: './room-form.component.html',
   styleUrls: ['./room-form.component.scss']
@@ -32,11 +36,16 @@ HttpClientModule,
 export class RoomFormComponent implements OnInit {
   roomForm!: FormGroup;
 
+  /** Identifiant de la salle en cours de modification (null en mode création). */
+  editingId: number | null = null;
+
   constructor(
     private fb: FormBuilder,
     private roomService: RoomService,
     private snackBar: MatSnackBar,
-    public dialog: MatDialog
+    public dialog: MatDialog,
+    private route: ActivatedRoute,
+    private router: Router
   ) { }
 
   ngOnInit(): void {
@@ -47,6 +56,22 @@ export class RoomFormComponent implements OnInit {
         description: ['']
       })
     });
+
+    // Mode modification : un identifiant est présent dans l'URL (room/edit/:id).
+    const idParam = this.route.snapshot.paramMap.get('id');
+    if (idParam) {
+      this.editingId = Number(idParam);
+      this.roomService.getRoom(this.editingId).subscribe({
+        next: (room) => this.roomForm.patchValue({
+          roomDetails: {
+            name: room.name ?? '',
+            capacity: room.capacity ?? '',
+            description: room.description ?? ''
+          }
+        }),
+        error: () => this.showErrorMessage('Erreur lors du chargement de la salle.')
+      });
+    }
   }
 
   flattenFormData(data: any, parentKey: string = ''): { label: string, value: any }[] {
@@ -91,17 +116,31 @@ export class RoomFormComponent implements OnInit {
             capacity: formData.roomDetails.capacity ? parseInt(formData.roomDetails.capacity) : 0
           };
           
-          this.roomService.createRoom(room).subscribe({
-            next: (room) => {
-              console.log('Room created:', room);
-              this.onClearForm();
-              this.showSuccessMessage('Room created successfully.');
-            },
-            error: (error) => {
-              console.error('Error creating room:', error);
-              this.showErrorMessage('Error creating room.');
-            }
-          });
+          if (this.editingId) {
+            // Mode modification : mise à jour de la salle existante.
+            this.roomService.updateRoom(this.editingId, room).subscribe({
+              next: () => {
+                this.showSuccessMessage('Salle mise à jour avec succès.');
+                this.router.navigate(['/room/table']);
+              },
+              error: (error) => {
+                console.error('Error updating room:', error);
+                this.showErrorMessage('Erreur lors de la mise à jour de la salle.');
+              }
+            });
+          } else {
+            this.roomService.createRoom(room).subscribe({
+              next: (created) => {
+                console.log('Room created:', created);
+                this.onClearForm();
+                this.showSuccessMessage('Room created successfully.');
+              },
+              error: (error) => {
+                console.error('Error creating room:', error);
+                this.showErrorMessage('Error creating room.');
+              }
+            });
+          }
         } else {
           console.warn('Form submission was cancelled.');
         }

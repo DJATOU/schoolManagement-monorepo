@@ -33,13 +33,22 @@ app-calendar {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  /*
+    UNE SEULE zone de défilement pour toute la page calendrier.
+    Auparavant la carte défilait de son côté tout en étant contrainte par ce conteneur :
+    la barre d'outils sortait du champ et le bas de la grille restait coupé.
+  */
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
 
-  // FullCalendar wrapper doit remplir la hauteur de la carte
+  /*
+    Le calendrier prend sa hauteur naturelle (option height: 'auto').
+    « flex: 1 » avec « min-height: 0 » autorisait le navigateur à le comprimer sous sa
+    hauteur de contenu : c'est ce qui écrasait la dernière semaine du mois.
+  */
   full-calendar {
-    flex: 1;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
+    flex: 0 0 auto;
+    display: block;
   }
 
   // ---- Carte englobant filtres + calendrier ----
@@ -48,11 +57,11 @@ app-calendar {
     border-radius: $cal-radius;
     box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
     border: 1px solid $cal-border;
-    overflow: hidden;
+    // La carte prend sa hauteur de contenu ; le défilement appartient au conteneur.
+    overflow: visible;
     display: flex;
     flex-direction: column;
-    flex: 1;
-    min-height: 0;
+    flex: 0 0 auto;
     position: relative; // ancre l'overlay des filtres
   }
 
@@ -236,9 +245,19 @@ app-calendar {
     font-family: 'Helvetica Neue', sans-serif;
   }
 
-  // La grille occupe toute la largeur et toute la hauteur restante
-  .fc .fc-view-harness {
-    height: 100% !important;
+  /*
+    Aucune hauteur imposée à la zone de grille.
+
+    FullCalendar gère lui-même la hauteur via l'option « height: auto » : le harness passe
+    en mode passif et la grille prend sa hauteur naturelle. Toute surcharge CSS ici est
+    contre-productive — forcer « height: auto !important » sur un harness en mode actif
+    (dont la vue est positionnée en absolu) fait disparaître la grille entière.
+
+    Ce qui reste nécessaire : une hauteur minimale par semaine, faute de quoi la dernière
+    ligne d'un mois à six semaines (août 2026) se comprime jusqu'à masquer ses séances.
+  */
+  .fc .fc-daygrid-body .fc-daygrid-day-frame {
+    min-height: 84px;
   }
 
   .fc table {

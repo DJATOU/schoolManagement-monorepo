@@ -1,5 +1,5 @@
 <form [formGroup]="levelForm" (ngSubmit)="onSubmit()" class="form-container fade-in">
-  <h2 class="form-title">Level Registration Form</h2>
+  <h2 class="form-title">{{ (editingId ? 'RESOURCE_FORM.EDIT_TITLE' : 'RESOURCE_FORM.CREATE_TITLE') | translate: { entity: 'RESOURCE_FORM.ENTITY.level' | translate } }}</h2>
   <mat-tab-group class="tab-group">
     <mat-tab label="Basic Information">
       <div class="tab-content">
@@ -14,6 +14,13 @@
         </mat-form-field>    
 
         <mat-form-field appearance="fill">
+          <mat-label>Rang (ordre de passage)</mat-label>
+          <input matInput type="number" min="1" formControlName="levelSequence"
+                 placeholder="Ex : 1 pour la 1ère année, 2 pour la 2ème...">
+          <mat-hint>Détermine l'ordre de promotion entre niveaux (1 = plus bas).</mat-hint>
+        </mat-form-field>
+
+        <mat-form-field appearance="fill">
           <mat-label>Description</mat-label>
           <textarea matInput formControlName="description"></textarea>
         </mat-form-field>
@@ -22,7 +29,7 @@
   </mat-tab-group>
 
   <div class="button-container">
-    <button mat-raised-button color="primary" type="submit" class="submit-button">Save Level</button>
+    <button mat-raised-button color="primary" type="submit" class="submit-button" appAdminOnly>{{ (editingId ? 'RESOURCE_FORM.UPDATE' : 'RESOURCE_FORM.SAVE') | translate }}</button>
     <button mat-raised-button color="accent" type="button" class="clear-button" (click)="onClearForm()">Clear</button>
   </div>
 </form>

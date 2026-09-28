@@ -87,7 +87,7 @@
   </mat-tab-group>
 
   <div class="button-container">
-    <button mat-raised-button color="primary" type="submit" class="submit-button">{{ 'groupForm.actions.save' | translate }}</button>
+    <button mat-raised-button color="primary" type="submit" class="submit-button" appAdminOnly>{{ 'groupForm.actions.save' | translate }}</button>
     <button mat-raised-button color="accent" type="button" class="clear-button" (click)="onClearForm()">{{ 'common.clear' | translate }}</button>
   </div>
 </form>

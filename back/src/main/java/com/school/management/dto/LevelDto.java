@@ -19,4 +19,5 @@ public class LevelDto implements Serializable {
     Long id;
     String name;
     String levelCode;
+    Integer levelSequence;
 }

@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
@@ -8,9 +8,13 @@ import { MatInputModule } from '@angular/material/input';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { DashboardService } from '../../services/dashboard.service';
 import { DashboardStats } from '../../models/dashboard/dashboard-stats';
+import { SchoolYearContextService } from '../../services/school-year-context.service';
+import { SchoolYear } from '../../models/schoolYear/school-year';
+import { Subject, takeUntil } from 'rxjs';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 
@@ -31,10 +35,10 @@ type RangePreset = 'year' | 'month' | 'custom';
   imports: [
     CommonModule, FormsModule, MatIconModule, MatButtonModule,
     MatFormFieldModule, MatInputModule, MatDatepickerModule, MatNativeDateModule,
-    MatProgressSpinnerModule, TranslateModule
+    MatProgressSpinnerModule, MatTooltipModule, TranslateModule
   ]
 })
-export class DashboardComponent implements OnInit {
+export class DashboardComponent implements OnInit, OnDestroy {
   loading = true;
   today = new Date();
   stats?: DashboardStats;
@@ -45,24 +49,96 @@ export class DashboardComponent implements OnInit {
 
   kpis: Kpi[] = [];
 
+  /** Année scolaire sélectionnée (contexte global) appliquée aux statistiques. */
+  private selectedSchoolYear: SchoolYear | null = null;
+
+  private get selectedSchoolYearId(): number | null {
+    return this.selectedSchoolYear?.id ?? null;
+  }
+
+  /** Dernière plage de dates chargée (pour recharger au changement d'année). */
+  private lastFrom: Date | null = null;
+  private lastTo: Date | null = null;
+
+  private readonly destroy$ = new Subject<void>();
+
   @ViewChild('dashboardContent') dashboardContent!: ElementRef<HTMLElement>;
 
   constructor(private dashboardService: DashboardService,
-              private translate: TranslateService) {}
+              private translate: TranslateService,
+              private schoolYearContext: SchoolYearContextService) {}
 
   ngOnInit(): void {
-    this.applyPreset('year');
+    // Recharge les statistiques à chaque changement d'année sélectionnée.
+    this.schoolYearContext.selectedSchoolYear$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((year) => {
+        this.selectedSchoolYear = year;
+        // Le preset « Année » suit l'année scolaire : au changement d'année, sa plage change
+        // aussi. On le réapplique plutôt que de recharger l'ancienne plage.
+        if (this.activePreset === 'custom' && this.lastFrom && this.lastTo) {
+          this.load(this.lastFrom, this.lastTo);
+        } else {
+          this.applyPreset(this.activePreset === 'month' ? 'month' : 'year');
+        }
+      });
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   applyPreset(preset: RangePreset): void {
     this.activePreset = preset;
     const now = new Date();
     if (preset === 'year') {
-      this.load(new Date(now.getFullYear(), 0, 1), now);
+      const range = this.schoolYearRange();
+      this.load(range.from, range.to);
     } else if (preset === 'month') {
       this.load(new Date(now.getFullYear(), now.getMonth(), 1), now);
     }
     // 'custom' : on attend que l'utilisateur valide les dates
+  }
+
+  /**
+   * Plage du bouton « Année » : celle de l'année scolaire sélectionnée, élargie à la
+   * période d'inscription qui la précède (l'été).
+   *
+   * <p>Le preset couvrait l'année <strong>civile</strong> en cours (1er janvier → aujourd'hui)
+   * alors que le sélecteur affiche une année <strong>scolaire</strong> (septembre → juin). Les
+   * deux ne se recouvrent pas : avec 2026-2027 sélectionnée, la plage 1er janvier →
+   * 21 août 2026 ne contenait aucune séance de l'année scolaire, et comptait à la place des
+   * séances de juillet-août antérieures à sa rentrée.</p>
+   *
+   * <p>Utiliser les bornes exactes de l'année scolaire (1er septembre → 30 juin) laissait
+   * cependant juillet et août dans un angle mort : une inscription enregistrée en août 2026
+   * (pour la rentrée 2026-2027) tombait avant le 1er septembre et n'était donc comptée dans
+   * « Nouveaux inscrits » d'aucune année. On rattache ce creux estival à l'année qui
+   * <strong>arrive</strong> — c'est bien pour elle que l'on inscrit en juillet/août — en
+   * démarrant la plage au 1er juillet précédant la rentrée. Les plages restent disjointes et
+   * couvrent l'ensemble du calendrier.</p>
+   *
+   * <p>Sans année sélectionnée, on retombe sur l'année civile en cours.</p>
+   */
+  private schoolYearRange(): { from: Date; to: Date } {
+    const now = new Date();
+    const start = this.selectedSchoolYear?.startDate;
+    const end = this.selectedSchoolYear?.endDate;
+
+    if (!start || !end) {
+      return { from: new Date(now.getFullYear(), 0, 1), to: now };
+    }
+    const startDate = new Date(start);
+    // 1er juillet de l'année civile de la rentrée : inclut la période d'inscription estivale.
+    const enrollmentWindowStart = new Date(startDate.getFullYear(), 6, 1);
+    const from = enrollmentWindowStart < startDate ? enrollmentWindowStart : startDate;
+    return { from, to: new Date(end) };
+  }
+
+  /** Libellé de la plage couverte par le bouton « Année », pour l'infobulle. */
+  get yearPresetLabel(): string {
+    return this.selectedSchoolYear?.label ?? String(new Date().getFullYear());
   }
 
   applyCustom(): void {
@@ -74,7 +150,9 @@ export class DashboardComponent implements OnInit {
 
   private load(from: Date, to: Date): void {
     this.loading = true;
-    this.dashboardService.getStats(this.fmt(from), this.fmt(to)).subscribe({
+    this.lastFrom = from;
+    this.lastTo = to;
+    this.dashboardService.getStats(this.fmt(from), this.fmt(to), this.selectedSchoolYearId).subscribe({
       next: (stats) => {
         this.stats = stats;
         this.buildKpis(stats);

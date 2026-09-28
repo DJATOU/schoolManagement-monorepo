@@ -1,0 +1,37 @@
+<!--
+  Rien n'est rendu en l'absence de signalement : pas de bloc vide, pas de mention « aucun
+  changement ». Le cas vide est le cas normal, et une alerte permanente cesse d'être lue.
+
+  role="status" : information consultative, annoncée sans interrompre l'utilisateur. Ce n'est
+  pas une alerte bloquante — le signalement ne conditionne aucune validation (exigence 10.7).
+  Le sens ne repose pas sur la couleur : l'icône et les libellés « quitté » / « rejoint »
+  portent l'information à eux seuls.
+-->
+<section class="group-change-notice" role="status" *ngIf="changes.length > 0">
+  <p class="group-change-notice__title">
+    <mat-icon aria-hidden="true">swap_horiz</mat-icon>
+    <span>{{ 'groupChange.title' | translate }}</span>
+  </p>
+
+  <div class="group-change-notice__item" *ngFor="let change of changes">
+    <p class="group-change-notice__month">{{ monthLabel(change) }}</p>
+    <ul class="group-change-notice__groups">
+      <li>
+        {{ 'groupChange.leftGroup' | translate:{
+              group: change.leftGroup.groupName,
+              count: change.leftGroup.attendedCount
+            } }}
+      </li>
+      <li>
+        {{ 'groupChange.joinedGroup' | translate:{
+              group: change.joinedGroup.groupName,
+              count: change.joinedGroup.attendedCount
+            } }}
+      </li>
+    </ul>
+  </div>
+
+  <!-- La facturation reste inchangée : chaque série est calculée séparément, l'ajustement est
+       administratif et manuel (exigence 10.6). -->
+  <p class="group-change-notice__hint">{{ 'groupChange.hint' | translate }}</p>
+</section>

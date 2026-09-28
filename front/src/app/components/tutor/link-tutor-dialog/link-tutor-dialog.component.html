@@ -1,0 +1,122 @@
+<div class="dlg-hero">
+  <div class="dlg-hero-icon">
+    <mat-icon>escalator_warning</mat-icon>
+  </div>
+  <div class="dlg-hero-text">
+    <h2 class="dlg-title">{{ 'tutor.linkTitle' | translate }}</h2>
+  </div>
+</div>
+
+<mat-dialog-content class="dlg-content">
+  <mat-tab-group animationDuration="150ms">
+    <!-- Onglet 1 : rattacher un tuteur déjà enregistré -->
+    <mat-tab [label]="'tutor.tabExisting' | translate">
+      <div class="tab-body">
+        <p class="tab-hint">
+          <mat-icon>info</mat-icon>
+          {{ 'tutor.existingHint' | translate }}
+        </p>
+
+        <mat-form-field appearance="outline" class="full" subscriptSizing="dynamic"
+          *ngIf="tutors.length > 0">
+          <mat-icon matPrefix>search</mat-icon>
+          <input matInput [(ngModel)]="searchTerm" (ngModelChange)="applySearch()"
+            [placeholder]="'tutor.searchPlaceholder' | translate">
+          <button matSuffix mat-icon-button *ngIf="searchTerm" (click)="clearSearch()">
+            <mat-icon>close</mat-icon>
+          </button>
+        </mat-form-field>
+
+        <div class="state" *ngIf="loadingTutors">
+          <mat-spinner diameter="32"></mat-spinner>
+        </div>
+
+        <div class="state" *ngIf="!loadingTutors && tutors.length === 0">
+          <mat-icon class="state-icon">person_off</mat-icon>
+          <p class="state-title">{{ 'tutor.noTutorFound' | translate }}</p>
+          <p class="state-hint">{{ 'tutor.noTutorFoundHint' | translate }}</p>
+        </div>
+
+        <div class="tutor-list" *ngIf="!loadingTutors && tutors.length > 0">
+          <div class="tutor-row" *ngFor="let t of filteredTutors" [class.selected]="isSelected(t)"
+            (click)="select(t)">
+            <span class="avatar">{{ initials(t) }}</span>
+            <div class="row-info">
+              <span class="row-name">{{ t.lastName }} {{ t.firstName }}</span>
+              <span class="row-meta">
+                <span *ngIf="t.relationship">{{ t.relationship }}</span>
+                <span *ngIf="t.phoneNumber">{{ t.phoneNumber }}</span>
+                <span *ngIf="t.email">{{ t.email }}</span>
+              </span>
+            </div>
+            <mat-icon class="row-check" *ngIf="isSelected(t)">check_circle</mat-icon>
+          </div>
+
+          <div class="state" *ngIf="filteredTutors.length === 0">
+            <mat-icon class="state-icon">search_off</mat-icon>
+            <p class="state-title">{{ 'tutor.noSearchResult' | translate }}</p>
+          </div>
+        </div>
+
+        <div class="tab-actions">
+          <button mat-stroked-button (click)="onCancel()">{{ 'common.cancel' | translate }}</button>
+          <button mat-flat-button color="primary" (click)="attachExisting()"
+            [disabled]="!selectedTutor" appAdminOnly>
+            <mat-icon>link</mat-icon>
+            {{ 'tutor.attach' | translate }}
+          </button>
+        </div>
+      </div>
+    </mat-tab>
+
+    <!-- Onglet 2 : créer un tuteur puis le rattacher -->
+    <mat-tab [label]="'tutor.tabNew' | translate">
+      <div class="tab-body">
+        <form [formGroup]="tutorForm" (ngSubmit)="createAndAttach()" id="newTutorForm" class="tutor-form">
+          <div class="form-grid">
+            <mat-form-field appearance="outline">
+              <mat-label>{{ 'tutorForm.fields.lastName' | translate }}</mat-label>
+              <input matInput formControlName="lastName" required>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>{{ 'tutorForm.fields.firstName' | translate }}</mat-label>
+              <input matInput formControlName="firstName" required>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>{{ 'tutorForm.fields.phoneNumber' | translate }}</mat-label>
+              <input matInput formControlName="phoneNumber" required>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>{{ 'tutorForm.fields.email' | translate }}</mat-label>
+              <input matInput formControlName="email" type="email">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="span-2">
+              <mat-label>{{ 'tutorForm.fields.relationship' | translate }}</mat-label>
+              <mat-select formControlName="relationship">
+                <mat-option value="parent">{{ 'tutorForm.relationships.parent' | translate }}</mat-option>
+                <mat-option value="guardian">{{ 'tutorForm.relationships.guardian' | translate }}</mat-option>
+                <mat-option value="other">{{ 'tutorForm.relationships.other' | translate }}</mat-option>
+              </mat-select>
+            </mat-form-field>
+          </div>
+        </form>
+
+        <div class="tab-actions">
+          <button mat-stroked-button type="button" [disabled]="saving" (click)="onCancel()">
+            {{ 'common.cancel' | translate }}
+          </button>
+          <button mat-flat-button color="primary" type="submit" form="newTutorForm"
+            [disabled]="tutorForm.invalid || saving" appAdminOnly>
+            <mat-spinner *ngIf="saving" diameter="18"></mat-spinner>
+            <mat-icon *ngIf="!saving">person_add</mat-icon>
+            {{ 'tutor.create' | translate }}
+          </button>
+        </div>
+      </div>
+    </mat-tab>
+  </mat-tab-group>
+</mat-dialog-content>

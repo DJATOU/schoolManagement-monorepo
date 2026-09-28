@@ -48,7 +48,9 @@ public class GroupController {
         // PHASE 1 REFACTORING: Utilise MappingContext au lieu de
         // ApplicationContextProvider
         GroupEntity group = groupMapper.groupDTOToGroup(groupDto, groupService.getMappingContext());
-        GroupEntity savedGroup = groupService.save(group);
+        // Rattache l'année scolaire (courante par défaut, ou celle fournie) et bloque la
+        // création si aucune année courante n'est définie (Exigences 3.2, 3.3, 13.3).
+        GroupEntity savedGroup = groupService.createGroup(group);
         return new ResponseEntity<>(groupMapper.groupToGroupDTO(savedGroup), HttpStatus.CREATED);
     }
 
@@ -65,11 +67,22 @@ public class GroupController {
         return ResponseEntity.ok(groupMapper.groupToGroupDTO(group));
     }
 
+    /**
+     * Liste les groupes, filtrés par année scolaire.
+     *
+     * <p>Lorsque {@code schoolYearId} est fourni, seuls les groupes de cette année sont
+     * retournés (Exigences 10.4, 10.5). En son absence, la liste est filtrée sur l'année
+     * scolaire courante par défaut (Exigence 10.4). La logique de filtrage et de repli sur
+     * l'année courante réside dans le service (contrôleur mince).</p>
+     *
+     * @param schoolYearId l'identifiant de l'année scolaire à filtrer (optionnel)
+     * @return les groupes de l'année demandée ou de l'année courante
+     */
     @GetMapping
-    public ResponseEntity<List<GroupDTO>> getAllGroups() {
-        List<GroupDTO> groups = groupService.findAll().stream()
-                .map(groupMapper::groupToGroupDTO)
-                .toList();
+    public ResponseEntity<List<GroupDTO>> getAllGroups(
+            @RequestParam(required = false) Long schoolYearId) {
+        List<GroupDTO> groups = convertToGroupDTOList(
+                groupService.findGroupsBySchoolYear(schoolYearId));
         return ResponseEntity.ok(groups);
     }
 
@@ -79,8 +92,9 @@ public class GroupController {
         // PHASE 1 REFACTORING: Utilise MappingContext au lieu de
         // ApplicationContextProvider
         GroupEntity updatedGroup = groupMapper.groupDTOToGroup(groupDto, groupService.getMappingContext());
-        updatedGroup.setId(id);
-        GroupEntity savedGroup = groupService.save(updatedGroup);
+        // Consulte le garde lecture seule : un groupe d'une année passée n'est pas modifiable
+        // (Exigence 9.2) ; l'année scolaire existante est préservée.
+        GroupEntity savedGroup = groupService.updateGroup(id, updatedGroup);
         return ResponseEntity.ok(groupMapper.groupToGroupDTO(savedGroup));
     }
 

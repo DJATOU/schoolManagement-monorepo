@@ -5,12 +5,15 @@ import { MatIcon } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { SecureImageDirective } from '../../../shared/secure-image.directive';
 import { environment } from '../../../../environments/environment';  // Import des variables d'environnement
 
 @Component({
   selector: 'app-profile-list-item',
   standalone: true,
-  imports: [CommonModule, MatListModule, MatIcon, MatCard, MatCardHeader, MatCardTitle, MatCardContent, MatCardActions, MatCardSubtitle, MatButtonModule, MatTooltipModule],
+  imports: [CommonModule, MatListModule, MatIcon, MatCard, MatCardHeader, MatCardTitle, MatCardContent, MatCardActions, MatCardSubtitle, MatButtonModule, MatTooltipModule,
+    SecureImageDirective
+  ],
   templateUrl: './profile-list-item.component.html',
   styleUrls: ['./profile-list-item.component.scss']
 })

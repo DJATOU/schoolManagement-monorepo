@@ -1,6 +1,7 @@
 package com.school.management.controller;
 
 import com.school.management.dto.GroupDTO;
+import com.school.management.dto.ParcoursDTO;
 import com.school.management.dto.StudentDTO;
 import com.school.management.dto.student.StudentFullHistoryDTO;
 import com.school.management.mapper.GroupMapper;
@@ -12,6 +13,7 @@ import com.school.management.infrastructure.storage.FileManagementService;
 import com.school.management.service.exception.CustomServiceException;
 import com.school.management.service.group.StudentPayableGroupsService;
 import com.school.management.service.student.StudentHistoryService;
+import com.school.management.service.student.StudentParcoursService;
 import com.school.management.service.student.StudentService;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
@@ -49,17 +51,20 @@ public class StudentController {
     private final StudentHistoryService studentHistoryService;
     private final FileManagementService fileManagementService;
     private final StudentPayableGroupsService studentPayableGroupsService;
+    private final StudentParcoursService studentParcoursService;
 
     @Autowired
     public StudentController(StudentService studentService, StudentMapper studentMapper, GroupMapper groupMapper,
             StudentHistoryService studentHistoryService, FileManagementService fileManagementService,
-            StudentPayableGroupsService studentPayableGroupsService) {
+            StudentPayableGroupsService studentPayableGroupsService,
+            StudentParcoursService studentParcoursService) {
         this.studentService = studentService;
         this.studentMapper = studentMapper;
         this.groupMapper = groupMapper;
         this.studentHistoryService = studentHistoryService;
         this.fileManagementService = fileManagementService;
         this.studentPayableGroupsService = studentPayableGroupsService;
+        this.studentParcoursService = studentParcoursService;
     }
 
     @PostMapping("/createStudent")
@@ -120,10 +125,76 @@ public class StudentController {
         return ResponseEntity.ok(studentMapper.studentToStudentDTO(updatedStudent));
     }
 
+    /**
+     * Réactive un étudiant précédemment marqué comme parti (exigence 7.5) : repasse son statut
+     * à ACTIVE. L'historique (inscriptions, paiements, présences) est conservé.
+     *
+     * @param id l'identifiant de l'étudiant à réactiver
+     * @return l'étudiant réactivé
+     */
+    /** Corps de requête de rattachement / détachement du tuteur. */
+    public record TutorLinkRequest(Long tutorId) {
+    }
+
+    /**
+     * Rattache un tuteur à l'étudiant, ou le détache lorsque {@code tutorId} est nul.
+     *
+     * <p>Point d'entrée dédié : la mise à jour générale ignore les valeurs nulles, elle ne
+     * permet donc pas de détacher un tuteur.</p>
+     *
+     * @param id      identifiant de l'étudiant
+     * @param request identifiant du tuteur, ou {@code null} pour détacher
+     * @return l'étudiant mis à jour
+     */
+    @PatchMapping("/{id}/tutor")
+    public ResponseEntity<StudentDTO> setStudentTutor(@PathVariable Long id,
+                                                     @RequestBody TutorLinkRequest request) {
+        StudentEntity updated = studentService.setTutor(id, request.tutorId());
+        return ResponseEntity.ok(studentMapper.studentToStudentDTO(updated));
+    }
+
+    @PatchMapping("/{id}/reactivate")
+    public ResponseEntity<StudentDTO> reactivateStudent(@PathVariable Long id) {
+        StudentEntity student = studentService.reactivateStudent(id);
+        return ResponseEntity.ok(studentMapper.studentToStudentDTO(student));
+    }
+
+    /**
+     * Marque un étudiant comme parti / archivé (exigence 7.1) : passe son statut à INACTIVE.
+     * L'étudiant est exclu des listes courantes par défaut mais son historique est préservé.
+     *
+     * @param id l'identifiant de l'étudiant à archiver
+     * @return l'étudiant archivé
+     */
+    @PatchMapping("/{id}/deactivate")
+    public ResponseEntity<StudentDTO> deactivateStudent(@PathVariable Long id) {
+        StudentEntity student = studentService.deactivateStudentStatus(id);
+        return ResponseEntity.ok(studentMapper.studentToStudentDTO(student));
+    }
+
+    /**
+     * Liste les étudiants filtrés selon leur statut d'inscription.
+     *
+     * <p>Par défaut ({@code includeInactive = false}), seuls les étudiants actifs
+     * de l'année courante sont retournés ; les étudiants partis (INACTIVE) sont
+     * exclus (exigence 7.3). Lorsque {@code includeInactive = true}, la liste
+     * inclut également les étudiants inactifs (exigence 7.4).</p>
+     *
+     * <p>Le paramètre optionnel {@code schoolYearId} situe la liste dans une année scolaire :
+     * pour l'année courante (ou en son absence) le filtrage se fait par statut ; pour une année
+     * passée, on renvoie les étudiants inscrits dans les groupes de cette année (historique
+     * figé, exigence 9.x / 4.x).</p>
+     *
+     * @param includeInactive {@code true} pour inclure les étudiants inactifs
+     * @param schoolYearId    année scolaire sélectionnée (optionnel)
+     * @return la liste des étudiants correspondant à l'année et au filtre de statut
+     */
     @Transactional(readOnly = true)
     @GetMapping
-    public ResponseEntity<List<StudentDTO>> getAllStudents() {
-        List<StudentDTO> students = studentService.findAllActiveStudents().stream()
+    public ResponseEntity<List<StudentDTO>> getAllStudents(
+            @RequestParam(required = false, defaultValue = "false") boolean includeInactive,
+            @RequestParam(required = false) Long schoolYearId) {
+        List<StudentDTO> students = studentService.findStudentsBySchoolYear(schoolYearId, includeInactive).stream()
                 .map(studentMapper::studentToStudentDTO)
                 .toList();
         return ResponseEntity.ok(students);
@@ -382,6 +453,19 @@ public class StudentController {
 
         LOGGER.info("Found {} payable groups for student {}", groupDTOs.size(), studentId);
         return ResponseEntity.ok(groupDTOs);
+    }
+
+    /**
+     * Récupère le parcours d'un étudiant : pour chaque année scolaire fréquentée,
+     * les niveaux distincts et les groupes suivis (exigence 11.5).
+     *
+     * @param id l'ID de l'étudiant
+     * @return le parcours de l'étudiant
+     */
+    @GetMapping("/{id}/parcours")
+    public ResponseEntity<ParcoursDTO> getStudentParcours(@PathVariable Long id) {
+        ParcoursDTO parcours = studentParcoursService.getParcours(id);
+        return ResponseEntity.ok(parcours);
     }
 
 }

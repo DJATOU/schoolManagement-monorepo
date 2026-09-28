@@ -1,0 +1,39 @@
+<div class="import-page fade-in">
+  <h2 class="import-title">{{ 'IMPORT.TITLE' | translate }}</h2>
+  <p class="import-hint">{{ 'IMPORT.HINT' | translate }}</p>
+
+  <mat-card class="import-card" *ngFor="let card of cards">
+    <mat-card-header>
+      <mat-icon mat-card-avatar>{{ card.icon }}</mat-icon>
+      <mat-card-title>{{ card.titleKey | translate }}</mat-card-title>
+      <mat-card-subtitle>{{ card.columnsKey | translate }}</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      <p class="import-note" *ngIf="card.noteKey">{{ card.noteKey | translate }}</p>
+
+      <input type="file" accept=".csv" (change)="onFileSelected(card.kind, $event)">
+      <button mat-raised-button color="primary"
+              [disabled]="!selectedFiles[card.kind] || loading[card.kind]"
+              (click)="runImport(card.kind)" appAdminOnly>
+        <mat-icon>upload</mat-icon> {{ 'IMPORT.BUTTON' | translate }}
+      </button>
+      <mat-spinner *ngIf="loading[card.kind]" [diameter]="24"></mat-spinner>
+
+      <div class="import-error" *ngIf="errorMessages[card.kind]">
+        <mat-icon>error_outline</mat-icon> {{ errorMessages[card.kind] }}
+      </div>
+
+      <ng-container *ngIf="results[card.kind] as res">
+        <p class="import-summary">
+          {{ 'IMPORT.IMPORTED' | translate }} : {{ res.imported }} —
+          {{ 'IMPORT.ERRORS' | translate }} : {{ res.errors.length }}
+        </p>
+        <ul class="import-errors" *ngIf="res.errors.length">
+          <li *ngFor="let e of res.errors">
+            {{ 'IMPORT.LINE' | translate }} {{ e.line }} : {{ e.message }}
+          </li>
+        </ul>
+      </ng-container>
+    </mat-card-content>
+  </mat-card>
+</div>

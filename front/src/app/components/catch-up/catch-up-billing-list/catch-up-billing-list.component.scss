@@ -1,0 +1,47 @@
+.cubl-card {
+  margin: 16px;
+  padding: 16px;
+}
+
+.cubl-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 4px;
+  font-size: 20px;
+  color: var(--pf-primary, #3f51b5);
+}
+
+.cubl-subtitle {
+  margin: 0 0 16px;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.cubl-loading {
+  display: flex;
+  justify-content: center;
+  padding: 24px 0;
+}
+
+.cubl-error {
+  color: #b91c1c;
+  font-size: 13px;
+}
+
+/* Liste vide = état souhaité. Le ton reste positif : rien n'est en attente. */
+.cubl-empty {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #15803d;
+  font-size: 14px;
+}
+
+.cubl-date {
+  color: #64748b;
+}
+
+table {
+  width: 100%;
+}

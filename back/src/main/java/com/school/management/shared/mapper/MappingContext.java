@@ -33,6 +33,7 @@ public class MappingContext {
     private final SubjectRepository subjectRepository;
     private final PricingRepository pricingRepository;
     private final TeacherRepository teacherRepository;
+    private final SchoolYearRepository schoolYearRepository;
 
     // Repositories pour Session
     private final RoomRepository roomRepository;
@@ -53,6 +54,7 @@ public class MappingContext {
             SubjectRepository subjectRepository,
             PricingRepository pricingRepository,
             TeacherRepository teacherRepository,
+            SchoolYearRepository schoolYearRepository,
             RoomRepository roomRepository,
             GroupRepository groupRepository,
             SessionSeriesRepository sessionSeriesRepository,
@@ -66,6 +68,7 @@ public class MappingContext {
             subjectRepository,
             pricingRepository,
             teacherRepository,
+            schoolYearRepository,
             roomRepository,
             groupRepository,
             sessionSeriesRepository,
@@ -85,7 +88,7 @@ public class MappingContext {
         return new MappingContext(
             levelRepository,
             tutorRepository,
-            null, null, null, null, null, null, null, null, null
+            null, null, null, null, null, null, null, null, null, null
         );
     }
 
@@ -97,7 +100,8 @@ public class MappingContext {
             LevelRepository levelRepository,
             SubjectRepository subjectRepository,
             PricingRepository pricingRepository,
-            TeacherRepository teacherRepository) {
+            TeacherRepository teacherRepository,
+            SchoolYearRepository schoolYearRepository) {
 
         return new MappingContext(
             levelRepository,
@@ -106,6 +110,7 @@ public class MappingContext {
             subjectRepository,
             pricingRepository,
             teacherRepository,
+            schoolYearRepository,
             null, null, null, null, null
         );
     }

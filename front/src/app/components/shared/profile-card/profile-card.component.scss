@@ -4,6 +4,67 @@
   width: 100%;
 }
 
+// ===== FLIP CARD (recto/verso) =====
+.flip-card {
+  width: 100%;
+  min-height: 200px;
+  perspective: 1200px;
+  background: transparent;
+}
+
+.flip-card-inner {
+  position: relative;
+  width: 100%;
+  min-height: 200px;
+  transition: transform 0.6s;
+  transform-style: preserve-3d;
+}
+
+.flip-card.is-flipped .flip-card-inner {
+  transform: rotateY(180deg);
+}
+
+.flip-card-face {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  display: flex;
+}
+
+.flip-card-face > .profile-card {
+  width: 100%;
+}
+
+.flip-card-back {
+  transform: rotateY(180deg);
+}
+
+// Bouton retourner (coin haut gauche)
+.flip-btn {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  z-index: 11;
+  width: 32px;
+  height: 32px;
+  line-height: 32px;
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    color: #6366f1;
+    transition: transform 0.4s ease;
+  }
+
+  &:hover mat-icon {
+    transform: rotate(180deg);
+  }
+}
+
 // ===== VERTICAL CARD DESIGN =====
 .profile-card {
   position: relative;
@@ -22,6 +83,113 @@
   &:hover {
     box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
     transform: translateY(-2px);
+  }
+}
+
+// ===== FACE ARRIÈRE : TUTEUR =====
+.profile-card--back {
+  align-items: stretch;
+  justify-content: flex-start;
+
+  &:hover {
+    transform: none;
+  }
+
+  .tutor-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: #4f46e5;
+    padding: 8px 0 12px;
+    border-bottom: 1px solid #f1f5f9;
+    margin-bottom: 12px;
+
+    mat-icon {
+      color: #6366f1;
+    }
+  }
+
+  .tutor-body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+  }
+
+  .tutor-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+      color: #94a3b8;
+      flex-shrink: 0;
+    }
+
+    .tutor-text {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .tutor-label {
+      font-size: 0.7rem;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+    }
+
+    .tutor-value {
+      font-size: 0.85rem;
+      color: #1e293b;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
+
+  .tutor-row--action {
+    cursor: pointer;
+    border-radius: 8px;
+    padding: 4px;
+    margin: -4px;
+    transition: background-color 0.2s ease;
+
+    .wa-icon {
+      color: #25d366;
+    }
+
+    .tutor-value--link {
+      color: #059669;
+    }
+
+    &:hover {
+      background-color: #ecfdf5;
+    }
+  }
+
+  .tutor-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    flex: 1;
+    color: #94a3b8;
+    padding: 20px 0;
+
+    mat-icon {
+      font-size: 32px;
+      width: 32px;
+      height: 32px;
+    }
   }
 }
 
@@ -61,6 +229,16 @@
     // Red: "En retard"
     &.status-late {
       background-color: #ef4444;
+      color: white;
+
+      mat-icon {
+        color: white;
+      }
+    }
+
+    // Indigo : « Exempté » (rien à payer, ce n'est pas une alerte)
+    &.status-exempt {
+      background-color: #6366f1;
       color: white;
 
       mat-icon {
@@ -184,13 +362,8 @@
 }
 
 // ===== TOOLTIP STYLE =====
-::ng-deep .payment-tooltip {
-  white-space: pre-line;
-  font-size: 12px;
-  line-height: 1.4;
-  max-width: 300px;
-  background-color: rgba(15, 23, 42, 0.95);
-}
+// Voir styles.scss : .payment-tooltip y est définie une seule fois, l'infobulle étant rendue
+// dans l'overlay Material et non dans ce composant.
 
 // ===== MOBILE RESPONSIVE =====
 @media (max-width: 600px) {

@@ -1,7 +1,7 @@
 <mat-card class="student-card">
   <div class="student-card-content">
     <div class="student-avatar">
-      <img *ngIf="profilePhotoUrl && !hasImageError; else avatarInitials" [src]="profilePhotoUrl"
+      <img *ngIf="profilePhotoUrl && !hasImageError; else avatarInitials" [appSecureImage]="profilePhotoUrl"
         alt="Photo de profil" class="profile-photo" (error)="onImageError()">
       <ng-template #avatarInitials>
         <div class="initials-avatar" [style.background-color]="avatarColor">{{ getInitials() }}</div>

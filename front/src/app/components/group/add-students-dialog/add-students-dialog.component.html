@@ -1,37 +1,87 @@
 <h2 mat-dialog-title class="dialog-title">
   <mat-icon>group_add</mat-icon>
-  Ajouter des étudiants
+  {{ 'ADD_STUDENTS_DIALOG.TITLE' | translate }}
   <span class="count-badge" *ngIf="selectedIds.size > 0">{{ selectedIds.size }}</span>
 </h2>
 
 <mat-dialog-content>
   <mat-form-field appearance="outline" class="search-field" subscriptSizing="dynamic">
     <mat-icon matPrefix>search</mat-icon>
-    <input matInput [(ngModel)]="searchTerm" (ngModelChange)="applySearch()"
-      placeholder="Rechercher un étudiant...">
+    <input matInput #searchInput [(ngModel)]="searchTerm" (ngModelChange)="applySearch()"
+      [placeholder]="'ADD_STUDENTS_DIALOG.SEARCH_PLACEHOLDER' | translate">
+    <button matSuffix mat-icon-button *ngIf="searchTerm" (click)="clearSearch()"
+      [matTooltip]="'ADD_STUDENTS_DIALOG.CLEAR_SEARCH' | translate">
+      <mat-icon>close</mat-icon>
+    </button>
   </mat-form-field>
+
+  <!-- Récapitulatif de la sélection : reste visible même si la recherche masque les lignes -->
+  <div class="selection-summary" *ngIf="selectedIds.size > 0">
+    <div class="summary-head">
+      <span class="summary-title">
+        {{ 'ADD_STUDENTS_DIALOG.SELECTED_TITLE' | translate: { count: selectedIds.size } }}
+      </span>
+      <button mat-button class="summary-clear" (click)="clearSelection()">
+        {{ 'ADD_STUDENTS_DIALOG.CLEAR_SELECTION' | translate }}
+      </button>
+    </div>
+    <div class="summary-chips">
+      <span class="chip" *ngFor="let s of selectedStudents">
+        {{ fullName(s) }}
+        <button class="chip-remove" (click)="toggle(s.id)"
+          [matTooltip]="'ADD_STUDENTS_DIALOG.REMOVE' | translate">
+          <mat-icon>close</mat-icon>
+        </button>
+      </span>
+    </div>
+  </div>
 
   <div class="list-toolbar" *ngIf="!loading && filtered.length > 0">
     <mat-checkbox [checked]="allFilteredSelected" (change)="toggleSelectAll()">
-      Tout sélectionner ({{ filtered.length }})
+      {{ 'ADD_STUDENTS_DIALOG.SELECT_ALL' | translate }}
     </mat-checkbox>
+    <span class="showing-count">
+      {{ 'ADD_STUDENTS_DIALOG.SHOWING' | translate: { shown: filtered.length, total: students.length } }}
+    </span>
   </div>
 
-  <div class="students-list" *ngIf="!loading; else loadingTpl">
-    <div *ngFor="let s of filtered" class="student-row" [class.selected]="isSelected(s.id)"
-      (click)="toggle(s.id)">
-      <mat-checkbox [checked]="isSelected(s.id)" (click)="$event.stopPropagation()"
-        (change)="toggle(s.id)"></mat-checkbox>
-      <div class="row-avatar">{{ getInitials(s) }}</div>
-      <div class="row-info">
-        <span class="row-name">{{ s.firstName }} {{ s.lastName }}</span>
-        <span class="row-email">{{ s.email }}</span>
-      </div>
+  <div class="list-area" *ngIf="!loading; else loadingTpl">
+    <!-- Index alphabétique : saut direct à une lettre -->
+    <div class="alpha-index" *ngIf="groups.length > 1">
+      <button type="button" class="alpha-btn" *ngFor="let letter of availableLetters"
+        (click)="jumpTo(letter)" [matTooltip]="'ADD_STUDENTS_DIALOG.JUMP_TO' | translate: { letter: letter }">
+        {{ letter }}
+      </button>
     </div>
 
-    <div class="empty" *ngIf="filtered.length === 0">
-      <mat-icon>person_off</mat-icon>
-      <span>Aucun étudiant disponible</span>
+    <div class="students-list" #listContainer>
+      <ng-container *ngFor="let group of groups">
+        <div class="letter-header" [attr.data-letter]="group.letter">{{ group.letter }}</div>
+
+        <div *ngFor="let s of group.students" class="student-row" [class.selected]="isSelected(s.id)"
+          (click)="toggle(s.id)">
+          <mat-checkbox [checked]="isSelected(s.id)" (click)="$event.stopPropagation()"
+            (change)="toggle(s.id)"></mat-checkbox>
+          <div class="row-avatar">{{ getInitials(s) }}</div>
+          <div class="row-info">
+            <span class="row-name">{{ s.lastName }} {{ s.firstName }}</span>
+            <span class="row-email" *ngIf="s.email">{{ s.email }}</span>
+          </div>
+        </div>
+      </ng-container>
+
+      <div class="empty" *ngIf="filtered.length === 0">
+        <mat-icon>person_off</mat-icon>
+        <p class="empty-title" *ngIf="searchTerm">
+          {{ 'ADD_STUDENTS_DIALOG.NO_RESULT' | translate: { term: searchTerm } }}
+        </p>
+        <p class="empty-title" *ngIf="!searchTerm">
+          {{ 'ADD_STUDENTS_DIALOG.NO_STUDENT' | translate }}
+        </p>
+        <p class="empty-hint" *ngIf="searchTerm">
+          {{ 'ADD_STUDENTS_DIALOG.NO_RESULT_HINT' | translate }}
+        </p>
+      </div>
     </div>
   </div>
 
@@ -43,9 +93,11 @@
 </mat-dialog-content>
 
 <mat-dialog-actions align="end">
-  <button mat-button (click)="onCancel()">Annuler</button>
-  <button mat-flat-button color="primary" (click)="onConfirm()" [disabled]="selectedIds.size === 0">
+  <button mat-button (click)="onCancel()">{{ 'common.cancel' | translate }}</button>
+  <button mat-flat-button color="primary" (click)="onConfirm()" [disabled]="selectedIds.size === 0" appAdminOnly>
     <mat-icon>add</mat-icon>
-    Ajouter {{ selectedIds.size > 0 ? '(' + selectedIds.size + ')' : '' }}
+    {{ selectedIds.size > 0
+        ? ('ADD_STUDENTS_DIALOG.ADD_COUNT' | translate: { count: selectedIds.size })
+        : ('ADD_STUDENTS_DIALOG.ADD' | translate) }}
   </button>
 </mat-dialog-actions>

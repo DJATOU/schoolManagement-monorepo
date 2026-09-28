@@ -56,3 +56,19 @@ export const NATIONALITIES: string[] = [
 
 /** Nationalité utilisée par défaut dans les formulaires. */
 export const DEFAULT_NATIONALITY = 'Algérienne';
+
+/**
+ * Clés de traduction des codes de sexe stockés par les formulaires.
+ * Le formulaire enregistre un code ('male'/'female') : le récapitulatif doit afficher
+ * le libellé traduit, pas le code brut.
+ */
+export const GENDER_LABEL_KEYS: Record<string, string> = {
+  male: 'COMMON.MALE',
+  female: 'COMMON.FEMALE'
+};
+
+/** Clés de traduction des codes de statut matrimonial ('single'/'married'). */
+export const MARITAL_STATUS_LABEL_KEYS: Record<string, string> = {
+  single: 'TEACHER_FORM.SINGLE',
+  married: 'TEACHER_FORM.MARRIED'
+};

@@ -56,9 +56,15 @@ public class TeacherService {
         return teacherRepository.save(Objects.requireNonNull(teacher));
     }
 
+    /**
+     * Liste les enseignants, hors enseignants désactivés.
+     *
+     * <p>La suppression d'un enseignant est logique ({@code active = false}) : sans ce filtre,
+     * un enseignant désactivé continuerait d'apparaître dans les listes et les sélecteurs.</p>
+     */
     public List<TeacherEntity> getAllTeachers() {
         LOGGER.info("Fetching all teachers...");
-        return teacherRepository.findAll();
+        return teacherRepository.findAllActive();
     }
 
     public List<TeacherEntity> findByLastName(String lastName) {

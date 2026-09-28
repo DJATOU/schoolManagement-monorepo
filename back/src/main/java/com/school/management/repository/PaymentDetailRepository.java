@@ -36,6 +36,156 @@ public interface PaymentDetailRepository
         List<PaymentDetailEntity> findByPayment_StudentIdAndSession_SessionSeriesId(@Param("studentId") Long studentId,
                         @Param("sessionSeriesId") Long sessionSeriesId);
 
+        // ========== ENCAISSEMENTS (agrégations) ==========
+
+        /*
+         * Les agrégations ci-dessous répondent à « combien ce groupe a encaissé ». Elles
+         * partagent trois exclusions, appliquées en SQL et non côté client :
+         *   - versement désactivé (pd.active = false) ;
+         *   - versement définitivement supprimé ;
+         *   - paiement parent ANNULÉ.
+         * Les remboursements sont retirés séparément (voir RefundRepository) : ils vivent
+         * dans une autre table et ne peuvent pas être joints ici sans fausser les SUM.
+         */
+
+        /** Total encaissé (brut, hors remboursements) sur l'ensemble des paiements d'un groupe. */
+        @Query("SELECT COALESCE(SUM(pd.amountPaid), 0) FROM PaymentDetailEntity pd JOIN pd.payment p "
+                        + "WHERE p.group.id = :groupId AND pd.active = true "
+                        + "AND (pd.permanentlyDeleted IS NULL OR pd.permanentlyDeleted = false) "
+                        + "AND (p.status IS NULL OR p.status <> 'CANCELLED')")
+        Double sumCollectedForGroup(@Param("groupId") Long groupId);
+
+        /**
+         * Encaissements d'un groupe ventilés par série.
+         *
+         * @return des lignes {@code [seriesId, seriesName, montant]}
+         */
+        @Query("SELECT p.sessionSeries.id, p.sessionSeries.name, COALESCE(SUM(pd.amountPaid), 0) "
+                        + "FROM PaymentDetailEntity pd JOIN pd.payment p "
+                        + "WHERE p.group.id = :groupId AND p.sessionSeries IS NOT NULL AND pd.active = true "
+                        + "AND (pd.permanentlyDeleted IS NULL OR pd.permanentlyDeleted = false) "
+                        + "AND (p.status IS NULL OR p.status <> 'CANCELLED') "
+                        + "GROUP BY p.sessionSeries.id, p.sessionSeries.name")
+        List<Object[]> sumCollectedByGroupGroupedBySeries(@Param("groupId") Long groupId);
+
+        /**
+         * Encaissements d'un groupe ventilés par séance.
+         *
+         * <p>Un versement non rattaché à une séance est exclu de cette ventilation : il
+         * reste comptabilisé dans le total du groupe et de sa série.</p>
+         *
+         * @return des lignes {@code [seriesId, sessionId, sessionTitle, sessionStart, montant]}
+         */
+        @Query("SELECT pd.session.sessionSeries.id, pd.session.id, pd.session.title, "
+                        + "pd.session.sessionTimeStart, COALESCE(SUM(pd.amountPaid), 0) "
+                        + "FROM PaymentDetailEntity pd JOIN pd.payment p "
+                        + "WHERE p.group.id = :groupId AND pd.session IS NOT NULL AND pd.active = true "
+                        + "AND (pd.permanentlyDeleted IS NULL OR pd.permanentlyDeleted = false) "
+                        + "AND (p.status IS NULL OR p.status <> 'CANCELLED') "
+                        + "GROUP BY pd.session.sessionSeries.id, pd.session.id, pd.session.title, "
+                        + "pd.session.sessionTimeStart "
+                        + "ORDER BY pd.session.sessionTimeStart")
+        List<Object[]> sumCollectedByGroupGroupedBySession(@Param("groupId") Long groupId);
+
+        /**
+         * Encaissements d'un groupe ventilés par mois civil de <strong>date
+         * d'encaissement</strong>.
+         *
+         * <p>Cet axe ne se confond pas avec la ventilation par série : un versement reçu en
+         * septembre peut solder une série d'août. « Par série » dit si un mois de cours est
+         * payé, « par mois » dit ce qui est entré en caisse.</p>
+         *
+         * @return des lignes {@code [année, mois, montant]}
+         */
+        @Query("SELECT YEAR(pd.paymentDate), MONTH(pd.paymentDate), COALESCE(SUM(pd.amountPaid), 0) "
+                        + "FROM PaymentDetailEntity pd JOIN pd.payment p "
+                        + "WHERE p.group.id = :groupId AND pd.paymentDate IS NOT NULL AND pd.active = true "
+                        + "AND (pd.permanentlyDeleted IS NULL OR pd.permanentlyDeleted = false) "
+                        + "AND (p.status IS NULL OR p.status <> 'CANCELLED') "
+                        + "GROUP BY YEAR(pd.paymentDate), MONTH(pd.paymentDate) "
+                        + "ORDER BY YEAR(pd.paymentDate), MONTH(pd.paymentDate)")
+        List<Object[]> sumCollectedByGroupGroupedByMonth(@Param("groupId") Long groupId);
+
+        // ========== RAPPORT DE RECETTES (transversal, filtré) ==========
+
+        /*
+         * Une requête par axe d'agrégation, partageant le même jeu de filtres optionnels
+         * (« :param IS NULL OR ... »). L'agrégation est faite par la base : la page balaie
+         * potentiellement tous les groupes de l'école, charger les versements pour les
+         * sommer côté application ne tiendrait pas.
+         *
+         * Le filtre de dates porte sur pd.paymentDate (date d'encaissement), qui est la
+         * date pertinente pour une recette.
+         */
+
+        String REVENUE_FILTERS = "AND (:groupId IS NULL OR p.group.id = :groupId) "
+                        + "AND (:levelId IS NULL OR p.group.level.id = :levelId) "
+                        + "AND (:seriesId IS NULL OR p.sessionSeries.id = :seriesId) "
+                        + "AND (:schoolYearId IS NULL OR p.group.schoolYear.id = :schoolYearId) "
+                        + "AND (CAST(:dateFrom AS timestamp) IS NULL OR pd.paymentDate >= :dateFrom) "
+                        + "AND (CAST(:dateTo AS timestamp) IS NULL OR pd.paymentDate <= :dateTo) ";
+
+        String REVENUE_BASE = "FROM PaymentDetailEntity pd JOIN pd.payment p "
+                        + "WHERE pd.active = true "
+                        + "AND (pd.permanentlyDeleted IS NULL OR pd.permanentlyDeleted = false) "
+                        + "AND (p.status IS NULL OR p.status <> 'CANCELLED') ";
+
+        /** Total encaissé brut sur le périmètre filtré. */
+        @Query("SELECT COALESCE(SUM(pd.amountPaid), 0) " + REVENUE_BASE + REVENUE_FILTERS)
+        Double sumRevenue(@Param("groupId") Long groupId,
+                        @Param("levelId") Long levelId,
+                        @Param("seriesId") Long seriesId,
+                        @Param("schoolYearId") Long schoolYearId,
+                        @Param("dateFrom") java.util.Date dateFrom,
+                        @Param("dateTo") java.util.Date dateTo);
+
+        /** Recettes par groupe. Lignes {@code [groupId, groupName, montant]}. */
+        @Query("SELECT p.group.id, p.group.name, COALESCE(SUM(pd.amountPaid), 0) " + REVENUE_BASE
+                        + "AND p.group IS NOT NULL " + REVENUE_FILTERS
+                        + "GROUP BY p.group.id, p.group.name ORDER BY COALESCE(SUM(pd.amountPaid), 0) DESC")
+        List<Object[]> revenueByGroup(@Param("groupId") Long groupId,
+                        @Param("levelId") Long levelId,
+                        @Param("seriesId") Long seriesId,
+                        @Param("schoolYearId") Long schoolYearId,
+                        @Param("dateFrom") java.util.Date dateFrom,
+                        @Param("dateTo") java.util.Date dateTo);
+
+        /** Recettes par série. Lignes {@code [seriesId, seriesName, groupName, montant]}. */
+        @Query("SELECT p.sessionSeries.id, p.sessionSeries.name, p.group.name, COALESCE(SUM(pd.amountPaid), 0) "
+                        + REVENUE_BASE + "AND p.sessionSeries IS NOT NULL " + REVENUE_FILTERS
+                        + "GROUP BY p.sessionSeries.id, p.sessionSeries.name, p.group.name "
+                        + "ORDER BY COALESCE(SUM(pd.amountPaid), 0) DESC")
+        List<Object[]> revenueBySeries(@Param("groupId") Long groupId,
+                        @Param("levelId") Long levelId,
+                        @Param("seriesId") Long seriesId,
+                        @Param("schoolYearId") Long schoolYearId,
+                        @Param("dateFrom") java.util.Date dateFrom,
+                        @Param("dateTo") java.util.Date dateTo);
+
+        /** Recettes par séance. Lignes {@code [sessionId, title, groupName, montant]}. */
+        @Query("SELECT pd.session.id, pd.session.title, p.group.name, COALESCE(SUM(pd.amountPaid), 0) "
+                        + REVENUE_BASE + "AND pd.session IS NOT NULL " + REVENUE_FILTERS
+                        + "GROUP BY pd.session.id, pd.session.title, p.group.name "
+                        + "ORDER BY COALESCE(SUM(pd.amountPaid), 0) DESC")
+        List<Object[]> revenueBySession(@Param("groupId") Long groupId,
+                        @Param("levelId") Long levelId,
+                        @Param("seriesId") Long seriesId,
+                        @Param("schoolYearId") Long schoolYearId,
+                        @Param("dateFrom") java.util.Date dateFrom,
+                        @Param("dateTo") java.util.Date dateTo);
+
+        /** Recettes par mois d'encaissement. Lignes {@code [année, mois, montant]}. */
+        @Query("SELECT YEAR(pd.paymentDate), MONTH(pd.paymentDate), COALESCE(SUM(pd.amountPaid), 0) "
+                        + REVENUE_BASE + "AND pd.paymentDate IS NOT NULL " + REVENUE_FILTERS
+                        + "GROUP BY YEAR(pd.paymentDate), MONTH(pd.paymentDate) "
+                        + "ORDER BY YEAR(pd.paymentDate) DESC, MONTH(pd.paymentDate) DESC")
+        List<Object[]> revenueByMonth(@Param("groupId") Long groupId,
+                        @Param("levelId") Long levelId,
+                        @Param("seriesId") Long seriesId,
+                        @Param("schoolYearId") Long schoolYearId,
+                        @Param("dateFrom") java.util.Date dateFrom,
+                        @Param("dateTo") java.util.Date dateTo);
+
         // ========== NOUVELLES MÉTHODES AJOUTÉES ==========
 
         /**
@@ -139,15 +289,19 @@ public interface PaymentDetailRepository
                         "WHERE (:studentId IS NULL OR p.student.id = :studentId) " +
                         "AND (:groupId IS NULL OR p.group.id = :groupId) " +
                         "AND (:sessionSeriesId IS NULL OR p.sessionSeries.id = :sessionSeriesId) " +
+                        "AND (:sessionId IS NULL OR pd.session.id = :sessionId) " +
                         "AND (:active IS NULL OR pd.active = :active) " +
                         "AND (CAST(:dateFrom AS timestamp) IS NULL OR pd.dateCreation >= :dateFrom) " +
+                        "AND (CAST(:dateTo AS timestamp) IS NULL OR pd.dateCreation <= :dateTo) " +
                         "AND (:levelId IS NULL OR p.student.level.id = :levelId)")
         Page<com.school.management.dto.PaymentDetailSearchDTO> searchPaymentDetailsWithCompleteData(
                         @Param("studentId") Long studentId,
                         @Param("groupId") Long groupId,
                         @Param("sessionSeriesId") Long sessionSeriesId,
+                        @Param("sessionId") Long sessionId,
                         @Param("active") Boolean active,
                         @Param("dateFrom") java.util.Date dateFrom,
+                        @Param("dateTo") java.util.Date dateTo,
                         @Param("levelId") Long levelId,
                         Pageable pageable);
 }

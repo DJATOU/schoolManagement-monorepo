@@ -21,11 +21,18 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatOptionModule } from '@angular/material/core';
 import { MatSelectModule } from '@angular/material/select';
 import { ReactiveFormsModule } from '@angular/forms';
-import { CommonModule } from '@angular/common';
+import { CommonModule, DatePipe } from '@angular/common';
 import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatCardModule } from '@angular/material/card';
+import { MatButtonModule } from '@angular/material/button';
 import { NgxMaterialTimepickerModule } from 'ngx-material-timepicker';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { MatCheckboxModule } from '@angular/material/checkbox';
+import { AdminOnlyDirective } from '../../../shared/admin-only.directive';
+import { resolveLocale } from '../../../shared/locale';
+import {
+  RecurringConflict, RecurringSessionRequest, RecurringSessionResult, WeekDay
+} from '../../../models/session/recurring-session';
 
 @Component({
   selector: 'app-session-form',
@@ -43,8 +50,11 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
     MatSnackBarModule,
     CommonModule,
     MatCardModule,
+    MatButtonModule,
     NgxMaterialTimepickerModule,
-    TranslateModule
+    MatCheckboxModule,
+    TranslateModule,
+    AdminOnlyDirective
   ],
   templateUrl: './session-form.component.html',
   styleUrls: ['./session-form.component.scss'],
@@ -57,8 +67,38 @@ export class SessionFormComponent implements OnInit {
   rooms: Room[] = [];
   series: SessionSeries[] = [];
 
-  // Format d'heure des timepickers : 24h en français, 12h (AM/PM) sinon.
+  // Format d'heure des timepickers : 24h en français, 12h (AM/PM) en anglais.
   timeFormat: 12 | 24 = 24;
+
+  /** Jours proposés pour la répétition, dans l'ordre de la semaine scolaire. */
+  readonly weekDays: { value: WeekDay; labelKey: string }[] = [
+    { value: 'MONDAY', labelKey: 'sessionForm.recurrence.weekDays.MONDAY' },
+    { value: 'TUESDAY', labelKey: 'sessionForm.recurrence.weekDays.TUESDAY' },
+    { value: 'WEDNESDAY', labelKey: 'sessionForm.recurrence.weekDays.WEDNESDAY' },
+    { value: 'THURSDAY', labelKey: 'sessionForm.recurrence.weekDays.THURSDAY' },
+    { value: 'FRIDAY', labelKey: 'sessionForm.recurrence.weekDays.FRIDAY' },
+    { value: 'SATURDAY', labelKey: 'sessionForm.recurrence.weekDays.SATURDAY' },
+    { value: 'SUNDAY', labelKey: 'sessionForm.recurrence.weekDays.SUNDAY' }
+  ];
+
+  /** Jours cochés pour la répétition. */
+  selectedDays: WeekDay[] = [];
+
+  /** Dernière simulation renvoyée par le serveur. */
+  preview: RecurringSessionResult | null = null;
+  previewLoading = false;
+
+  /** Formateur de dates du récapitulatif, aligné sur la langue active. */
+  private datePipe: DatePipe = new DatePipe(resolveLocale('fr'));
+
+  // Types de session disponibles (valeur stockée + clé de traduction).
+  sessionTypes: { value: string; labelKey: string }[] = [
+    { value: 'COURS', labelKey: 'sessionForm.sessionTypes.COURS' },
+    { value: 'EXERCICES', labelKey: 'sessionForm.sessionTypes.EXERCICES' },
+    { value: 'EXAMEN', labelKey: 'sessionForm.sessionTypes.EXAMEN' },
+    { value: 'REVISION', labelKey: 'sessionForm.sessionTypes.REVISION' },
+    { value: 'AUTRE', labelKey: 'sessionForm.sessionTypes.AUTRE' }
+  ];
 
   constructor(
     private fb: FormBuilder,
@@ -77,8 +117,7 @@ export class SessionFormComponent implements OnInit {
       sessionDetails: this.fb.group({
         title: ['', Validators.required],
         description: [''],
-        sessionType: ['', Validators.required],
-        feedbackLink: ['']
+        sessionType: ['', Validators.required]
       }),
       sessionTiming: this.fb.group({
         sessionDateStart: [null, Validators.required],
@@ -90,6 +129,13 @@ export class SessionFormComponent implements OnInit {
         groupId: [null, Validators.required],
         roomId: [null, Validators.required],
         teacherId: [null, Validators.required]
+      }),
+      // Répétition : la date et les heures de l'onglet Planification servent de modèle,
+      // seuls les jours et la date de fin sont propres à la récurrence.
+      recurrence: this.fb.group({
+        enabled: [false],
+        until: [null],
+        skipConflicts: [true]
       })
     });
 
@@ -98,15 +144,22 @@ export class SessionFormComponent implements OnInit {
     this.setupTeacherAutoFill();
 
     // Format d'heure selon la langue : 24h en français, 12h (AM/PM) en anglais.
-    this.updateTimeFormat(this.translate.currentLang);
-    this.translate.onLangChange.subscribe(({ lang }) => this.updateTimeFormat(lang));
+    this.updateTimeFormat(this.translate.currentLang ?? this.translate.getDefaultLang());
+    this.datePipe = new DatePipe(resolveLocale(this.translate.currentLang));
+    this.translate.onLangChange.subscribe(({ lang }) => {
+      this.updateTimeFormat(lang);
+      this.datePipe = new DatePipe(resolveLocale(lang));
+    });
   }
 
   /**
-   * Choisit le format d'heure des timepickers selon la langue active.
+   * Choisit le format d'heure des timepickers selon la langue active :
+   * 12h (AM/PM) uniquement en anglais, 24h partout ailleurs (français par
+   * défaut, pas de notion AM/PM). Robuste si la langue n'est pas encore
+   * résolue (currentLang undefined) : on reste en 24h.
    */
   private updateTimeFormat(lang: string | undefined): void {
-    this.timeFormat = (lang ?? 'fr').startsWith('fr') ? 24 : 12;
+    this.timeFormat = (lang ?? '').toLowerCase().startsWith('en') ? 12 : 24;
   }
 
   /**
@@ -235,36 +288,235 @@ export class SessionFormComponent implements OnInit {
         if (this.sessionForm.valid) {
             const submissionData = this.prepareSubmissionData();
 
-            // Préparation des données aplatées pour le dialogue
-            const flattenedData = this.flattenFormData({
-                sessionDetails: submissionData.sessionDetails,
-                sessionTiming: submissionData.sessionTiming,
-                identifiers: {
-                    group: this.getGroupNameById(submissionData.groupId),
-                    room: this.getRoomNameById(submissionData.roomId),
-                    teacher: this.getTeacherNameById(submissionData.teacherId),
-                }
+            // Récapitulatif avant écriture en base. Attention : prepareSubmissionData()
+            // renvoie un objet *plat* ; l'ancienne version lisait
+            // submissionData.sessionDetails / .sessionTiming (inexistants), si bien que le
+            // résumé n'affichait que le groupe, la salle et l'enseignant.
+            const dialogRef = this.dialog.open(SummaryDialogComponent, {
+                width: '520px',
+                maxWidth: '95vw',
+                data: this.buildSummary(submissionData)
             });
 
-            console.log('Flattened Data for dialog:', flattenedData);
-
-            const dialogRef = this.dialog.open(SummaryDialogComponent, { data: flattenedData });
-
             dialogRef.afterClosed().subscribe(result => {
-                if (result) {
-                    console.log('Dialog confirmed, proceeding with series creation or session submission.');
-                    this.processSeriesCreationOrSubmission(submissionData);
+                if (!result) {
+                    return;
+                }
+                if (this.recurrenceEnabled) {
+                    // Répétition : une seule requête, le serveur crée toutes les occurrences
+                    // et les rattache aux séries du groupe.
+                    this.submitRecurrence(submissionData);
                 } else {
-                    console.warn('Form submission was cancelled.');
+                    this.processSeriesCreationOrSubmission(submissionData);
                 }
             });
         } else {
-            console.warn('The form is not valid.');
+            this.sessionForm.markAllAsTouched();
             this.showErrorMessage('sessionForm.messages.invalid');
         }
     } catch (error: unknown) {
         this.handleError(error);
     }
+}
+
+/**
+ * Construit le récapitulatif attendu par {@link SummaryDialogComponent} : une liste
+ * d'entrées « Section - champ ». Les identifiants sont remplacés par les libellés et les
+ * dates/heures sont formatées, pour que la relecture avant enregistrement soit utile.
+ */
+private buildSummary(data: any): { label: string; value: any }[] {
+    const dateTime = (value: string) =>
+        this.datePipe.transform(value, 'EEEE d MMMM y, HH:mm') ?? '';
+
+    const summary: { label: string; value: any }[] = [
+        { label: 'sessionDetails - title', value: data.title },
+        { label: 'sessionDetails - sessionType', value: this.sessionTypeLabel(data.sessionType) },
+        { label: 'sessionDetails - description', value: data.description },
+        { label: 'sessionTiming - start', value: dateTime(data.sessionTimeStart) },
+        { label: 'sessionTiming - end', value: dateTime(data.sessionTimeEnd) },
+        { label: 'sessionTiming - duration', value: this.formatDuration(data) },
+        { label: 'identifiers - group', value: this.getGroupNameById(data.groupId) },
+        { label: 'identifiers - room', value: this.getRoomNameById(data.roomId) },
+        { label: 'identifiers - teacher', value: this.getTeacherNameById(data.teacherId) }
+    ];
+
+    // La répétition change radicalement la portée de l'enregistrement : elle doit
+    // apparaître dans le récapitulatif, avec le nombre de séances annoncé.
+    if (this.recurrenceEnabled) {
+        summary.push(
+            {
+                label: 'recurrence - days',
+                value: this.selectedDays
+                    .map(day => this.translate.instant(`sessionForm.recurrence.weekDays.${day}`))
+                    .join(', ')
+            },
+            {
+                label: 'recurrence - until',
+                value: this.datePipe.transform(
+                    this.sessionForm.get('recurrence.until')?.value, 'EEEE d MMMM y') ?? ''
+            },
+            {
+                label: 'recurrence - count',
+                value: this.preview
+                    ? this.translate.instant('sessionForm.recurrence.previewCount',
+                        { count: this.preview.created })
+                    : this.translate.instant('sessionForm.recurrence.previewUnknown')
+            }
+        );
+    }
+
+    return summary;
+}
+
+/** Libellé traduit du type de séance (la valeur stockée est un code). */
+private sessionTypeLabel(value: string): string {
+    const type = this.sessionTypes.find(t => t.value === value);
+    return type ? this.translate.instant(type.labelKey) : value;
+}
+
+/** Durée de la séance en heures et minutes (vide si les bornes sont incohérentes). */
+private formatDuration(data: any): string {
+    const minutes = Math.round(
+        (new Date(data.sessionTimeEnd).getTime() - new Date(data.sessionTimeStart).getTime()) / 60000);
+    if (!Number.isFinite(minutes) || minutes <= 0) {
+        return '';
+    }
+    const hours = Math.floor(minutes / 60);
+    const rest = minutes % 60;
+    return hours > 0 ? `${hours} h${rest ? ' ' + rest : ''}` : `${rest} min`;
+}
+
+// =========================================================================
+// Répétition
+// =========================================================================
+
+/** La répétition est-elle activée ? */
+get recurrenceEnabled(): boolean {
+    return !!this.sessionForm?.get('recurrence.enabled')?.value;
+}
+
+isDaySelected(day: WeekDay): boolean {
+    return this.selectedDays.includes(day);
+}
+
+toggleDay(day: WeekDay): void {
+    this.selectedDays = this.isDaySelected(day)
+        ? this.selectedDays.filter(selected => selected !== day)
+        : [...this.selectedDays, day];
+    // La simulation précédente ne vaut plus rien dès que les jours changent.
+    this.preview = null;
+}
+
+/** Libellé lisible d'un conflit renvoyé par le serveur (code + ressource en cause). */
+conflictReason(conflict: RecurringConflict): string {
+    const key = conflict.reason === 'ROOM_BUSY'
+        ? 'sessionForm.recurrence.conflictRoom'
+        : 'sessionForm.recurrence.conflictTeacher';
+    return this.translate.instant(key, { name: conflict.detail });
+}
+
+/**
+ * Demande au serveur ce que produirait la répétition, sans rien enregistrer.
+ *
+ * <p>La simulation vit côté serveur : lui seul connaît les créneaux déjà réservés. Créer
+ * une centaine de séances sans annoncer le résultat serait irréversible en pratique.</p>
+ */
+onPreviewRecurrence(): void {
+    const request = this.buildRecurrenceRequest();
+    if (!request) {
+        return;
+    }
+
+    this.previewLoading = true;
+    this.sessionService.previewRecurringSessions(request).subscribe({
+        next: result => {
+            this.preview = result;
+            this.previewLoading = false;
+        },
+        error: error => {
+            this.preview = null;
+            this.previewLoading = false;
+            this.showBackendError(error, 'sessionForm.recurrence.previewError');
+        }
+    });
+}
+
+/** Envoie la répétition : une requête, une transaction serveur. */
+private submitRecurrence(submissionData: any): void {
+    const request = this.buildRecurrenceRequest(submissionData);
+    if (!request) {
+        return;
+    }
+
+    this.sessionService.createRecurringSessions(request).subscribe({
+        next: result => {
+            this.sessionForm.reset();
+            this.selectedDays = [];
+            this.preview = null;
+            const message = result.skipped > 0
+                ? this.translate.instant('sessionForm.recurrence.createdWithConflicts',
+                    { count: result.created, skipped: result.skipped })
+                : this.translate.instant('sessionForm.recurrence.created', { count: result.created });
+            this.snackBar.open(message, this.translate.instant('common.close'), { duration: 6000 });
+        },
+        error: error => this.showBackendError(error, 'sessionForm.recurrence.createError')
+    });
+}
+
+/**
+ * Assemble la demande de récurrence à partir du formulaire.
+ *
+ * @returns la demande, ou {@code null} si la saisie est incomplète (un message est alors
+ *          affiché)
+ */
+private buildRecurrenceRequest(submissionData?: any): RecurringSessionRequest | null {
+    const data = submissionData ?? this.prepareSubmissionData();
+    const until = this.sessionForm.get('recurrence.until')?.value;
+
+    if (this.selectedDays.length === 0 || !until || !data.sessionTimeStart || !data.sessionTimeEnd) {
+        this.showErrorMessage('sessionForm.recurrence.incomplete');
+        return null;
+    }
+
+    const start = new Date(data.sessionTimeStart);
+    const end = new Date(data.sessionTimeEnd);
+
+    return {
+        groupId: data.groupId,
+        teacherId: data.teacherId ?? null,
+        roomId: data.roomId ?? null,
+        title: data.title,
+        sessionType: data.sessionType,
+        // La date de la séance saisie sert de première date possible de la répétition.
+        startDate: this.isoDate(start),
+        endDate: this.isoDate(new Date(until)),
+        daysOfWeek: this.selectedDays,
+        startTime: this.isoTime(start),
+        endTime: this.isoTime(end),
+        skipConflicts: !!this.sessionForm.get('recurrence.skipConflicts')?.value,
+        numberTitles: true
+    };
+}
+
+/** Date au format yyyy-MM-dd, sans décalage de fuseau. */
+private isoDate(date: Date): string {
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${date.getFullYear()}-${month}-${day}`;
+}
+
+/** Heure au format HH:mm. */
+private isoTime(date: Date): string {
+    return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+}
+
+/** Affiche le message du serveur s'il existe, sinon un libellé traduit. */
+private showBackendError(error: unknown, fallbackKey: string): void {
+    const serverMessage = (error as { error?: { message?: string } })?.error?.message;
+    this.snackBar.open(
+        serverMessage || this.translate.instant(fallbackKey),
+        this.translate.instant('common.close'),
+        { duration: 6000, panelClass: ['snack-bar-error'] });
 }
 
 private prepareSubmissionData(): any {
@@ -289,19 +541,16 @@ private prepareSubmissionData(): any {
 private processSeriesCreationOrSubmission(submissionData: any): void {
   this.groupService.getGroupById(submissionData.groupId).subscribe(group => {
       const totalSessionsPerSeries = group.sessionNumberPerSerie;
-      const groupName = group.name;
-
-      console.log(`Group Name: ${groupName}, Total Sessions per Series: ${totalSessionsPerSeries}`);
 
       this.seriesService.getSessionSeriesByGroupId(submissionData.groupId).subscribe(series => {
           console.log('Existing series for group:', series);
 
-          this.findOrCreateSeries(submissionData, series, totalSessionsPerSeries, groupName);
+          this.findOrCreateSeries(submissionData, series, totalSessionsPerSeries);
       });
   });
 }
 
-private findOrCreateSeries(submissionData: any, series: any[], totalSessionsPerSeries: number, groupName: string): void {
+private findOrCreateSeries(submissionData: any, series: any[], totalSessionsPerSeries: number): void {
   let seriesFound = false;
 
   series.forEach(existingSeries => {
@@ -319,21 +568,22 @@ private findOrCreateSeries(submissionData: any, series: any[], totalSessionsPerS
           if (!seriesFound && existingSeries === series[series.length - 1]) {
               // Si aucune série n'a été trouvée ou toutes les séries sont pleines
               console.log('No available series found or all series are full, creating a new series.');
-              this.createAndAssignNewSeries(submissionData, groupName, totalSessionsPerSeries, series.length + 1);
+              this.createAndAssignNewSeries(submissionData, totalSessionsPerSeries);
           }
       });
   });
 
   if (!series.length) {
       // Si aucune série n'existe, en créer une nouvelle
-      this.createAndAssignNewSeries(submissionData, groupName, totalSessionsPerSeries, 1);
+      this.createAndAssignNewSeries(submissionData, totalSessionsPerSeries);
   }
 }
 
-private createAndAssignNewSeries(submissionData: any, groupName: string, totalSessionsPerSeries: number, seriesCount: number): void {
-    console.log(`Creating new series as all existing series are full or none exist. Series Count: ${seriesCount}`);
-
-    const newSeriesData = this.constructSeriesData(submissionData.groupId, totalSessionsPerSeries, groupName, seriesCount);
+private createAndAssignNewSeries(submissionData: any, totalSessionsPerSeries: number): void {
+    // La série est datée par la séance qui la déclenche : c'est cette date qui détermine
+    // le mois du nom généré par le serveur.
+    const newSeriesData = this.constructSeriesData(
+        submissionData.groupId, totalSessionsPerSeries, submissionData.sessionTimeStart);
 
     this.seriesService.createSeries(newSeriesData).subscribe(newSeries => {
         console.log(`New series created: ${newSeries.name} with ID: ${newSeries.id}`);
@@ -342,23 +592,33 @@ private createAndAssignNewSeries(submissionData: any, groupName: string, totalSe
     });
 }
 
-private constructSeriesData(groupId: number, totalSessionsPerSeries: number, groupName: string, seriesCount: number): SessionSeries {
-  const now = new Date();
-  const month = now.toLocaleString('default', { month: 'long' });
-  const year = now.getFullYear();
-  const seriesName = `Série ${groupName} - ${month}-${year}-${seriesCount.toString().padStart(3, '0')}`;
-
-  console.log(`Constructing new series data: ${seriesName}`);
+/**
+ * Prépare la création d'une série.
+ *
+ * <p>La série démarre à la date de la <strong>première séance</strong> qu'elle va contenir,
+ * et non à la date de création : une séance planifiée en septembre saisie en août doit
+ * appartenir à la série de septembre.</p>
+ *
+ * <p>Le nom n'est volontairement pas composé ici. Le serveur le calcule à partir de cette
+ * date de début et du numéro de séquence du groupe. L'ancienne version le fabriquait
+ * localement avec {@code toLocaleString('default', { month: 'long' })} : le nom dépendait
+ * donc de la langue du navigateur (« August » ou « août » selon le poste), ne pouvait plus
+ * être traduit une fois enregistré, et divergeait du format du backend.</p>
+ */
+private constructSeriesData(groupId: number, totalSessionsPerSeries: number, firstSessionStart: string): SessionSeries {
+  const start = new Date(firstSessionStart);
+  const end = new Date(start);
+  end.setMonth(end.getMonth() + 1);
 
   return {
       groupId: groupId,
       totalSessions: totalSessionsPerSeries,
       sessionsCompleted: 0,
       numberOfSessionsCreated: 0, // Initialisation à 0
-      name: seriesName,
-      serieTimeStart: now.toISOString(),
-      serieTimeEnd: new Date(new Date().setMonth(now.getMonth() + 1)).toISOString(),
-  };
+      // name omis : nommage assuré par le serveur (SeriesNamingService).
+      serieTimeStart: start.toISOString(),
+      serieTimeEnd: end.toISOString(),
+  } as SessionSeries;
 }
 
 
@@ -382,6 +642,9 @@ private handleError(error: unknown): void {
     } else {
         console.error('Error in form submission:', error);
     }
+    // Sans ce retour visible, un échec ne se voyait que dans la console : l'utilisateur
+    // cliquait sur « Enregistrer » et rien ne se passait.
+    this.showErrorMessage('sessionForm.messages.saveError');
 }
 
 

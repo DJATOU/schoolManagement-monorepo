@@ -1,6 +1,14 @@
 # IDE files
 .idea/
 
+# Secrets de déploiement — NE JAMAIS COMMITER.
+# docker-compose lit le .env à la racine : mot de passe de la base, clé JWT,
+# mot de passe ADMIN. Seul .env.example (valeurs d'exemple) est suivi.
+.env
+.env.local
+.env.*.local
+!.env.example
+
 # Upload files
 uploads/
 

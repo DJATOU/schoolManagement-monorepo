@@ -1,1 +1,75 @@
 // Le design du profil est mutualisé dans src/styles/_profile.scss (classes pf-*).
+
+/* ===== Actions de la section Tuteur ===== */
+.tutor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.tutor-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  border-radius: 9px;
+  font-size: 12.5px;
+  font-weight: 600;
+
+  mat-icon {
+    font-size: 17px;
+    width: 17px;
+    height: 17px;
+  }
+
+  &.tutor-btn-danger:not([disabled]) {
+    color: #dc2626;
+    border-color: #fecaca;
+
+    &:hover {
+      background: #fef2f2;
+    }
+  }
+}
+
+/* Réductions de l'étudiant : le tarif réellement facturé en dépend, l'information doit
+   être lisible d'un coup d'œil. */
+.pf-discounts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 4px 0;
+}
+
+.pf-discount {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border: 1px solid #c5cae9;
+  border-radius: 999px;
+  background: #eef2ff;
+  font-size: 0.82rem;
+  color: #303f9f;
+}
+
+.pf-discount--exempt {
+  border-color: #b2dfdb;
+  background: #e0f2f1;
+  color: #00695c;
+}
+
+.pf-discount-rate {
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.pf-discount-scope {
+  color: #4b5563;
+}
+
+.pf-discount-exempt {
+  font-weight: 600;
+  text-transform: lowercase;
+}

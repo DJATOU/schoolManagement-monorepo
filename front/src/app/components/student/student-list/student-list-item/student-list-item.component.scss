@@ -37,6 +37,17 @@
   }
 }
 
+/* Exempté : ni vert « à jour » ni rouge « en retard », l'étudiant n'a rien à payer. */
+.student-card.status-exempt-bg {
+  background: linear-gradient(135deg, #eef2ff 0%, #ffffff 55%);
+  border-color: #c7d2fe;
+
+  &:hover {
+    border-color: #6366f1;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.18);
+  }
+}
+
 .student-info {
   display: flex;
   align-items: center;
@@ -249,6 +260,16 @@
     }
   }
 
+  // Statut « Exempté » (indigo, sans clignotement : ce n'est pas une alerte)
+  &.status-exempt {
+    background-color: #6366f1 !important;
+    color: white !important;
+
+    mat-icon {
+      color: white !important;
+    }
+  }
+
   // Status "Non applicable" (gray)
   &.status-na {
     background-color: #94a3b8 !important;
@@ -275,16 +296,9 @@
   }
 }
 
-// Payment tooltip styling
-::ng-deep .payment-tooltip {
-  white-space: pre-line;
-  font-size: 13px;
-  line-height: 1.6;
-  max-width: 350px;
-  background-color: rgba(0, 0, 0, 0.95) !important;
-  padding: 12px 16px;
-  border-radius: 8px;
-}
+// Le style de .payment-tooltip est défini une seule fois dans styles.scss : l'infobulle est
+// rendue dans l'overlay Material, hors de ce composant, et deux définitions ::ng-deep
+// concurrentes (ici et dans profile-card) s'écrasaient mutuellement.
 
 // Responsive adjustments
 @media (max-width: 768px) {

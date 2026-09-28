@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { Subject } from '../models/subject/subject';
-import { API_BASE_URL } from '../app.config';
+import { API_BASE_URL } from '../api-base-url';
 
 @Injectable({
   providedIn: 'root'
@@ -14,6 +14,11 @@ export class SubjectService {
 
   getSubjects(): Observable<Subject[]> {
     return this.http.get<Subject[]>(this.apiUrl);
+  }
+
+  /** Récupère une matière par identifiant (mode modification du formulaire). */
+  getSubjectById(id: number): Observable<Subject> {
+    return this.http.get<Subject>(`${this.apiUrl}/${id}`);
   }
 
   createSubject(subject: Subject): Observable<Subject> {

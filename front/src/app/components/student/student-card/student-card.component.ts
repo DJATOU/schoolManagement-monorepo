@@ -7,6 +7,8 @@ import { ProfileCardComponent } from '../../shared/profile-card/profile-card.com
 import { LevelService } from '../../../services/level.service';
 import { StudentPaymentStatusService } from '../../../services/student-payment-status.service';
 import { StudentPaymentStatus } from '../../../models/student-payment-status';
+import { TutorService } from '../../../services/tutor.service';
+import { Tutor } from '../../../models/tutor/tutor';
 
 @Component({
   selector: 'app-student-card',
@@ -21,16 +23,34 @@ export class StudentCardComponent implements OnInit {
   profile: any;
   levelName: string | undefined = '';
   paymentStatus?: StudentPaymentStatus;
+  tutor?: Tutor | null;
 
   constructor(
     private levelService: LevelService,
-    private paymentStatusService: StudentPaymentStatusService
+    private paymentStatusService: StudentPaymentStatusService,
+    private tutorService: TutorService
   ) {}
 
   ngOnInit(): void {
     console.log('Student object:', this.student);
     this.getLevelName();
     this.loadPaymentStatus();
+    this.loadTutor();
+  }
+
+  /** Charge le tuteur de l'étudiant (affiché au dos de la carte). */
+  private loadTutor(): void {
+    if (this.student?.tutorId) {
+      this.tutorService.getTutorById(this.student.tutorId).subscribe({
+        next: (tutor) => (this.tutor = tutor),
+        error: (error) => {
+          console.error('Error loading tutor:', error);
+          this.tutor = null;
+        }
+      });
+    } else {
+      this.tutor = null;
+    }
   }
 
   private getLevelName(): void {

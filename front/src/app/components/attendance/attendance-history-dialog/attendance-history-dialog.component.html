@@ -46,10 +46,15 @@
       <td mat-cell *matCellDef="let attendance" [ngClass]="getRowClass(attendance)"> {{ attendance.isPresent ? 'Oui' : 'Non' }} </td>
     </ng-container>
 
+    <!--
+      Libellé textuel et non « Oui / Non » : trois valeurs sont possibles, et « non renseignée »
+      n'est pas « non justifiée ». Le texte porte l'information, la couleur de ligne ne survivant ni
+      à une impression en noir et blanc ni au daltonisme.
+    -->
     <ng-container matColumnDef="isJustified">
       <th *matHeaderCellDef> Justifié </th>
       <td *matCellDef="let attendance" [ngClass]="getRowClass(attendance)">
-        {{ attendance.isPresent ? '' : (attendance.isJustified ? 'Oui' : 'Non') }}
+        {{ justificationLabel(attendance) }}
       </td>
     </ng-container>
 
@@ -58,9 +63,34 @@
       <td mat-cell *matCellDef="let attendance" [ngClass]="getRowClass(attendance)"> {{ attendance.description }} </td>
     </ng-container>
 
+    <!--
+      Action de correction, proposée sur les seules absences. appAdminOnly la grise pour un
+      consultant ; le backend reste l'autorité, ce grisage n'est qu'une commodité.
+    -->
+    <ng-container matColumnDef="actions">
+      <th mat-header-cell *matHeaderCellDef></th>
+      <td mat-cell *matCellDef="let attendance" [ngClass]="getRowClass(attendance)">
+        <button *ngIf="canEditJustification(attendance)" mat-icon-button color="primary"
+          matTooltip="Modifier la justification" (click)="editJustification(attendance)" appAdminOnly>
+          <mat-icon>edit_note</mat-icon>
+        </button>
+      </td>
+    </ng-container>
+
     <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
     <tr mat-row *matRowDef="let row; columns: displayedColumns;" [ngClass]="getRowClass(row)"></tr>
   </table>
+
+  <!--
+    Mention affichée dès qu'une absence est listée. C'est l'ambiguïté que cette fonctionnalité vient
+    lever : la justification ne réduit aucun montant, et un administrateur qui l'ignore peut
+    promettre à une famille une exonération que le système n'applique pas.
+  -->
+  <p class="justification-note" *ngIf="attendanceHistory.data.length > 0">
+    La justification sert au suivi disciplinaire et au droit au rattrapage. Elle n'entre dans aucun
+    calcul de montant : une absence n'augmente jamais le montant dû, et une séance manquée après
+    l'inscription reste comptée dans le coût de la série.
+  </p>
 </mat-dialog-content>
 
 <mat-dialog-actions>

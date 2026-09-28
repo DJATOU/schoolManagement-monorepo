@@ -1,13 +1,21 @@
-<div class="all-content" fxLayout="column">
-  <app-navigation (sidenavToggle)="toggleSidenav()"></app-navigation>
-  <div class="main-container" fxLayout="row" fxFlexFill>
-    <mat-sidenav-container class="sidenav-container" fxFlex>
-      <mat-sidenav #sidenav mode="side" [(opened)]="isSidenavOpen" class="sidenav">
-        <app-side-menu></app-side-menu>
-      </mat-sidenav>
-      <mat-sidenav-content class="content-area">
-        <app-shared-layout-container></app-shared-layout-container>
-      </mat-sidenav-content>
-    </mat-sidenav-container>
+<ng-container *ngIf="(auth.currentUser$ | async) as user; else publicOutlet">
+  <!-- Shell applicatif : affiché uniquement quand l'utilisateur est connecté -->
+  <div class="all-content" fxLayout="column">
+    <app-navigation (sidenavToggle)="toggleSidenav()"></app-navigation>
+    <div class="main-container" fxLayout="row" fxFlexFill>
+      <mat-sidenav-container class="sidenav-container" fxFlex>
+        <mat-sidenav #sidenav mode="side" [(opened)]="isSidenavOpen" class="sidenav">
+          <app-side-menu></app-side-menu>
+        </mat-sidenav>
+        <mat-sidenav-content class="content-area">
+          <app-shared-layout-container></app-shared-layout-container>
+        </mat-sidenav-content>
+      </mat-sidenav-container>
+    </div>
   </div>
-</div>
+</ng-container>
+
+<!-- Pages publiques (login) : plein écran, hors shell -->
+<ng-template #publicOutlet>
+  <router-outlet></router-outlet>
+</ng-template>

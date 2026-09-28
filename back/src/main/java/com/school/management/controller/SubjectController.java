@@ -24,6 +24,12 @@ public class SubjectController {
         return ResponseEntity.ok(subjectService.getAllSubjects());
     }
 
+    /** Récupère une matière par identifiant (pré-remplissage du formulaire de modification). */
+    @GetMapping("/{id}")
+    public ResponseEntity<SubjectEntity> getSubjectById(@PathVariable Long id) {
+        return ResponseEntity.ok(subjectService.getSubjectById(id));
+    }
+
     @PostMapping
     public ResponseEntity<SubjectEntity> createSubject(@RequestBody SubjectEntity subject) {
         return ResponseEntity.ok(subjectService.createSubject(subject));

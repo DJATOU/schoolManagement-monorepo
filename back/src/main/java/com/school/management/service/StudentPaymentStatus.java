@@ -31,7 +31,24 @@ public class StudentPaymentStatus extends StudentDTO {
             boolean isPaymentOverdue,
             boolean active
     ) {
-        super(id, firstName, lastName, gender, email, phoneNumber, dateOfBirth, placeOfBirth, photo, level, groupIds, tutorId, establishment, averageScore, active);
+        // On utilise les setters (hérités de StudentDTO) plutôt que le constructeur
+        // positionnel : le code reste stable même si de nouveaux champs sont
+        // ajoutés à StudentDTO.
+        setId(id);
+        setFirstName(firstName);
+        setLastName(lastName);
+        setEmail(email);
+        setGender(gender);
+        setPhoneNumber(phoneNumber);
+        setDateOfBirth(dateOfBirth);
+        setPlaceOfBirth(placeOfBirth);
+        setPhoto(photo);
+        setLevelId(level);
+        setGroupIds(groupIds);
+        setTutorId(tutorId);
+        setEstablishment(establishment);
+        setAverageScore(averageScore);
+        setActive(active);
         this.isPaymentOverdue = isPaymentOverdue;
     }
 

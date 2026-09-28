@@ -14,6 +14,9 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatOptionModule } from '@angular/material/core';
 import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { CommonModule } from '@angular/common';
+import { ActivatedRoute, Router } from '@angular/router';
+import { TranslateModule } from '@ngx-translate/core';
+import { AdminOnlyDirective } from '../../../shared/admin-only.directive';
 
 @Component({
   selector: 'app-group-type-form',
@@ -32,7 +35,9 @@ HttpClientModule,
     MatOptionModule,
     MatSelectModule,
     MatSnackBarModule,
-    CommonModule
+    CommonModule,
+    AdminOnlyDirective,
+    TranslateModule
   ],
   templateUrl: './group-type-form.component.html',
   styleUrls: ['./group-type-form.component.scss'],
@@ -41,11 +46,16 @@ HttpClientModule,
 export class GroupTypeFormComponent implements OnInit {
   groupTypeForm!: FormGroup;
 
+  /** Identifiant du type de groupe en cours de modification (null en mode création). */
+  editingId: number | null = null;
+
   constructor(
     private fb: FormBuilder,
     private groupTypeService: GroupTypeService,
     private snackBar: MatSnackBar,
-    public dialog: MatDialog
+    public dialog: MatDialog,
+    private route: ActivatedRoute,
+    private router: Router
   ) {}
 
   ngOnInit(): void {
@@ -55,6 +65,21 @@ export class GroupTypeFormComponent implements OnInit {
         size: ['', [Validators.required, Validators.min(1)]]
       })
     });
+
+    // Mode modification : un identifiant est présent dans l'URL (groupType/edit/:id).
+    const idParam = this.route.snapshot.paramMap.get('id');
+    if (idParam) {
+      this.editingId = Number(idParam);
+      this.groupTypeService.getGroupTypeById(this.editingId).subscribe({
+        next: (groupType) => this.groupTypeForm.patchValue({
+          groupTypeDetails: {
+            name: groupType.name ?? '',
+            size: groupType.size ?? ''
+          }
+        }),
+        error: () => this.showErrorMessage('Erreur lors du chargement du type de groupe.')
+      });
+    }
   }
 
   flattenFormData(data: any, parentKey: string = ''): { label: string, value: any }[] {
@@ -97,17 +122,31 @@ export class GroupTypeFormComponent implements OnInit {
             size: formData.groupTypeDetails.size ? parseInt(formData.groupTypeDetails.size) : 0
           };
 
-          this.groupTypeService.createGroupType(groupType).subscribe({
-            next: (groupType) => {
-              console.log('Group type created:', groupType);
-              this.onClearForm();
-              this.showSuccessMessage('Group type created successfully.');
-            },
-            error: (error) => {
-              console.error('Error creating group type:', error);
-              this.showErrorMessage('Error creating group type.');
-            }
-          });
+          if (this.editingId) {
+            // Mode modification : mise à jour du type de groupe existant.
+            this.groupTypeService.updateGroupType(this.editingId, groupType).subscribe({
+              next: () => {
+                this.showSuccessMessage('Type de groupe mis à jour avec succès.');
+                this.router.navigate(['/groupType/table']);
+              },
+              error: (error) => {
+                console.error('Error updating group type:', error);
+                this.showErrorMessage('Erreur lors de la mise à jour du type de groupe.');
+              }
+            });
+          } else {
+            this.groupTypeService.createGroupType(groupType).subscribe({
+              next: (created) => {
+                console.log('Group type created:', created);
+                this.onClearForm();
+                this.showSuccessMessage('Group type created successfully.');
+              },
+              error: (error) => {
+                console.error('Error creating group type:', error);
+                this.showErrorMessage('Error creating group type.');
+              }
+            });
+          }
         } else {
           console.warn('Form submission was cancelled.');
         }

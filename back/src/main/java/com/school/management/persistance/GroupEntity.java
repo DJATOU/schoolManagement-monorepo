@@ -54,6 +54,10 @@ public class GroupEntity extends BaseEntity {
     @JsonBackReference
     private TeacherEntity teacher;
 
+    @ManyToOne(fetch = FetchType.LAZY)  // Chargement paresseux : exactement une année scolaire par groupe
+    @JoinColumn(name = "school_year_id")
+    private SchoolYearEntity schoolYear;
+
     @Builder.Default
     @ManyToMany(mappedBy = "groups", fetch = FetchType.LAZY)  // Lazy loading for students
     @JsonIgnore

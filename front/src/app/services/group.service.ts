@@ -1,7 +1,7 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { map, Observable } from 'rxjs';
-import { API_BASE_URL } from '../app.config';
+import { API_BASE_URL } from '../api-base-url';
 import { Group } from '../models/group/group';
 import { Student } from '../components/student/domain/student';
 import { SessionSeries } from '../models/sessionSerie/sessionSerie';
@@ -22,9 +22,16 @@ export class GroupService {
   }
 
 
-  // Fetch all groups
-  getGroups(): Observable<Group[]> {
-    return this.http.get<Group[]>(this.apiUrl);
+  // Fetch all groups.
+  // SCHOOL YEAR: lorsque `schoolYearId` est fourni, la liste est filtrée sur l'année
+  // scolaire sélectionnée (Selected_School_Year, Exigences 10.4 et 10.5). En son absence,
+  // le backend applique par défaut le filtrage sur l'année scolaire courante.
+  getGroups(schoolYearId?: number): Observable<Group[]> {
+    let params = new HttpParams();
+    if (schoolYearId != null) {
+      params = params.set('schoolYearId', schoolYearId.toString());
+    }
+    return this.http.get<Group[]>(this.apiUrl, { params });
   }
 
   // Fetch a single group by ID
@@ -55,6 +62,17 @@ export class GroupService {
 
   updateGroupPartial(groupId: number, partialGroup: Partial<Group>): Observable<Group> {
     return this.http.patch<Group>(`${this.apiUrl}/${groupId}`, partialGroup);
+  }
+
+  /**
+   * Désactive un groupe (suppression logique).
+   *
+   * <p>On cible volontairement `disable/{id}` et non `DELETE /{id}` : le groupe disparaît des
+   * listes et des statistiques mais son historique (séances, présences, paiements) est
+   * conservé, là où une suppression définitive le perdrait.</p>
+   */
+  disableGroup(groupId: number): Observable<boolean> {
+    return this.http.delete<boolean>(`${this.apiUrl}/disable/${groupId}`);
   }
 
 

@@ -7,6 +7,5 @@ export interface EditSessionData {
     teacherName: string;
     sessionTimeStart: Date;
     sessionTimeEnd: Date;
-    feedbackLink?: string;
   }
   

@@ -1,0 +1,132 @@
+<div class="sd-container fade-in">
+  <!-- En-tête -->
+  <div class="sd-header">
+    <button mat-icon-button class="sd-back" (click)="goBack()" matTooltip="Retour au groupe">
+      <mat-icon>arrow_back</mat-icon>
+    </button>
+
+    <div class="sd-titles" *ngIf="!loadingSeries">
+      <h1 class="sd-name">
+        <mat-icon>layers</mat-icon>
+        <!-- Le nom stocké est neutre en langue (« Groupe - 09-2026-001 ») : le mot
+             « Série » est ajouté ici, donc traduit. -->
+        {{ series?.name
+            ? ('studentHistory.series' | translate: { name: series?.name })
+            : ('studentHistory.seriesLabel' | translate) }}
+      </h1>
+      <span class="sd-sub" *ngIf="groupNameText()">{{ groupNameText() }}</span>
+    </div>
+
+    <div class="sd-actions">
+      <button mat-flat-button color="primary" (click)="downloadPdf()" [disabled]="loadingSessions">
+        <mat-icon>download</mat-icon> Télécharger (PDF)
+      </button>
+    </div>
+  </div>
+
+  <!-- Bloc d'informations de la série -->
+  <div class="sd-info-cards" *ngIf="!loadingSeries && series">
+    <div class="sd-info-card">
+      <span class="sd-info-value">{{ series.totalSessions }}</span>
+      <span class="sd-info-label">Sessions prévues</span>
+    </div>
+    <div class="sd-info-card">
+      <span class="sd-info-value">{{ series.numberOfSessionsCreated || dataSource.data.length }}</span>
+      <span class="sd-info-label">Sessions créées</span>
+    </div>
+    <div class="sd-info-card sd-info-card--green">
+      <span class="sd-info-value">{{ validatedCount }}</span>
+      <span class="sd-info-label">Validées</span>
+    </div>
+    <div class="sd-info-card sd-info-card--amber">
+      <span class="sd-info-value">{{ dataSource.data.length - validatedCount }}</span>
+      <span class="sd-info-label">Programmées</span>
+    </div>
+  </div>
+
+  <!-- Tableau des sessions -->
+  <div class="sd-table-card">
+    <div class="sd-table-toolbar">
+      <mat-form-field appearance="outline" class="sd-filter">
+        <mat-label>Filtrer</mat-label>
+        <input matInput (keyup)="applyFilter($event)" placeholder="Titre, type, enseignant, salle…">
+        <mat-icon matSuffix>search</mat-icon>
+      </mat-form-field>
+    </div>
+
+    <div class="sd-spinner" *ngIf="loadingSessions">
+      <mat-progress-spinner mode="indeterminate" diameter="48"></mat-progress-spinner>
+    </div>
+
+    <div class="sd-empty" *ngIf="!loadingSessions && dataSource.data.length === 0">
+      <mat-icon>event_busy</mat-icon>
+      <span>Aucune session dans cette série.</span>
+    </div>
+
+    <!-- Tri par défaut sur la date de début : la colonne porte l'indicateur de tri actif,
+         donc la numérotation des lignes suit un ordre visible et explicable. -->
+    <table mat-table [dataSource]="dataSource" matSort
+           matSortActive="sessionTimeStart" matSortDirection="asc" matSortDisableClear
+           class="sd-table" *ngIf="!loadingSessions && dataSource.data.length > 0">
+
+      <ng-container matColumnDef="index">
+        <th mat-header-cell *matHeaderCellDef> N° </th>
+        <td mat-cell *matCellDef="let session; let i = index"> {{ i + 1 }} </td>
+      </ng-container>
+
+      <ng-container matColumnDef="title">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header> Titre </th>
+        <td mat-cell *matCellDef="let session"> {{ session.title || '—' }} </td>
+      </ng-container>
+
+      <ng-container matColumnDef="sessionType">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header> Type </th>
+        <td mat-cell *matCellDef="let session"> {{ session.sessionType || '—' }} </td>
+      </ng-container>
+
+      <ng-container matColumnDef="teacherName">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header> Enseignant </th>
+        <td mat-cell *matCellDef="let session"> {{ session.teacherName || '—' }} </td>
+      </ng-container>
+
+      <ng-container matColumnDef="roomName">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header> Salle </th>
+        <td mat-cell *matCellDef="let session"> {{ session.roomName || '—' }} </td>
+      </ng-container>
+
+      <ng-container matColumnDef="sessionTimeStart">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header> Date </th>
+        <td mat-cell *matCellDef="let session"> {{ (session.sessionTimeStart | date: 'dd/MM/yyyy HH:mm') || '—' }} </td>
+      </ng-container>
+
+      <ng-container matColumnDef="status">
+        <th mat-header-cell *matHeaderCellDef mat-sort-header> Statut </th>
+        <td mat-cell *matCellDef="let session">
+          <!-- Le statut tient compte de la désactivation : une séance supprimée
+               s'affichait « Programmée » car seul isFinished était considéré. -->
+          <span class="sd-badge"
+                [class.sd-badge--grey]="session.active === false"
+                [class.sd-badge--green]="session.active !== false && session.isFinished"
+                [class.sd-badge--amber]="session.active !== false && !session.isFinished">
+            {{ session.active === false
+                ? 'Désactivée'
+                : (session.isFinished ? 'Validée' : 'Programmée') }}
+          </span>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef> Actions </th>
+        <td mat-cell *matCellDef="let session">
+          <button mat-icon-button color="primary" (click)="openSession(session); $event.stopPropagation()"
+                  matTooltip="Ouvrir la session">
+            <mat-icon>open_in_new</mat-icon>
+          </button>
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns" class="sd-row" (click)="openSession(row)"></tr>
+    </table>
+  </div>
+</div>

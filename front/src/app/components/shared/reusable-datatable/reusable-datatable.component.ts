@@ -16,9 +16,12 @@ import { MatDialog } from '@angular/material/dialog';
 import { DeleteCommand } from './DeleteCommand';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ConfirmationDialogComponent } from '../confirmation-dialog/confirmation-dialog.component';
-import { el } from '@fullcalendar/core/internal-common';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { ProfilePdfService } from '../../../services/profile-pdf.service';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { AdminOnlyDirective } from '../../../shared/admin-only.directive';
+import { resolveLocale } from '../../../shared/locale';
+import { parseJavaDate } from '../../../shared/java-date';
 
 interface ColumnDefenition {
   columnDef: string;
@@ -29,7 +32,9 @@ interface ColumnDefenition {
 @Component({
   selector: 'app-reusable-datatable',
   standalone: true,
-  imports: [NgIf,MatIcon,MatButton,MatTableModule, MatPaginatorModule, MatSortModule, MatFormFieldModule, MatInputModule, MatCheckboxModule, MatRecycleRows, TranslateModule],
+  imports: [NgIf, MatIcon, MatButton, MatTableModule, MatPaginatorModule, MatSortModule,
+    MatFormFieldModule, MatInputModule, MatCheckboxModule, MatRecycleRows, MatTooltipModule,
+    TranslateModule, AdminOnlyDirective],
   templateUrl: './reusable-datatable.component.html',
   styleUrl: './reusable-datatable.component.scss'
 })
@@ -65,9 +70,9 @@ export class ReusableDatatableComponent  implements OnInit{
               private snackBar: MatSnackBar,
               private translate: TranslateService,
               private profilePdfService: ProfilePdfService) {
-    this.datePipe = new DatePipe(this.translate.currentLang || 'fr');
+    this.datePipe = new DatePipe(resolveLocale(this.translate.currentLang));
     this.translate.onLangChange.subscribe(event => {
-      this.datePipe = new DatePipe(event.lang);
+      this.datePipe = new DatePipe(resolveLocale(event.lang));
     });
   }
   
@@ -119,10 +124,16 @@ export class ReusableDatatableComponent  implements OnInit{
     return result;
   }
 
-  convertDate(date: Date): String {
-    const dateParts = date.toString().split(',').map(part => parseInt(part, 10));
-    const newDate = new Date(dateParts[0], dateParts[1] - 1, dateParts[2], dateParts[3], dateParts[4]);
-    return this.datePipe.transform(newDate, 'dd MMMM yyyy') || '';
+  /**
+   * Formate une date issue de l'API pour le dialogue « Voir ».
+   *
+   * <p>La conversion précédente appelait {@code date.toString().split(',')} sans garde :
+   * une date nulle levait une TypeError. Elle ne gérait par ailleurs que le format tableau
+   * de Jackson, pas les chaînes ISO.</p>
+   */
+  convertDate(date: unknown): string {
+    const parsed = parseJavaDate(date);
+    return parsed ? (this.datePipe.transform(parsed, 'dd MMMM yyyy') ?? '') : '';
   }
   
   /** Implement edit logic */
@@ -137,7 +148,8 @@ export class ReusableDatatableComponent  implements OnInit{
       this.dialog.open(ConfirmationDialogComponent, {
         data:{
           title: this.translate.instant('CONFIRMATION_DIALOG.TITLE'),
-          message: this.translate.instant('CONFIRMATION_DIALOG.MESSAGE'),
+          message: this.translate.instant('CONFIRMATION_DIALOG.MESSAGE',
+            { count: this.selection.selected.length }),
           confirmText: this.translate.instant('CONFIRMATION_DIALOG.CONFIRM'),
           cancelText: this.translate.instant('CONFIRMATION_DIALOG.CANCEL'),
           confirmColor: 'warn'
@@ -184,28 +196,96 @@ export class ReusableDatatableComponent  implements OnInit{
     });
   }
   
-  /** Génère un PDF propre de la liste (colonnes affichées, toutes les lignes). */
+  /**
+   * Génère un PDF de la liste.
+   *
+   * <p>Respecte le contexte de l'écran : si des lignes sont sélectionnées, seule la
+   * sélection est imprimée ; sinon on imprime les lignes <strong>filtrées</strong>
+   * (résultat de la recherche) et non l'intégralité des données.</p>
+   */
   onPrint() {
-    const rows = (this.data || []) as any[];
+    const rows = this.rowsToPrint();
     if (rows.length === 0) {
-      this.showErrorMessage(this.translate.instant('DATATABLE.FILTER_PLACEHOLDER'));
+      this.showErrorMessage(this.translate.instant('DATATABLE.PRINT_EMPTY'));
       return;
     }
 
-    const title = this.translate.instant('DATATABLE.' + this.dataType.toUpperCase());
-    const safeTitle = title && title.indexOf('DATATABLE.') === -1 ? title : 'Liste';
+    const onSelection = this.selection.hasValue();
+    const subtitle = this.translate.instant(
+      onSelection ? 'DATATABLE.PRINT_SUBTITLE_SELECTION' : 'DATATABLE.PRINT_SUBTITLE_ALL',
+      { count: rows.length });
 
     this.profilePdfService.generateProfilePdf({
-      title: safeTitle,
-      subtitle: `${rows.length} élément(s)`,
+      title: this.entityTitle,
+      subtitle,
       sections: [],
-      tableTitle: safeTitle,
+      tableTitle: this.entityTitle,
       tableColumns: this.columns.map(c => c.header),
-      tableRows: rows.map(row => this.columns.map(c => {
-        const val = c.cell(row);
-        return val === 'undefined' || val === 'null' ? '' : val;
-      }))
+      tableRows: rows.map(row => this.columns.map(c => this.display(c.cell(row))))
     });
+  }
+
+  /** Lignes à imprimer : la sélection si elle existe, sinon les lignes filtrées. */
+  private rowsToPrint(): any[] {
+    if (this.selection.hasValue()) {
+      return this.selection.selected;
+    }
+    return this.dataSource?.filteredData ?? [];
+  }
+
+  /** Infobulle du bouton d'impression, selon qu'une sélection est active ou non. */
+  get printTooltip(): string {
+    return this.selection.hasValue()
+      ? this.translate.instant('DATATABLE.PRINT_SELECTION', { count: this.selection.selected.length })
+      : this.translate.instant('DATATABLE.PRINT_ALL');
+  }
+
+  /** Titre de la page, dérivé du type d'entité (repli sur le type brut). */
+  get entityTitle(): string {
+    const key = `DATATABLE.ENTITIES.${this.dataType}.title`;
+    const label = this.translate.instant(key);
+    return label === key ? this.dataType : label;
+  }
+
+  /** Sous-titre explicatif de la page. */
+  get entitySubtitle(): string {
+    const key = `DATATABLE.ENTITIES.${this.dataType}.subtitle`;
+    const label = this.translate.instant(key);
+    return label === key ? '' : label;
+  }
+
+  /** Icône illustrant l'entité listée. */
+  get entityIcon(): string {
+    switch (this.dataType) {
+      case 'level': return 'stairs';
+      case 'room': return 'meeting_room';
+      case 'subject': return 'menu_book';
+      case 'groupType': return 'category';
+      case 'pricing': return 'price_change';
+      default: return 'table_rows';
+    }
+  }
+
+  /** Nombre de lignes actuellement affichées (après filtrage). */
+  get rowCount(): number {
+    return this.dataSource?.filteredData?.length ?? 0;
+  }
+
+  /** Vrai si des données existent (permet de distinguer « vide » de « aucun résultat »). */
+  get hasData(): boolean {
+    return (this.data?.length ?? 0) > 0;
+  }
+
+  /**
+   * Nettoie une valeur de cellule : les fabriques `cell()` interpolent des champs absents,
+   * ce qui produit les chaînes « undefined » / « null » à l'écran comme dans le PDF.
+   */
+  display(value: any): string {
+    if (value === null || value === undefined) {
+      return '';
+    }
+    const text = String(value).trim();
+    return text === 'undefined' || text === 'null' ? '' : text;
   }
 
   /**For the filter option. */

@@ -25,5 +25,8 @@ public class LevelEntity extends BaseEntity {
     @Column(name = "level_code")
     private String levelCode;// "1st", "2nd", "3rd", etc.
 
+    @Column(name = "level_sequence")
+    private Integer levelSequence; // rang/ordre du niveau pour la promotion (renseigné par l'administrateur)
+
 
 }

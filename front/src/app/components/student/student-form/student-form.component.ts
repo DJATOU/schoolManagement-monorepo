@@ -23,6 +23,7 @@ import { AddTutorDialogComponent } from '../../tutor/add-tutor-dialog/add-tutor-
 import { Tutor } from '../../../models/tutor/tutor';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { COMMUNICATION_OPTIONS, DEFAULT_NATIONALITY, NATIONALITIES } from '../../../utils/form-options';
+import { AdminOnlyDirective } from '../../../shared/admin-only.directive';
 
 @Component({
   selector: 'app-student',
@@ -49,7 +50,8 @@ import { COMMUNICATION_OPTIONS, DEFAULT_NATIONALITY, NATIONALITIES } from '../..
     MatCardHeader,
     MatCardTitle,
     MatSnackBarModule,
-    TranslateModule
+    TranslateModule,
+    AdminOnlyDirective
   ],
   templateUrl: './student-form.component.html',
   styleUrls: ['./student-form.component.scss'],
@@ -126,7 +128,7 @@ export class StudentFormComponent implements OnInit {
   private loadLevels(): void {
     this.levelService.getLevels().subscribe({
       next: (data) => (this.levels = data),
-      error: () => this.showErrorMessage('messages.levelsError')
+      error: () => this.showErrorMessage('STUDENT_FORM.MESSAGES.LEVELS_ERROR')
     });
   }
 
@@ -167,7 +169,7 @@ export class StudentFormComponent implements OnInit {
 
   onSubmit(): void {
     if (this.studentForm.invalid) {
-      this.showErrorMessage('messages.invalidForm');
+      this.showErrorMessage('STUDENT_FORM.MESSAGES.INVALID_FORM');
       return;
     }
 
@@ -229,11 +231,21 @@ export class StudentFormComponent implements OnInit {
     let result: { label: string; value: any }[] = [];
     Object.keys(data).forEach(key => {
       const newKey = parentKey ? `${parentKey} - ${key}` : key;
-      const value = data[key];
-      if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+      let value = data[key];
+
+      if (value instanceof Date) {
+        // Afficher la date au format lisible plutôt que l'objet Date brut
+        value = this.formatDateForBackend(value);
+        result.push({ label: newKey, value });
+      } else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
         result = result.concat(this.flattenFormData(value, newKey));
       } else {
-        result.push({ label: newKey, value: value });
+        // Résoudre le nom du niveau à partir de son ID pour l'affichage
+        if (key === 'level' && value != null) {
+          const level = this.levels.find(l => l.id === value);
+          value = level ? level.name : value;
+        }
+        result.push({ label: newKey, value });
       }
     });
     return result;
@@ -244,11 +256,11 @@ export class StudentFormComponent implements OnInit {
       next: (response) => {
         console.log('Student created:', response);
         this.onClearForm();
-        this.showSuccessMessage('messages.studentCreated');
+        this.showSuccessMessage('STUDENT_FORM.MESSAGES.CREATED');
       },
       error: (error) => {
         console.error('Error creating student:', error);
-        this.showErrorMessage('messages.studentCreateError');
+        this.showErrorMessage('STUDENT_FORM.MESSAGES.CREATE_ERROR');
       }
     });
   }

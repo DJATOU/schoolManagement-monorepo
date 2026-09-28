@@ -420,6 +420,26 @@ mat-card-title {
   /* Texte blanc */
 }
 
+/*
+  Refus d'un versement : le message nomme le maximum encaissable ET l'action corrective
+  (« créez d'abord les séances de la série … pour l'ouvrir »). Il est long, et la barre
+  Material tronque par défaut sur une seule ligne : l'action corrective disparaissait
+  précisément parce qu'elle se trouve en fin de message. On l'autorise donc à s'étendre sur
+  plusieurs lignes, sur une largeur plus généreuse.
+*/
+.payment-refusal-snackbar {
+  max-width: min(760px, 92vw);
+
+  .mdc-snackbar__surface {
+    max-width: none;
+  }
+
+  .mdc-snackbar__label {
+    white-space: pre-line;
+    line-height: 1.45;
+  }
+}
+
 
 /* Ensure the Angular Material overlay container has a high z-index */
 .cdk-overlay-container {
@@ -791,5 +811,45 @@ mat-card-title {
     mat-icon {
       color: #cbd5e1;
     }
+  }
+}
+
+/* ===== Commandes réservées aux ADMIN (directive appAdminOnly) =====
+   Grisage cohérent des boutons/actions désactivés pour un VIEWER. */
+.viewer-disabled,
+button.viewer-disabled[disabled] {
+  opacity: 0.5 !important;
+  cursor: not-allowed !important;
+  pointer-events: none !important;
+  filter: grayscale(0.3);
+}
+
+/* ===== Infobulle « paiements en retard » (matTooltipClass="payment-tooltip") =====
+   Définie globalement : l'infobulle est rendue dans l'overlay Material, hors de la portée
+   des styles de composant. Deux définitions ::ng-deep concurrentes existaient auparavant
+   (student-list-item et profile-card) et s'écrasaient selon l'ordre de chargement.
+
+   Le point clé est de cibler .mat-mdc-tooltip-surface : c'est elle qui porte le
+   max-width de 200px par défaut de Material. Le fixer sur l'élément parent restait sans
+   effet, ce qui écrasait le texte sur une colonne étroite et coupait les montants en
+   plein milieu. */
+.payment-tooltip {
+  .mat-mdc-tooltip-surface {
+    /* Assez large pour qu'un « Versé 12 000 / dû 18 000 DA » tienne sur une ligne. */
+    max-width: min(420px, 90vw);
+    padding: 12px 14px;
+    border-radius: 10px;
+    background-color: rgba(15, 23, 42, 0.97);
+
+    /* Les sauts de ligne du texte composé sont significatifs (un bloc par groupe) ; sans
+       pre-line tout était aplati en un seul paragraphe. */
+    white-space: pre-line;
+    text-align: left;
+    font-size: 12.5px;
+    line-height: 1.55;
+    /* Tabulaires : les montants s'alignent verticalement d'une ligne à l'autre. */
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.1px;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.28);
   }
 }

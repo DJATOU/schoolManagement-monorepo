@@ -1,0 +1,35 @@
+/* Motif d'exclusion : affiché à côté du décompte des séances non facturées, pour que
+   l'administrateur puisse justifier un coût inférieur au coût nominal de la série. */
+.pcd-exclusion-reason {
+  display: block;
+  margin-left: 0.25rem;
+  color: #6b7280;
+  font-size: 0.85rem;
+  font-style: italic;
+}
+
+/* Répartition du versement : dernier écran avant validation où le report est visible.
+   Encadré pour ne pas se confondre avec les lignes du récapitulatif de série. */
+.pcd-allocation {
+  margin: 0.75rem 0;
+  padding: 0.65rem 0.8rem;
+  border-left: 3px solid #2563eb;
+  border-radius: 4px;
+  background-color: #eff6ff;
+}
+
+.pcd-allocation__title {
+  margin: 0 0 0.35rem;
+  font-weight: 600;
+  color: #1e3a8a;
+}
+
+.pcd-allocation__line {
+  margin: 0 0 0.2rem 0.75rem;
+  font-size: 0.9rem;
+}
+
+.pcd-allocation__total {
+  margin: 0.35rem 0 0;
+  font-weight: 600;
+}

@@ -11,6 +11,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { TutorService } from '../../../services/tutor.service';
 import { Tutor } from '../../../models/tutor/tutor';
+import { AdminOnlyDirective } from '../../../shared/admin-only.directive';
 
 @Component({
   selector: 'app-add-tutor-dialog',
@@ -25,7 +26,8 @@ import { Tutor } from '../../../models/tutor/tutor';
     MatButtonModule,
     MatIconModule,
     MatSnackBarModule,
-    TranslateModule
+    TranslateModule,
+    AdminOnlyDirective
   ],
   templateUrl: './add-tutor-dialog.component.html',
   styleUrls: ['./add-tutor-dialog.component.scss']

@@ -1,0 +1,223 @@
+:host {
+  --asd-primary: #4f46e5;
+  --asd-primary-soft: #eef2ff;
+  --asd-muted: #6b7280;
+  --asd-line: #e5e7eb;
+}
+
+.dialog-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  mat-icon {
+    color: var(--asd-primary);
+  }
+}
+
+.dialog-content {
+  padding-top: 0.5rem;
+  overflow: hidden;
+}
+
+.search-field {
+  width: 100%;
+
+  mat-icon[matPrefix] {
+    margin-right: 0.5rem;
+    color: var(--asd-muted);
+  }
+}
+
+.rule-hint {
+  margin: 0.6rem 0 0.4rem;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  color: var(--asd-muted);
+}
+
+/* Rappel de la sélection courante, indépendant du filtre de recherche. */
+.selection-summary {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 0.5rem;
+  padding: 0.4rem 0.5rem 0.4rem 0.75rem;
+  border: 1px solid rgba(79, 70, 229, 0.25);
+  border-radius: 10px;
+  background: var(--asd-primary-soft);
+}
+
+.summary-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.list-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 0.25rem 0.25rem;
+}
+
+.showing-count {
+  font-size: 0.75rem;
+  color: var(--asd-muted);
+}
+
+/* Zone défilante : un seul ascenseur, visible, qui n'entraîne pas la fenêtre derrière. */
+.students-list {
+  max-height: 46vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  border: 1px solid var(--asd-line);
+  border-radius: 10px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(79, 70, 229, 0.35) transparent;
+
+  &::-webkit-scrollbar {
+    width: 10px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(79, 70, 229, 0.3);
+    border: 3px solid transparent;
+    border-radius: 999px;
+    background-clip: content-box;
+
+    &:hover {
+      background: rgba(79, 70, 229, 0.55);
+      background-clip: content-box;
+    }
+  }
+}
+
+/* En-tête de lettre collant : on sait toujours où on se trouve dans la liste. */
+.letter-header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 0.25rem 0.75rem;
+  background: #f9fafb;
+  border-bottom: 1px solid var(--asd-line);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--asd-muted);
+}
+
+.student-row {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: none;
+  border-bottom: 1px solid #f3f4f6;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    background: #fafbff;
+  }
+
+  &.selected {
+    background: var(--asd-primary-soft);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--asd-primary);
+    outline-offset: -2px;
+  }
+}
+
+.row-avatar {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--asd-primary-soft);
+  color: var(--asd-primary);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.row-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.row-check {
+  flex: 0 0 auto;
+  color: var(--asd-primary);
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
+}
+
+/* Statut membre / rattrapage : la conséquence de l'ajout doit être lisible d'un coup d'œil. */
+.student-badge {
+  flex: 0 0 auto;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.student-badge--member {
+  background: rgba(34, 197, 94, 0.15);
+  color: #15803d;
+}
+
+.student-badge--catchup {
+  background: rgba(249, 115, 22, 0.16);
+  color: #c2410c;
+}
+
+.empty {
+  padding: 1.5rem 1rem;
+  text-align: center;
+  color: var(--asd-muted);
+
+  mat-icon {
+    font-size: 32px;
+    width: 32px;
+    height: 32px;
+    opacity: 0.5;
+  }
+}
+
+.empty-title {
+  margin: 0.5rem 0 0;
+  font-weight: 600;
+}
+
+.empty-hint {
+  margin: 0.25rem 0 0;
+  font-size: 0.8rem;
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  padding: 2rem 0;
+}

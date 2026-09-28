@@ -11,6 +11,9 @@ import { environment } from '../../../../../environments/environment';
 import { MatIcon } from '@angular/material/icon';
 import { StudentPaymentStatusService } from '../../../../services/student-payment-status.service';
 import { StudentPaymentStatus } from '../../../../models/student-payment-status';
+import { SecureImageDirective } from '../../../../shared/secure-image.directive';
+import { TranslateService } from '@ngx-translate/core';
+import { buildLatePaymentTooltip } from '../../../../utils/payment-status-tooltip';
 
 @Component({
   selector: 'app-student-list-item',
@@ -24,6 +27,8 @@ import { StudentPaymentStatus } from '../../../../models/student-payment-status'
     MatButtonModule,
     MatTooltipModule,
     MatChipsModule
+  ,
+    SecureImageDirective
   ],
   templateUrl: './student-list-item.component.html',
   styleUrls: ['./student-list-item.component.scss']
@@ -46,7 +51,8 @@ export class StudentListItemComponent implements OnInit {
 
   constructor(
     private router: Router,
-    private paymentStatusService: StudentPaymentStatusService
+    private paymentStatusService: StudentPaymentStatusService,
+    private translate: TranslateService
   ) {}
 
   ngOnInit(): void {
@@ -151,6 +157,8 @@ export class StudentListItemComponent implements OnInit {
         return 'check_circle';
       case 'LATE':
         return 'warning';
+      case 'EXEMPT':
+        return 'volunteer_activism';
       case 'NA':
         return 'remove_circle_outline';
       default:
@@ -159,41 +167,15 @@ export class StudentListItemComponent implements OnInit {
   }
 
   /**
-   * Retourne le label approprié selon le statut de paiement
+   * Retourne le label traduit du statut de paiement.
    */
   getPaymentLabel(): string {
-    if (!this.paymentStatus) return '';
-
-    switch (this.paymentStatus.paymentStatus) {
-      case 'GOOD':
-        return 'À jour';
-      case 'LATE':
-        return 'En retard';
-      case 'NA':
-        return 'N/A';
-      default:
-        return '';
-    }
+    const status = this.paymentStatus?.paymentStatus;
+    return status ? this.translate.instant(`PAYMENT_STATUS.${status}`) : '';
   }
 
-  /**
-   * Génère le texte du tooltip pour les retards de paiement
-   */
+  /** Détail des retards de paiement, mis en forme par l'utilitaire partagé. */
   getPaymentTooltip(): string {
-    if (!this.paymentStatus || this.paymentStatus.paymentStatus !== 'LATE') {
-      return '';
-    }
-
-    const lines: string[] = ['Paiements en retard:'];
-
-    for (const lateGroup of this.paymentStatus.lateGroups) {
-      const remaining = lateGroup.dueAmount - lateGroup.paidAmount;
-      lines.push(
-        `• ${lateGroup.groupName}: ${lateGroup.unpaidSessionsCount} session(s) - ` +
-        `Reste ${remaining.toFixed(2)} DA (${lateGroup.paidAmount.toFixed(2)}/${lateGroup.dueAmount.toFixed(2)} DA)`
-      );
-    }
-
-    return lines.join('\n');
+    return buildLatePaymentTooltip(this.paymentStatus, this.translate);
   }
 }

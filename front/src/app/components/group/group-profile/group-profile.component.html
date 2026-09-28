@@ -1,10 +1,21 @@
 <div class="pf-container fade-in" *ngIf="!loadingGroup && group; else loadingSpinner">
+  <!-- Bandeau lecture seule : année scolaire passée (Read_Only_History, Requirement 9.4) -->
+  <div class="pf-readonly-banner" *ngIf="readOnly$ | async">
+    <mat-icon>lock</mat-icon>
+    <!-- Le motif est précisé quand il vient du groupe lui-même : la fiche est atteignable
+         depuis un étudiant sans changer le sélecteur d'année. -->
+    <span *ngIf="!(groupIsPastYear$ | async)">{{ 'schoolYear.readOnly.banner' | translate }}</span>
+    <span *ngIf="groupIsPastYear$ | async">
+      {{ 'schoolYear.readOnly.groupBanner' | translate: { year: group.schoolYearLabel || '—' } }}
+    </span>
+  </div>
+
   <mat-card class="pf-card">
     <!-- En-tête -->
     <div class="pf-header pf-header--group">
       <div class="pf-identity">
         <div class="pf-avatar pf-avatar--square">
-          <img *ngIf="groupPhotoUrl; else groupInitials" [src]="groupPhotoUrl" alt="Photo du groupe"
+          <img *ngIf="groupPhotoUrl; else groupInitials" [appSecureImage]="groupPhotoUrl" alt="Photo du groupe"
             (error)="onImageError()">
           <ng-template #groupInitials>
             <div class="pf-initials" [style.background-color]="avatarColor">{{ getInitials() }}</div>
@@ -19,13 +30,20 @@
       </div>
 
       <div class="pf-header-buttons">
-        <button mat-icon-button class="pf-hb pf-hb-edit" (click)="onEditGroup()" matTooltip="Modifier le groupe">
+        <button mat-icon-button class="pf-hb pf-hb-edit" (click)="onEditGroup()" matTooltip="Modifier le groupe"
+          [disabled]="(writeDisabled$ | async) ?? false">
           <mat-icon>edit</mat-icon>
         </button>
-        <button mat-icon-button class="pf-hb pf-hb-print" (click)="printGroupPdf()" matTooltip="Imprimer la fiche (PDF)">
+        <!-- Désactivé pendant les chargements : le document contient les encaissements et les
+             séries, imprimer trop tôt produirait des pages vides. -->
+        <button mat-icon-button class="pf-hb pf-hb-print" (click)="printGroupPdf()"
+          [disabled]="loadingStudents || loadingSeries || loadingRevenue"
+          matTooltip="Imprimer la fiche, les encaissements et les séries (PDF)">
           <mat-icon>print</mat-icon>
         </button>
-        <button mat-icon-button class="pf-hb pf-hb-danger" (click)="onDisable()" matTooltip="Supprimer le groupe">
+        <button mat-icon-button class="pf-hb pf-hb-danger" (click)="onDisable()"
+          matTooltip="Désactiver le groupe (historique conservé)"
+          [disabled]="(writeDisabled$ | async) ?? false">
           <mat-icon>block</mat-icon>
         </button>
       </div>
@@ -52,12 +70,16 @@
         </section>
       </div>
 
+      <!--
+        Le bouton « Créer une série » a été retiré : il n'avait aucun gestionnaire de clic, et
+        surtout une série vide n'a pas de sens. Les séries sont créées automatiquement à la
+        création des séances (la séance rejoint la série courante du groupe, ou en ouvre une
+        nouvelle si celle-ci est pleine), et leur nom dérive de la date de la première séance.
+      -->
       <div class="pf-actions">
-        <button mat-flat-button class="pf-action-primary" (click)="addStudentToGroup()">
+        <button mat-flat-button class="pf-action-primary" (click)="addStudentToGroup()"
+          [disabled]="(readOnly$ | async) ?? false">
           <mat-icon>person_add</mat-icon> Ajouter un étudiant
-        </button>
-        <button mat-stroked-button class="pf-action-secondary">
-          <mat-icon>library_add</mat-icon> Créer une série
         </button>
       </div>
     </div>
@@ -68,12 +90,140 @@
     <mat-expansion-panel *ngIf="!loadingStudents" [expanded]="true" class="student-panel">
       <mat-expansion-panel-header>
         <mat-panel-title><mat-icon>group</mat-icon>Étudiants</mat-panel-title>
-        <mat-panel-description>{{ students.length }} étudiant(s)</mat-panel-description>
+        <mat-panel-description>
+          <span *ngIf="!studentFilter">{{ students.length }} étudiant(s)</span>
+          <span *ngIf="studentFilter">{{ filteredStudents.length }} / {{ students.length }} étudiant(s)</span>
+        </mat-panel-description>
       </mat-expansion-panel-header>
       <div class="student-list-container">
-        <app-student-list [students]="students" [showDeleteButton]="true"
+        <!-- Filtre proposé pour les groupes nombreux : évite de parcourir toute la liste -->
+        <mat-form-field appearance="outline" class="student-filter" subscriptSizing="dynamic"
+          *ngIf="showStudentFilter">
+          <mat-icon matPrefix>search</mat-icon>
+          <input matInput [(ngModel)]="studentFilter" (ngModelChange)="applyStudentFilter()"
+            placeholder="Filtrer les étudiants du groupe…">
+          <button matSuffix mat-icon-button *ngIf="studentFilter" (click)="clearStudentFilter()"
+            matTooltip="Effacer le filtre">
+            <mat-icon>close</mat-icon>
+          </button>
+        </mat-form-field>
+
+        <app-student-list [students]="pagedStudents" [showDeleteButton]="!((writeDisabled$ | async) ?? false)"
           (deleteStudent)="removeStudentFromGroup($event)"></app-student-list>
+
+        <div class="no-student-match" *ngIf="filteredStudents.length === 0 && students.length > 0">
+          <mat-icon>person_off</mat-icon>
+          <span>Aucun étudiant ne correspond à « {{ studentFilter }} »</span>
+        </div>
+
+        <!-- Pagination : 5 étudiants par page par défaut -->
+        <mat-paginator class="student-paginator" *ngIf="filteredStudents.length > pageSizeOptions[0]"
+          [length]="filteredStudents.length" [pageSize]="pageSize" [pageIndex]="pageIndex"
+          [pageSizeOptions]="pageSizeOptions" (page)="onStudentPage($event)"
+          showFirstLastButtons></mat-paginator>
       </div>
+    </mat-expansion-panel>
+
+    <!--
+      Encaissements : réservé à ADMIN. La directive masque le panneau, et l'endpoint
+      répond 403 à un VIEWER (le backend reste l'autorité).
+    -->
+    <mat-expansion-panel *appHasRole="'ADMIN'" class="revenue-panel">
+      <mat-expansion-panel-header>
+        <mat-panel-title><mat-icon>account_balance_wallet</mat-icon>{{ 'revenue.title' | translate }}</mat-panel-title>
+        <mat-panel-description *ngIf="revenue">
+          {{ revenue.collected | number:'1.0-2' }} DA
+        </mat-panel-description>
+      </mat-expansion-panel-header>
+
+      <div class="revenue-loading" *ngIf="loadingRevenue">
+        <mat-progress-spinner mode="indeterminate" diameter="32"></mat-progress-spinner>
+      </div>
+
+      <p class="revenue-error" *ngIf="revenueError">{{ 'revenue.error' | translate }}</p>
+
+      <ng-container *ngIf="!loadingRevenue && revenue">
+        <!-- Trois montants distincts : encaissé, attendu, reste. Les confondre est
+             exactement ce que les règles métier interdisent. -->
+        <div class="revenue-kpis">
+          <div class="revenue-kpi revenue-kpi--collected">
+            <span class="kpi-label">{{ 'revenue.collected' | translate }}</span>
+            <span class="kpi-value">{{ revenue.collected | number:'1.0-2' }} DA</span>
+            <span class="kpi-hint" *ngIf="revenue.refunded > 0">
+              {{ 'revenue.refundedHint' | translate: { amount: (revenue.refunded | number:'1.0-2') } }}
+            </span>
+          </div>
+          <div class="revenue-kpi revenue-kpi--expected">
+            <span class="kpi-label">{{ 'revenue.expected' | translate }}</span>
+            <span class="kpi-value">{{ revenue.expected | number:'1.0-2' }} DA</span>
+            <span class="kpi-hint">{{ 'revenue.expectedHint' | translate }}</span>
+          </div>
+          <div class="revenue-kpi revenue-kpi--remaining">
+            <span class="kpi-label">{{ 'revenue.remaining' | translate }}</span>
+            <span class="kpi-value">{{ revenue.remaining | number:'1.0-2' }} DA</span>
+            <!-- Trop-perçu affiché à part : il est compris dans l'encaissé mais ne
+                 correspond à aucune séance due, donc il ne réduit pas le reste à recouvrer. -->
+            <span class="kpi-hint kpi-hint--overpaid" *ngIf="revenue.overpaid > 0">
+              {{ 'revenue.overpaidHint' | translate: { amount: (revenue.overpaid | number:'1.0-2') } }}
+            </span>
+            <span class="kpi-hint" *ngIf="revenue.unassignedToSeries > 0">
+              {{ 'revenue.unassignedHint' | translate: { amount: (revenue.unassignedToSeries | number:'1.0-2') } }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Axe « mois de cours » : une série = un mois du domaine. -->
+        <h4 class="revenue-subtitle"><mat-icon>layers</mat-icon>{{ 'revenue.bySeries' | translate }}</h4>
+        <div class="revenue-empty" *ngIf="revenue.series.length === 0">{{ 'revenue.noSeries' | translate }}</div>
+        <div class="revenue-series" *ngFor="let serie of pagedRevenueSeries">
+          <div class="revenue-series__head">
+            <span class="revenue-series__name">{{ serie.seriesName }}</span>
+            <span class="revenue-series__amounts">
+              <strong>{{ serie.collected | number:'1.0-2' }}</strong>
+              / {{ serie.expected | number:'1.0-2' }} DA
+            </span>
+          </div>
+          <div class="revenue-bar" [matTooltip]="collectionRate(serie.collected, serie.expected) + ' %'">
+            <div class="revenue-bar__fill" [style.width.%]="collectionRate(serie.collected, serie.expected)"></div>
+          </div>
+          <p class="revenue-series__balance" *ngIf="serie.remaining > 0 || serie.overpaid > 0">
+            <span *ngIf="serie.remaining > 0">
+              {{ 'revenue.remaining' | translate }} : {{ serie.remaining | number:'1.0-2' }} DA
+            </span>
+            <span class="revenue-overpaid" *ngIf="serie.overpaid > 0">
+              {{ 'revenue.overpaid' | translate }} : {{ serie.overpaid | number:'1.0-2' }} DA
+            </span>
+          </p>
+          <ul class="revenue-sessions" *ngIf="serie.sessions.length > 0">
+            <li *ngFor="let session of serie.sessions">
+              <span class="revenue-session__name">
+                {{ session.sessionTitle }}
+                <span class="revenue-session__date" *ngIf="session.sessionDate">
+                  · {{ session.sessionDate | date:'dd/MM/yyyy' }}
+                </span>
+              </span>
+              <span class="revenue-session__amount">{{ session.collected | number:'1.0-2' }} DA</span>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Pagination des encaissements par série : 5 séries par page par défaut. -->
+        <mat-paginator class="revenue-paginator" *ngIf="revenue.series.length > pageSizeOptions[0]"
+          [length]="revenue.series.length" [pageSize]="revenuePageSize" [pageIndex]="revenuePageIndex"
+          [pageSizeOptions]="pageSizeOptions" (page)="onRevenuePage($event)"
+          showFirstLastButtons></mat-paginator>
+
+        <!-- Axe « caisse » : ce qui est entré ce mois-là, quelle que soit la série soldée. -->
+        <h4 class="revenue-subtitle"><mat-icon>calendar_month</mat-icon>{{ 'revenue.byMonth' | translate }}</h4>
+        <p class="revenue-axis-note">{{ 'revenue.byMonthNote' | translate }}</p>
+        <div class="revenue-empty" *ngIf="revenue.months.length === 0">{{ 'revenue.noMonth' | translate }}</div>
+        <ul class="revenue-months">
+          <li *ngFor="let month of revenue.months">
+            <span>{{ monthLabel(month) }}</span>
+            <strong>{{ month.collected | number:'1.0-2' }} DA</strong>
+          </li>
+        </ul>
+      </ng-container>
     </mat-expansion-panel>
 
     <mat-expansion-panel *ngIf="!loadingSeries" class="series-panel">
@@ -83,20 +233,33 @@
       </mat-expansion-panel-header>
       <div class="series-list">
         <ul>
-          <li *ngFor="let serie of series">
-            <div class="serie-item">
-              <span>{{ serie.name }} ({{ serie.dateCreation | date }})</span>
+          <li *ngFor="let serie of pagedSeries">
+            <div class="serie-item serie-item--clickable" (click)="openSeries(serie)"
+                 matTooltip="Voir les sessions de la série">
+              <span class="serie-name">
+                <mat-icon>layers</mat-icon>
+                {{ serie.name }} ({{ serie.dateCreation | date }})
+              </span>
               <div class="serie-buttons">
-                <button mat-icon-button color="primary" matTooltip="Modifier la série">
+                <button mat-icon-button (click)="renameSeries(serie); $event.stopPropagation()"
+                        [matTooltip]="'series.rename.tooltip' | translate"
+                        [disabled]="(writeDisabled$ | async) ?? false">
                   <mat-icon>edit</mat-icon>
                 </button>
-                <button mat-icon-button color="warn" matTooltip="Supprimer la série">
-                  <mat-icon>delete</mat-icon>
+                <button mat-icon-button color="primary" (click)="openSeries(serie); $event.stopPropagation()"
+                        matTooltip="Voir les sessions">
+                  <mat-icon>open_in_new</mat-icon>
                 </button>
               </div>
             </div>
           </li>
         </ul>
+
+        <!-- Pagination : 5 séries par page par défaut, masquée en deçà. -->
+        <mat-paginator class="series-paginator" *ngIf="series.length > pageSizeOptions[0]"
+          [length]="series.length" [pageSize]="seriesPageSize" [pageIndex]="seriesPageIndex"
+          [pageSizeOptions]="pageSizeOptions" (page)="onSeriesPage($event)"
+          showFirstLastButtons></mat-paginator>
       </div>
     </mat-expansion-panel>
   </mat-accordion>

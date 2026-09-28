@@ -42,6 +42,13 @@ public class LevelService {
     public LevelEntity updateLevel(Long id, LevelEntity level) {
         LevelEntity levelToUpdate = levelRepository.findById(Objects.requireNonNull(id)).orElseThrow();
         levelToUpdate.setName(level.getName());
+        // Rang de promotion (Level_Sequence) : mis à jour s'il est fourni.
+        if (level.getLevelSequence() != null) {
+            levelToUpdate.setLevelSequence(level.getLevelSequence());
+        }
+        if (level.getLevelCode() != null) {
+            levelToUpdate.setLevelCode(level.getLevelCode());
+        }
         return levelRepository.save(levelToUpdate);
     }
 

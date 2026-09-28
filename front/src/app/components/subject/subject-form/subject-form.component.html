@@ -1,5 +1,5 @@
 <form [formGroup]="subjectForm" (ngSubmit)="onSubmit()" class="form-container fade-in">
-    <h2 class="form-title">Subject Registration Form</h2>
+    <h2 class="form-title">{{ (editingId ? 'RESOURCE_FORM.EDIT_TITLE' : 'RESOURCE_FORM.CREATE_TITLE') | translate: { entity: 'RESOURCE_FORM.ENTITY.subject' | translate } }}</h2>
     <mat-tab-group class="tab-group">
       <mat-tab label="Basic Information">
         <div class="tab-content">
@@ -17,7 +17,7 @@
     </mat-tab-group>
   
     <div class="button-container">
-      <button mat-raised-button color="primary" type="submit" class="submit-button">Save Subject</button>
+      <button mat-raised-button color="primary" type="submit" class="submit-button" appAdminOnly>{{ (editingId ? 'RESOURCE_FORM.UPDATE' : 'RESOURCE_FORM.SAVE') | translate }}</button>
       <button mat-raised-button color="accent" type="button" class="clear-button" (click)="onClearForm()">Clear</button>
     </div>
 </form>

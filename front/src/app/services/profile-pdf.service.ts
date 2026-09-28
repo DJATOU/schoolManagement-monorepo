@@ -8,6 +8,30 @@ export interface PdfInfoRow {
   value: string | number | null | undefined;
 }
 
+/** Bloc de tableau : titre, colonnes, lignes. */
+export interface PdfTable {
+  title: string;
+  columns: string[];
+  rows: (string | number | null | undefined)[][];
+  /** Note affichée sous le tableau (méthode de calcul, avertissement…). */
+  note?: string;
+}
+
+/**
+ * Page supplémentaire du document, démarrée sur une nouvelle feuille.
+ *
+ * Sert à imprimer les volets annexes d'une fiche (encaissements, séries) sans les mélanger
+ * avec la fiche elle-même : chaque volet reste lisible et détachable.
+ */
+export interface PdfExtraPage {
+  heading: string;
+  subtitle?: string;
+  sections?: { heading: string; rows: PdfInfoRow[] }[];
+  tables?: PdfTable[];
+  /** Message affiché lorsque la page n'a aucune donnée à présenter. */
+  emptyMessage?: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class ProfilePdfService {
 
@@ -28,6 +52,8 @@ export class ProfilePdfService {
     tableTitle?: string;
     tableColumns?: string[];
     tableRows?: (string | number | null | undefined)[][];
+    /** Volets annexes, chacun sur sa propre page. */
+    extraPages?: PdfExtraPage[];
   }): void {
     const content: Content[] = [
       {
@@ -48,23 +74,7 @@ export class ProfilePdfService {
     });
 
     for (const section of options.sections) {
-      content.push({ text: section.heading, style: 'sectionHeader' });
-      content.push({
-        table: {
-          widths: ['35%', '65%'],
-          body: section.rows.map(r => ([
-            { text: r.label, bold: true, fillColor: '#f1f5f9', margin: [6, 5, 6, 5] },
-            { text: this.fmt(r.value), margin: [6, 5, 6, 5] }
-          ]))
-        },
-        layout: {
-          hLineColor: () => '#e2e8f0',
-          vLineColor: () => '#e2e8f0',
-          hLineWidth: () => 0.5,
-          vLineWidth: () => 0.5
-        },
-        margin: [0, 0, 0, 14]
-      });
+      content.push(...this.infoSection(section.heading, section.rows));
     }
 
     if (options.listTitle && options.listItems && options.listItems.length > 0) {
@@ -77,33 +87,16 @@ export class ProfilePdfService {
 
     // Tableau optionnel (ex. liste des étudiants d'un groupe)
     if (options.tableTitle && options.tableColumns && options.tableRows && options.tableRows.length > 0) {
-      content.push({ text: options.tableTitle, style: 'sectionHeader' });
+      content.push(...this.tableBlock({
+        title: options.tableTitle,
+        columns: options.tableColumns,
+        rows: options.tableRows
+      }));
+    }
 
-      const header = options.tableColumns.map(c => ({ text: c, style: 'tableHeader' }));
-      const body = [
-        header,
-        ...options.tableRows.map((row, i) => row.map((cell, ci) => ({
-          text: this.fmt(cell) === '—' ? '' : this.fmt(cell),
-          margin: [6, 8, 6, 8] as [number, number, number, number],
-          fillColor: i % 2 === 0 ? '#f8fafc' : '#ffffff',
-          alignment: ci === 0 ? 'center' : 'left'
-        })))
-      ];
-
-      content.push({
-        table: {
-          headerRows: 1,
-          widths: options.tableColumns.map((_, i) => (i === 0 ? 'auto' : '*')),
-          body
-        },
-        layout: {
-          hLineColor: () => '#e2e8f0',
-          vLineColor: () => '#e2e8f0',
-          hLineWidth: () => 0.5,
-          vLineWidth: () => 0.5
-        },
-        margin: [0, 0, 0, 16]
-      });
+    // Volets annexes : chacun démarre sur une nouvelle page pour rester détachable.
+    for (const page of options.extraPages ?? []) {
+      content.push(...this.extraPage(page));
     }
 
     content.push({
@@ -117,8 +110,10 @@ export class ProfilePdfService {
       content,
       styles: {
         header: { fontSize: 20, bold: true, color: '#4f46e5' },
+        pageHeader: { fontSize: 18, bold: true, color: '#4f46e5' },
         subtitle: { fontSize: 13, color: '#64748b', margin: [0, 4, 0, 0] },
         sectionHeader: { fontSize: 14, bold: true, color: '#4f46e5', margin: [0, 6, 0, 8] },
+        note: { fontSize: 9, color: '#64748b', italics: true },
         tableHeader: { bold: true, fontSize: 11, color: '#ffffff', fillColor: '#6366f1', alignment: 'center', margin: [6, 6, 6, 6] }
       },
       defaultStyle: { fontSize: 11 },
@@ -133,6 +128,97 @@ export class ProfilePdfService {
     pdfMake.createPdf(doc).getBlob((blob) => {
       window.open(URL.createObjectURL(blob), '_blank');
     });
+  }
+
+  /** Section label/valeur, rendue en tableau à deux colonnes. */
+  private infoSection(heading: string, rows: PdfInfoRow[]): Content[] {
+    return [
+      { text: heading, style: 'sectionHeader' },
+      {
+        table: {
+          widths: ['35%', '65%'],
+          body: rows.map(r => ([
+            { text: r.label, bold: true, fillColor: '#f1f5f9', margin: [6, 5, 6, 5] },
+            { text: this.fmt(r.value), margin: [6, 5, 6, 5] }
+          ]))
+        },
+        layout: this.gridLayout(),
+        margin: [0, 0, 0, 14]
+      }
+    ];
+  }
+
+  /** Tableau à en-tête, lignes alternées et première colonne centrée. */
+  private tableBlock(table: PdfTable): Content[] {
+    const header = table.columns.map(c => ({ text: c, style: 'tableHeader' }));
+    const body = [
+      header,
+      ...table.rows.map((row, i) => row.map((cell, ci) => ({
+        text: this.fmt(cell) === '—' ? '' : this.fmt(cell),
+        margin: [6, 8, 6, 8] as [number, number, number, number],
+        fillColor: i % 2 === 0 ? '#f8fafc' : '#ffffff',
+        alignment: ci === 0 ? 'center' : 'left'
+      })))
+    ];
+
+    const blocks: Content[] = [
+      { text: table.title, style: 'sectionHeader' },
+      {
+        table: {
+          headerRows: 1,
+          widths: table.columns.map((_, i) => (i === 0 ? 'auto' : '*')),
+          body
+        },
+        layout: this.gridLayout(),
+        margin: [0, 0, 0, table.note ? 4 : 16]
+      }
+    ];
+
+    if (table.note) {
+      blocks.push({ text: table.note, style: 'note', margin: [0, 0, 0, 16] });
+    }
+    return blocks;
+  }
+
+  /** Volet annexe démarré sur une nouvelle page. */
+  private extraPage(page: PdfExtraPage): Content[] {
+    const blocks: Content[] = [
+      { text: page.heading, style: 'pageHeader', pageBreak: 'before' }
+    ];
+
+    if (page.subtitle) {
+      blocks.push({ text: page.subtitle, style: 'subtitle', margin: [0, 0, 0, 4] });
+    }
+
+    blocks.push({
+      canvas: [{ type: 'line', x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 1.5, lineColor: '#6366f1' }],
+      margin: [0, 8, 0, 12]
+    });
+
+    for (const section of page.sections ?? []) {
+      blocks.push(...this.infoSection(section.heading, section.rows));
+    }
+
+    const tables = (page.tables ?? []).filter(t => t.rows.length > 0);
+    for (const table of tables) {
+      blocks.push(...this.tableBlock(table));
+    }
+
+    const hasContent = (page.sections?.length ?? 0) > 0 || tables.length > 0;
+    if (!hasContent && page.emptyMessage) {
+      blocks.push({ text: page.emptyMessage, style: 'note', margin: [0, 0, 0, 16] });
+    }
+
+    return blocks;
+  }
+
+  private gridLayout() {
+    return {
+      hLineColor: () => '#e2e8f0',
+      vLineColor: () => '#e2e8f0',
+      hLineWidth: () => 0.5,
+      vLineWidth: () => 0.5
+    };
   }
 
   private fmt(v: string | number | null | undefined): string {

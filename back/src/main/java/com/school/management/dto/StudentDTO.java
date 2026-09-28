@@ -1,6 +1,7 @@
 package com.school.management.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.school.management.persistance.StudentStatus;
 import jakarta.validation.constraints.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -64,6 +65,13 @@ public class StudentDTO {
     @Max(100)
     private Double averageScore;
 
+    // Remarques libres sur l'étudiant. Le champ existe sur l'entité (BaseEntity) et était
+    // saisi à l'inscription, mais absent du DTO : sa valeur n'était donc jamais persistée.
+    private String description;
+
     private Boolean active; // Ajouter ce champ
+
+    // SCHOOL YEAR: statut d'inscription de l'étudiant (ACTIVE / INACTIVE) — Requirement 7.1
+    private StudentStatus status;
 
 }

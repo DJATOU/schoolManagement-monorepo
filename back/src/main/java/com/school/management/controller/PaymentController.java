@@ -3,15 +3,19 @@ package com.school.management.controller;
 import com.school.management.api.response.common.PageResponse;
 import com.school.management.dto.PaymentDTO;
 import com.school.management.dto.PaymentDetailDTO;
+import com.school.management.dto.payment.PaymentAllocationResultDTO;
+import com.school.management.dto.payment.PaymentCarryOverDTO;
+import com.school.management.dto.payment.StudentPaymentHistoryDTO;
 import com.school.management.dto.session.SessionDTO;
 import com.school.management.mapper.PaymentMapper;
 import com.school.management.mapper.SessionMapper;
 import com.school.management.persistance.*;
 import com.school.management.service.GroupPaymentStatus;
-import com.school.management.service.PatchService;
 import com.school.management.service.StudentPaymentStatus;
 import com.school.management.service.exception.CustomServiceException;
+import com.school.management.service.payment.PaymentAllocationResult;
 import com.school.management.service.payment.PaymentCrudService;
+import com.school.management.service.payment.PaymentHistoryService;
 import com.school.management.service.payment.PaymentProcessingService;
 import com.school.management.service.payment.PaymentStatusService;
 import jakarta.validation.Valid;
@@ -58,7 +62,9 @@ public class PaymentController {
     private final PaymentProcessingService paymentProcessingService;
     private final PaymentStatusService paymentStatusService;
 
-    private final PatchService patchService;
+    /** Restitution des reports dans l'historique de l'étudiant (exigences 6.2, 6.4). */
+    private final PaymentHistoryService paymentHistoryService;
+
     private final SessionMapper sessionMapper;
     private final PaymentMapper paymentMapper;
 
@@ -67,19 +73,28 @@ public class PaymentController {
             PaymentCrudService paymentCrudService,
             PaymentProcessingService paymentProcessingService,
             PaymentStatusService paymentStatusService,
-            PatchService patchService,
+            PaymentHistoryService paymentHistoryService,
             SessionMapper sessionMapper,
             PaymentMapper paymentMapper) {
         this.paymentCrudService = paymentCrudService;
         this.paymentProcessingService = paymentProcessingService;
         this.paymentStatusService = paymentStatusService;
-        this.patchService = patchService;
+        this.paymentHistoryService = paymentHistoryService;
         this.sessionMapper = sessionMapper;
         this.paymentMapper = paymentMapper;
     }
 
     /**
      * Crée un nouveau paiement de base.
+     *
+     * <p>Note libre facultative (requirement 11) : l'endpoint d'enregistrement de paiement
+     * {@code POST /api/payments} porte le champ optionnel {@code notes}. Ce champ transite
+     * par {@link PaymentMapper} qui le mappe dans les deux sens
+     * ({@code PaymentDTO.notes ↔ PaymentEntity.notes}). Une note fournie est persistée avec
+     * le paiement ; en son absence, {@code null} est persisté (requirement 11.1, 11.3), et
+     * la note est renvoyée dans la réponse (requirement 11.2). Le chemin {@code /process}
+     * (via {@code PaymentProcessingService} avec des arguments primitifs) ne porte pas de
+     * note et reste inchangé, tout comme les endpoints multipart d'upload.</p>
      *
      * @param paymentDto les données du paiement
      * @return le paiement créé
@@ -100,23 +115,11 @@ public class PaymentController {
         return new ResponseEntity<>(paymentMapper.toDto(savedPayment), HttpStatus.CREATED);
     }
 
-    /**
-     * Met à jour partiellement un paiement (PATCH).
-     *
-     * @param id      l'ID du paiement
-     * @param updates les champs à mettre à jour
-     * @return le paiement mis à jour
-     */
-    @PatchMapping("/{id}")
-    public ResponseEntity<PaymentDTO> patchPayment(@PathVariable Long id, @RequestBody Map<String, Object> updates) {
-        LOGGER.info("Patching payment: {}", id);
-
-        PaymentEntity payment = paymentCrudService.getPaymentById(id);
-        patchService.applyPatch(payment, updates);
-        PaymentEntity updatedPayment = paymentCrudService.save(payment);
-
-        return ResponseEntity.ok(paymentMapper.toDto(updatedPayment));
-    }
+    // PATCH /{id} générique retiré : il projetait une Map arbitraire du client sur l'entité
+    // (ModelMapper), permettant d'écraser n'importe quel champ d'un paiement — dont le montant,
+    // l'indicateur actif et les champs d'audit. Aucun écran ne l'utilisait. Les modifications
+    // légitimes passent par les points d'entrée dédiés de l'administration des paiements, qui
+    // tracent l'opération.
 
     /**
      * Récupère tous les paiements avec pagination.
@@ -180,27 +183,44 @@ public class PaymentController {
      *
      * PHASE 2: Utilise PaymentProcessingService au lieu du service monolithique.
      *
-     * Le montant est distribué sur toutes les sessions de la série en ordre
-     * chronologique.
+     * Le montant est imputé sur la série visée à hauteur de son montant dû, puis la part
+     * excédentaire est reportée sur les séries suivantes du groupe. La réponse décrit la
+     * répartition complète : un versement ne crédite plus forcément une seule série
+     * (exigence 6.3).
      *
      * @param paymentDto les informations du paiement
-     * @return le paiement traité
+     * @return la répartition du versement : part imputée, parts reportées et séries destinataires
      */
     @PostMapping("/process")
-    public ResponseEntity<PaymentDTO> processPayment(@Valid @RequestBody PaymentDTO paymentDto) {
+    public ResponseEntity<PaymentAllocationResultDTO> processPayment(@Valid @RequestBody PaymentDTO paymentDto) {
         LOGGER.info("Processing payment - student: {}, group: {}, series: {}, amount: {}",
                 paymentDto.getStudentId(), paymentDto.getGroupId(),
                 paymentDto.getSessionSeriesId(), paymentDto.getAmountPaid());
 
         // PHASE 2: Utilise PaymentProcessingService
-        PaymentEntity processedPayment = paymentProcessingService.processPayment(
+        PaymentAllocationResult result = paymentProcessingService.processPayment(
                 paymentDto.getStudentId(),
                 paymentDto.getGroupId(),
                 paymentDto.getSessionSeriesId(),
                 paymentDto.getAmountPaid());
 
-        PaymentDTO responseDto = paymentMapper.toDto(processedPayment);
-        return ResponseEntity.ok(responseDto);
+        return ResponseEntity.ok(toDto(result));
+    }
+
+    /** Traduit le résultat d'encaissement en contrat d'API, la ligne de paiement comprise. */
+    private PaymentAllocationResultDTO toDto(PaymentAllocationResult result) {
+        return new PaymentAllocationResultDTO(
+                result.studentId(),
+                result.groupId(),
+                result.seriesId(),
+                result.amountReceived(),
+                result.amountAllocated(),
+                result.amountCarriedOver(),
+                result.carryOvers().stream()
+                        .map(carryOver -> new PaymentAllocationResultDTO.CarriedOverAmountDTO(
+                                carryOver.seriesId(), carryOver.seriesName(), carryOver.amount()))
+                        .toList(),
+                paymentMapper.toDto(result.payment()));
     }
 
     /**
@@ -330,6 +350,35 @@ public class PaymentController {
         List<PaymentDTO> paymentHistory = paymentCrudService.getPaymentHistoryForSeries(studentId, sessionSeriesId);
 
         return ResponseEntity.ok(paymentHistory);
+    }
+
+    /**
+     * Historique de paiement d'un étudiant, reports compris (exigences 6.2, 6.4).
+     *
+     * <p>Chaque ligne de série distingue la part saisie directement sur elle de la part reçue par
+     * report depuis une autre série ; la liste des reports restitue chacun d'eux avec son montant,
+     * sa série source et sa série destination. Sans cette distinction, une série créditée par
+     * report affiche un montant sans origine, injustifiable lors d'un contrôle.</p>
+     *
+     * @param studentId l'identifiant de l'étudiant
+     * @return l'historique complet, listes vides si l'étudiant n'a aucun versement
+     */
+    @GetMapping("/students/{studentId}/payment-history")
+    public ResponseEntity<StudentPaymentHistoryDTO> getStudentPaymentHistory(@PathVariable Long studentId) {
+        LOGGER.info("Fetching payment history with carry-overs for student: {}", studentId);
+        return ResponseEntity.ok(paymentHistoryService.getStudentPaymentHistory(studentId));
+    }
+
+    /**
+     * Reports produits par les versements d'un étudiant (exigence 6.2).
+     *
+     * @param studentId l'identifiant de l'étudiant
+     * @return les reports actifs, par identifiant croissant ; liste vide si aucun
+     */
+    @GetMapping("/students/{studentId}/carry-overs")
+    public ResponseEntity<List<PaymentCarryOverDTO>> getStudentCarryOvers(@PathVariable Long studentId) {
+        LOGGER.info("Fetching carry-overs for student: {}", studentId);
+        return ResponseEntity.ok(paymentHistoryService.getCarryOversForStudent(studentId));
     }
 
     /**

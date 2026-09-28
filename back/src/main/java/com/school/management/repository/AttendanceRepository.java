@@ -15,6 +15,108 @@ public interface AttendanceRepository extends JpaRepository<AttendanceEntity, Lo
 
     long countByStudentIdAndSessionSeriesIdAndIsPresent(Long studentId, Long sessionSeriesId, boolean isPresent);
 
+    /**
+     * Vrai s'il existe déjà une présence active de cet étudiant couvrant cette séance manquée.
+     *
+     * <p>Garantit qu'un rattrapage n'est enregistré qu'une fois par séance manquée (exigence 1.9).
+     * Deux rattrapages d'une même séance rendraient le décompte des séances suivies indéterminé.
+     * La règle est doublée d'un index unique partiel en base : ce contrôle applicatif sert à
+     * produire un message utile plutôt qu'une violation de contrainte.</p>
+     */
+    boolean existsByStudentIdAndMissedSessionIdAndActiveTrue(Long studentId, Long missedSessionId);
+
+    /**
+     * Même contrôle d'unicité, mais en <strong>ignorant une présence donnée</strong>.
+     *
+     * <p>Indispensable à la correction : réaffecter un rattrapage à une séance manquée doit vérifier
+     * qu'aucune <em>autre</em> présence ne couvre déjà cette séance. Avec la variante ci-dessus, une
+     * correction qui redésigne la même séance manquée se heurterait à elle-même et serait refusée,
+     * alors qu'elle ne crée aucun doublon.</p>
+     */
+    @Query("SELECT CASE WHEN COUNT(a) > 0 THEN true ELSE false END FROM AttendanceEntity a "
+            + "WHERE a.student.id = :studentId AND a.missedSession.id = :missedSessionId "
+            + "AND a.active = true AND a.id <> :excludedAttendanceId")
+    boolean existsOtherCatchUpForMissedSession(@Param("studentId") Long studentId,
+                                               @Param("missedSessionId") Long missedSessionId,
+                                               @Param("excludedAttendanceId") Long excludedAttendanceId);
+
+    /**
+     * Rattrapages à préciser : présences actives dont la facturation n'est pas encore tranchée.
+     *
+     * <p>Cette liste est consultée <strong>pour être vidée</strong> : chaque ligne est une séance
+     * consommée que personne ne facture encore. La laisser invisible reviendrait à reproduire le
+     * défaut d'origine sous une autre forme — non plus une facturation silencieuse, mais un oubli
+     * silencieux.</p>
+     *
+     * <p>Ordre chronologique de séance : l'administrateur traite ce qui a eu lieu d'abord, et la
+     * liste ne se réordonne pas d'une consultation à l'autre.</p>
+     */
+    /**
+     * <p>La séance est jointe en {@code LEFT JOIN} et non par navigation implicite
+     * ({@code a.session.sessionTimeStart}), qui produit une jointure interne : une présence dont la
+     * séance a été supprimée disparaissait alors de la liste. Or c'est exactement la ligne qu'il
+     * faut voir — une séance consommée, non facturée, et désormais sans repère. La faire disparaître
+     * transformerait le défaut d'origine en oubli définitif.</p>
+     */
+    @Query("SELECT a FROM AttendanceEntity a LEFT JOIN a.session s "
+            + "WHERE a.catchUpBillingState = com.school.management.persistance.CatchUpBillingState.PENDING "
+            + "AND a.active = true "
+            + "ORDER BY s.sessionTimeStart ASC NULLS LAST, a.id ASC")
+    List<AttendanceEntity> findPendingCatchUps();
+
+    /**
+     * Présences de rattrapage actives d'un étudiant, tous groupes confondus.
+     *
+     * <p>Alimente {@code CatchUpBillingQualifier}, qui doit voir les rattrapages hors de la série
+     * évaluée : une séance rattrapée dans un autre groupe n'apparaît pas dans les présences de la
+     * série d'origine.</p>
+     *
+     * <p>Contrairement à {@code findByStudentIdAndIsCatchUp}, cette requête filtre sur {@code active}
+     * en base plutôt qu'en mémoire chez l'appelant : une présence désactivée ne fait pas partie de
+     * la définition d'une présence de rattrapage, et la laisser remonter obligeait chaque appelant à
+     * s'en souvenir.</p>
+     */
+    @Query("SELECT a FROM AttendanceEntity a WHERE a.student.id = :studentId "
+            + "AND a.isCatchUp = true AND a.active = true")
+    List<AttendanceEntity> findByStudentIdAndIsCatchUpTrueAndActiveTrue(@Param("studentId") Long studentId);
+
+    /**
+     * Compte les séances effectivement suivies (présent) par un étudiant dans le
+     * périmètre d'une série, tous groupes confondus. Ne compte que les fiches
+     * actives avec {@code isPresent = true}.
+     *
+     * @param studentId       l'identifiant de l'étudiant
+     * @param sessionSeriesId l'identifiant de la série de sessions
+     * @return le nombre de séances suivies (présent) dans la série
+     */
+    @Query("SELECT COUNT(a) FROM AttendanceEntity a WHERE a.student.id = :studentId " +
+            "AND a.sessionSeries.id = :sessionSeriesId AND a.isPresent = true AND a.active = true")
+    long countPresentForStudentAndSeries(@Param("studentId") Long studentId,
+            @Param("sessionSeriesId") Long sessionSeriesId);
+
+    /**
+     * Compte les séances suivies (présent) par un étudiant dans un groupe donné sur une plage
+     * de dates, bornes incluses.
+     *
+     * <p>Sert au <strong>seul</strong> signalement de changement de groupe (exigence 10.3), qui
+     * est informatif. Ce comptage par plage de dates ne doit alimenter aucun calcul monétaire :
+     * l'unité de facturation reste la série, et
+     * {@link #countPresentForStudentAndSeries(Long, Long)} en demeure la source.</p>
+     *
+     * @param studentId l'identifiant de l'étudiant
+     * @param groupId   l'identifiant du groupe
+     * @param from      début de la plage, inclus
+     * @param to        fin de la plage, incluse
+     * @return le nombre de séances suivies dans ce groupe sur la plage
+     */
+    @Query("SELECT COUNT(a) FROM AttendanceEntity a WHERE a.student.id = :studentId "
+            + "AND a.group.id = :groupId AND a.isPresent = true AND a.active = true "
+            + "AND a.session.sessionTimeStart BETWEEN :from AND :to")
+    long countPresentForStudentAndGroupBetween(@Param("studentId") Long studentId,
+                                               @Param("groupId") Long groupId,
+                                               @Param("from") java.util.Date from,
+                                               @Param("to") java.util.Date to);
+
     @Query("SELECT a FROM AttendanceEntity a WHERE a.session.id = :sessionId AND a.student.id = :studentId AND a.active = true ORDER BY a.id DESC LIMIT 1")
     Optional<AttendanceEntity> findBySessionIdAndStudentId(@Param("sessionId") Long sessionId,
             @Param("studentId") Long studentId);
@@ -43,6 +145,18 @@ public interface AttendanceRepository extends JpaRepository<AttendanceEntity, Lo
 
     List<AttendanceEntity> findByStudentIdAndActiveTrue(Long studentId);
 
+    /**
+     * Liste les absences actives d'un étudiant (fiches {@code isPresent = false}),
+     * triées par date de séance décroissante. Utilisé par le workflow de rattrapage
+     * pour proposer les séances manquées éligibles à une demande de rattrapage.
+     *
+     * @param studentId l'identifiant de l'étudiant
+     * @return la liste des absences actives de l'étudiant
+     */
+    @Query("SELECT a FROM AttendanceEntity a WHERE a.student.id = :studentId " +
+            "AND a.isPresent = false AND a.active = true ORDER BY a.session.sessionTimeStart DESC")
+    List<AttendanceEntity> findAbsencesByStudentId(@Param("studentId") Long studentId);
+
     // ===== Statistiques tableau de bord (sur période, via la date de session) =====
 
     @Query("SELECT COUNT(a) FROM AttendanceEntity a WHERE a.active = true AND a.isPresent = true " +
@@ -60,4 +174,28 @@ public interface AttendanceRepository extends JpaRepository<AttendanceEntity, Lo
     @Query("SELECT COUNT(a) FROM AttendanceEntity a WHERE a.active = true AND a.isCatchUp = true " +
             "AND a.session.sessionTimeStart BETWEEN :from AND :to")
     long countCatchUp(@Param("from") java.util.Date from, @Param("to") java.util.Date to);
+
+    // ===== Variantes filtrées par année scolaire (via attendance.session.group.schoolYear) =====
+
+    @Query("SELECT COUNT(a) FROM AttendanceEntity a WHERE a.active = true AND a.isPresent = true " +
+            "AND a.session.group.schoolYear.id = :schoolYearId AND a.session.sessionTimeStart BETWEEN :from AND :to")
+    long countPresentByYear(@Param("from") java.util.Date from, @Param("to") java.util.Date to,
+                            @Param("schoolYearId") Long schoolYearId);
+
+    @Query("SELECT COUNT(a) FROM AttendanceEntity a WHERE a.active = true AND a.isPresent = false " +
+            "AND a.isJustified = true AND a.session.group.schoolYear.id = :schoolYearId " +
+            "AND a.session.sessionTimeStart BETWEEN :from AND :to")
+    long countJustifiedAbsencesByYear(@Param("from") java.util.Date from, @Param("to") java.util.Date to,
+                                      @Param("schoolYearId") Long schoolYearId);
+
+    @Query("SELECT COUNT(a) FROM AttendanceEntity a WHERE a.active = true AND a.isPresent = false " +
+            "AND (a.isJustified = false OR a.isJustified IS NULL) AND a.session.group.schoolYear.id = :schoolYearId " +
+            "AND a.session.sessionTimeStart BETWEEN :from AND :to")
+    long countUnjustifiedAbsencesByYear(@Param("from") java.util.Date from, @Param("to") java.util.Date to,
+                                        @Param("schoolYearId") Long schoolYearId);
+
+    @Query("SELECT COUNT(a) FROM AttendanceEntity a WHERE a.active = true AND a.isCatchUp = true " +
+            "AND a.session.group.schoolYear.id = :schoolYearId AND a.session.sessionTimeStart BETWEEN :from AND :to")
+    long countCatchUpByYear(@Param("from") java.util.Date from, @Param("to") java.util.Date to,
+                            @Param("schoolYearId") Long schoolYearId);
 }

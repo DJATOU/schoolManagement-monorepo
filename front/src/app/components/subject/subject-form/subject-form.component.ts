@@ -10,6 +10,9 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { ReactiveFormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
+import { ActivatedRoute, Router } from '@angular/router';
+import { TranslateModule } from '@ngx-translate/core';
+import { AdminOnlyDirective } from '../../../shared/admin-only.directive';
 
 @Component({
   selector: 'app-subject-form',
@@ -19,7 +22,9 @@ import { CommonModule } from '@angular/common';
     MatFormFieldModule,
     MatInputModule,
     MatTabsModule,
-    CommonModule
+    CommonModule,
+    AdminOnlyDirective,
+    TranslateModule
   ],
   templateUrl: './subject-form.component.html',
   styleUrls: ['./subject-form.component.scss']
@@ -27,11 +32,16 @@ import { CommonModule } from '@angular/common';
 export class SubjectFormComponent {
   subjectForm!: FormGroup;
 
+  /** Identifiant de la matière en cours de modification (null en mode création). */
+  editingId: number | null = null;
+
   constructor(
     private fb: FormBuilder,
     private subjectService: SubjectService,
     public dialog: MatDialog,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private route: ActivatedRoute,
+    private router: Router
   ) {}
 
   ngOnInit(): void {
@@ -39,6 +49,19 @@ export class SubjectFormComponent {
       name: ['', Validators.required],
       description: ['']
     });
+
+    // Mode modification : un identifiant est présent dans l'URL (subject/edit/:id).
+    const idParam = this.route.snapshot.paramMap.get('id');
+    if (idParam) {
+      this.editingId = Number(idParam);
+      this.subjectService.getSubjectById(this.editingId).subscribe({
+        next: (subject) => this.subjectForm.patchValue({
+          name: subject.name ?? '',
+          description: subject.description ?? ''
+        }),
+        error: () => this.showErrorMessage('Erreur lors du chargement de la matière.')
+      });
+    }
   }
 
   flattenFormData(data: any, parentKey: string = ''): { label: string, value: any }[] {
@@ -81,17 +104,31 @@ export class SubjectFormComponent {
             description: formData.basicInformation.description ?? ''
           };
 
-          this.subjectService.createSubject(subject).subscribe({
-            next: (subject) => {
-              console.log('Subject created:', subject);
-              this.onClearForm();
-              this.showSuccessMessage('Subject created successfully.');
-            },
-            error: (error) => {
-              console.error('Error creating subject:', error);
-              this.showErrorMessage('Error creating subject.');
-            }
-          });
+          if (this.editingId) {
+            // Mode modification : mise à jour de la matière existante.
+            this.subjectService.updateSubject(this.editingId, subject).subscribe({
+              next: () => {
+                this.showSuccessMessage('Matière mise à jour avec succès.');
+                this.router.navigate(['/subject/table']);
+              },
+              error: (error) => {
+                console.error('Error updating subject:', error);
+                this.showErrorMessage('Erreur lors de la mise à jour de la matière.');
+              }
+            });
+          } else {
+            this.subjectService.createSubject(subject).subscribe({
+              next: (created) => {
+                console.log('Subject created:', created);
+                this.onClearForm();
+                this.showSuccessMessage('Subject created successfully.');
+              },
+              error: (error) => {
+                console.error('Error creating subject:', error);
+                this.showErrorMessage('Error creating subject.');
+              }
+            });
+          }
         } else {
           console.warn('Form submission was cancelled.');
         }

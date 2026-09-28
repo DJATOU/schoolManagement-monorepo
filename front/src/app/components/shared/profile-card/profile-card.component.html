@@ -1,43 +1,101 @@
-<mat-card class="profile-card">
-  <!-- Status chip (top right) -->
-  <div class="status-badge" *ngIf="paymentStatus && profileType === 'student' && paymentStatus.paymentStatus !== 'NA'">
-    <mat-chip [class.status-good]="paymentStatus.paymentStatus === 'GOOD'"
-      [class.status-late]="paymentStatus.paymentStatus === 'LATE'" [matTooltip]="getPaymentTooltip()"
-      [matTooltipDisabled]="paymentStatus.paymentStatus !== 'LATE'" matTooltipClass="payment-tooltip">
-      <mat-icon>{{ getPaymentIcon() }}</mat-icon>
-      {{ getPaymentLabel() }}
-    </mat-chip>
-  </div>
+<div class="flip-card" [class.is-flipped]="isFlipped">
+  <div class="flip-card-inner">
 
-  <!-- Main content: clickable -->
-  <div class="card-content" (click)="navigateToProfile()">
-    <!-- Avatar -->
-    <div class="card-avatar">
-      <img *ngIf="profilePhotoUrl && !hasImageError; else initialsTemplate" [src]="profilePhotoUrl"
-        alt="Photo de profil" (error)="onImageError($event)">
-      <ng-template #initialsTemplate>
-        <div class="initials-avatar" [style.background-color]="avatarColor">
-          {{ getInitials() }}
+    <!-- ===== FACE AVANT ===== -->
+    <div class="flip-card-face flip-card-front">
+      <mat-card class="profile-card">
+        <!-- Status chip (top right) -->
+        <div class="status-badge" *ngIf="paymentStatus && profileType === 'student' && paymentStatus.paymentStatus !== 'NA'">
+          <mat-chip [class.status-good]="paymentStatus.paymentStatus === 'GOOD'"
+            [class.status-late]="paymentStatus.paymentStatus === 'LATE'"
+            [class.status-exempt]="paymentStatus.paymentStatus === 'EXEMPT'" [matTooltip]="getPaymentTooltip()"
+            [matTooltipDisabled]="paymentStatus.paymentStatus !== 'LATE'" matTooltipClass="payment-tooltip">
+            <mat-icon>{{ getPaymentIcon() }}</mat-icon>
+            {{ getPaymentLabel() }}
+          </mat-chip>
         </div>
-      </ng-template>
+
+        <!-- Bouton retourner (uniquement pour les étudiants) -->
+        <button *ngIf="profileType === 'student'" mat-icon-button class="flip-btn"
+          (click)="toggleFlip($event)" [matTooltip]="'tutor.flipHint' | translate">
+          <mat-icon>autorenew</mat-icon>
+        </button>
+
+        <!-- Main content: clickable -->
+        <div class="card-content" (click)="navigateToProfile()">
+          <!-- Avatar -->
+          <div class="card-avatar">
+            <img *ngIf="profilePhotoUrl && !hasImageError; else initialsTemplate" [appSecureImage]="profilePhotoUrl"
+              alt="Photo de profil" (error)="onImageError($event)">
+            <ng-template #initialsTemplate>
+              <div class="initials-avatar" [style.background-color]="avatarColor">
+                {{ getInitials() }}
+              </div>
+            </ng-template>
+          </div>
+
+          <!-- Name and subtitle -->
+          <div class="card-info">
+            <span class="card-name">{{ profile.firstName }} {{ profile.lastName }}</span>
+            <span class="card-subtitle">{{ profile.subtitle }}</span>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <mat-card-actions class="card-actions">
+          <button mat-icon-button class="action-btn" (click)="sendEmail($event)" [disabled]="!profile.email"
+            matTooltip="Envoyer un email">
+            <mat-icon>email</mat-icon>
+          </button>
+          <button mat-icon-button class="action-btn" (click)="callPhone($event)" [disabled]="!profile.phoneNumber"
+            matTooltip="Ouvrir WhatsApp">
+            <mat-icon>phone</mat-icon>
+          </button>
+        </mat-card-actions>
+      </mat-card>
     </div>
 
-    <!-- Name and subtitle -->
-    <div class="card-info">
-      <span class="card-name">{{ profile.firstName }} {{ profile.lastName }}</span>
-      <span class="card-subtitle">{{ profile.subtitle }}</span>
+    <!-- ===== FACE ARRIÈRE : TUTEUR ===== -->
+    <div class="flip-card-face flip-card-back" *ngIf="profileType === 'student'">
+      <mat-card class="profile-card profile-card--back">
+        <button mat-icon-button class="flip-btn" (click)="toggleFlip($event)"
+          [matTooltip]="'tutor.backHint' | translate">
+          <mat-icon>autorenew</mat-icon>
+        </button>
+
+        <div class="tutor-header">
+          <mat-icon>escalator_warning</mat-icon>
+          <span>{{ 'tutor.title' | translate }}</span>
+        </div>
+
+        <!-- Tuteur présent : nom + téléphone (WhatsApp) -->
+        <div class="tutor-body" *ngIf="tutor; else noTutor">
+          <div class="tutor-row">
+            <mat-icon>person</mat-icon>
+            <div class="tutor-text">
+              <span class="tutor-label">{{ 'tutor.name' | translate }}</span>
+              <span class="tutor-value">{{ tutor.firstName }} {{ tutor.lastName }}</span>
+            </div>
+          </div>
+
+          <div class="tutor-row tutor-row--action" *ngIf="tutor.phoneNumber"
+            (click)="openTutorWhatsApp($event)" [matTooltip]="'tutor.whatsappHint' | translate">
+            <mat-icon class="wa-icon">chat</mat-icon>
+            <div class="tutor-text">
+              <span class="tutor-label">{{ 'tutor.phone' | translate }}</span>
+              <span class="tutor-value tutor-value--link">{{ tutor.phoneNumber }}</span>
+            </div>
+          </div>
+        </div>
+
+        <ng-template #noTutor>
+          <div class="tutor-empty">
+            <mat-icon>person_off</mat-icon>
+            <span>{{ 'tutor.none' | translate }}</span>
+          </div>
+        </ng-template>
+      </mat-card>
     </div>
+
   </div>
-
-  <!-- Actions -->
-  <mat-card-actions class="card-actions">
-    <button mat-icon-button class="action-btn" (click)="sendEmail($event)" [disabled]="!profile.email"
-      matTooltip="Envoyer un email">
-      <mat-icon>email</mat-icon>
-    </button>
-    <button mat-icon-button class="action-btn" (click)="callPhone($event)" [disabled]="!profile.phoneNumber"
-      matTooltip="Ouvrir WhatsApp">
-      <mat-icon>phone</mat-icon>
-    </button>
-  </mat-card-actions>
-</mat-card>
+</div>

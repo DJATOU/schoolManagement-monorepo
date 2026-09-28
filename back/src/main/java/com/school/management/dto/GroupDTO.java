@@ -53,6 +53,12 @@ public class GroupDTO {
 
     private String teacherName; // Add this field to hold the teacher's name
 
+    // SCHOOL YEAR: année scolaire à laquelle appartient le groupe (Requirement 3.1)
+    private Long schoolYearId;
+
+    // Libellé de l'année scolaire (ex. "2025-2026"), renseigné en lecture pour l'affichage
+    private String schoolYearLabel;
+
     private String photo; // PHASE 3A: Photo filename
 
     private Set<Long> studentIds; // IDs of students in the group

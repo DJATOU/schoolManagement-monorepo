@@ -1,0 +1,53 @@
+.import-page {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 24px;
+
+  .import-title {
+    margin-bottom: 4px;
+  }
+
+  .import-hint {
+    color: rgba(0, 0, 0, 0.6);
+    margin-bottom: 24px;
+  }
+
+  .import-card {
+    margin-bottom: 20px;
+
+    input[type="file"] {
+      display: block;
+      margin: 12px 0;
+    }
+
+    button {
+      margin-right: 12px;
+    }
+
+    .import-note {
+      font-style: italic;
+      color: rgba(0, 0, 0, 0.6);
+    }
+
+    .import-summary {
+      margin-top: 12px;
+      font-weight: 600;
+    }
+
+    .import-error {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #c62828;
+      margin-top: 12px;
+    }
+
+    .import-errors {
+      margin-top: 8px;
+      color: #c62828;
+      font-size: 13px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+  }
+}

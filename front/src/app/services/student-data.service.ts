@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
 import { Student } from '../components/student/domain/student';
-import { API_BASE_URL } from '../app.config';
+import { API_BASE_URL } from '../api-base-url';
 import { Group } from '../models/group/group';
 import { StudentFullHistoryDTO } from '../components/student/domain/StudentFullHistoryDTO';
 

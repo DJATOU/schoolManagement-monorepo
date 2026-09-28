@@ -237,6 +237,9 @@ public class PaymentCrudService {
                 .sessionName(detail.getSession().getTitle())
                 .amountPaid(detail.getAmountPaid())
                 .remainingBalance(detail.getSession().getGroup().getPrice().getPrice() - detail.getAmountPaid())
+                // La date était omise : l'historique et le reçu PDF affichaient « N/A »
+                // alors que l'entité la renseigne à la création.
+                .paymentDate(detail.getPaymentDate())
                 .isCatchUp(detail.getIsCatchUp())
                 .paymentStatus(detail.getPayment().getStatus())
                 .build();

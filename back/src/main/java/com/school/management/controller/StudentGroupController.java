@@ -64,9 +64,21 @@ public class StudentGroupController {
     }
 
 
+    /**
+     * Groupes d'un étudiant, éventuellement restreints à une année scolaire.
+     *
+     * <p>Sans {@code schoolYearId}, tous les groupes sont renvoyés (le parcours en a besoin).
+     * Avec, seuls ceux de l'année demandée le sont : la fiche étudiante affichait les groupes
+     * de toutes les années, y compris ceux d'une année révolue introuvables dans la liste des
+     * groupes, filtrée sur l'année sélectionnée (Exigence 10.4).</p>
+     *
+     * @param studentId    identifiant de l'étudiant
+     * @param schoolYearId année scolaire à filtrer (optionnel)
+     */
     @GetMapping("/{studentId}/groups")
-    public ResponseEntity<List<GroupDTO>> getGroupsOfStudent(@PathVariable Long studentId) {
-        List<GroupDTO> groups = studentGroupService.getGroupsOfStudent(studentId);
+    public ResponseEntity<List<GroupDTO>> getGroupsOfStudent(@PathVariable Long studentId,
+            @RequestParam(required = false) Long schoolYearId) {
+        List<GroupDTO> groups = studentGroupService.getGroupsOfStudent(studentId, schoolYearId);
         return ResponseEntity.ok(groups);
     }
 

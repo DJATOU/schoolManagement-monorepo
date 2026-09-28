@@ -1,107 +1,156 @@
-.edit-session-form {
-  padding: 20px;
-  max-width: 800px;
-  margin: 0 auto;
+// Même présentation que les dialogues de modification étudiant et enseignant :
+// en-tête dégradé, onglets, grille deux colonnes, actions séparées par un filet.
+
+:host {
+  --dlg-primary: #4f46e5;
+  --dlg-ink: #111827;
+  --dlg-muted: #6b7280;
+  --dlg-line: #e9ecf3;
+  display: block;
 }
 
-.form-section {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  padding: 10px 0;
-}
-
-.form-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 15px;
-}
-
-.time-row {
+/* ===== En-tête ===== */
+.dlg-hero {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 14px;
+  padding: 16px 24px;
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  color: #fff;
 }
 
-.time-select {
-  flex: 1;
-}
-
-.period-select {
-  max-width: 80px;
-}
-
-.mat-form-field {
-  background-color: #ffffff;
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.mat-form-field-appearance-fill .mat-form-field-flex {
-  padding: 0 12px;
-}
-
-.mat-form-field-appearance-fill .mat-form-field-outline {
-  border-radius: 8px;
-}
-
-.custom-panel {
-  z-index: 1001 !important; /* Ensure the dropdown has a high z-index */
-}
-
-.mat-tab-label {
-  font-weight: bold;
-  font-size: 14px;
-  text-transform: uppercase;
-  color: #4a4a4a;
-}
-
-.mat-tab-label-active {
-  color: #3f51b5; /* Primary color for active tab */
-}
-
-.mat-tab-group {
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  border-radius: 8px;
-}
-
-.mat-tab-body-content {
-  padding: 20px;
-}
-
-.action-buttons {
+.dlg-hero-icon {
   display: flex;
-  justify-content: flex-end;
-  padding: 20px 0;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.2);
+
+  mat-icon {
+    font-size: 22px;
+    width: 22px;
+    height: 22px;
+  }
+}
+
+.dlg-title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.25;
+  color: #fff;
+}
+
+.dlg-subtitle {
+  display: block;
+  margin-top: 2px;
+  font-size: 11.5px;
+  opacity: 0.85;
+}
+
+/* ===== Contenu ===== */
+.dlg-content {
+  padding: 0 !important;
+  width: 660px;
+  max-width: 100%;
+  max-height: 62vh;
+  overflow: hidden;
+}
+
+.edit-tabs ::ng-deep .mat-mdc-tab-header {
+  border-bottom: 1px solid var(--dlg-line);
+}
+
+.edit-tabs ::ng-deep .mat-mdc-tab .mdc-tab__text-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.tab-icon {
+  font-size: 17px;
+  width: 17px;
+  height: 17px;
+}
+
+.tab-body {
+  padding: 18px 22px 16px;
+  min-height: 208px;
+}
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.span-2 {
+  grid-column: 1 / -1;
+}
+
+/* ===== Planification : libellé + date + trio heure/minute/AM-PM ===== */
+.sf-timing {
+  display: grid;
+  grid-template-columns: 56px 1fr 1.3fr;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.sf-timing-label {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--dlg-ink);
+}
+
+.sf-time-group {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+}
+
+/* ===== Actions ===== */
+.dlg-actions {
   gap: 10px;
-}
+  padding: 12px 24px 16px !important;
+  border-top: 1px solid var(--dlg-line);
 
-mat-dialog-actions button {
-  padding: 8px 16px;
-  font-weight: bold;
-}
-
-button[color="primary"] {
-  background-color: #3f51b5;
-  color: #fff;
-}
-
-button[color="warn"] {
-  background-color: #f44336;
-  color: #fff;
-}
-
-button[color="primary"]:hover,
-button[color="warn"]:hover {
-  opacity: 0.8;
-}
-
-@media (max-width: 768px) {
-  .form-row {
-    flex-direction: column;
+  button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 40px;
+    border-radius: 10px;
+    font-weight: 600;
   }
 
-  .mat-form-field {
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+}
+
+.sf-spacer {
+  flex: 1 1 auto;
+}
+
+@media (max-width: 700px) {
+  .dlg-content {
     width: 100%;
+  }
+
+  .grid-2 {
+    grid-template-columns: 1fr;
+  }
+
+  .sf-timing {
+    grid-template-columns: 1fr;
+    gap: 10px;
   }
 }

@@ -73,6 +73,12 @@
             </mat-option>
           </mat-select>
         </mat-form-field>
+
+        <mat-slide-toggle class="filter-inactive-toggle"
+                          [ngModel]="showInactive"
+                          (ngModelChange)="onShowInactiveChange($event)">
+          {{ 'STUDENT_SEARCH.SHOW_INACTIVE' | translate }}
+        </mat-slide-toggle>
       </div>
     </div>
   </div>
@@ -84,12 +90,22 @@
     <ng-container *ngIf="!isLoading && displayedStudents.length > 0">
       <div class="student-view" [ngClass]="viewMode === 'card' ? 'cards-grid' : 'list-view'">
         <ng-container *ngIf="viewMode === 'card'">
-          <app-student-card *ngFor="let student of displayedStudents" [student]="student"
-            class="fade-in"></app-student-card>
+          <div class="student-wrapper" *ngFor="let student of displayedStudents"
+               [class.is-inactive]="isInactive(student)">
+            <span class="inactive-badge" *ngIf="isInactive(student)">
+              {{ 'STUDENT_SEARCH.INACTIVE_BADGE' | translate }}
+            </span>
+            <app-student-card [student]="student" class="fade-in"></app-student-card>
+          </div>
         </ng-container>
         <ng-container *ngIf="viewMode === 'list'">
-          <app-student-list-item *ngFor="let student of displayedStudents" [student]="student"
-            class="fade-in"></app-student-list-item>
+          <div class="student-wrapper" *ngFor="let student of displayedStudents"
+               [class.is-inactive]="isInactive(student)">
+            <span class="inactive-badge" *ngIf="isInactive(student)">
+              {{ 'STUDENT_SEARCH.INACTIVE_BADGE' | translate }}
+            </span>
+            <app-student-list-item [student]="student" class="fade-in"></app-student-list-item>
+          </div>
         </ng-container>
       </div>
 
@@ -108,14 +124,14 @@
     <ng-container *ngIf="isLoading">
       <div class="loading-state">
         <mat-spinner></mat-spinner>
-        <p>Chargement des étudiants...</p>
+        <p>{{ 'LIST_STATE.LOADING_STUDENTS' | translate }}</p>
       </div>
     </ng-container>
 
     <ng-container *ngIf="!isLoading && filteredStudents.length === 0">
       <div class="empty-state">
         <mat-icon class="empty-icon">person_off</mat-icon>
-        <p>Aucun étudiant trouvé.</p>
+        <p>{{ 'LIST_STATE.EMPTY_STUDENTS' | translate }}</p>
       </div>
     </ng-container>
   </div>

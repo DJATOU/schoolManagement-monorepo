@@ -70,3 +70,19 @@ mat-dialog-actions {
 .legend .not-justified {
   background-color: #f8d7da; /* Rouge */
 }
+
+/*
+ * Mention de neutralité financière de la justification.
+ *
+ * Affichée sous le tableau et non en simple infobulle : c'est l'information qui empêche un
+ * administrateur de promettre une exonération que le système n'applique pas.
+ */
+.justification-note {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #eef2ff;
+  color: #3730a3;
+  font-size: 12.5px;
+  line-height: 1.45;
+}

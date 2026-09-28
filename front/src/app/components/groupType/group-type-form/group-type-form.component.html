@@ -1,5 +1,5 @@
 <form [formGroup]="groupTypeForm" (ngSubmit)="onSubmit()" class="form-container fade-in">
-  <h2 class="form-title">Group Type Details</h2>
+  <h2 class="form-title">{{ (editingId ? 'RESOURCE_FORM.EDIT_TITLE' : 'RESOURCE_FORM.CREATE_TITLE') | translate: { entity: 'RESOURCE_FORM.ENTITY.groupType' | translate } }}</h2>
   <mat-tab-group class="tab-group">
     <mat-tab label="Group Type Details">
       <div class="tab-content" formGroupName="groupTypeDetails">
@@ -19,7 +19,7 @@
   </mat-tab-group>
   
   <div class="button-container">
-    <button mat-raised-button color="primary" type="submit" class="submit-button">Save Group Type</button>
+    <button mat-raised-button color="primary" type="submit" class="submit-button" appAdminOnly>{{ (editingId ? 'RESOURCE_FORM.UPDATE' : 'RESOURCE_FORM.SAVE') | translate }}</button>
     <button mat-raised-button color="accent" type="button" class="clear-button" (click)="onClearForm()">Clear</button>
   </div>
 </form>

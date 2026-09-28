@@ -9,11 +9,16 @@ import { Level } from '../../../models/level/level';
 import { GroupType } from '../../../models/GroupType/groupType';
 import { Router } from '@angular/router';
 import { GroupService } from '../../../services/group.service';
+import { SecureImageDirective } from '../../../shared/secure-image.directive';
+import { TranslateModule } from '@ngx-translate/core';
+import { SchoolYearContextService } from '../../../services/school-year-context.service';
 
 @Component({
   selector: 'app-group-card',
   standalone: true,
-  imports: [MatCardModule, CommonModule, MatButtonModule, MatIconModule, MatTooltipModule],
+  imports: [MatCardModule, CommonModule, MatButtonModule, MatIconModule, MatTooltipModule,
+    SecureImageDirective, TranslateModule
+  ],
   templateUrl: './group-card.component.html',
   styleUrls: ['./group-card.component.scss']
 })
@@ -22,11 +27,21 @@ export class GroupCardComponent implements OnInit {
   @Input() levels: Level[] = [];
   @Input() groupTypes: GroupType[] = [];
 
-  level: string = 'Unknown Level';
-  type: string = 'Unknown Type';
+  level: string = '—';
+  type: string = '—';
   groupPhotoUrl: string = '';
   isFlipped: boolean = false;
   avatarColor: string = '#6366f1';
+
+  /**
+   * Vrai lorsque le groupe appartient à une autre année scolaire que celle sélectionnée.
+   *
+   * <p>La liste des groupes est filtrée sur l'année sélectionnée. Un groupe d'une année
+   * antérieure restait donc visible sur la fiche étudiante tout en étant introuvable dans
+   * la liste des groupes, sans aucune indication. On le signale désormais explicitement ;
+   * la consultation reste possible, seule la modification est refusée.</p>
+   */
+  outsideSelectedYear = false;
 
   // Colors for avatar backgrounds
   private avatarColors = [
@@ -36,22 +51,39 @@ export class GroupCardComponent implements OnInit {
 
   constructor(
     private router: Router,
-    private groupService: GroupService
+    private groupService: GroupService,
+    private schoolYearContext: SchoolYearContextService
   ) { }
 
   ngOnInit(): void {
     this.setLevelAndType();
     this.setPhotoUrl();
     this.setAvatarColor();
+    this.setSchoolYearFlag();
   }
 
-  private setLevelAndType(): void {
-    const levelData = this.levels.find(level => level.id === this.group.levelId);
-    const typeData = this.groupTypes.find(type => type.id === this.group.groupTypeId);
+  private setSchoolYearFlag(): void {
+    const selected = this.schoolYearContext.getSelectedSchoolYear();
+    this.outsideSelectedYear = selected?.id != null
+      && this.group.schoolYearId != null
+      && this.group.schoolYearId !== selected.id;
+  }
 
-    // Assurez-vous que `levelData` et `typeData` existent avant d'accéder à leurs propriétés
-    this.level = levelData?.name || 'Unknown Level';
-    this.type = typeData?.name || 'Unknown Type';
+  /**
+   * Résout le niveau et le type du groupe.
+   *
+   * <p>On privilégie les libellés déjà fournis par le backend ({@code levelName} /
+   * {@code groupTypeName}, renseignés par {@code GroupMapper}). Les tableaux
+   * {@code levels} / {@code groupTypes} ne servent que de repli pour les appelants qui les
+   * fournissent : s'appuyer uniquement sur eux affichait « Unknown Level » dès qu'un
+   * écran ne les chargeait pas (cas du profil enseignant).</p>
+   */
+  private setLevelAndType(): void {
+    const levelFromLookup = this.levels.find(level => level.id === this.group.levelId)?.name;
+    const typeFromLookup = this.groupTypes.find(type => type.id === this.group.groupTypeId)?.name;
+
+    this.level = this.group.levelName || levelFromLookup || '—';
+    this.type = this.group.groupTypeName || typeFromLookup || '—';
   }
 
   private setPhotoUrl(): void {

@@ -1,0 +1,25 @@
+# Contexte de build envoyé au démon Docker : tout ce qui suit est inutile à la
+# compilation et pèse lourd. Le cache Angular seul atteint facilement plusieurs
+# centaines de Mo, et node_modules est de toute façon réinstallé par npm ci.
+node_modules
+.angular
+dist
+.git
+.gitignore
+
+# Secrets : ne doivent jamais entrer dans une image.
+.env
+.env.*
+!.env.example
+
+# Tests et outillage local
+coverage
+*.spec.ts
+karma.conf.js
+.vscode
+.idea
+.DS_Store
+
+# Le Dockerfile n'a pas besoin de se copier lui-même
+Dockerfile
+.dockerignore
