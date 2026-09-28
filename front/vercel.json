@@ -2,6 +2,8 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist/school-management-front/browser",
   "rewrites": [
+    { "source": "/api/(.*)", "destination": "https://schoolmanager-api.onrender.com/api/$1" },
+    { "source": "/personne/(.*)", "destination": "https://schoolmanager-api.onrender.com/personne/$1" },
     { "source": "/(.*)", "destination": "/" }
   ]
 }
