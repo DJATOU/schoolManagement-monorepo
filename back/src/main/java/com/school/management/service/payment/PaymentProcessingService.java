@@ -91,6 +91,13 @@ public class PaymentProcessingService {
         /** Sépare le rejeu d'une soumission du second encaissement réel. */
         private final PaymentIdempotencyService idempotencyService;
 
+        /**
+         * Refuse l'encaissement sur un groupe d'une année scolaire close (school-year, exigence
+         * 9.2). Les autres écritures liées au paiement (édition et suppression d'une ligne de
+         * ventilation) le faisaient déjà ; l'encaissement était la seule porte restée ouverte.
+         */
+        private final com.school.management.service.ReadOnlyYearGuard readOnlyYearGuard;
+
         public PaymentProcessingService(
                         PaymentRepository paymentRepository,
                         StudentRepository studentRepository,
@@ -103,8 +110,10 @@ public class PaymentProcessingService {
                         PaymentQuoteService paymentQuoteService,
                         PaymentAllocationService allocationService,
                         PaymentCarryOverService carryOverService,
-                        PaymentIdempotencyService idempotencyService) {
+                        PaymentIdempotencyService idempotencyService,
+                        com.school.management.service.ReadOnlyYearGuard readOnlyYearGuard) {
                 this.idempotencyService = idempotencyService;
+                this.readOnlyYearGuard = readOnlyYearGuard;
                 this.paymentRepository = paymentRepository;
                 this.studentRepository = studentRepository;
                 this.groupRepository = groupRepository;
@@ -171,16 +180,22 @@ public class PaymentProcessingService {
 
                 StudentEntity student = studentRepository.findById(Objects.requireNonNull(studentId))
                                 .orElseThrow(() -> new CustomServiceException(
-                                                "Student not found with ID: " + studentId));
+                                                "Student not found with ID: " + studentId, HttpStatus.NOT_FOUND));
 
                 GroupEntity group = groupRepository.findById(Objects.requireNonNull(groupId))
-                                .orElseThrow(() -> new CustomServiceException("Group not found with ID: " + groupId));
+                                .orElseThrow(() -> new CustomServiceException("Group not found with ID: " + groupId,
+                                                HttpStatus.NOT_FOUND));
+
+                // Avant toute écriture, et avant le contrôle d'inscription : sur une année close,
+                // c'est l'année qui bloque, et le message doit le dire plutôt que d'accuser une
+                // inscription manquante.
+                readOnlyYearGuard.assertGroupMutable(group);
 
                 requireEnrolmentOrCatchUp(studentId, group, sessionSeriesId);
 
                 sessionSeriesRepository.findById(Objects.requireNonNull(sessionSeriesId))
                                 .orElseThrow(() -> new CustomServiceException(
-                                                "Session series not found with ID: " + sessionSeriesId));
+                                                "Session series not found with ID: " + sessionSeriesId, HttpStatus.NOT_FOUND));
 
                 // Refus du montant nul ou négatif (exigence 4.6). Le contrôle est délégué au
                 // garde-fou du service de ventilation, qui nomme la cause réelle — série soldée,
@@ -268,14 +283,17 @@ public class PaymentProcessingService {
 
                 StudentEntity student = studentRepository.findById(Objects.requireNonNull(studentId))
                                 .orElseThrow(() -> new CustomServiceException(
-                                                "Student not found with ID: " + studentId));
+                                                "Student not found with ID: " + studentId, HttpStatus.NOT_FOUND));
 
                 SessionEntity session = sessionRepository.findById(Objects.requireNonNull(sessionId))
                                 .orElseThrow(() -> new CustomServiceException(
-                                                "Session not found with ID: " + sessionId));
+                                                "Session not found with ID: " + sessionId, HttpStatus.NOT_FOUND));
 
                 GroupEntity group = session.getGroup();
                 SessionSeriesEntity sessionSeries = session.getSessionSeries();
+
+                // Même règle que l'encaissement de série : pas d'écriture sur une année close.
+                readOnlyYearGuard.assertGroupMutable(group);
 
                 if (sessionSeries == null) {
                         throw new CustomServiceException("Session is not part of a series");
@@ -506,7 +524,7 @@ public class PaymentProcessingService {
                                         SessionSeriesEntity sessionSeries = sessionSeriesRepository
                                                         .findById(Objects.requireNonNull(sessionSeriesId))
                                                         .orElseThrow(() -> new CustomServiceException(
-                                                                        "Session series not found"));
+                                                                        "Session series not found", HttpStatus.NOT_FOUND));
 
                                         PaymentEntity newPayment = PaymentEntity.builder()
                                                         .student(student)

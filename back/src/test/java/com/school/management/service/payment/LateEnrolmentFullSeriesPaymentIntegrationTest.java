@@ -75,6 +75,12 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
         PaymentCarryOverService.class, PaymentProcessingService.class, PaymentIdempotencyService.class, GroupRevenueService.class })
 class LateEnrolmentFullSeriesPaymentIntegrationTest {
 
+    // Les groupes de ce jeu de données ne portent pas d'année scolaire : la garde d'année close
+    // (school-year 9.2) les refuserait tous. Elle n'est pas l'objet de ce test, et elle est
+    // éprouvée par PaymentProcessingEndpointIntegrationTest.
+    @org.springframework.boot.test.mock.mockito.MockBean
+    private com.school.management.service.ReadOnlyYearGuard readOnlyYearGuard;
+
     /** Prix de la séance : 4 séances × 2 000 = les 8 000 DA du cas réel. */
     private static final double PRICE_PER_SESSION = 2000.0;
 

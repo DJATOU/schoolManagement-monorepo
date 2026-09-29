@@ -99,6 +99,9 @@ class PaymentProcessingServiceTest {
      */
     @Mock private PaymentIdempotencyService idempotencyService;
 
+    /** Sans effet ici : la garde d'année est éprouvée par PaymentProcessingEndpointIntegrationTest. */
+    @Mock private com.school.management.service.ReadOnlyYearGuard readOnlyYearGuard;
+
     private PaymentProcessingService service;
 
     private StudentEntity student;
@@ -112,7 +115,7 @@ class PaymentProcessingServiceTest {
         service = new PaymentProcessingService(paymentRepository, studentRepository, groupRepository,
                 sessionRepository, sessionSeriesRepository, studentGroupRepository,
                 attendanceRepository, distributionService, paymentQuoteService, allocationService,
-                carryOverService, idempotencyService);
+                carryOverService, idempotencyService, readOnlyYearGuard);
         // Aucune clé transmise par ces cas : le service d'idempotence ne doit rien écarter.
         when(idempotencyService.findReplay(any(), any(), any(), any(), any()))
                 .thenReturn(Optional.empty());

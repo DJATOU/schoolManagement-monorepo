@@ -73,6 +73,12 @@ import static org.assertj.core.api.Assertions.assertThat;
         PaymentProcessingService.class, PaymentIdempotencyService.class })
 class GroupChangeIsInformationalOnlyIntegrationTest {
 
+    // Les groupes de ce jeu de données ne portent pas d'année scolaire : la garde d'année close
+    // (school-year 9.2) les refuserait tous. Elle n'est pas l'objet de ce test, et elle est
+    // éprouvée par PaymentProcessingEndpointIntegrationTest.
+    @org.springframework.boot.test.mock.mockito.MockBean
+    private com.school.management.service.ReadOnlyYearGuard readOnlyYearGuard;
+
     private static final double PRICE_PER_SESSION = 2000.0;
 
     @Autowired
