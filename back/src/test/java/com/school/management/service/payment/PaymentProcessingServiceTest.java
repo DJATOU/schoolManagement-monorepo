@@ -91,6 +91,14 @@ class PaymentProcessingServiceTest {
     @Mock private PaymentAllocationService allocationService;
     @Mock private PaymentCarryOverService carryOverService;
 
+    /**
+     * Sans clé d'idempotence, ce service est transparent : {@code normalizeKey} rend {@code null}
+     * et {@code findReplay} un optionnel vide, valeurs par défaut des mocks Mockito. Les cas
+     * nominaux de cette classe restent donc inchangés, et l'idempotence est éprouvée à part par
+     * {@link PaymentIdempotencyServiceTest}.
+     */
+    @Mock private PaymentIdempotencyService idempotencyService;
+
     private PaymentProcessingService service;
 
     private StudentEntity student;
@@ -104,7 +112,10 @@ class PaymentProcessingServiceTest {
         service = new PaymentProcessingService(paymentRepository, studentRepository, groupRepository,
                 sessionRepository, sessionSeriesRepository, studentGroupRepository,
                 attendanceRepository, distributionService, paymentQuoteService, allocationService,
-                carryOverService);
+                carryOverService, idempotencyService);
+        // Aucune clé transmise par ces cas : le service d'idempotence ne doit rien écarter.
+        when(idempotencyService.findReplay(any(), any(), any(), any(), any()))
+                .thenReturn(Optional.empty());
 
         student = new StudentEntity();
         student.setId(STUDENT_ID);

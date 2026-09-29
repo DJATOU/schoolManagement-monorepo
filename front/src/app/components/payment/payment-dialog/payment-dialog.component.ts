@@ -144,6 +144,23 @@ export class PaymentDialogComponent implements OnInit {
   nextCatchUpSessionId: number | null = null;
 
   /**
+   * Clé de cette saisie d'encaissement, engendrée une seule fois à l'ouverture du dialogue.
+   *
+   * Un double clic sur « Encaisser » et un second versement du même montant le même jour
+   * produisent une requête rigoureusement identique : aucune donnée ne les distingue, seule
+   * l'intention le fait. Comme cette clé naît avec le dialogue, toute nouvelle soumission du
+   * même formulaire la réutilise et le serveur y reconnaît un rejeu ; un second encaissement
+   * passe par un nouveau dialogue, donc une clé neuve, et est bien enregistré.
+   *
+   * L'engendrer au moment de l'envoi annulerait le mécanisme : deux clics donneraient deux clés.
+   *
+   * Affectée dans `ngOnInit` et non par un initialiseur de champ : l'ordre d'émission relatif aux
+   * propriétés de constructeur dépend de `useDefineForClassFields`, et la clé deviendrait
+   * silencieusement `undefined` si ce drapeau changeait.
+   */
+  private idempotencyKey = '';
+
+  /**
    * Devis de la série sélectionnée, calculé par le serveur : tarif catalogue, réduction,
    * prix net, coût de la série, déjà versé et plafond encaissable.
    *
@@ -205,6 +222,10 @@ export class PaymentDialogComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    // Une seule fois par ouverture du dialogue : c'est la stabilité de cette clé entre deux
+    // soumissions du même formulaire qui permet au serveur de reconnaître un rejeu.
+    this.idempotencyKey = this.paymentService.newIdempotencyKey();
+
     this.paymentForm.get('groupId')!.valueChanges.subscribe(groupId => {
       this.loadSessionSeries(groupId);
     });
@@ -769,7 +790,7 @@ export class PaymentDialogComponent implements OnInit {
     const paymentRequest: Observable<PaymentAllocationResult | Payment> =
       paymentData.sessionId && this.nextCatchUpSessionId
         ? this.paymentService.processCatchUpPayment(paymentData)
-        : this.paymentService.addPayment(paymentData);
+        : this.paymentService.processPayment(paymentData, this.idempotencyKey);
 
     // Contexte capturé avant l'appel : la génération du reçu s'appuie sur la saisie et le
     // devis courants, que la fermeture du dialogue rendrait indisponibles.

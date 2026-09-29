@@ -192,17 +192,22 @@ public class PaymentController {
      * @return la répartition du versement : part imputée, parts reportées et séries destinataires
      */
     @PostMapping("/process")
-    public ResponseEntity<PaymentAllocationResultDTO> processPayment(@Valid @RequestBody PaymentDTO paymentDto) {
+    public ResponseEntity<PaymentAllocationResultDTO> processPayment(
+            @Valid @RequestBody PaymentDTO paymentDto,
+            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
         LOGGER.info("Processing payment - student: {}, group: {}, series: {}, amount: {}",
                 paymentDto.getStudentId(), paymentDto.getGroupId(),
                 paymentDto.getSessionSeriesId(), paymentDto.getAmountPaid());
 
-        // PHASE 2: Utilise PaymentProcessingService
+        // La clé voyage dans un en-tête et non dans le corps : elle qualifie la requête, pas le
+        // versement. Le contrat du PaymentDTO reste donc inchangé, et un client qui l'ignore
+        // conserve le comportement d'avant — chaque appel encaisse.
         PaymentAllocationResult result = paymentProcessingService.processPayment(
                 paymentDto.getStudentId(),
                 paymentDto.getGroupId(),
                 paymentDto.getSessionSeriesId(),
-                paymentDto.getAmountPaid());
+                paymentDto.getAmountPaid(),
+                idempotencyKey);
 
         return ResponseEntity.ok(toDto(result));
     }

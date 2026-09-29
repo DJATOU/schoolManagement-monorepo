@@ -40,4 +40,21 @@ public interface PaymentCarryOverRepository extends JpaRepository<PaymentCarryOv
      * @return les reports actifs, par identifiant croissant (liste vide si aucun)
      */
     List<PaymentCarryOverEntity> findByTargetPaymentIdAndActiveTrueOrderByIdAsc(Long targetPaymentId);
+
+    /**
+     * Reports nés d'un encaissement précis, identifié par son étudiant, sa série source et son
+     * horodatage.
+     *
+     * <p>Sert au rejeu d'un versement déjà traité (clé d'idempotence) : la réponse doit nommer
+     * les mêmes séries et les mêmes montants que la première fois. Relire la table qui fait foi
+     * évite d'en stocker une copie, laquelle pourrait diverger de ce que présentent les
+     * relevés.</p>
+     *
+     * @param studentId       l'étudiant à l'origine du versement
+     * @param sourceSeriesId  la série visée à la saisie, source du surplus
+     * @param originPaymentDate l'horodatage d'encaissement retenu par le serveur
+     * @return les reports actifs de cet encaissement, par identifiant croissant
+     */
+    List<PaymentCarryOverEntity> findByStudentIdAndSourceSeriesIdAndOriginPaymentDateAndActiveTrueOrderByIdAsc(
+            Long studentId, Long sourceSeriesId, java.util.Date originPaymentDate);
 }

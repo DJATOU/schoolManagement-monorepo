@@ -88,6 +88,9 @@ public class PaymentProcessingService {
         /** Trace des montants reçus par report (exigence 6.1). */
         private final PaymentCarryOverService carryOverService;
 
+        /** Sépare le rejeu d'une soumission du second encaissement réel. */
+        private final PaymentIdempotencyService idempotencyService;
+
         public PaymentProcessingService(
                         PaymentRepository paymentRepository,
                         StudentRepository studentRepository,
@@ -99,7 +102,9 @@ public class PaymentProcessingService {
                         PaymentDistributionService distributionService,
                         PaymentQuoteService paymentQuoteService,
                         PaymentAllocationService allocationService,
-                        PaymentCarryOverService carryOverService) {
+                        PaymentCarryOverService carryOverService,
+                        PaymentIdempotencyService idempotencyService) {
+                this.idempotencyService = idempotencyService;
                 this.paymentRepository = paymentRepository;
                 this.studentRepository = studentRepository;
                 this.groupRepository = groupRepository;
@@ -130,8 +135,39 @@ public class PaymentProcessingService {
         @Transactional
         public PaymentAllocationResult processPayment(Long studentId, Long groupId, Long sessionSeriesId,
                         double amountPaid) {
+                return processPayment(studentId, groupId, sessionSeriesId, amountPaid, null);
+        }
+
+        /**
+         * Encaisse un versement, en écartant le rejeu d'une soumission déjà traitée.
+         *
+         * <p>Deux situations produisent une requête rigoureusement identique : le double clic sur
+         * « Encaisser », et le second versement réel du même montant le même jour, prévu par la
+         * règle du paiement par facilité. Aucune donnée ne les sépare. La clé d'idempotence porte
+         * l'intention : engendrée à l'ouverture du formulaire, elle est identique pour un rejeu et
+         * neuve pour un nouvel encaissement.</p>
+         *
+         * <p>Sans clé, le comportement est celui d'avant : chaque appel encaisse.</p>
+         *
+         * @param idempotencyKey clé fournie par le client, ou {@code null}
+         * @throws CustomServiceException 409 si la clé a déjà servi pour un encaissement différent
+         */
+        @Transactional
+        public PaymentAllocationResult processPayment(Long studentId, Long groupId, Long sessionSeriesId,
+                        double amountPaid, String idempotencyKey) {
                 LOGGER.info("Processing payment for student {} on series {} - amount: {}",
                                 studentId, sessionSeriesId, amountPaid);
+
+                String key = idempotencyService.normalizeKey(idempotencyKey);
+
+                // Le rejeu est écarté AVANT toute validation et toute écriture : une soumission
+                // déjà traitée ne doit pas pouvoir échouer sur un contrôle que l'original a passé,
+                // ni produire un second versement.
+                java.util.Optional<PaymentAllocationResult> replay = idempotencyService.findReplay(
+                                key, studentId, groupId, sessionSeriesId, money(amountPaid));
+                if (replay.isPresent()) {
+                        return replay.get();
+                }
 
                 StudentEntity student = studentRepository.findById(Objects.requireNonNull(studentId))
                                 .orElseThrow(() -> new CustomServiceException(
@@ -207,6 +243,11 @@ public class PaymentProcessingService {
 
                 PaymentAllocationResult result = new PaymentAllocationResult(studentId, groupId,
                                 sessionSeriesId, amount, directlyAllocated, carryOvers, primaryPayment);
+
+                // Empreinte conservée dans la MÊME transaction : si la ventilation avait échoué,
+                // elle disparaîtrait avec, et une nouvelle tentative resterait possible. Une
+                // empreinte survivant à un échec bloquerait la reprise d'un versement jamais abouti.
+                idempotencyService.remember(key, result, paymentDate);
 
                 LOGGER.info("Versement de {} DA réparti : {} DA sur la série {}, {} DA reportés sur {} série(s)",
                                 amount.toPlainString(), directlyAllocated.toPlainString(), sessionSeriesId,

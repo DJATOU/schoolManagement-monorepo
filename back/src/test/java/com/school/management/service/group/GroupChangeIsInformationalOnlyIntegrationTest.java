@@ -18,6 +18,7 @@ import com.school.management.service.payment.PaymentAllocationService;
 import com.school.management.service.payment.PaymentCarryOverService;
 import com.school.management.service.payment.PaymentCostResolver;
 import com.school.management.service.payment.PaymentDistributionService;
+import com.school.management.service.payment.PaymentIdempotencyService;
 import com.school.management.service.payment.PaymentProcessingService;
 import com.school.management.service.payment.PaymentQuoteService;
 import org.junit.jupiter.api.BeforeEach;
@@ -69,7 +70,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @Import({ GroupChangeDetector.class, BillableSessionsResolverImpl.class, CatchUpBillingQualifierImpl.class, DiscountService.class,
         PaymentCostResolver.class, PaymentQuoteService.class, PaymentAllocationService.class,
         PaymentDistributionService.class, PaymentCarryOverService.class,
-        PaymentProcessingService.class })
+        PaymentProcessingService.class, PaymentIdempotencyService.class })
 class GroupChangeIsInformationalOnlyIntegrationTest {
 
     private static final double PRICE_PER_SESSION = 2000.0;

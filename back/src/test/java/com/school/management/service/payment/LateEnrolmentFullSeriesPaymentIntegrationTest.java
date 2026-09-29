@@ -72,7 +72,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 })
 @Import({ BillableSessionsResolverImpl.class, CatchUpBillingQualifierImpl.class, DiscountService.class, PaymentCostResolver.class,
         PaymentQuoteService.class, PaymentAllocationService.class, PaymentDistributionService.class,
-        PaymentCarryOverService.class, PaymentProcessingService.class, GroupRevenueService.class })
+        PaymentCarryOverService.class, PaymentProcessingService.class, PaymentIdempotencyService.class, GroupRevenueService.class })
 class LateEnrolmentFullSeriesPaymentIntegrationTest {
 
     /** Prix de la séance : 4 séances × 2 000 = les 8 000 DA du cas réel. */

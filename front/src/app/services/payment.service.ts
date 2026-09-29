@@ -1,4 +1,4 @@
-import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { catchError, Observable, throwError } from 'rxjs';
 import { Payment } from '../models/payment/payment';
@@ -184,13 +184,37 @@ export class PaymentService {
    * `Payment` alors que le serveur renvoie `PaymentAllocationResultDTO`, si bien que
    * `response.id` et `response.paymentDate` étaient lus sur un objet qui ne les porte plus.
    *
+   * Le `idempotencyKey` sépare le rejeu d'une soumission d'un second encaissement réel. Un
+   * double clic sur « Encaisser » et un second versement du même montant le même jour produisent
+   * une requête rigoureusement identique : aucune donnée ne les distingue, seule l'intention le
+   * fait. La clé doit donc être engendrée **à l'ouverture du formulaire** et réutilisée telle
+   * quelle en cas de renvoi ; en engendrer une neuve à chaque appel rétablirait le double
+   * encaissement que le mécanisme existe pour empêcher.
+   *
+   * Sans clé, le serveur conserve son comportement d'avant : chaque appel encaisse.
+   *
    * @param payment Données du paiement
+   * @param idempotencyKey Clé de la soumission, engendrée à l'ouverture du formulaire
    * @returns Observable<PaymentAllocationResult> part imputée et reports
    */
-  processPayment(payment: Payment): Observable<PaymentAllocationResult> {
-    return this.http.post<PaymentAllocationResult>(`${this.baseUrl}/process`, payment).pipe(
+  processPayment(payment: Payment, idempotencyKey?: string): Observable<PaymentAllocationResult> {
+    const options = idempotencyKey
+      ? { headers: new HttpHeaders({ 'Idempotency-Key': idempotencyKey }) }
+      : {};
+    return this.http.post<PaymentAllocationResult>(`${this.baseUrl}/process`, payment, options).pipe(
       catchError(this.handleError)
     );
+  }
+
+  /**
+   * Engendre une clé de soumission pour un encaissement.
+   *
+   * À appeler une seule fois, à l'ouverture du formulaire de paiement, et non au moment de
+   * l'envoi : c'est la stabilité de la clé entre deux soumissions identiques qui permet au
+   * serveur de reconnaître un rejeu.
+   */
+  newIdempotencyKey(): string {
+    return crypto.randomUUID();
   }
 
   /**

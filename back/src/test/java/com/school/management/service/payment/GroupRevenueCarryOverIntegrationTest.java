@@ -60,7 +60,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 })
 @Import({ BillableSessionsResolverImpl.class, CatchUpBillingQualifierImpl.class, DiscountService.class, PaymentCostResolver.class,
         PaymentQuoteService.class, PaymentAllocationService.class, PaymentDistributionService.class,
-        PaymentCarryOverService.class, PaymentProcessingService.class, GroupRevenueService.class,
+        PaymentCarryOverService.class, PaymentProcessingService.class, PaymentIdempotencyService.class, GroupRevenueService.class,
         PaymentHistoryService.class })
 class GroupRevenueCarryOverIntegrationTest {
 
