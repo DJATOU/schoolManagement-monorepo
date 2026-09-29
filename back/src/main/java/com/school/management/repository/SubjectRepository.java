@@ -11,5 +11,8 @@ public interface SubjectRepository extends JpaRepository<SubjectEntity, Long> {
 
     List<SubjectEntity> findByNameContaining(String name);
 
+    // Garde d'import : voir LevelRepository.existsByName.
+    boolean existsByName(String name);
+
     // Add other custom methods if needed
 }

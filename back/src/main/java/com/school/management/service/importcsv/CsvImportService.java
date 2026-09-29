@@ -44,6 +44,16 @@ import java.util.Map;
  *
  * <p>Les entités référencées par nom (niveau, matière, type de groupe, enseignant) doivent déjà
  * exister : elles sont résolues, jamais créées ici (import volontairement minimal).</p>
+ *
+ * <p><b>Doublons des référentiels.</b> Les imports de niveaux, matières, salles et types de
+ * groupe refusent un nom déjà présent et le signalent ligne à ligne, au lieu de créer un
+ * homonyme. Sans cette garde, réimporter un même fichier créait silencieusement des doublons ;
+ * l'échec ne se manifestait qu'ensuite, dans l'import d'élèves ou de groupes, où la résolution
+ * par nom devient indécidable et remonte un « Query did not return a unique result » qui ne
+ * nomme ni le doublon ni l'entité concernée. Le refus est donc posé là où la cause est
+ * nommable. L'unicité est également portée par le stockage (index uniques, migration V4) :
+ * elle vaut alors quel que soit le nombre d'instances de l'application, et deux imports
+ * concurrents ne peuvent pas contourner la garde applicative.</p>
  */
 @Service
 public class CsvImportService {
@@ -144,6 +154,15 @@ public class CsvImportService {
                     result.addError(lineNumber, "Nom du niveau obligatoire.");
                     continue;
                 }
+                // Un niveau est désigné par son nom dans les imports d'élèves et de groupes.
+                // Créer un homonyme rendrait ces imports impossibles avec une erreur qui ne
+                // mentionne ni le doublon ni le niveau ; on refuse donc la ligne ici, là où
+                // la cause est nommable.
+                if (levelRepository.existsByName(name.trim())) {
+                    result.addError(lineNumber, "Niveau déjà présent : " + name.trim()
+                            + ". Ligne ignorée pour ne pas créer de doublon.");
+                    continue;
+                }
                 LevelEntity level = LevelEntity.builder().build();
                 level.setName(name.trim());
                 level.setLevelCode(emptyToNull(value(row, col, "levelcode")));
@@ -189,6 +208,11 @@ public class CsvImportService {
                     result.addError(lineNumber, "Nom de la matière obligatoire.");
                     continue;
                 }
+                if (subjectRepository.existsByName(name.trim())) {
+                    result.addError(lineNumber, "Matière déjà présente : " + name.trim()
+                            + ". Ligne ignorée pour ne pas créer de doublon.");
+                    continue;
+                }
                 SubjectEntity subject = SubjectEntity.builder().build();
                 subject.setName(name.trim());
                 subject.setActive(true);
@@ -221,6 +245,11 @@ public class CsvImportService {
                 String name = value(row, col, "name");
                 if (isBlank(name)) {
                     result.addError(lineNumber, "Nom de la salle obligatoire.");
+                    continue;
+                }
+                if (roomRepository.existsByName(name.trim())) {
+                    result.addError(lineNumber, "Salle déjà présente : " + name.trim()
+                            + ". Ligne ignorée pour ne pas créer de doublon.");
                     continue;
                 }
                 RoomEntity room = RoomEntity.builder().build();
@@ -265,6 +294,11 @@ public class CsvImportService {
                 String name = value(row, col, "name");
                 if (isBlank(name)) {
                     result.addError(lineNumber, "Nom du type de groupe obligatoire.");
+                    continue;
+                }
+                if (groupTypeRepository.existsByName(name.trim())) {
+                    result.addError(lineNumber, "Type de groupe déjà présent : " + name.trim()
+                            + ". Ligne ignorée pour ne pas créer de doublon.");
                     continue;
                 }
                 GroupTypeEntity groupType = GroupTypeEntity.builder().build();

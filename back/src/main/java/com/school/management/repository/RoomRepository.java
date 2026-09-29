@@ -14,6 +14,9 @@ public interface RoomRepository extends JpaRepository<RoomEntity, Long> {
     List<RoomEntity> findByCapacityGreaterThanEqual(Integer capacity);
     List<RoomEntity> findByNameContaining(String name);
 
+    // Garde d'import : voir LevelRepository.existsByName.
+    boolean existsByName(String name);
+
     @Query("SELECT r.name FROM RoomEntity r WHERE r.id = :id")
     Optional<String> findRoomNameById(Long id);
     // Add other custom methods if needed

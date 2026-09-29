@@ -11,4 +11,7 @@ public interface GroupTypeRepository extends JpaRepository<GroupTypeEntity, Long
     List<GroupTypeEntity> findByName(String name);
     List<GroupTypeEntity> findBySize(int size);
 
+    // Garde d'import : voir LevelRepository.existsByName.
+    boolean existsByName(String name);
+
 }
