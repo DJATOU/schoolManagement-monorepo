@@ -33,6 +33,19 @@
             {{ 'IMPORT.LINE' | translate }} {{ e.line }} : {{ e.message }}
           </li>
         </ul>
+        <!-- Lignes importées avec une réserve : distinctes des erreurs, qui signalent une ligne
+             NON importée. Les fondre ferait croire à un échec ou masquerait une lacune. -->
+        <ng-container *ngIf="res.warnings?.length">
+          <p class="import-summary">
+            {{ 'IMPORT.WARNINGS' | translate }} : {{ res.warnings!.length }}
+          </p>
+          <ul class="import-warnings">
+            <li *ngFor="let w of res.warnings">
+              <mat-icon inline aria-hidden="true">warning_amber</mat-icon>
+              {{ 'IMPORT.LINE' | translate }} {{ w.line }} : {{ w.message }}
+            </li>
+          </ul>
+        </ng-container>
       </ng-container>
     </mat-card-content>
   </mat-card>

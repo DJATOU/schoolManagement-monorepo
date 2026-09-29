@@ -12,7 +12,13 @@ export interface ImportError {
 /** Résumé d'un import CSV renvoyé par le backend. */
 export interface ImportResult {
   imported: number;
+  /** Lignes NON importées. */
   errors: ImportError[];
+  /**
+   * Lignes importées avec une réserve (ex. groupe créé sans tarif, donc sans encaissement
+   * possible). Facultatif : un backend antérieur ne l'envoie pas.
+   */
+  warnings?: ImportError[];
 }
 
 /** Types d'import CSV pris en charge. */

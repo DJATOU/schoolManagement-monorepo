@@ -44,12 +44,27 @@ public class ImportResultDTO {
     private int imported = 0;
     private final List<ImportError> errors = new ArrayList<>();
 
+    /**
+     * Lignes importées avec une réserve : l'élément est créé, mais inutilisable pour une partie
+     * du métier tant que l'administrateur ne l'a pas complété. Distinct d'une erreur, qui signale
+     * une ligne NON importée — les confondre ferait croire à un échec, ou masquerait une lacune.
+     */
+    private final List<ImportError> warnings = new ArrayList<>();
+
     public void incrementImported() {
         this.imported++;
     }
 
     public void addError(int line, String message) {
         this.errors.add(new ImportError(line, message));
+    }
+
+    public void addWarning(int line, String message) {
+        this.warnings.add(new ImportError(line, message));
+    }
+
+    public List<ImportError> getWarnings() {
+        return warnings;
     }
 
     public int getImported() {

@@ -49,5 +49,19 @@
       max-height: 200px;
       overflow-y: auto;
     }
+
+    // Ambre foncé plutôt que jaune : #8a5a00 garde un contraste suffisant sur fond blanc
+    // (ratio > 4.5:1), et l'icône double le signal pour qui ne distingue pas les couleurs.
+    .import-warnings {
+      margin-top: 8px;
+      color: #8a5a00;
+      font-size: 13px;
+      max-height: 200px;
+      overflow-y: auto;
+
+      mat-icon {
+        vertical-align: middle;
+      }
+    }
   }
 }

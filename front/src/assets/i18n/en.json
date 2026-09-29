@@ -61,8 +61,8 @@
     },
     "GROUPS": {
       "TITLE": "Groups",
-      "COLUMNS": "Columns: name, groupType, level, subject, teacherFirstName, teacherLastName, sessionNumberPerSerie (name, level, subject required)",
-      "NOTE": "Levels, subjects, types and teachers must already exist. Import teachers before groups. Each group is attached to the current school year."
+      "COLUMNS": "Columns: name, groupType, level, subject, teacherFirstName, teacherLastName, sessionNumberPerSerie, price (name, level, subject required)",
+      "NOTE": "Levels, subjects, types, teachers and pricing must already exist. Import teachers and pricing before groups. The price column refers to an existing price by its amount: without it, the group is created but cannot collect any payment. Each group is attached to the current school year."
     },
     "LEVELS": {
       "TITLE": "Levels",
@@ -83,7 +83,8 @@
     "PRICING": {
       "TITLE": "Pricing (price per session)",
       "COLUMNS": "Columns: price (required). The price is then linked to a group via the form."
-    }
+    },
+    "WARNINGS": "Warnings"
   },
   "LIST_STATE": {
     "LOADING_STUDENTS": "Loading students...",

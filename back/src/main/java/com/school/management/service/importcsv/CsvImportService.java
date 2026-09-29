@@ -425,8 +425,11 @@ public class CsvImportService {
     /**
      * Importe des groupes depuis un CSV. Chaque groupe est rattaché à l'année scolaire courante.
      * Colonnes reconnues :
-     * {@code name,groupType,level,subject,teacherFirstName,teacherLastName,sessionNumberPerSerie}.
+     * {@code name,groupType,level,subject,teacherFirstName,teacherLastName,sessionNumberPerSerie,price}.
      * Obligatoires : {@code name}, {@code level}, {@code subject}.
+     *
+     * <p>{@code price} désigne un tarif existant par son montant. Absent, le groupe est créé mais
+     * signalé en avertissement : sans tarif, aucun encaissement n'y est possible.</p>
      */
     @Transactional
     public ImportResultDTO importGroups(MultipartFile file) {
@@ -505,10 +508,45 @@ public class CsvImportService {
                     }
                 }
 
+                // Tarif par séance (optionnel), résolu par montant parmi les tarifs existants.
+                // Comme le niveau ou la matière, il est désigné et jamais créé ici : un tarif
+                // fabriqué au fil d'un import de groupes échapperait à l'administrateur qui gère
+                // la grille tarifaire.
+                String priceRaw = value(row, col, "price");
+                boolean withoutPrice = isBlank(priceRaw);
+                if (!withoutPrice) {
+                    double priceValue;
+                    try {
+                        priceValue = Double.parseDouble(priceRaw.trim().replace(",", "."));
+                    } catch (NumberFormatException nfe) {
+                        result.addError(lineNumber, "Prix invalide : " + priceRaw);
+                        continue;
+                    }
+                    PricingEntity pricing = pricingRepository.findByPriceOrderByIdAsc(priceValue)
+                            .stream().findFirst().orElse(null);
+                    if (pricing == null) {
+                        result.addError(lineNumber, "Tarif introuvable : " + priceRaw.trim()
+                                + ". Importez d'abord ce tarif, puis relancez l'import des groupes.");
+                        continue;
+                    }
+                    group.setPrice(pricing);
+                }
+
                 group.setActive(true);
                 // createGroup rattache automatiquement l'année scolaire courante (Exigence 3.2).
                 groupService.createGroup(group);
                 result.incrementImported();
+
+                // Un groupe sans tarif est créé, mais aucun encaissement n'y est possible : le
+                // coût d'une série se calcule à partir du prix par séance. Le signaler ici, au
+                // moment de l'import, évite de le découvrir plus tard devant un parent qui paie.
+                // Ce n'est pas une erreur : la colonne est facultative et les fichiers existants
+                // doivent continuer à passer.
+                if (withoutPrice) {
+                    result.addWarning(lineNumber, "Groupe « " + name.trim() + " » créé sans tarif : "
+                            + "aucun paiement ne pourra y être encaissé tant qu'un tarif n'est pas "
+                            + "rattaché au groupe.");
+                }
             } catch (Exception e) {
                 LOGGER.warn("Import groupe ligne {} en échec : {}", lineNumber, e.getMessage());
                 result.addError(lineNumber, e.getMessage());

@@ -61,8 +61,8 @@
     },
     "GROUPS": {
       "TITLE": "Groupes",
-      "COLUMNS": "Colonnes : name, groupType, level, subject, teacherFirstName, teacherLastName, sessionNumberPerSerie (name, level, subject obligatoires)",
-      "NOTE": "Les niveaux, matières, types et enseignants doivent déjà exister. Importez les enseignants avant les groupes. Chaque groupe est rattaché à l'année scolaire courante."
+      "COLUMNS": "Colonnes : name, groupType, level, subject, teacherFirstName, teacherLastName, sessionNumberPerSerie, price (name, level, subject obligatoires)",
+      "NOTE": "Les niveaux, matières, types, enseignants et tarifs doivent déjà exister. Importez les enseignants et les tarifs avant les groupes. La colonne price désigne un tarif existant par son montant : sans elle, le groupe est créé mais ne peut encaisser aucun paiement. Chaque groupe est rattaché à l'année scolaire courante."
     },
     "LEVELS": {
       "TITLE": "Niveaux",
@@ -83,7 +83,8 @@
     "PRICING": {
       "TITLE": "Tarifs (prix par séance)",
       "COLUMNS": "Colonnes : price (obligatoire). Le tarif est ensuite rattaché à un groupe via le formulaire."
-    }
+    },
+    "WARNINGS": "Avertissements"
   },
   "LIST_STATE": {
     "LOADING_STUDENTS": "Chargement des étudiants...",
