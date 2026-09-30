@@ -87,8 +87,12 @@ services:
       # photos sont donc relatives et restent valables si l'IP de la machine change.
       SERVER_BASE_URL: ${SERVER_BASE_URL:-}
 
-      # Horodatage des paiements et des séances en heure locale.
-      TZ: ${TZ:-Europe/Paris}
+      # Horodatage des paiements et des séances en heure locale de l'école.
+      # Africa/Algiers et non Europe/Paris : l'Algérie est à UTC+1 toute l'année,
+      # sans heure d'été. Avec Europe/Paris, tout serait décalé d'une heure de fin
+      # mars à fin octobre, et une séance tardive changerait de jour — ce qui fausse
+      # la comparaison avec la date d'inscription, donc ce que l'étudiant doit.
+      TZ: ${TZ:-Africa/Algiers}
     volumes:
       # Dossier de l'hôte, et non volume nommé : la sauvegarde des photos se
       # résume alors à copier ce dossier sur une clé USB, sans docker cp.

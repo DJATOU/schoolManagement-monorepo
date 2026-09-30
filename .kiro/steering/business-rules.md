@@ -255,6 +255,33 @@ comme « non facturée » — ce serait annoncer une gratuité décidée — ni 
 annoncer une dette. Il doit en revanche rester **visible** : une séance consommée que personne ne
 facture est un oubli en puissance.
 
+## Aucune dette d'une année scolaire sur l'autre — TRANCHÉ
+
+**Décision du propriétaire produit : une année close ne porte aucune dette encaissable.** Un
+encaissement sur un groupe d'une année scolaire non courante est refusé (409, lecture seule),
+comme toute autre écriture (school-year, exigence 9.2). Il n'existe aucune exception de
+recouvrement : la question « un parent vient payer en octobre la série de juin » n'a pas lieu
+d'être, les soldes sont réglés avant la bascule.
+
+## Avant son inscription, l'étudiant n'est pas concerné — TRANCHÉ
+
+**Décision du propriétaire produit.** Un étudiant qui rejoint un groupe à la 3ᵉ séance n'est ni
+présent ni absent aux séances 1 et 2 : il n'est **pas concerné**. Il en est dispensé d'office, sans
+démarche de l'administrateur.
+
+- Aucune fiche d'**absence** ne doit exister pour une séance antérieure à la date d'inscription.
+  Une absence n'a de sens que pour une place réservée ; avant l'inscription, il n'y en a pas.
+- Une **présence** antérieure à l'inscription reste possible et facturable : c'est le rattrapage
+  consommé (« une séance suivie en rattrapage avant l'inscription est facturable »).
+- La règle est **symétrique à la sortie** : après la date de sortie d'un groupe, l'étudiant n'est
+  plus concerné. Il est concerné entre sa date d'inscription et sa date de sortie, incluses. Une
+  présence de rattrapage reste possible hors de cette fenêtre, selon les règles de rattrapage.
+- Une date d'inscription **future** est admise : un étudiant peut être inscrit à l'avance.
+- La date d'inscription est donc une **donnée métier**, pas un horodatage technique : elle décide
+  de ce que l'étudiant doit. Elle doit pouvoir être saisie à la date réelle d'arrivée et corrigée
+  par l'administrateur, avec trace. Une inscription enregistrée en retard ne doit pas faire payer
+  ni noter absent un étudiant qui n'est pas encore arrivé — ni l'inverse.
+
 ## DEFERRED policy decision — do NOT hardcode an assumption
 
 At month / year end, does a student owe for sessions they were **absent** from?
