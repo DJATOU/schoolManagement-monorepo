@@ -1,135 +1,120 @@
 # Implementation Plan — Corrections administrateur, étape 1
 
-Exigences 1, 2, 3, 7 et journal par Étudiant (8.2, 8.3, 8.5). Design : `design.md`.
-Règles métier : `.kiro/steering/business-rules.md`, sections « Avant son inscription, l'étudiant
-n'est pas concerné » et « Aucune dette d'une année scolaire sur l'autre ».
+Exigences 1 à 12. Design : `design.md`. Règles métier : `.kiro/steering/business-rules.md`.
+Branche : `feat/admin-corrections`.
 
-Chaque tâche se termine par `./mvnw test` vert (JDK 21). Les propriétés sont vérifiées par
-mutation : un défaut injecté doit les faire échouer, puis le code est restauré.
+Quatre lots, chacun déployable seul et vérifié chez le client avant le suivant. Chaque tâche se
+termine par `./mvnw test` vert (JDK 21) ; chaque propriété est vérifiée par mutation, puis le code
+est restauré.
 
-## 1. Socle : fuseau, trace commune, Motif
+## Lot A — L'Encaissement (exigences 1, 11)
 
-- [ ] 1.1 Migration V6 : table `correction_audit`, séquence `correction_audit_rank_seq`, index ;
-  troncature au jour de `student_groups.date_assigned`
-  _Exigences : 1.5, 7.4, 7.5 — design D1, D3_
-- [ ] 1.2 `CorrectionAuditEntity`, `CorrectionDomain`, `CorrectionField`, dépôt ; rang lu depuis la
-  séquence, jamais calculé par `MAX + 1`
-  _Exigences : 7.4_
-- [ ] 1.3 `CorrectionReason.require` : trim, refus si vide ou > 500 caractères
-  _Exigences : 7.1_
-- [ ] 1.4 `CorrectionAuditService.record` : auteur par `AuditorAware`, écriture dans la transaction
-  appelante
-  _Exigences : 7.3, 7.6_
-- [ ] 1.5 Contrôle du fuseau au démarrage : journaliser `ZoneId.systemDefault()`, refuser de
-  démarrer s'il diffère de `app.expected-timezone` (défaut `Africa/Algiers`) ; valeur de test dans
-  `src/test/resources/application.properties`
-  _Design D1_
-- [ ] 1.6 Tests : `CorrectionReason` (vide, espaces, 500, 501, trim) ; Trace attribuée et ordonnée
+Socle de tout le reste : sans Encaissement identifiable, aucune correction d'argent n'est possible.
 
-## 2. Fenêtre d'inscription et date réelle
+- [ ] A.1 Inventaire des lecteurs qui supposent une ligne de ventilation unique par (paiement,
+  Séance), dont `findByPaymentIdAndSessionId` ; liste consignée dans ce fichier avant tout code
+  _Design : Risques, D3_
+- [ ] A.2 Migration V6 (partie paiement) : `encashment`, `encashment_allocation`, colonnes
+  `encashment_id` sur ventilation, report, idempotence ; `correction_audit` et sa séquence
+  _Exigences : 1.1, 1.3, 11.4 — D2, D3, D8_
+- [ ] A.3 `EncashmentService` : création, `RECU-AAAA-NNNN` (modèle `RefundNumberService`),
+  neutralisation ; cumul de Série recalculé depuis les Imputations actives
+  _Exigences : 1.1, 1.2, 1.4 — D2, D3_
+- [ ] A.4 `PaymentProcessingService` et chemin rattrapage : encaissement via `EncashmentService` ;
+  idempotence sur le chemin rattrapage
+  _Exigences : 1.1, 1.7_
+- [ ] A.5 `PaymentDistributionService` : une ligne par (Encaissement, Séance), plafond au prix net ;
+  lecteurs de A.1 adaptés
+  _Exigences : 1.3, 1.6 — D3_
+- [ ] A.6 `recalculatePayment` ne réécrit plus le cumul depuis la ventilation
+  _Défaut 2 — D3_
+- [ ] A.7 Migration V7 : reprise `LEGACY` des cumuls existants
+  _Exigences : 1.8_
+- [ ] A.8 Propriété P1 « conservation de l'argent » ; propriété P8 « reprise sans perte »
+- [ ] A.9 Reçu : `receipt_number` renvoyé par l'API et imprimé ; `GET /api/encashments/{id}`
+  _Exigences : 1.2_
+- [ ] A.10 Historique élève : liste des Encaissements
+  _Exigences : 1.1_
 
-- [ ] 2.1 `EnrolmentWindow` : `normalize`, `activeEnrolment`, `isConcerned`, `absencesOutside`,
-  `assertWithinSchoolYear`
-  _Exigences : 1.4, 1.5, 2.1 — design D1_
-- [ ] 2.2 `StudentGroupEntity.onCreate` : ne pose la date du jour que si elle est absente ;
-  normalisation au jour à l'enregistrement
-  _Exigences : 1.1, 1.2 — design D2_
-- [ ] 2.3 `StudentGroupDTO` : retrait de `@PastOrPresent` ; contrôle « dans l'année scolaire du
-  Groupe » dans `addStudentsToGroup` et `addGroupsToStudent`
-  _Exigences : 1.3, 1.4_
-- [ ] 2.4 `getStudentsForSession` : comparaison sur la date de séance normalisée
-  _Exigences : 2.1, 1.5_
-- [ ] 2.5 Tests : date fournie conservée, date absente = aujourd'hui, date future acceptée, date
-  hors année refusée, séance du jour de l'inscription incluse quelle que soit l'heure
-  _Exigences : 1.1 à 1.5_
+## Lot B — Corriger l'argent (exigences 2, 3, 4)
 
-## 3. Refus serveur des absences hors fenêtre
+- [ ] B.1 `CorrectionRunner` : exécution en mode PREVIEW / CONFIRM, photographie des Séries, Aperçu
+  canonique, jeton SHA-256, 409 sur Aperçu périmé
+  _Exigences : 4.1 à 4.4 — D7_
+- [ ] B.2 `CorrectionReason`, `CorrectionReasonType`, `CorrectionAuditService` avec `summary` et
+  `amount_effect` rédigés à l'écriture
+  _Exigences : 11.1 à 11.6 — D8, D10_
+- [ ] B.3 `EncashmentCorrectionService.cancel` : neutralisation, refus sous le total remboursé,
+  refus d'une seconde annulation, année close
+  _Exigences : 2.1 à 2.5, 2.7_
+- [ ] B.4 `EncashmentCorrectionService.correct` : Remplacement par le chemin ordinaire, liens
+  dans les deux sens ; mode et note sans Remplacement
+  _Exigences : 3.1 à 3.6 — D4_
+- [ ] B.5 Points d'entrée `cancel` et `correct`, `preview` et `confirm`
+- [ ] B.6 Propriétés P2 « remplacer équivaut à avoir bien saisi », P3 « indivisibilité »,
+  P4 « l'Aperçu ne ment pas »
+- [ ] B.7 `CorrectionPreviewDialog` (composant commun) ; actions « annuler », « corriger »,
+  « réimprimer » dans l'historique ; tampon « ANNULÉ » à la réimpression
+  _Exigences : 2.6, 3.7, 4.1_
 
-- [ ] 3.1 `AttendanceService.saveAll` : valider toutes les lignes avant d'en écrire une ; refuser
-  en bloc les absences hors fenêtre ou sans inscription active, corps `rejected` nommant chaque
-  ligne ; les présences restent acceptées
-  _Exigences : 2.3, 2.4, 2.5, 2.6 — design D4_
-- [ ] 3.2 `POST /api/attendances` (création unitaire) : même contrôle
-  _Exigences : 2.3_
-- [ ] 3.3 Propriété 1 « fenêtre respectée à l'écriture », par mutation
-  _Exigences : 2.3, 3.4_
-- [ ] 3.4 Propriété 5 « jour calendaire »
-  _Exigences : 1.5_
+## Lot C — Dates d'arrivée et de départ, Feuille_Appel (exigences 5, 6, 7)
 
-## 4. Correction de la date d'inscription
+- [ ] C.1 V6 (partie inscription) : `date_left`, troncature au jour, `date_left` des clôtures
+  existantes
+  _D1, D5_
+- [ ] C.2 `EnrolmentWindow` ; `StudentGroupEntity.onCreate` ne pose la date que si elle est
+  absente ; retrait de `@PastOrPresent`, contrôle dans l'année courante
+  _Exigences : 5.1 à 5.4 — D1, D5_
+- [ ] C.3 Feuille_Appel par fenêtre, clôtures comprises ; suppression du repli côté écran
+  _Exigences : 6.2, 7.1, 7.2_
+- [ ] C.4 Refus serveur des absences hors fenêtre, en bloc à la validation, sur tous les points
+  d'entrée
+  _Exigences : 7.3 à 7.5_
+- [ ] C.5 Résolveur : Séances facturables d'une inscription clôturée par sa fenêtre
+  _Changement de calcul assumé — D5_
+- [ ] C.6 `EnrolmentCorrectionService` : arrivée reculée (absences, présences ordinaires) et
+  avancée (Séances validées sans Présence), départ, correction de départ, réouverture ;
+  `VentilationMover`
+  _Exigences : 5.5 à 5.9, 6.1, 6.3 à 6.5 — D6_
+- [ ] C.7 Propriétés P5 « fenêtre respectée », P6 « déplacer la ventilation ne change aucun
+  montant »
+- [ ] C.8 Écrans : date d'arrivée à l'inscription ; corriger l'arrivée, enregistrer le départ,
+  rouvrir ; lignes refusées retirables en un clic à la validation
+  _Exigences : 5, 6, 7.5_
+- [ ] C.9 Contrôle du fuseau au démarrage et bandeau d'alerte
+  _D1_
 
-- [ ] 4.1 `EnrolmentCorrectionService.correctDate`, dans l'ordre des contrôles du design :
-  404, année close, Motif, bornes de l'année, date inchangée, séance payée écartée (D6), absences
-  en conflit (D5), écritures
-  _Exigences : 1.6 à 1.12, 7.2 — design D5, D6, D7_
-- [ ] 4.2 `PATCH /api/enrolments/{id}/date-assigned` ; corps 409 `conflictingAbsences` ou
-  `paidSessions`
-  _Exigences : 1.6, 1.8_
-- [ ] 4.3 Recalcul du statut stocké du paiement de la Série après correction
-  _Design D7_
-- [ ] 4.4 Propriété 2 « corriger équivaut à avoir bien saisi » (métamorphique)
-  _Exigences : 1.11_
-- [ ] 4.5 Propriété 3 « indivisibilité » de la correction combinée
-  _Exigences : 1.9, 7.6_
-- [ ] 4.6 Tests : liste présentée différente de la liste à jour → 409 sans écriture ; année close
-  → 409 ; séance payée écartée → 409 nommant séance et montant
-  _Exigences : 1.10, 1.12 — design D6_
+## Lot D — Présences, rattrapages, dévalidation, Journal (exigences 8, 9, 10, 12)
 
-## 5. Correction d'une présence
+- [ ] D.1 `AttendanceCorrectionService` : présent ↔ absent avec justification, ajout, retrait
+  par désactivation
+  _Exigences : 8.1 à 8.6_
+- [ ] D.2 Retrait d'une présence de rattrapage, réouverture du droit, demande passée à
+  `CANCELLED`
+  _Exigences : 9.1 à 9.3 — D9_
+- [ ] D.3 Dévalidation avec Motif et Aperçu ; validation et dévalidation refusées sur année close
+  _Exigences : 10.1, 10.2_
+- [ ] D.4 `CorrectionJournalService` : quatre sources, entrées en français, effet sur le dû ;
+  adaptateurs des trois audits existants
+  _Exigences : 12.1 à 12.3, 12.5 — D8_
+- [ ] D.5 Journal imprimable par période
+  _Exigences : 12.4_
+- [ ] D.6 Propriété P7 « une Trace par changement effectif »
+- [ ] D.7 `session-modal` : corriger par élève, ajouter un élève, dévalider avec motif ; fiche élève,
+  onglet journal
+  _Exigences : 8, 10, 12_
 
-- [ ] 5.1 `AttendanceCorrectionService` : `setPresence`, `addToValidatedSession`, `remove`
-  (désactivation), avec les contrôles du tableau du design ; passage à présent efface
-  `isJustified` dans la même Trace ; rattrapage renvoyé vers `/api/catch-up-billing/{id}/correct`
-  _Exigences : 3.1 à 3.8 — design D6, D7_
-- [ ] 5.2 Points d'entrée : `PATCH /api/attendances/{id}/presence`,
-  `POST /api/sessions/{sessionId}/attendances/corrections`, `POST /api/attendances/{id}/removal`
-  _Exigences : 3.1, 3.2, 3.3_
-- [ ] 5.3 Propriété 4 « une Trace par changement effectif », sur les deux services de correction
-  _Exigences : 7.2, 7.4, 7.6_
+## Transverse, à chaque lot
 
-## 6. Journal par Étudiant
+- [ ] T.1 Tests HTTP de bout en bout du lot : statuts, corps, absence d'écriture après refus,
+  403 VIEWER sur chaque `preview` et `confirm`
+- [ ] T.2 Tests Karma des composants du lot
+- [ ] T.3 Clés i18n FR et EN, parité vérifiée
+- [ ] T.4 `npm run build` et `./mvnw test` verts
+- [ ] T.5 Déploiement sur une copie de la base de l'école : sauvegarde, `docker compose up`,
+  vérification des migrations et du fuseau, parcours du lot, retour arrière testé
 
-- [ ] 6.1 `CorrectionJournalService.forStudent` : `correction_audit` + trois tables existantes,
-  la plus récente d'abord
-  _Exigences : 8.2, 8.3_
-- [ ] 6.2 `GET /api/students/{id}/corrections`, lecture ouverte à ADMIN et VIEWER
-  _Exigences : 8.5_
-- [ ] 6.3 Tests : les quatre sources présentes et ordonnées ; Trace conservée après
-  désactivation de la donnée
-  _Exigences : 7.5, 8.2, 8.3_
+## Livraison
 
-## 7. Contrat HTTP et autorisation
-
-- [ ] 7.1 `AdminCorrectionEndpointIntegrationTest` (`@SpringBootTest`, H2, MockMvc) : statuts,
-  corps, absence d'écriture après chaque refus, sur le modèle de
-  `PaymentProcessingEndpointIntegrationTest`
-  _Exigences : 1, 2, 3_
-- [ ] 7.2 403 pour le rôle VIEWER sur chaque point d'entrée de correction ; 200 en lecture du
-  journal
-  _Exigences : 7.7, 8.5_
-
-## 8. Frontend
-
-- [ ] 8.1 `session-modal` : suppression du repli « tout le groupe » ; affichage d'une Feuille_Appel
-  vide avec explication ; affichage du corps `rejected` à la validation
-  _Exigences : 2.1, 2.2, 2.6_
-- [ ] 8.2 Ajout d'élèves (`group-profile`, `student-profile`) : champ « date d'arrivée », défaut
-  aujourd'hui, borné à l'année scolaire
-  _Exigences : 1.1 à 1.4_
-- [ ] 8.3 Fiche élève : dialogue « corriger la date d'arrivée » ; sur 409, liste des absences et
-  case « les retirer avec la correction » ; liste des séances payées bloquantes
-  _Exigences : 1.6 à 1.12_
-- [ ] 8.4 `session-modal` sur séance validée : « corriger » par élève (présent / absent / retirer)
-  et « ajouter un élève », avec Motif
-  _Exigences : 3.1 à 3.3_
-- [ ] 8.5 Fiche élève : onglet « journal des corrections »
-  _Exigences : 8.5_
-- [ ] 8.6 Clés i18n FR et EN, parité vérifiée
-- [ ] 8.7 `npm run build` vert
-
-## 9. Livraison
-
-- [ ] 9.1 Suite complète verte, build front vert
-- [ ] 9.2 Vérification de bout en bout avec `docker compose up` sur une base neuve : V1 à V6
-  appliquées, fuseau `Africa/Algiers` journalisé, parcours « élève arrivé à la 3ᵉ séance »
-  _Exigences : 2, design D1_
+- [ ] L.1 Script `mise-a-jour.ps1` : sauvegarde datée, mise à jour, vérification, retour arrière
+- [ ] L.2 Mode d'emploi administrateur d'une page par lot, en français, avec captures

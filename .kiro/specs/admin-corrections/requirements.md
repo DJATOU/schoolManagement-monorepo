@@ -2,241 +2,333 @@
 
 ## Introduction
 
-Cette fonctionnalité répond à une demande du propriétaire produit : « il faut un système pour
-l'administrateur qui permet de corriger les soucis de paiement, de présence, etc. », et à une
-règle qu'il a tranchée au même moment : **avant son inscription, l'Étudiant n'est pas concerné**
-(`.kiro/steering/business-rules.md`, section du même nom).
+Le propriétaire produit demande « un système pour l'administrateur qui permet de corriger les
+soucis de paiement, de présence, etc. ». Le Système sera installé sur site, sur le poste de
+l'école, et utilisé par une administratrice seule, sans compétence technique. Chaque exigence
+est écrite depuis sa place : elle doit pouvoir corriger une erreur **sans comprendre le modèle de
+données**, voir **avant de confirmer** ce que la correction change pour le parent, et **répondre à
+un parent** qui conteste un montant, reçu en main.
 
-**Ce qui existe déjà, et sert de modèle.** La correction d'un Détail_Paiement est le seul
-chemin complet : réservée à l'Administrateur, Motif obligatoire, Trace immuable, refus sur Année
-close (`PaymentDetailAdminService`). La justification d'absence et la décision de rattrapage ont
-chacune une Trace, sans exiger de Motif. Cette fonctionnalité étend ce modèle aux domaines qui
-en sont privés ; elle ne le réinvente pas.
+### Les erreurs réelles à corriger, par fréquence
 
-**Quatre défauts avérés motivent cette fonctionnalité.**
+1. Un encaissement erroné : montant mal tapé (20 000 au lieu de 2 000), mauvais Étudiant,
+   mauvaise Série.
+2. Une présence mal saisie : absent coché présent, ou l'inverse ; Séance validée par erreur.
+3. Une date d'arrivée fausse : Étudiant enregistré une semaine après son arrivée réelle.
+4. Un départ : Étudiant qui quitte un Groupe.
 
-1. **La date d'inscription ne peut être ni choisie ni corrigée.** `StudentGroupEntity.onCreate`
-   écrase `date_assigned` par l'heure de l'enregistrement, même quand une date est transmise ;
-   aucun point d'entrée ne la modifie ensuite. Or cette date décide des Séances facturables et de
-   la Feuille_Appel. Un Étudiant enregistré une semaine après son arrivée réelle est traité comme
-   arrivé le jour de sa saisie, sans recours.
-2. **Une présence ne peut pas être corrigée isolément.** Passer un Étudiant d'absent à présent
-   après validation impose de dévalider la Séance entière, ce qui désactive toutes ses Présences,
-   puis de tout ressaisir. Aucun Motif, aucune Trace, aucun refus sur Année close.
-3. **Le Système accepte des absences hors de toute inscription.** Aucun contrôle serveur ne
-   compare la date de la Séance à la Date_Inscription, ni même ne vérifie une inscription. Le
-   filtrage n'existe que dans l'écran, et son repli (« si personne n'est inscrit avant la
-   séance, afficher tout le groupe ») ramène sur la Feuille_Appel des Étudiants non concernés et
-   des inscriptions clôturées. Tout Étudiant décoché devient une absence.
-4. **Plusieurs écritures qui modifient un montant dû sont muettes.** Remise créée, modifiée ou
-   supprimée sans Motif ni Trace, suppression définitive ; Présence supprimée définitivement ;
-   Séance dévalidée ; inscription clôturée. Aucune ne laisse savoir qui a changé quoi, alors que
-   chacune change ce que l'Étudiant doit.
+### Défauts avérés dans le code actuel
 
-**Découpage en deux étapes.** Étape 1, ce qui touche directement aux montants : exigences 1, 2,
-3, 7 et le journal par Étudiant (8.2, 8.3, 8.5). Étape 2 : exigences 4, 5, 6, 9 et le journal
-complet filtrable (8.1, 8.4). L'étape 2 n'est conçue qu'une fois l'étape 1 livrée.
+1. **Un versement n'a pas d'existence propre.** `payments` ne porte qu'un cumul par Étudiant et
+   Série ; sa date est réécrite à chaque écriture. Une Séance n'a qu'une ligne de ventilation,
+   complétée par les versements successifs : l'argent de plusieurs versements s'y mélange. Aucun
+   versement ne peut donc être annulé sans toucher aux autres.
+2. **Corriger un détail de paiement peut effacer de l'argent reçu.** `recalculatePayment`
+   remplace le cumul de la Série par la somme des lignes de ventilation actives. Toute part non
+   ventilée (avance sur des séances non encore planifiées) disparaît du registre à la première
+   correction de n'importe quelle ligne de la Série. Rien n'empêche ensuite le cumul de passer
+   sous le total déjà remboursé.
+3. **Un reçu de paiement n'est pas vérifiable.** Sa référence est construite par l'écran à partir
+   de l'identifiant du cumul et de sa date, réécrite ensuite ; rien n'est conservé à l'impression.
+   Un reçu présenté par un parent ne peut être rapproché d'aucun versement.
+4. **La ventilation ignore la réduction.** Le plafond par Séance est le tarif catalogue : pour un
+   Étudiant réduit, des Séances apparaissent « payées » à tort.
+5. **La date d'inscription ne peut être ni choisie ni corrigée** : `StudentGroupEntity.onCreate`
+   l'écrase par l'heure de saisie.
+6. **Aucune présence ne peut être corrigée isolément** : il faut dévalider la Séance entière,
+   sans Motif ni Trace.
+7. **Le Système accepte des absences hors de toute inscription** ; le repli de la Feuille_Appel
+   ramène des Étudiants non concernés et des inscriptions clôturées.
+8. **Une présence de rattrapage saisie à tort ne peut pas être retirée.**
+9. **Une inscription clôturée disparaît de toutes les Séances, passées comprises** : une Séance
+   validée en retard, après le départ d'un Étudiant, ne peut plus porter sa vraie absence.
 
-**Hors périmètre.** Le calcul des montants n'est pas modifié : Séances facturables, prorata,
-report, rattrapage et neutralité de la justification restent tels que spécifiés et éprouvés. Seuls
-changent les données qui y entrent, et la manière de les corriger. La réconciliation de fin
-d'année reste une décision différée.
+### Découpage
+
+- **Étape 1** — tout ce qui touche à l'argent et à ce qui le détermine : exigences 1 à 12.
+- **Étape 2** — traçabilité complète des autres écritures : remises motivées et tracées, fin de
+  toute suppression définitive, signalement des incohérences existantes, journal filtrable
+  multi-critères, transfert d'un Étudiant vers un autre Groupe avec ses présences et paiements,
+  raccordement des outils existants (détail de paiement, remboursement) aux Motifs communs.
+  Conçue après livraison de l'étape 1.
+
+### Ce qui change dans le calcul, et ce qui ne change pas
+
+Inchangés : prorata, report, rattrapage, neutralité de la justification, montant dû à ce jour.
+
+**Deux changements assumés**, parce que le calcul actuel contredit une règle tranchée :
+
+- **Séances facturables d'un Étudiant sorti.** Aujourd'hui, une inscription clôturée n'est plus
+  trouvée par le résolveur : l'Étudiant est traité comme sans inscription, et seules les Séances
+  portant une Présence restent facturables. Une Séance de sa période, pas encore validée au
+  moment du départ, cesse donc d'être due. Avec la Date_Sortie, sont facturables les Séances de la
+  Fenêtre_Inscription, plus les Séances hors fenêtre effectivement suivies (exigence 6).
+- **Ventilation au prix net** : la répartition d'un versement entre Séances ne plafonne plus au
+  tarif catalogue mais au prix réduit (exigence 1.6). Le montant versé, le montant dû et le
+  statut ne changent pas ; seule change la liste des Séances affichées comme payées.
+
+### Hors périmètre
+
+Changent les données qui entrent dans le calcul et la manière de les corriger, pas le reste. La réconciliation de fin d'année reste différée. La préinscription dans un Groupe de
+l'année scolaire suivante est exclue : ce Groupe appartient à une année qui n'est pas encore
+courante, donc en lecture seule.
 
 ## Glossary
 
-- **Administrateur** : utilisateur au rôle ADMIN. Seul rôle autorisé à corriger.
-- **Motif** : texte libre obligatoire, non vide après suppression des espaces, de 500 caractères
-  au plus, saisi par l'Administrateur pour justifier une Correction.
-- **Correction** : écriture qui modifie une donnée déjà enregistrée ayant un effet sur un montant
-  dû, un montant versé ou une Présence.
-- **Trace** : enregistrement immuable d'une Correction — domaine, identifiant de la donnée, valeur
-  avant, valeur après, auteur, horodatage, rang de séquence, Motif. Elle survit à la suppression
-  de la donnée corrigée.
-- **Journal_Corrections** : l'ensemble des Traces, consultable par l'Administrateur.
-- **Date_Inscription** : `student_groups.date_assigned`, date d'arrivée réelle de l'Étudiant dans
-  le Groupe.
-- **Séance_Non_Concernée** : pour un Étudiant et un Groupe, Séance du Groupe dont la date est
-  antérieure à sa Date_Inscription.
-- **Feuille_Appel** : la liste des Étudiants proposée pour la prise de présence d'une Séance.
-- **Année_Close** : Année scolaire qui n'est pas l'année courante (school-year, exigence 9).
+- **Administrateur** : utilisateur au rôle ADMIN, seul autorisé à corriger.
+- **Encaissement** : un versement reçu d'un parent, tel qu'il a eu lieu — montant, date, heure,
+  Étudiant, Série visée, mode de paiement. Il est l'unité que l'Administrateur annule ou corrige.
+- **Numéro_Reçu** : identifiant unique et définitif d'un Encaissement, imprimé sur son reçu.
+- **Imputation** : part d'un Encaissement créditée sur une Série — la Série visée, ou une Série
+  suivante par report.
+- **Annulation** : neutralisation d'un Encaissement erroné. L'Encaissement reste enregistré,
+  marqué annulé ; il ne compte plus dans aucun montant.
+- **Remplacement** : Annulation d'un Encaissement suivie, dans la même opération, d'un nouvel
+  Encaissement corrigé qui le référence.
+- **Correction** : écriture qui modifie une donnée enregistrée ayant un effet sur un montant dû,
+  un montant versé ou une Présence.
+- **Motif** : raison d'une Correction : un Motif_Type choisi dans une liste, et un texte libre
+  obligatoire si le type est « Autre ».
+- **Aperçu** : présentation, avant confirmation, de l'effet d'une Correction sur les montants de
+  chaque Série concernée.
+- **Trace** : enregistrement immuable d'une Correction — objet, valeur avant, valeur après,
+  effet sur les montants, auteur, horodatage, rang, Motif. Elle survit à la donnée corrigée.
+- **Journal** : l'ensemble des Traces d'un Étudiant, lisible et imprimable.
+- **Date_Inscription**, **Date_Sortie** : début et fin de la présence de l'Étudiant dans le Groupe.
+- **Fenêtre_Inscription** : période de la Date_Inscription à la Date_Sortie incluses, ou sans fin
+  si l'inscription n'est pas clôturée.
+- **Séance_Non_Concernée** : Séance du Groupe hors de la Fenêtre_Inscription de l'Étudiant.
+- **Feuille_Appel** : liste des Étudiants proposée pour la prise de présence d'une Séance.
+- **Année_Close** : Année scolaire non courante, en lecture seule.
 
 ## Requirements
 
-### Requirement 1: Date d'inscription réelle et corrigeable
+### Requirement 1: L'Encaissement, unité de paiement
 
-**User Story:** En tant qu'Administrateur, je veux saisir la date réelle d'arrivée d'un Étudiant
-et pouvoir la corriger, afin que ce qu'il doit et les séances où il est attendu correspondent à la
-réalité et non au jour de sa saisie.
-
-#### Acceptance Criteria
-
-1. QUAND une inscription est créée avec une Date_Inscription fournie, LE Système DOIT conserver
-   cette date telle quelle.
-2. QUAND une inscription est créée sans Date_Inscription, LE Système DOIT retenir la date du jour.
-3. LE Système DOIT accepter une Date_Inscription postérieure à la date du jour : un Étudiant peut
-   être inscrit à l'avance. Il n'est alors concerné par aucune Séance antérieure à cette date
-   (exigence 2).
-4. SI la Date_Inscription fournie est hors de l'Année scolaire du Groupe, ALORS LE Système DOIT
-   refuser l'inscription avec un message nommant les bornes de l'année.
-5. LE Système DOIT traiter la Date_Inscription comme une date calendaire : une Séance tenue le
-    jour même de l'inscription concerne l'Étudiant, quelle que soit l'heure de la saisie.
-6. LE Système DOIT permettre à l'Administrateur de corriger la Date_Inscription d'une inscription
-   existante, avec un Motif.
-7. QUAND la Date_Inscription est corrigée, LE Système DOIT écrire une Trace portant l'ancienne et
-   la nouvelle date.
-8. SI la correction de Date_Inscription rendait Séance_Non_Concernée une Séance où l'Étudiant a
-   une absence active, ALORS LE Système DOIT refuser la correction et lister ces absences, sauf
-   demande explicite de l'Administrateur de les retirer dans la même opération.
-9. QUAND l'Administrateur demande de retirer ces absences avec la correction, LE Système DOIT
-    appliquer la correction de date et le retrait de chaque absence listée en une seule
-    opération indivisible, sous un seul Motif, avec une Trace par absence retirée et une Trace
-    pour la date. Si l'une échoue, aucune n'est appliquée.
-10. SI les absences à retirer diffèrent de celles présentées à l'Administrateur au moment de sa
-    demande, ALORS LE Système DOIT refuser l'opération et présenter la liste à jour : rien n'est
-    retiré sans avoir été vu.
-11. QUAND la Date_Inscription est corrigée, LE Système DOIT refléter la nouvelle date dans le coût
-   au prorata, le montant dû à ce jour et le plafond encaissable, sans autre intervention.
-12. SI le Groupe appartient à une Année_Close, ALORS LE Système DOIT refuser la correction.
-
-### Requirement 2: L'Étudiant non inscrit n'est pas concerné
-
-**User Story:** En tant qu'Administrateur, je veux qu'un Étudiant ne soit jamais noté absent à une
-séance tenue avant son arrivée, afin qu'il en soit dispensé d'office sans démarche de ma part.
+**User Story:** En tant qu'Administratrice, je veux que chaque versement reçu reste identifiable
+tel qu'il a eu lieu, afin de pouvoir retrouver, annuler ou corriger précisément celui-là.
 
 #### Acceptance Criteria
 
-1. QUAND la Feuille_Appel d'une Séance est construite, LE Système DOIT n'y inclure que les
-   Étudiants dont l'inscription au Groupe est active et dont la Date_Inscription est antérieure
-   ou égale à la date de la Séance.
-2. LE Système NE DOIT PAS compléter une Feuille_Appel vide par l'ensemble des Étudiants du Groupe.
-3. SI une absence est soumise pour un Étudiant sur une Séance_Non_Concernée, ALORS LE Système DOIT
-   la refuser côté serveur, quel que soit l'écran d'origine, avec un message nommant l'Étudiant et
-   sa Date_Inscription.
-4. SI une absence est soumise pour un Étudiant sans inscription active au Groupe, ALORS LE Système
-   DOIT la refuser.
-5. LE Système DOIT continuer d'accepter une présence sur une Séance_Non_Concernée : c'est un
-   rattrapage consommé, facturable (business-rules, prorata).
-6. QUAND une validation en masse contient au moins une absence refusée, LE Système DOIT refuser la
-   validation entière et nommer chaque ligne refusée, afin qu'aucune Séance ne soit validée à
-   moitié.
+1. QUAND un versement est encaissé, LE Système DOIT enregistrer un Encaissement portant le montant
+   reçu, l'Étudiant, le Groupe, la Série visée, le mode de paiement, la note, l'auteur, la date et
+   l'heure d'encaissement fixées par le serveur.
+2. LE Système DOIT attribuer à chaque Encaissement un Numéro_Reçu unique, de la forme
+   `RECU-AAAA-NNNN`, séquentiel par année civile, attribué par le serveur et jamais réutilisé.
+3. LE Système DOIT rattacher chaque Imputation et chaque ligne de ventilation à l'Encaissement qui
+   l'a produite ; aucune ligne ne DOIT mêler l'argent de deux Encaissements.
+4. LE Système DOIT maintenir, pour chaque Étudiant et chaque Série, l'invariant : montant versé =
+   somme des Imputations des Encaissements non annulés, moins les remboursements.
+5. LE Système NE DOIT modifier ni le montant, ni la date, ni l'Étudiant, ni la Série d'un
+   Encaissement enregistré ; toute rectification passe par une Annulation ou un Remplacement.
+6. LE Système DOIT plafonner la ventilation d'une Séance au prix net de l'Étudiant, réduction
+   comprise.
+7. LE Système DOIT appliquer la même règle au chemin d'encaissement d'un rattrapage, y compris la
+   clé d'idempotence.
+8. QUAND la migration s'applique à des données existantes, LE Système DOIT créer un Encaissement
+   « historique » par cumul existant, pour le montant de ce cumul, sans perte ni doublon, et sans
+   modifier aucun montant dû ni aucun statut. Son numéro, `RECU-HIST-<n>`, le distingue des reçus
+   émis : aucun reçu n'a été imprimé sous ce numéro.
 
-### Requirement 3: Correction d'une présence
+### Requirement 2: Annuler un Encaissement
 
-**User Story:** En tant qu'Administrateur, je veux corriger la présence d'un seul Étudiant sur une
-séance validée, afin de réparer une erreur de saisie sans dévalider la séance pour tous.
-
-#### Acceptance Criteria
-
-1. LE Système DOIT permettre à l'Administrateur de passer une Présence active de présent à absent,
-   et d'absent à présent, avec un Motif.
-2. LE Système DOIT permettre à l'Administrateur d'ajouter une Présence manquante pour un Étudiant
-   de la Feuille_Appel d'une Séance validée, avec un Motif.
-3. LE Système DOIT permettre à l'Administrateur de retirer une Présence, avec un Motif ; le
-   retrait DOIT être une désactivation et non une suppression définitive.
-4. SI le passage à absent porte sur une Séance_Non_Concernée, ALORS LE Système DOIT le refuser
-   (exigence 2.3).
-5. QUAND une Présence passe à présent, LE Système DOIT effacer son indicateur de justification, et
-   l'inscrire dans la même Trace.
-6. SI la Présence est un rattrapage, ALORS LE Système DOIT refuser la correction par ce point
-   d'entrée et désigner la correction de rattrapage existante, qui porte la décision « déjà
-   payée ».
-7. QUAND une Présence est corrigée, LE Système DOIT écrire une Trace portant la valeur avant et
-   la valeur après.
-8. SI la Séance appartient à une Année_Close, ALORS LE Système DOIT refuser la correction.
-
-### Requirement 4: Dévalidation et suppression tracées
-
-**User Story:** En tant qu'Administrateur, je veux que dévalider une séance ou en retirer les
-présences laisse une trace motivée, afin de pouvoir expliquer après coup un montant qui a changé.
+**User Story:** En tant qu'Administratrice, je veux annuler un encaissement saisi par erreur, afin
+qu'il ne compte plus, sans effacer la trace qu'il a eu lieu.
 
 #### Acceptance Criteria
 
-1. QUAND une Séance est dévalidée, LE Système DOIT exiger un Motif et écrire une Trace listant les
-   Présences désactivées.
-2. LE Système NE DOIT PAS supprimer définitivement une Présence par un point d'entrée accessible
-   à l'Administrateur ; les suppressions définitives existantes DOIVENT devenir des
-   désactivations tracées.
-3. SI la Séance appartient à une Année_Close, ALORS LE Système DOIT refuser la validation, la
-   dévalidation et le retrait de Présences.
+1. LE Système DOIT permettre d'annuler un Encaissement, avec un Motif et après Aperçu.
+2. QUAND un Encaissement est annulé, LE Système DOIT neutraliser toutes ses Imputations, reports
+   compris, et toutes ses lignes de ventilation, puis recalculer les montants des Séries concernées.
+3. LE Système DOIT conserver l'Encaissement annulé, visible dans l'historique de l'Étudiant et
+   marqué « annulé » avec la date, l'auteur et le Motif.
+4. SI l'Annulation ferait passer le montant versé d'une Série sous le total déjà remboursé sur
+   cette Série, ALORS LE Système DOIT la refuser et nommer le remboursement en cause.
+5. SI l'Encaissement est déjà annulé, ALORS LE Système DOIT refuser une seconde Annulation.
+6. QUAND le reçu d'un Encaissement annulé est réimprimé, LE Système DOIT le marquer « ANNULÉ »,
+   avec la date d'annulation et, s'il existe, le Numéro_Reçu de l'Encaissement de remplacement.
+7. SI l'Encaissement porte sur une Année_Close, ALORS LE Système DOIT refuser l'Annulation.
 
-### Requirement 5: Remises tracées
+### Requirement 3: Corriger un Encaissement
 
-**User Story:** En tant qu'Administrateur, je veux que toute remise accordée, modifiée ou retirée
-soit motivée et tracée, afin que la réduction d'un montant dû soit toujours explicable.
-
-#### Acceptance Criteria
-
-1. QUAND une remise est créée, modifiée ou retirée, LE Système DOIT exiger un Motif.
-2. LE Système DOIT écrire une Trace pour chacune de ces opérations, portant le taux avant et après.
-3. LE Système DOIT retirer une remise par désactivation et non par suppression définitive.
-4. SI la remise porte sur une Série ou un Groupe d'une Année_Close, ALORS LE Système DOIT refuser
-   l'opération.
-
-### Requirement 6: Sortie de groupe tracée, symétrique de l'entrée
-
-**User Story:** En tant qu'Administrateur, je veux que la clôture d'une inscription soit motivée
-et tracée, et qu'après sa sortie l'Étudiant ne soit plus concerné, afin de retrouver pourquoi et
-quand il a quitté un Groupe.
+**User Story:** En tant qu'Administratrice, je veux corriger un encaissement mal saisi — montant,
+Étudiant, Série — en une seule opération, afin que le registre corresponde à l'argent reçu.
 
 #### Acceptance Criteria
 
-1. QUAND une inscription est clôturée, LE Système DOIT exiger un Motif et une date de sortie,
-   proposée par défaut à la date du jour, et écrire une Trace.
-2. LE Système DOIT considérer comme Séance_Non_Concernée toute Séance postérieure à la date de
-   sortie : l'Étudiant est concerné entre sa Date_Inscription et sa date de sortie incluses.
-3. SI une absence active ou une présence ordinaire existe sur une Séance postérieure à la date de
-   sortie, ALORS LE Système DOIT refuser la clôture et lister ces Présences.
-4. LE Système DOIT accepter une présence de rattrapage postérieure à la date de sortie : c'est un
-   autre cas, régi par les règles de rattrapage.
-5. LE Système DOIT conserver les inscriptions clôturées dans l'historique, avec leurs dates
-   d'entrée et de sortie.
+1. LE Système DOIT permettre de corriger le montant, l'Étudiant, le Groupe, la Série visée, le mode
+   de paiement ou la note d'un Encaissement, avec un Motif et après Aperçu.
+2. QUAND un Encaissement est corrigé, LE Système DOIT procéder par Remplacement : annuler l'original
+   et créer un nouvel Encaissement avec un nouveau Numéro_Reçu, en une seule opération indivisible.
+3. LE Système DOIT relier l'Encaissement de remplacement à l'original, dans les deux sens, et
+   l'afficher dans l'historique : « remplace RECU-… », « remplacé par RECU-… ».
+4. LE Système DOIT soumettre l'Encaissement de remplacement aux mêmes règles qu'un encaissement
+   ordinaire : plafond, report, refus en totalité, année close.
+5. SI le Remplacement est refusé par l'une de ces règles, ALORS LE Système NE DOIT annuler
+   l'original ni rien écrire, et DOIT présenter le motif du refus.
+6. QUAND seul le mode de paiement ou la note change, LE Système DOIT les corriger sans Remplacement,
+   sans nouveau Numéro_Reçu, avec une Trace.
+7. QUAND le Remplacement est confirmé, LE Système DOIT proposer l'impression du nouveau reçu.
 
-### Requirement 7: Motif et Trace communs
+### Requirement 4: Aperçu avant toute Correction
 
-**User Story:** En tant qu'Administrateur, je veux une seule manière de motiver et de consulter
-les corrections, quel que soit le domaine, afin de ne pas apprendre une règle par écran.
+**User Story:** En tant qu'Administratrice, je veux voir ce qu'une correction change pour le parent
+avant de la confirmer, afin de ne jamais découvrir après coup un montant inattendu.
 
 #### Acceptance Criteria
 
-1. LE Système DOIT appliquer une seule règle de validation du Motif à toute Correction : non vide
-   après suppression des espaces, 500 caractères au plus, espaces de tête et de fin retirés.
-2. LE Système DOIT refuser une Correction sans changement effectif, plutôt que d'écrire une Trace
-   sans information.
-3. LE Système DOIT attribuer chaque Trace à l'Administrateur authentifié, et jamais à une valeur
-   fournie par le client.
-4. LE Système DOIT attribuer à chaque Trace un rang de séquence strictement croissant, afin que
-   « quelle est la dernière correction » ait une réponse même pour deux corrections dans la même
-   milliseconde.
-5. LE Système DOIT conserver une Trace après la désactivation ou la suppression de la donnée
-   corrigée.
-6. SI la Correction échoue, ALORS LE Système NE DOIT écrire aucune Trace.
+1. AVANT toute Correction des exigences 2, 3, 5, 6, 8, 9 et 10, LE Système DOIT présenter un Aperçu
+   indiquant, pour chaque Série dont un montant change : coût, montant dû à ce jour, montant versé,
+   reste à payer et statut « à jour / en retard », avant et après.
+2. L'Aperçu DOIT lister les autres effets : Imputations neutralisées, absences retirées, Séances
+   devenues facturables ou non facturables, ventilation déplacée.
+3. LE Système DOIT garantir que la Correction confirmée produit exactement les montants annoncés
+   par l'Aperçu ; SI les données ont changé entre l'Aperçu et la confirmation, ALORS LE Système DOIT
+   refuser la confirmation et présenter un nouvel Aperçu.
+4. QUAND une Correction ne change aucun montant, L'Aperçu DOIT l'indiquer explicitement.
+
+### Requirement 5: Date d'inscription réelle et corrigeable
+
+**User Story:** En tant qu'Administratrice, je veux saisir la date réelle d'arrivée d'un Étudiant et
+pouvoir la corriger, afin que ce qu'il doit corresponde à sa présence réelle.
+
+#### Acceptance Criteria
+
+1. QUAND une inscription est créée avec une Date_Inscription, LE Système DOIT la conserver ;
+   sans date, LE Système DOIT retenir le jour même.
+2. LE Système DOIT accepter une Date_Inscription future à l'intérieur de l'année scolaire courante.
+3. SI la Date_Inscription est hors de l'année scolaire du Groupe, ALORS LE Système DOIT refuser
+   l'inscription en nommant les bornes de l'année.
+4. LE Système DOIT traiter la Date_Inscription comme une date calendaire : une Séance tenue le jour
+   même de l'inscription concerne l'Étudiant, quelle que soit l'heure de la saisie.
+5. LE Système DOIT permettre de corriger la Date_Inscription, avec un Motif et après Aperçu.
+6. QUAND la correction **recule** la Date_Inscription, LE Système DOIT lister les absences devenues
+   hors Fenêtre_Inscription et proposer de les retirer dans la même opération ; il DOIT aussi
+   lister les présences ordinaires devenues hors fenêtre, qui restent facturables comme séances
+   consommées, et demander confirmation explicite de ce maintien.
+7. QUAND la correction **avance** la Date_Inscription, LE Système DOIT lister les Séances déjà
+   validées devenues concernées et sans Présence pour l'Étudiant, et permettre de le noter présent
+   ou absent à chacune dans la même opération ; une Séance laissée sans Présence DOIT être annoncée
+   dans l'Aperçu comme facturable.
+8. SI la liste confirmée par l'Administratrice diffère de la liste recalculée à la confirmation,
+   ALORS LE Système DOIT refuser et présenter la liste à jour : rien n'est retiré sans avoir été vu.
+9. QUAND une correction rend non facturable une Séance qui porte une ventilation, LE Système DOIT
+   ventiler de nouveau ce montant sur les Séances facturables de la même Série, et l'annoncer dans
+   l'Aperçu ; SI le montant versé dépasse alors le coût de la Série, ALORS l'Aperçu DOIT l'annoncer
+   comme trop-perçu, et la Correction NE DOIT PAS le reporter ni le rembourser d'elle-même.
+
+### Requirement 6: Date de sortie
+
+**User Story:** En tant qu'Administratrice, je veux enregistrer la date de départ d'un Étudiant, afin
+qu'il ne soit plus attendu après, sans perdre ses présences passées.
+
+#### Acceptance Criteria
+
+1. QUAND une inscription est clôturée, LE Système DOIT exiger une Date_Sortie, proposée au jour
+   même, et un Motif, après Aperçu.
+2. LE Système DOIT considérer l'Étudiant concerné par toutes les Séances de sa Fenêtre_Inscription,
+   y compris après la clôture : une Séance antérieure à la Date_Sortie, validée plus tard, DOIT le
+   faire figurer sur la Feuille_Appel.
+3. SI une absence ou une présence ordinaire existe sur une Séance postérieure à la Date_Sortie,
+   ALORS LE Système DOIT la lister et proposer de la retirer dans la même opération.
+4. LE Système DOIT accepter une présence de rattrapage hors Fenêtre_Inscription, selon les règles
+   de rattrapage.
+5. LE Système DOIT permettre de corriger une Date_Sortie ou de rouvrir une inscription clôturée,
+   avec un Motif et après Aperçu.
+
+### Requirement 7: L'Étudiant hors fenêtre n'est pas concerné
+
+**User Story:** En tant qu'Administratrice, je veux qu'un Étudiant ne soit jamais noté absent hors de
+sa période d'inscription, afin qu'il en soit dispensé d'office.
+
+#### Acceptance Criteria
+
+1. LE Système DOIT construire la Feuille_Appel d'une Séance à partir des seuls Étudiants dont la
+   Fenêtre_Inscription contient la date de la Séance.
+2. LE Système NE DOIT PAS compléter une Feuille_Appel vide par les autres Étudiants du Groupe ;
+   une Feuille_Appel vide DOIT l'expliquer.
+3. SI une absence est soumise sur une Séance_Non_Concernée ou pour un Étudiant sans inscription au
+   Groupe, ALORS LE Système DOIT la refuser côté serveur, en nommant l'Étudiant et sa
+   Fenêtre_Inscription.
+4. LE Système DOIT accepter une présence sur une Séance_Non_Concernée, comme rattrapage consommé.
+5. QUAND une validation contient une absence refusée, LE Système DOIT refuser la validation entière
+   et nommer chaque ligne ; l'écran DOIT permettre de retirer ces lignes en une action et de revalider.
+
+### Requirement 8: Corriger une présence
+
+**User Story:** En tant qu'Administratrice, je veux corriger la présence d'un seul Étudiant sur une
+Séance validée, sans toucher aux autres.
+
+#### Acceptance Criteria
+
+1. LE Système DOIT permettre, avec un Motif et après Aperçu : passer présent ↔ absent, ajouter une
+   Présence manquante, retirer une Présence.
+2. QUAND une Présence passe à absent, LE Système DOIT permettre de fixer la justification dans la
+   même action.
+3. QUAND une Présence passe à présent, LE Système DOIT effacer la justification et l'inscrire dans
+   la même Trace.
+4. LE Système DOIT retirer une Présence par désactivation, jamais par suppression définitive.
+5. SI la Correction ferait une absence sur une Séance_Non_Concernée, ALORS LE Système DOIT la refuser.
+6. SI la Séance appartient à une Année_Close, ALORS LE Système DOIT refuser la Correction.
+
+### Requirement 9: Corriger une présence de rattrapage
+
+**User Story:** En tant qu'Administratrice, je veux retirer une présence de rattrapage saisie à tort,
+afin qu'un Étudiant ne paie pas une Séance où il n'est pas venu.
+
+#### Acceptance Criteria
+
+1. LE Système DOIT permettre de retirer une présence de rattrapage, avec un Motif et après Aperçu.
+2. QUAND une présence de rattrapage est retirée, LE Système DOIT rouvrir le droit au rattrapage de
+   la Séance manquée qu'elle compensait, de sorte qu'elle puisse être rattrapée de nouveau.
+3. LE Système DOIT conserver dans la Trace la Séance manquée et la décision « déjà payée » qui
+   étaient portées par la présence retirée.
+
+### Requirement 10: Dévalider une Séance
+
+**User Story:** En tant qu'Administratrice, je veux dévalider une Séance validée par erreur en
+sachant ce que je défais, afin de pouvoir l'expliquer ensuite.
+
+#### Acceptance Criteria
+
+1. QUAND une Séance est dévalidée, LE Système DOIT exiger un Motif, présenter un Aperçu, et écrire
+   une Trace listant les Présences désactivées.
+2. SI la Séance appartient à une Année_Close, ALORS LE Système DOIT refuser la validation et la
+   dévalidation.
+
+### Requirement 11: Motif et Trace
+
+**User Story:** En tant qu'Administratrice, je veux motiver une correction en un geste et retrouver
+toujours qui a changé quoi.
+
+#### Acceptance Criteria
+
+1. LE Système DOIT proposer, pour chaque type de Correction, une liste de Motif_Type : « Erreur de
+   saisie », « Justificatif reçu », « Date d'arrivée corrigée », « Départ de l'étudiant »,
+   « Encaissement sur le mauvais élève », « Montant mal saisi », « Autre ».
+2. SI le Motif_Type est « Autre », ALORS LE Système DOIT exiger un texte libre, non vide après
+   suppression des espaces ; tout texte libre est limité à 500 caractères.
+3. LE Système DOIT refuser une Correction sans changement effectif.
+4. LE Système DOIT attribuer chaque Trace à l'Administrateur authentifié, jamais à une valeur
+   fournie par le client, et lui donner un rang strictement croissant.
+5. LE Système DOIT écrire la Trace dans la même opération que la Correction : une Correction
+   refusée ou échouée n'en laisse aucune.
+6. LE Système DOIT conserver chaque Trace après la désactivation de la donnée corrigée.
 7. LE Système DOIT réserver toute Correction au rôle ADMIN ; le rôle VIEWER DOIT recevoir 403.
 
-### Requirement 8: Journal des corrections
+### Requirement 12: Journal lisible et imprimable
 
-**User Story:** En tant qu'Administrateur, je veux consulter l'historique des corrections d'un
-Étudiant, d'un Groupe ou d'une Séance, afin de répondre à un parent qui conteste un montant.
-
-#### Acceptance Criteria
-
-1. LE Système DOIT exposer le Journal_Corrections filtrable par Étudiant, par Groupe, par Séance,
-   par domaine et par période.
-2. LE Système DOIT présenter les Traces de la plus récente à la plus ancienne.
-3. LE Système DOIT inclure dans le Journal_Corrections les Traces déjà existantes : Détails de
-   paiement, justifications d'absence, décisions de rattrapage.
-4. LE Système DOIT rendre le Journal_Corrections consultable pour une Année_Close.
-5. LE Système DOIT permettre, depuis la fiche d'un Étudiant, d'ouvrir son Journal_Corrections.
-
-### Requirement 9: Signalement des incohérences existantes
-
-**User Story:** En tant qu'Administrateur, je veux voir les données déjà en contradiction avec la
-règle « non concerné avant l'inscription », afin de les corriger une fois pour toutes.
+**User Story:** En tant qu'Administratrice, je veux montrer à un parent qui conteste l'historique
+des corrections de son enfant, en clair.
 
 #### Acceptance Criteria
 
-1. LE Système DOIT lister, pour l'Année courante, les absences actives portant sur une
-   Séance_Non_Concernée, et les absences d'Étudiants sans inscription active au Groupe.
-2. QUAND une telle absence est listée, LE Système DOIT proposer les deux corrections possibles :
-   retirer l'absence (exigence 3.3) ou corriger la Date_Inscription (exigence 1.6).
-3. LE Système NE DOIT PAS corriger ces données automatiquement : choisir entre une absence erronée
-   et une date d'inscription erronée appartient à l'Administrateur.
+1. LE Système DOIT présenter, depuis la fiche d'un Étudiant, son Journal : Encaissements annulés et
+   remplacés, corrections de présence, de dates, de rattrapage, de justification et de détail de
+   paiement, du plus récent au plus ancien.
+2. LE Système DOIT rédiger chaque entrée en français, sans identifiant technique : « Séance du
+   14/01/2027 (Maths 1ère A) : absent → présent », « Reçu RECU-2027-0042 de 20 000,00 DA annulé,
+   remplacé par RECU-2027-0043 de 2 000,00 DA ».
+3. LE Système DOIT indiquer pour chaque entrée son effet sur le montant dû, quand il y en a un.
+4. LE Système DOIT permettre d'imprimer le Journal d'un Étudiant, sur une période choisie.
+5. LE Système DOIT rendre le Journal consultable pour une Année_Close.
