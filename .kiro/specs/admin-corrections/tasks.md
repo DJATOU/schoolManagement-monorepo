@@ -93,7 +93,14 @@ Socle de tout le reste : sans Encaissement identifiable, aucune correction d'arg
   retirés ; l'écran « Gestion des paiements » garde la recherche, l'historique et le
   remboursement, avec une note qui renvoie au reçu. Mutation vérifiée (refus retiré)
   _Défaut 2 — D3, Data Models_
-- [ ] A.7 Propriété P1 « conservation de l'argent »
+- [x] A.7 Propriété P1 « conservation de l'argent » : `MoneyConservationPropertyTest` (jqwik,
+  H2 réelle, 100 scénarios de 1 à 12 étapes : versements acceptés ou refusés, reports, séries non
+  ouvertes, annulations). Après chaque étape, relus en SQL : cumul = Imputations actives,
+  encaissements actifs = somme des cumuls, encaissement actif imputé en entier et annulé sans rien
+  d'actif, ventilation complète et un report par Imputation reportée, cumul ≤ coût, reçus
+  consécutifs, refus sans effet. Couverture exigée des refus, reports, annulations et annulations
+  d'un versement reporté. Mutations vérifiées : ligne non désactivée à l'annulation, cumul
+  incrémenté en plus de l'Imputation. Remplacement : ajouté à la propriété avec le lot B (B.6)
   _Exigences : 1.4_
 - [ ] A.8 Reçu : `receipt_number` renvoyé par l'API et imprimé ; `GET /api/encashments/{id}`
   _Exigences : 1.2_
