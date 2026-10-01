@@ -228,13 +228,13 @@ export class PaymentService {
    *
    * @param payment Données du paiement (studentId, sessionId, amountPaid)
    * @param idempotencyKey Clé de la soumission, engendrée à l'ouverture du formulaire
-   * @returns Observable<Payment>
+   * @returns Observable<PaymentAllocationResult> même contrat que processPayment, reçu compris
    */
-  processCatchUpPayment(payment: Payment, idempotencyKey?: string): Observable<Payment> {
+  processCatchUpPayment(payment: Payment, idempotencyKey?: string): Observable<PaymentAllocationResult> {
     const options = idempotencyKey
       ? { headers: new HttpHeaders({ 'Idempotency-Key': idempotencyKey }) }
       : {};
-    return this.http.post<Payment>(`${this.baseUrl}/process/catch-up`, payment, options).pipe(
+    return this.http.post<PaymentAllocationResult>(`${this.baseUrl}/process/catch-up`, payment, options).pipe(
       catchError(this.handleError)
     );
   }

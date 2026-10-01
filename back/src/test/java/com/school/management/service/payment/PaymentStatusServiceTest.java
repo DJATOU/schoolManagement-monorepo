@@ -669,10 +669,63 @@ class PaymentStatusServiceTest {
         return session;
     }
 
+    /** Ligne d'un paiement en cours : le paiement est obligatoire en base, comme ici. */
     private static PaymentDetailEntity line(SessionEntity session, double amount, boolean active) {
-        PaymentDetailEntity line = PaymentDetailEntity.builder().session(session).amountPaid(amount).build();
+        return line(session, amount, active, "PARTIAL");
+    }
+
+    private static PaymentDetailEntity line(SessionEntity session, double amount, boolean active,
+                                            String paymentStatus) {
+        PaymentEntity payment = PaymentEntity.builder().status(paymentStatus).build();
+        PaymentDetailEntity line = PaymentDetailEntity.builder()
+                .payment(payment).session(session).amountPaid(amount).build();
         line.setActive(active);
         return line;
+    }
+
+    @Test
+    @DisplayName("getPaidSessions : ni la ligne d'un paiement annulé ni une ligne sans séance ne règlent quoi que ce soit")
+    void getPaidSessionsIgnoresCancelledPaymentsAndLinesWithoutSession() {
+        GroupEntity group = groupWithPrice(1L, "G", 30.0);
+        SessionEntity cancelled = billedSession(1L, 10L, group);
+        SessionEntity paid = billedSession(2L, 10L, group);
+        when(paymentDetailRepository.findByPayment_StudentId(STUDENT_ID)).thenReturn(List.of(
+                line(cancelled, 30.0, true, "CANCELLED"),
+                line(null, 30.0, true),
+                line(paid, 30.0, true)));
+
+        assertThat(service.getPaidSessions(STUDENT_ID)).containsExactly(paid);
+    }
+
+    @Test
+    @DisplayName("Séance hors série : son seuil est le tarif de son groupe")
+    void sessionWithoutSeriesIsPricedAtItsGroupTariff() {
+        GroupEntity group = groupWithPrice(1L, "G", 30.0);
+        SessionEntity settled = sessionIn(1L, "S1", group);
+        SessionEntity partial = sessionIn(2L, "S2", group);
+        when(attendanceRepo.findByStudentIdAndIsPresent(STUDENT_ID, true)).thenReturn(List.of(settled, partial));
+        when(paymentDetailRepository.findByPayment_StudentId(STUDENT_ID)).thenReturn(List.of(
+                line(settled, 30.0, true), line(partial, 29.0, true)));
+
+        assertThat(service.getUnpaidAttendedSessions(STUDENT_ID)).containsExactly(partial);
+        assertThat(service.getPaidSessions(STUDENT_ID)).containsExactly(settled);
+    }
+
+    @Test
+    @DisplayName("Séance hors série sans tarif (pas de groupe, pas de tarif, tarif vide) : rien n'est dû")
+    void sessionWithoutSeriesNorTariffOwesNothing() {
+        GroupEntity noPricing = groupWithPrice(2L, "Sans tarif", 30.0);
+        noPricing.setPrice(null);
+        GroupEntity emptyPricing = groupWithPrice(3L, "Tarif vide", 30.0);
+        emptyPricing.getPrice().setPrice(null);
+        SessionEntity noGroup = sessionIn(1L, "S1", null);
+        SessionEntity withoutPricing = sessionIn(2L, "S2", noPricing);
+        SessionEntity withEmptyPricing = sessionIn(3L, "S3", emptyPricing);
+        when(attendanceRepo.findByStudentIdAndIsPresent(STUDENT_ID, true))
+                .thenReturn(List.of(noGroup, withoutPricing, withEmptyPricing));
+        when(paymentDetailRepository.findByPayment_StudentId(STUDENT_ID)).thenReturn(List.of());
+
+        assertThat(service.getUnpaidAttendedSessions(STUDENT_ID)).isEmpty();
     }
 
     @Test

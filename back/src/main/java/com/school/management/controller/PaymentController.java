@@ -68,6 +68,9 @@ public class PaymentController {
     private final SessionMapper sessionMapper;
     private final PaymentMapper paymentMapper;
 
+    /** Relit l'Encaissement enregistré : numéro de reçu, date et auteur à imprimer. */
+    private final com.school.management.service.payment.EncashmentQueryService encashmentQueryService;
+
     @Autowired
     public PaymentController(
             PaymentCrudService paymentCrudService,
@@ -75,13 +78,15 @@ public class PaymentController {
             PaymentStatusService paymentStatusService,
             PaymentHistoryService paymentHistoryService,
             SessionMapper sessionMapper,
-            PaymentMapper paymentMapper) {
+            PaymentMapper paymentMapper,
+            com.school.management.service.payment.EncashmentQueryService encashmentQueryService) {
         this.paymentCrudService = paymentCrudService;
         this.paymentProcessingService = paymentProcessingService;
         this.paymentStatusService = paymentStatusService;
         this.paymentHistoryService = paymentHistoryService;
         this.sessionMapper = sessionMapper;
         this.paymentMapper = paymentMapper;
+        this.encashmentQueryService = encashmentQueryService;
     }
 
     // POST / (création d'une ligne de paiement « de base ») retiré avec A.6 (spec
@@ -200,7 +205,10 @@ public class PaymentController {
         return new PaymentProcessingService.PaymentMeans(paymentDto.getPaymentMethod(), note);
     }
 
-    /** Traduit le résultat d'encaissement en contrat d'API, la ligne de paiement comprise. */
+    /**
+     * Traduit le résultat d'encaissement en contrat d'API : la répartition, la ligne de paiement,
+     * et l'Encaissement relu après validation, porteur du numéro de reçu à imprimer.
+     */
     private PaymentAllocationResultDTO toDto(PaymentAllocationResult result) {
         return new PaymentAllocationResultDTO(
                 result.studentId(),
@@ -213,7 +221,8 @@ public class PaymentController {
                         .map(carryOver -> new PaymentAllocationResultDTO.CarriedOverAmountDTO(
                                 carryOver.seriesId(), carryOver.seriesName(), carryOver.amount()))
                         .toList(),
-                paymentMapper.toDto(result.payment()));
+                paymentMapper.toDto(result.payment()),
+                encashmentQueryService.get(result.encashment().getId()));
     }
 
     /**
@@ -225,10 +234,10 @@ public class PaymentController {
      *                       amountPaid)
      * @param idempotencyKey clé de la soumission, même règle que {@code /process}
      *                       (spec admin-corrections, exigence 1.7)
-     * @return la ligne de paiement de la série, cumul à jour
+     * @return la répartition, la ligne de paiement et l'Encaissement, comme {@code /process}
      */
     @PostMapping("/process/catch-up")
-    public ResponseEntity<PaymentDTO> processCatchUpPayment(
+    public ResponseEntity<PaymentAllocationResultDTO> processCatchUpPayment(
             @Valid @RequestBody PaymentDTO paymentDto,
             @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
         LOGGER.info("Processing catch-up payment - student: {}, session: {}, amount: {}",
@@ -241,7 +250,7 @@ public class PaymentController {
                 idempotencyKey,
                 meansOf(paymentDto));
 
-        return ResponseEntity.ok(paymentMapper.toDto(result.payment()));
+        return ResponseEntity.ok(toDto(result));
     }
 
     /**

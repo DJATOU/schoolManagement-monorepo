@@ -59,6 +59,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -340,6 +341,34 @@ class PaymentProcessingEndpointIntegrationTest {
         }
 
         @Test
+        @DisplayName("A.8 : la réponse porte le reçu à imprimer, numéro, date, auteur et répartition fixés par le serveur")
+        void laReponsePorteLeRecu() throws Exception {
+            SessionSeriesEntity s2 = persistSeries(group, "Série 2", date(2030, 2, 4), date(2030, 2, 11));
+            long before = System.currentTimeMillis();
+
+            pay(s1.getId(), 6000, "cle-recu")
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.encashment.receiptNumber").value(receipt(1)))
+                    .andExpect(jsonPath("$.encashment.status").value("ACTIVE"))
+                    .andExpect(jsonPath("$.encashment.kind").value("REGULAR"))
+                    .andExpect(jsonPath("$.encashment.amountReceived").value(6000.00))
+                    .andExpect(jsonPath("$.encashment.receivedBy").isNotEmpty())
+                    .andExpect(jsonPath("$.encashment.studentName").value("Amine Belkacem"))
+                    .andExpect(jsonPath("$.encashment.targetSeriesName").value("Série 1"))
+                    .andExpect(jsonPath("$.encashment.allocations", hasSize(2)))
+                    .andExpect(jsonPath("$.encashment.allocations[1].seriesId").value(s2.getId()))
+                    .andExpect(jsonPath("$.encashment.allocations[1].carriedOver").value(true));
+
+            Date receivedAt = encashmentRepository.findAll().get(0).getReceivedAt();
+            assertThat(receivedAt.getTime()).isBetween(before - 1000, System.currentTimeMillis());
+
+            // Le rejeu rend le même reçu : réimprimé, il porte le même numéro.
+            pay(s1.getId(), 6000, "cle-recu")
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.encashment.receiptNumber").value(receipt(1)));
+        }
+
+        @Test
         @DisplayName("versement reporté : un seul Encaissement, deux Imputations, le report désigne la sienne")
         void reportRattacheASonImputation() throws Exception {
             SessionSeriesEntity s2 = persistSeries(group, "Série 2", date(2030, 2, 4), date(2030, 2, 11));
@@ -472,6 +501,66 @@ class PaymentProcessingEndpointIntegrationTest {
     }
 
     // ------------------------------------------------------------------
+    // Lecture des Encaissements : réimpression et historique (A.8, A.9)
+    // ------------------------------------------------------------------
+
+    @Nested
+    @DisplayName("GET /api/encashments/{id} et /api/students/{id}/encashments")
+    class LectureDesEncaissements {
+
+        @Test
+        @DisplayName("réimpression : le reçu relu à l'identique ; annulé, il le dit avec sa trace")
+        void reimpressionDUnRecu() throws Exception {
+            pay(s1.getId(), 2000).andExpect(status().isOk());
+            EncashmentEntity encashment = encashmentRepository.findAll().get(0);
+
+            mockMvc.perform(get("/api/encashments/" + encashment.getId()))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.receiptNumber").value(receipt(1)))
+                    .andExpect(jsonPath("$.amountReceived").value(2000.00))
+                    .andExpect(jsonPath("$.status").value("ACTIVE"))
+                    .andExpect(jsonPath("$.allocations[0].active").value(true));
+
+            encashmentService.neutralize(encashment.getId(), CorrectionReason.of(CorrectionReasonType.WRONG_AMOUNT));
+
+            mockMvc.perform(get("/api/encashments/" + encashment.getId()))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.receiptNumber").value(receipt(1)))
+                    // L'argent reçu reste écrit tel quel : on annule, on n'efface pas.
+                    .andExpect(jsonPath("$.amountReceived").value(2000.00))
+                    .andExpect(jsonPath("$.status").value("CANCELLED"))
+                    .andExpect(jsonPath("$.cancelReasonType").value("WRONG_AMOUNT"))
+                    .andExpect(jsonPath("$.cancelledAt").isNotEmpty())
+                    .andExpect(jsonPath("$.allocations[0].active").value(false));
+        }
+
+        @Test
+        @DisplayName("historique d'un élève : ses Encaissements, le plus récent d'abord, annulés compris")
+        void historiqueDesEncaissements() throws Exception {
+            pay(s1.getId(), 1500).andExpect(status().isOk());
+            pay(s1.getId(), 2500).andExpect(status().isOk());
+            EncashmentEntity first = encashmentRepository.findAll().stream()
+                    .filter(e -> e.getReceiptNumber().equals(receipt(1))).findFirst().orElseThrow();
+            encashmentService.neutralize(first.getId(), CorrectionReason.of(CorrectionReasonType.DATA_ENTRY_ERROR));
+
+            mockMvc.perform(get("/api/students/" + student.getId() + "/encashments"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$", hasSize(2)))
+                    .andExpect(jsonPath("$[0].receiptNumber").value(receipt(2)))
+                    .andExpect(jsonPath("$[0].status").value("ACTIVE"))
+                    .andExpect(jsonPath("$[1].receiptNumber").value(receipt(1)))
+                    .andExpect(jsonPath("$[1].status").value("CANCELLED"));
+        }
+
+        @Test
+        @DisplayName("Encaissement ou élève introuvable : 404")
+        void introuvable() throws Exception {
+            mockMvc.perform(get("/api/encashments/999999")).andExpect(status().isNotFound());
+            mockMvc.perform(get("/api/students/999999/encashments")).andExpect(status().isNotFound());
+        }
+    }
+
+    // ------------------------------------------------------------------
     // Rattrapage : même Encaissement, même clé (exigence 1.7)
     // ------------------------------------------------------------------
 
@@ -526,9 +615,12 @@ class PaymentProcessingEndpointIntegrationTest {
         void rattrapageEnregistreCommeEncaissement() throws Exception {
             payCatchUp(firstSession, 2000, null)
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.amountPaid").value(2000.0))
+                    .andExpect(jsonPath("$.payment.amountPaid").value(2000.0))
                     // Une séance suivie et facturable à 2 000 DA : la série est soldée pour Lina.
-                    .andExpect(jsonPath("$.status").value("COMPLETED"));
+                    .andExpect(jsonPath("$.payment.status").value("COMPLETED"))
+                    // Même contrat que /process : le reçu à imprimer vient du serveur.
+                    .andExpect(jsonPath("$.encashment.receiptNumber").value(receipt(1)))
+                    .andExpect(jsonPath("$.encashment.kind").value("CATCH_UP"));
 
             assertThat(encashmentRepository.findAll()).singleElement().satisfies(encashment -> {
                 assertThat(encashment.getKind()).isEqualTo(EncashmentKind.CATCH_UP);
@@ -548,7 +640,7 @@ class PaymentProcessingEndpointIntegrationTest {
 
             payCatchUp(firstSession, 2000, "cle-rattrapage")
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.amountPaid").value(2000.0));
+                    .andExpect(jsonPath("$.payment.amountPaid").value(2000.0));
 
             assertThat(ledger()).as("le rejeu n'écrit rien").isEqualTo(afterFirst);
             assertThat(idempotencyRepository.findAll()).singleElement()

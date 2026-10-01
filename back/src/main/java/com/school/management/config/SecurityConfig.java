@@ -96,6 +96,9 @@ public class SecurityConfig {
                         // lecture. Doit précéder la règle générique GET ouverte aux deux rôles.
                         .requestMatchers(HttpMethod.GET, "/api/groups/*/revenue").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/revenue/**").hasRole("ADMIN")
+                        // Reçus et historique des versements d'un élève (spec admin-corrections).
+                        .requestMatchers(HttpMethod.GET, "/api/encashments/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/students/*/encashments").hasRole("ADMIN")
                         // Lecture : les deux rôles
                         .requestMatchers(HttpMethod.GET, "/api/**").hasAnyRole("ADMIN", "VIEWER")
                         // Écriture : ADMIN uniquement

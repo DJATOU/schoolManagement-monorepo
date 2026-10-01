@@ -931,7 +931,6 @@
       "carriedOverTotal": "Total reporté",
       "studentSignature": "Signature de l'étudiant",
       "adminSignature": "Encaissé par",
-      "unknownAdmin": "Administration",
       "footerNote": "Ce reçu ne couvre que le versement mentionné ci-dessus.",
       "error": "Paiement enregistré, mais le reçu n'a pas pu être généré."
     },

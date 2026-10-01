@@ -931,7 +931,6 @@
       "carriedOverTotal": "Total carried over",
       "studentSignature": "Student signature",
       "adminSignature": "Received by",
-      "unknownAdmin": "Administration",
       "footerNote": "This receipt covers only the payment shown above.",
       "error": "Payment recorded, but the receipt could not be generated."
     },

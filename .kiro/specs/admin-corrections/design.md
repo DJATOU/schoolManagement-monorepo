@@ -226,11 +226,13 @@ sous-liste pertinente ; `OTHER` exige un texte (11.1, 11.2).
 ## Architecture
 
 ```
+controller/
+  EncashmentController             GET  /api/encashments/{id}                 (reçu, réimpression)
+                                   GET  /api/students/{id}/encashments        (historique, A.8)
 controller/correction/
   EncashmentCorrectionController   POST /api/encashments/{id}/cancel/{preview|confirm}
                                    POST /api/encashments/{id}/correct/{preview|confirm}
                                    PATCH /api/encashments/{id}/details        (mode, note)
-                                   GET  /api/encashments/{id}                 (reçu, réimpression)
   EnrolmentCorrectionController    POST /api/enrolments/{id}/arrival/{preview|confirm}
                                    POST /api/enrolments/{id}/departure/{preview|confirm}
   AttendanceCorrectionController   POST /api/attendances/{id}/correct/{preview|confirm}

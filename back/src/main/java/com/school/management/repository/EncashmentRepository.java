@@ -8,11 +8,15 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 /** Accès aux Encaissements. */
 @Repository
 public interface EncashmentRepository extends JpaRepository<EncashmentEntity, Long> {
+
+    /** Encaissements d'un étudiant, le plus récent d'abord ; annulés compris (index V6). */
+    List<EncashmentEntity> findByStudentIdOrderByReceivedAtDescIdDesc(Long studentId);
 
     /**
      * Encaissement verrouillé en écriture jusqu'à la fin de la transaction : deux annulations

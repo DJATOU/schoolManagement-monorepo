@@ -102,7 +102,30 @@ Socle de tout le reste : sans Encaissement identifiable, aucune correction d'arg
   d'un versement reporté. Mutations vérifiées : ligne non désactivée à l'annulation, cumul
   incrémenté en plus de l'Imputation. Remplacement : ajouté à la propriété avec le lot B (B.6)
   _Exigences : 1.4_
-- [ ] A.8 Reçu : `receipt_number` renvoyé par l'API et imprimé ; `GET /api/encashments/{id}`
+- [x] A.8 Reçu : `receipt_number` renvoyé par l'API et imprimé ; `GET /api/encashments/{id}`.
+  Fait :
+  - `/process` et `/process/catch-up` renvoient tous deux `PaymentAllocationResultDTO`, enrichi de
+    l'Encaissement enregistré (`EncashmentDTO` : numéro, statut, nature, montant reçu, mode,
+    date, auteur, Imputations, annulation, remplacement). Le rattrapage renvoyait une ligne de
+    paiement ;
+  - `GET /api/encashments/{id}` (réimpression) et `GET /api/students/{id}/encashments`
+    (historique, plus récent d'abord, annulés compris), 404 sur identifiant inconnu, réservés à
+    l'ADMIN comme les recettes (`SecurityConfig`) ;
+  - le reçu imprime le numéro, la date et l'auteur du serveur : `buildReference` (identifiant de
+    ligne + heure du navigateur) et la signature par le compte connecté sont retirés ; le montant
+    imprimé est celui de l'Encaissement, jamais le cumul de la série ;
+  - front : modèle `Encashment`, `EncashmentService` (lecture seule).
+  Tests : bout en bout (réponse porteuse du reçu sur les deux chemins, relecture, historique,
+  404), autorisation (ADMIN seul), `PaymentDialogComponent` (numéro, date, auteur, montant du
+  versement, rattrapage), `EncashmentService` (adresses, motifs). Mutations vérifiées : règle de
+  sécurité retirée, référence fabriquée, date du navigateur, auteur fixe, cumul imprimé, adresse
+  de l'historique.
+  Au passage : le seuil JaCoCo de `PaymentStatusService` (100 %) n'était plus tenu ; toutes les
+  branches non couvertes étaient dans le code introduit par A.5 (lecture de la ventilation par
+  séance, prix net). Gardes mortes retirées (paiement et montant `NOT NULL`,
+  série sans identifiant) ; testés : ligne d'un paiement annulé, ligne sans séance, séance hors
+  série au tarif du groupe, séance sans tarif. Quatre mutations vérifiées. Le contrôle se lit
+  désormais au code de sortie de Maven, pas seulement aux rapports surefire
   _Exigences : 1.2_
 - [ ] A.9 Historique élève : liste des Encaissements
   _Exigences : 1.1_

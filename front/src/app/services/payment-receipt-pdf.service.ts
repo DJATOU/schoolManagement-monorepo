@@ -27,9 +27,9 @@ export interface ReceiptCarryOver {
  * <strong>versement courant</strong>, pas le cumul de la série.</p>
  */
 export interface PaymentReceiptData {
-  /** Référence du reçu, imprimée en en-tête (voir PaymentReceiptPdfService.buildReference). */
+  /** Numéro de reçu attribué par le serveur (`RECU-AAAA-NNNN`), imprimé en en-tête. */
   reference: string;
-  /** Date d'encaissement retenue (date serveur si disponible, sinon date locale). */
+  /** Date et heure d'encaissement fixées par le serveur. */
   issuedAt: Date;
   studentName: string;
   groupName: string;
@@ -69,8 +69,7 @@ export interface PaymentReceiptData {
   /**
    * Part du versement imputée sur la série visée (exigence 7.2).
    *
-   * <p>Absente pour les chemins qui ne renvoient pas de répartition, comme le rattrapage : le
-   * reçu se limite alors au montant reçu.</p>
+   * <p>Facultative : absente, le reçu se limite au montant reçu.</p>
    */
   amountAllocated?: number;
   /**
@@ -81,7 +80,7 @@ export interface PaymentReceiptData {
    * série qu'elle a réglée.</p>
    */
   carryOvers?: ReceiptCarryOver[];
-  /** Identifiant de l'admin qui a encaissé CE versement. */
+  /** Compte qui a encaissé CE versement, tel qu'enregistré par le serveur. */
   adminUsername: string;
 }
 
@@ -103,21 +102,6 @@ export class PaymentReceiptPdfService {
 
   constructor(private translate: TranslateService) {
     (pdfMake as any).vfs = pdfFonts.pdfMake.vfs;
-  }
-
-  /**
-   * Construit une référence de reçu.
-   *
-   * <p>L'identifiant de paiement seul ne suffit pas : le backend regroupe tous les versements
-   * d'une même série sur une seule ligne de paiement, si bien que deux versements successifs
-   * partagent cet identifiant. On y adjoint donc l'horodatage d'encaissement pour distinguer
-   * les reçus tout en restant traçable jusqu'à la ligne de paiement.</p>
-   */
-  buildReference(paymentId: number | undefined, issuedAt: Date): string {
-    const pad = (n: number) => String(n).padStart(2, '0');
-    const stamp = `${issuedAt.getFullYear()}${pad(issuedAt.getMonth() + 1)}${pad(issuedAt.getDate())}`
-      + `-${pad(issuedAt.getHours())}${pad(issuedAt.getMinutes())}${pad(issuedAt.getSeconds())}`;
-    return paymentId != null ? `${paymentId}-${stamp}` : stamp;
   }
 
   /**

@@ -429,20 +429,21 @@ public class PaymentStatusService {
         /**
          * Somme des lignes actives de l'étudiant par séance, lignes d'un paiement annulé exclues.
          *
+         * <p>Le paiement et le montant d'une ligne sont obligatoires en base ({@code NOT NULL}) ;
+         * la séance ne l'est pas, une ligne sans séance ne règle rien.</p>
+         *
          * @param sessions reçoit les séances rencontrées, par identifiant
          */
         private Map<Long, BigDecimal> ventilatedBySession(Long studentId, Map<Long, SessionEntity> sessions) {
                 Map<Long, BigDecimal> ventilated = new HashMap<>();
                 for (PaymentDetailEntity detail : paymentDetailRepository.findByPayment_StudentId(studentId)) {
                         if (!Boolean.TRUE.equals(detail.getActive()) || detail.getSession() == null
-                                        || (detail.getPayment() != null
-                                                        && "CANCELLED".equals(detail.getPayment().getStatus()))) {
+                                        || "CANCELLED".equals(detail.getPayment().getStatus())) {
                                 continue;
                         }
                         sessions.putIfAbsent(detail.getSession().getId(), detail.getSession());
                         ventilated.merge(detail.getSession().getId(),
-                                        BigDecimal.valueOf(detail.getAmountPaid() == null ? 0.0 : detail.getAmountPaid()),
-                                        BigDecimal::add);
+                                        BigDecimal.valueOf(detail.getAmountPaid()), BigDecimal::add);
                 }
                 return ventilated;
         }
@@ -460,7 +461,7 @@ public class PaymentStatusService {
                 }
 
                 BigDecimal of(SessionEntity session) {
-                        if (session.getSessionSeries() != null && session.getSessionSeries().getId() != null) {
+                        if (session.getSessionSeries() != null) {
                                 return bySeries.computeIfAbsent(session.getSessionSeries().getId(),
                                                 seriesId -> paymentQuoteService.netPricePerSession(studentId, seriesId));
                         }
