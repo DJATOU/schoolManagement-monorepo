@@ -171,8 +171,14 @@ ALTER TABLE payment_carry_over
 CREATE INDEX idx_payment_carry_over_allocation ON payment_carry_over (encashment_allocation_id);
 
 -- L'empreinte d'idempotence porte sur la requête entière, donc sur l'Encaissement.
+-- session_id : séance payée par un encaissement de rattrapage, nulle pour un
+-- versement de série. Elle complète l'empreinte : deux rattrapages du même montant
+-- sur deux séances de la même série sont deux encaissements, jamais un rejeu.
+-- Pas de clé étrangère, comme les autres colonnes d'empreinte : une empreinte ne
+-- doit pas empêcher la suppression d'une séance.
 ALTER TABLE payment_idempotency
     ADD COLUMN encashment_id BIGINT,
+    ADD COLUMN session_id BIGINT,
     ADD CONSTRAINT fk_payment_idempotency_encashment
         FOREIGN KEY (encashment_id) REFERENCES encashment (id);
 

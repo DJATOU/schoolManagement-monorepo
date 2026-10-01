@@ -207,9 +207,22 @@ public class PaymentController {
                 paymentDto.getGroupId(),
                 paymentDto.getSessionSeriesId(),
                 paymentDto.getAmountPaid(),
-                idempotencyKey);
+                idempotencyKey,
+                meansOf(paymentDto));
 
         return ResponseEntity.ok(toDto(result));
+    }
+
+    /**
+     * Mode de paiement et note saisis, conservés sur l'Encaissement. L'écran envoie la note dans
+     * {@code paymentDescription} ; {@code notes} reste accepté pour les autres clients.
+     */
+    private static PaymentProcessingService.PaymentMeans meansOf(PaymentDTO paymentDto) {
+        String note = paymentDto.getPaymentDescription();
+        if (note == null || note.isBlank()) {
+            note = paymentDto.getNotes();
+        }
+        return new PaymentProcessingService.PaymentMeans(paymentDto.getPaymentMethod(), note);
     }
 
     /** Traduit le résultat d'encaissement en contrat d'API, la ligne de paiement comprise. */
@@ -233,22 +246,27 @@ public class PaymentController {
      *
      * PHASE 2: Utilise PaymentProcessingService.processCatchUpPayment.
      *
-     * @param paymentDto les informations du paiement (studentId, sessionId,
-     *                   amountPaid)
-     * @return le paiement traité
+     * @param paymentDto     les informations du paiement (studentId, sessionId,
+     *                       amountPaid)
+     * @param idempotencyKey clé de la soumission, même règle que {@code /process}
+     *                       (spec admin-corrections, exigence 1.7)
+     * @return la ligne de paiement de la série, cumul à jour
      */
     @PostMapping("/process/catch-up")
-    public ResponseEntity<PaymentDTO> processCatchUpPayment(@Valid @RequestBody PaymentDTO paymentDto) {
+    public ResponseEntity<PaymentDTO> processCatchUpPayment(
+            @Valid @RequestBody PaymentDTO paymentDto,
+            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
         LOGGER.info("Processing catch-up payment - student: {}, session: {}, amount: {}",
                 paymentDto.getStudentId(), paymentDto.getSessionId(), paymentDto.getAmountPaid());
 
-        PaymentEntity processedPayment = paymentProcessingService.processCatchUpPayment(
+        PaymentAllocationResult result = paymentProcessingService.processCatchUpPayment(
                 paymentDto.getStudentId(),
                 paymentDto.getSessionId(),
-                paymentDto.getAmountPaid());
+                paymentDto.getAmountPaid(),
+                idempotencyKey,
+                meansOf(paymentDto));
 
-        PaymentDTO responseDto = paymentMapper.toDto(processedPayment);
-        return ResponseEntity.ok(responseDto);
+        return ResponseEntity.ok(paymentMapper.toDto(result.payment()));
     }
 
     /**

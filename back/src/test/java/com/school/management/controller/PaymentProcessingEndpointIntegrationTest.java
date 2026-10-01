@@ -1,6 +1,13 @@
 package com.school.management.controller;
 
+import com.school.management.persistance.AttendanceEntity;
+import com.school.management.persistance.CatchUpBillingState;
+import com.school.management.persistance.CorrectionReasonType;
+import com.school.management.persistance.EncashmentEntity;
+import com.school.management.persistance.EncashmentKind;
+import com.school.management.persistance.EncashmentStatus;
 import com.school.management.persistance.GroupEntity;
+import com.school.management.persistance.PaymentEntity;
 import com.school.management.persistance.PricingEntity;
 import com.school.management.persistance.SchoolYearEntity;
 import com.school.management.persistance.SessionEntity;
@@ -8,7 +15,12 @@ import com.school.management.persistance.SessionSeriesEntity;
 import com.school.management.persistance.StudentEntity;
 import com.school.management.persistance.StudentGroupEntity;
 import com.school.management.repository.AttendanceRepository;
+import com.school.management.repository.EncashmentAllocationRepository;
+import com.school.management.repository.EncashmentRepository;
 import com.school.management.repository.GroupRepository;
+import com.school.management.repository.ReceiptCounterRepository;
+import com.school.management.service.correction.CorrectionReason;
+import com.school.management.service.payment.EncashmentService;
 import com.school.management.repository.PaymentCarryOverRepository;
 import com.school.management.repository.PaymentDetailRepository;
 import com.school.management.repository.PaymentIdempotencyRepository;
@@ -32,9 +44,12 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.Year;
 import java.time.ZoneId;
 import java.util.Date;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.allOf;
@@ -97,6 +112,10 @@ class PaymentProcessingEndpointIntegrationTest {
     @Autowired private PaymentDetailRepository paymentDetailRepository;
     @Autowired private PaymentCarryOverRepository carryOverRepository;
     @Autowired private PaymentIdempotencyRepository idempotencyRepository;
+    @Autowired private EncashmentRepository encashmentRepository;
+    @Autowired private EncashmentAllocationRepository allocationRepository;
+    @Autowired private ReceiptCounterRepository receiptCounterRepository;
+    @Autowired private EncashmentService encashmentService;
 
     private SchoolYearEntity currentYear;
     private GroupEntity group;
@@ -116,6 +135,10 @@ class PaymentProcessingEndpointIntegrationTest {
         idempotencyRepository.deleteAll();
         carryOverRepository.deleteAll();
         paymentDetailRepository.deleteAll();
+        allocationRepository.deleteAll();
+        encashmentRepository.deleteAll();
+        // Compteur remis à zéro : chaque test voit son premier reçu porter le rang 0001.
+        receiptCounterRepository.deleteAll();
         paymentRepository.deleteAll();
         attendanceRepository.deleteAll();
         sessionRepository.deleteAll();
@@ -181,12 +204,29 @@ class PaymentProcessingEndpointIntegrationTest {
     }
 
     /** État du registre, pour vérifier qu'un refus n'a rien écrit. */
-    private record Ledger(long payments, long details, long carryOvers, long idempotency) {
+    private record Ledger(long payments, long details, long carryOvers, long idempotency,
+                          long encashments, long allocations) {
     }
 
     private Ledger ledger() {
         return new Ledger(paymentRepository.count(), paymentDetailRepository.count(),
-                carryOverRepository.count(), idempotencyRepository.count());
+                carryOverRepository.count(), idempotencyRepository.count(),
+                encashmentRepository.count(), allocationRepository.count());
+    }
+
+    /** Numéro de reçu attendu pour le rang donné, dans l'année du serveur. */
+    private static String receipt(int rank) {
+        return String.format("RECU-%d-%04d", Year.now().getValue(), rank);
+    }
+
+    /** Cumul de la série relu en base, comparé à la somme de ses Imputations actives. */
+    private double cumulOf(Long seriesId, Long studentId) {
+        PaymentEntity line = paymentRepository.findActiveByStudentIdAndSessionSeriesId(studentId, seriesId)
+                .orElseThrow();
+        assertThat(BigDecimal.valueOf(line.getAmountPaid()))
+                .as("cumul = somme des Imputations actives (exigence 1.4)")
+                .isEqualByComparingTo(allocationRepository.sumActiveAmountForPayment(line.getId()));
+        return line.getAmountPaid();
     }
 
     // ------------------------------------------------------------------
@@ -255,6 +295,256 @@ class PaymentProcessingEndpointIntegrationTest {
                     .andExpect(jsonPath("$.amountAllocated").value(0.00))
                     .andExpect(jsonPath("$.carryOvers[0].seriesId").value(s2.getId()))
                     .andExpect(jsonPath("$.carryOvers[0].amount").value(2000.00));
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // L'Encaissement (spec admin-corrections, A.4)
+    // ------------------------------------------------------------------
+
+    @Nested
+    @DisplayName("Encaissement enregistré")
+    class EncaissementEnregistre {
+
+        @Test
+        @DisplayName("un versement : un Encaissement numéroté, porteur du montant, du mode et de la note")
+        void versementEnregistreCommeEncaissement() throws Exception {
+            mockMvc.perform(post(URL).contentType(MediaType.APPLICATION_JSON)
+                            .content(String.format("{\"studentId\":%s,\"groupId\":%s,\"sessionSeriesId\":%s,"
+                                            + "\"amountPaid\":4000,\"paymentMethod\":\"cash\","
+                                            + "\"paymentDescription\":\"Réglé par la mère\"}",
+                                    student.getId(), group.getId(), s1.getId())))
+                    .andExpect(status().isOk());
+
+            assertThat(encashmentRepository.findAll()).singleElement().satisfies(encashment -> {
+                assertThat(encashment.getReceiptNumber()).isEqualTo(receipt(1));
+                assertThat(encashment.getStatus()).isEqualTo(EncashmentStatus.ACTIVE);
+                assertThat(encashment.getKind()).isEqualTo(EncashmentKind.REGULAR);
+                assertThat(encashment.getAmountReceived()).isEqualByComparingTo("4000.00");
+                assertThat(encashment.getPaymentMethod()).isEqualTo("cash");
+                assertThat(encashment.getNotes()).isEqualTo("Réglé par la mère");
+                assertThat(encashment.getReceivedBy()).isNotBlank();
+            });
+            assertThat(allocationRepository.findAll()).singleElement().satisfies(imputation -> {
+                assertThat(imputation.getAmount()).isEqualByComparingTo("4000.00");
+                assertThat(imputation.getCarriedOver()).isFalse();
+            });
+            assertThat(cumulOf(s1.getId(), student.getId())).isEqualTo(4000.0);
+            // Deux séances facturables à 2 000 DA : le coût au prorata est atteint.
+            assertThat(paymentRepository.findAll()).singleElement()
+                    .satisfies(line -> assertThat(line.getStatus()).isEqualTo("COMPLETED"));
+        }
+
+        @Test
+        @DisplayName("versement reporté : un seul Encaissement, deux Imputations, le report désigne la sienne")
+        void reportRattacheASonImputation() throws Exception {
+            SessionSeriesEntity s2 = persistSeries(group, "Série 2", date(2030, 2, 4), date(2030, 2, 11));
+
+            pay(s1.getId(), 6000, "cle-report").andExpect(status().isOk());
+
+            assertThat(encashmentRepository.count()).isEqualTo(1);
+            assertThat(allocationRepository.findAll())
+                    .extracting(a -> a.getSeries().getId(), a -> a.getAmount().toPlainString(), a -> a.getCarriedOver())
+                    .containsExactlyInAnyOrder(
+                            org.assertj.core.groups.Tuple.tuple(s1.getId(), "4000.00", false),
+                            org.assertj.core.groups.Tuple.tuple(s2.getId(), "2000.00", true));
+            Long carriedImputationId = allocationRepository.findAll().stream()
+                    .filter(a -> Boolean.TRUE.equals(a.getCarriedOver()))
+                    .findFirst().orElseThrow().getId();
+            assertThat(carryOverRepository.findAll()).singleElement()
+                    .satisfies(carryOver -> assertThat(carryOver.getEncashmentAllocation().getId())
+                            .isEqualTo(carriedImputationId));
+            assertThat(idempotencyRepository.findAll()).singleElement()
+                    .satisfies(record -> assertThat(record.getEncashment()).isNotNull());
+            assertThat(cumulOf(s1.getId(), student.getId())).isEqualTo(4000.0);
+            assertThat(cumulOf(s2.getId(), student.getId())).isEqualTo(2000.0);
+        }
+
+        @Test
+        @DisplayName("deux versements : deux Encaissements aux numéros consécutifs, cumul = leur somme")
+        void deuxVersementsDeuxRecus() throws Exception {
+            pay(s1.getId(), 1500).andExpect(status().isOk());
+            pay(s1.getId(), 2500).andExpect(status().isOk());
+
+            assertThat(encashmentRepository.findAll())
+                    .extracting(EncashmentEntity::getReceiptNumber)
+                    .containsExactlyInAnyOrder(receipt(1), receipt(2));
+            assertThat(cumulOf(s1.getId(), student.getId())).isEqualTo(4000.0);
+        }
+
+        @Test
+        @DisplayName("versement refusé : aucun Encaissement, aucun numéro consommé")
+        void refusNeConsommeAucunNumero() throws Exception {
+            pay(s1.getId(), 6000).andExpect(status().isBadRequest());
+            assertThat(encashmentRepository.count()).isZero();
+
+            pay(s1.getId(), 2000).andExpect(status().isOk());
+            assertThat(encashmentRepository.findAll()).singleElement()
+                    .satisfies(encashment -> assertThat(encashment.getReceiptNumber()).isEqualTo(receipt(1)));
+        }
+
+        @Test
+        @DisplayName("Encaissement annulé : le cumul retombe à la somme des Encaissements restants")
+        void cumulDeriveDesEncaissements() throws Exception {
+            pay(s1.getId(), 1500).andExpect(status().isOk());
+            pay(s1.getId(), 2500).andExpect(status().isOk());
+            EncashmentEntity first = encashmentRepository.findAll().stream()
+                    .filter(encashment -> encashment.getReceiptNumber().equals(receipt(1)))
+                    .findFirst().orElseThrow();
+
+            encashmentService.neutralize(first.getId(), CorrectionReason.of(CorrectionReasonType.WRONG_AMOUNT));
+
+            // Un cumul incrémenté resterait à 4 000 DA : il serait faux dès la première annulation.
+            assertThat(cumulOf(s1.getId(), student.getId())).isEqualTo(2500.0);
+            // Et la place libérée peut être encaissée de nouveau.
+            pay(s1.getId(), 1500).andExpect(status().isOk());
+            assertThat(cumulOf(s1.getId(), student.getId())).isEqualTo(4000.0);
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Rattrapage : même Encaissement, même clé (exigence 1.7)
+    // ------------------------------------------------------------------
+
+    @Nested
+    @DisplayName("POST /api/payments/process/catch-up")
+    class Rattrapage {
+
+        private static final String CATCH_UP_URL = "/api/payments/process/catch-up";
+
+        private StudentEntity lina;
+        private SessionEntity firstSession;
+        private SessionEntity secondSession;
+
+        /**
+         * Lina n'est pas inscrite au groupe. Elle est venue en rattrapage à la première séance de
+         * la série, facturée sur place (aucun groupe de même niveau et même matière ne lui réserve
+         * de place) : elle doit cette séance, et elle seule.
+         */
+        @BeforeEach
+        void givenAHostBilledCatchUp() {
+            lina = studentRepository.save(StudentEntity.builder().firstName("Lina").lastName("Hamdani").build());
+            List<SessionEntity> sessions = sessionRepository.findAll().stream()
+                    .filter(session -> session.getSessionSeries().getId().equals(s1.getId()))
+                    .sorted(java.util.Comparator.comparing(SessionEntity::getSessionTimeStart))
+                    .toList();
+            firstSession = sessions.get(0);
+            secondSession = sessions.get(1);
+            attend(firstSession, CatchUpBillingState.HOST_BILLED);
+        }
+
+        private void attend(SessionEntity session, CatchUpBillingState state) {
+            attendanceRepository.save(AttendanceEntity.builder()
+                    .student(lina).session(session).sessionSeries(s1).group(group)
+                    .isPresent(true).isCatchUp(true).catchUpBillingState(state).build());
+        }
+
+        private ResultActions payCatchUp(SessionEntity session, Object amount, String key) throws Exception {
+            MockHttpServletRequestBuilder request = post(CATCH_UP_URL)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    // groupId est exigé par la validation du PaymentDTO ; le serveur retient
+                    // néanmoins le groupe de la séance, seul à faire foi.
+                    .content(String.format("{\"studentId\":%s,\"groupId\":%s,\"sessionId\":%s,\"amountPaid\":%s,"
+                            + "\"paymentMethod\":\"cash\"}", lina.getId(), group.getId(), session.getId(), amount));
+            if (key != null) {
+                request = request.header("Idempotency-Key", key);
+            }
+            return mockMvc.perform(request);
+        }
+
+        @Test
+        @DisplayName("rattrapage accepté : Encaissement CATCH_UP numéroté, cumul et statut au prorata")
+        void rattrapageEnregistreCommeEncaissement() throws Exception {
+            payCatchUp(firstSession, 2000, null)
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.amountPaid").value(2000.0))
+                    // Une séance suivie et facturable à 2 000 DA : la série est soldée pour Lina.
+                    .andExpect(jsonPath("$.status").value("COMPLETED"));
+
+            assertThat(encashmentRepository.findAll()).singleElement().satisfies(encashment -> {
+                assertThat(encashment.getKind()).isEqualTo(EncashmentKind.CATCH_UP);
+                assertThat(encashment.getReceiptNumber()).isEqualTo(receipt(1));
+                assertThat(encashment.getTargetSeries().getId()).isEqualTo(s1.getId());
+                assertThat(encashment.getPaymentMethod()).isEqualTo("cash");
+            });
+            assertThat(cumulOf(s1.getId(), lina.getId())).isEqualTo(2000.0);
+            assertThat(carryOverRepository.count()).as("un rattrapage ne se reporte pas").isZero();
+        }
+
+        @Test
+        @DisplayName("rejeu sous la même clé : même réponse, un seul Encaissement")
+        void rejeu() throws Exception {
+            payCatchUp(firstSession, 2000, "cle-rattrapage").andExpect(status().isOk());
+            Ledger afterFirst = ledger();
+
+            payCatchUp(firstSession, 2000, "cle-rattrapage")
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.amountPaid").value(2000.0));
+
+            assertThat(ledger()).as("le rejeu n'écrit rien").isEqualTo(afterFirst);
+            assertThat(idempotencyRepository.findAll()).singleElement()
+                    .satisfies(record -> assertThat(record.getSessionId()).isEqualTo(firstSession.getId()));
+        }
+
+        @Test
+        @DisplayName("même clé pour une autre séance, ou sur /process : 409, rien n'est écrit")
+        void cleReutilisee() throws Exception {
+            payCatchUp(firstSession, 1000, "cle-r").andExpect(status().isOk());
+            Ledger before = ledger();
+
+            payCatchUp(secondSession, 1000, "cle-r")
+                    .andExpect(status().isConflict())
+                    .andExpect(jsonPath("$.message", containsString("déjà servi")));
+            mockMvc.perform(post(URL).contentType(MediaType.APPLICATION_JSON)
+                            .header("Idempotency-Key", "cle-r")
+                            .content(body(lina.getId(), group.getId(), s1.getId(), 1000)))
+                    .andExpect(status().isConflict());
+
+            assertThat(ledger()).isEqualTo(before);
+        }
+
+        @Test
+        @DisplayName("au-delà du prix de la séance : 400, rien n'est écrit")
+        void auDelaDuPrixDeLaSeance() throws Exception {
+            Ledger before = ledger();
+
+            payCatchUp(firstSession, 2500, null)
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.message", containsString("dépasse le coût de la séance")));
+
+            assertThat(ledger()).isEqualTo(before);
+        }
+
+        @Test
+        @DisplayName("au-delà de ce qui reste dû : 400 avec le maximum, rien n'est écrit")
+        void auDelaDuResteDu() throws Exception {
+            payCatchUp(firstSession, 1500, null).andExpect(status().isOk());
+            Ledger before = ledger();
+
+            payCatchUp(firstSession, 1000, null)
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.message", allOf(
+                            containsString("au maximum 500.00 DA"),
+                            containsString("ne se reporte pas"))));
+
+            assertThat(ledger()).isEqualTo(before);
+            assertThat(cumulOf(s1.getId(), lina.getId())).isEqualTo(1500.0);
+        }
+
+        @Test
+        @DisplayName("rattrapage « à préciser » : rien à encaisser, 400, rien n'est écrit")
+        void rattrapageAPreciser() throws Exception {
+            // Avant A.4, ce chemin encaissait jusqu'au prix de la séance un rattrapage qui ne
+            // facture rien tant qu'il n'est pas tranché : un crédit que rien n'expliquait.
+            attendanceRepository.deleteAll();
+            attend(firstSession, CatchUpBillingState.PENDING);
+            Ledger before = ledger();
+
+            payCatchUp(firstSession, 2000, null)
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.message", containsString("Rien à encaisser pour ce rattrapage")));
+
+            assertThat(ledger()).isEqualTo(before);
         }
     }
 

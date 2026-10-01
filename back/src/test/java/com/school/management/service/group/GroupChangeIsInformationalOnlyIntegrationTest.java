@@ -1,5 +1,6 @@
 package com.school.management.service.group;
 
+import com.school.management.config.security.SecurityAuditorAware;
 import com.school.management.dto.group.GroupChangeDTO;
 import com.school.management.dto.payment.PaymentQuoteDTO;
 import com.school.management.persistance.AttendanceEntity;
@@ -19,7 +20,9 @@ import com.school.management.service.payment.PaymentCarryOverService;
 import com.school.management.service.payment.PaymentCostResolver;
 import com.school.management.service.payment.PaymentDistributionService;
 import com.school.management.service.payment.PaymentIdempotencyService;
+import com.school.management.service.payment.EncashmentService;
 import com.school.management.service.payment.PaymentProcessingService;
+import com.school.management.service.payment.ReceiptNumberService;
 import com.school.management.service.payment.PaymentQuoteService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -70,7 +73,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 @Import({ GroupChangeDetector.class, BillableSessionsResolverImpl.class, CatchUpBillingQualifierImpl.class, DiscountService.class,
         PaymentCostResolver.class, PaymentQuoteService.class, PaymentAllocationService.class,
         PaymentDistributionService.class, PaymentCarryOverService.class,
-        PaymentProcessingService.class, PaymentIdempotencyService.class })
+        PaymentProcessingService.class, PaymentIdempotencyService.class,
+        EncashmentService.class, ReceiptNumberService.class, SecurityAuditorAware.class })
 class GroupChangeIsInformationalOnlyIntegrationTest {
 
     // Les groupes de ce jeu de données ne portent pas d'année scolaire : la garde d'année close

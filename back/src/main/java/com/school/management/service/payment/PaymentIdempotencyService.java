@@ -1,8 +1,9 @@
 package com.school.management.service.payment;
 
-import com.school.management.persistance.PaymentCarryOverEntity;
+import com.school.management.persistance.EncashmentAllocationEntity;
+import com.school.management.persistance.EncashmentEntity;
 import com.school.management.persistance.PaymentIdempotencyEntity;
-import com.school.management.repository.PaymentCarryOverRepository;
+import com.school.management.repository.EncashmentAllocationRepository;
 import com.school.management.repository.PaymentIdempotencyRepository;
 import com.school.management.service.exception.CustomServiceException;
 import org.slf4j.Logger;
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -31,6 +33,11 @@ import java.util.Optional;
  * encaissement. Rendre la clé obligatoire aurait cassé tous les clients existants d'un seul coup,
  * et un défaut engendré côté serveur n'aurait rien distingué : deux requêtes auraient reçu deux
  * clés, donc deux versements, ce que ce service existe pour éviter.</p>
+ *
+ * <p><b>Deux chemins, une seule règle</b> (spec admin-corrections, exigence 1.7). Le versement de
+ * série et le rattrapage partagent la clé et l'empreinte. Le rattrapage y ajoute sa séance : deux
+ * rattrapages du même montant sur deux séances d'une même série sont deux encaissements, et une
+ * clé passée d'un chemin à l'autre est une clé réutilisée, jamais un rejeu.</p>
  */
 @Service
 public class PaymentIdempotencyService {
@@ -41,12 +48,12 @@ public class PaymentIdempotencyService {
     private static final int MAX_KEY_LENGTH = 100;
 
     private final PaymentIdempotencyRepository idempotencyRepository;
-    private final PaymentCarryOverRepository carryOverRepository;
+    private final EncashmentAllocationRepository allocationRepository;
 
     public PaymentIdempotencyService(PaymentIdempotencyRepository idempotencyRepository,
-                                     PaymentCarryOverRepository carryOverRepository) {
+                                     EncashmentAllocationRepository allocationRepository) {
         this.idempotencyRepository = idempotencyRepository;
-        this.carryOverRepository = carryOverRepository;
+        this.allocationRepository = allocationRepository;
     }
 
     /**
@@ -80,39 +87,57 @@ public class PaymentIdempotencyService {
     }
 
     /**
-     * Retrouve le résultat d'un encaissement déjà traité sous cette clé.
+     * Retrouve le résultat d'un versement de série déjà traité sous cette clé.
      *
      * <p>L'empreinte de la requête est confrontée à celle conservée. Une clé réutilisée pour un
      * versement différent est un défaut du client, jamais un rejeu : la signaler vaut mieux que
      * renvoyer le résultat d'un autre encaissement, qui produirait un reçu portant un montant que
      * personne n'a versé.</p>
      *
-     * @param key      la clé normalisée, ou {@code null} si l'appelant n'en fournit pas
+     * @param key       la clé normalisée, ou {@code null} si l'appelant n'en fournit pas
      * @param studentId l'étudiant de la requête courante
      * @param groupId   le groupe de la requête courante
      * @param seriesId  la série visée par la requête courante
      * @param amount    le montant de la requête courante, échelle monétaire
      * @return le résultat du traitement original si la clé a déjà servi, vide sinon
-     * @throws CustomServiceException 409 si la clé a servi pour un encaissement différent
+     * @throws CustomServiceException 409 si la clé a servi pour un encaissement différent, y
+     *                                compris un rattrapage
      */
     public Optional<PaymentAllocationResult> findReplay(String key, Long studentId, Long groupId,
                                                         Long seriesId, BigDecimal amount) {
-        if (key == null) {
-            return Optional.empty();
-        }
+        return find(key).map(record -> {
+            boolean sameRequest = record.getSessionId() == null
+                    && record.getStudentId().equals(studentId)
+                    && record.getGroupId().equals(groupId)
+                    && record.getSessionSeriesId().equals(seriesId)
+                    && record.getAmountReceived().compareTo(amount) == 0;
+            return replay(record, key, sameRequest);
+        });
+    }
 
-        Optional<PaymentIdempotencyEntity> existing = idempotencyRepository.findByIdempotencyKey(key);
-        if (existing.isEmpty()) {
-            return Optional.empty();
-        }
-
-        PaymentIdempotencyEntity record = existing.get();
-        assertSameRequest(record, key, studentId, groupId, seriesId, amount);
-
-        LOGGER.info("Rejeu détecté sur la clé {} : aucun second versement créé, résultat du "
-                + "traitement original restitué.", key);
-
-        return Optional.of(rebuild(record));
+    /**
+     * Retrouve le résultat d'un encaissement de rattrapage déjà traité sous cette clé.
+     *
+     * <p>L'empreinte porte sur ce que la requête désigne : l'étudiant, la séance rattrapée et le
+     * montant. Groupe et série s'en déduisent et n'ont pas à être comparés.</p>
+     *
+     * @param key       la clé normalisée, ou {@code null} si l'appelant n'en fournit pas
+     * @param studentId l'étudiant de la requête courante
+     * @param sessionId la séance payée par la requête courante
+     * @param amount    le montant de la requête courante, échelle monétaire
+     * @return le résultat du traitement original si la clé a déjà servi, vide sinon
+     * @throws CustomServiceException 409 si la clé a servi pour un encaissement différent, y
+     *                                compris un versement de série
+     */
+    public Optional<PaymentAllocationResult> findCatchUpReplay(String key, Long studentId, Long sessionId,
+                                                               BigDecimal amount) {
+        return find(key).map(record -> {
+            boolean sameRequest = sessionId != null
+                    && sessionId.equals(record.getSessionId())
+                    && record.getStudentId().equals(studentId)
+                    && record.getAmountReceived().compareTo(amount) == 0;
+            return replay(record, key, sameRequest);
+        });
     }
 
     /**
@@ -122,23 +147,27 @@ public class PaymentIdempotencyService {
      * l'empreinte disparaît avec elle et une nouvelle tentative reste possible. Une empreinte
      * survivant à un échec bloquerait la reprise d'un versement qui n'a jamais abouti.</p>
      *
-     * @param key    la clé normalisée, ou {@code null} pour ne rien conserver
-     * @param result le résultat du traitement
-     * @param originPaymentDate l'horodatage d'encaissement retenu par le serveur
+     * @param key              la clé normalisée, ou {@code null} pour ne rien conserver
+     * @param result           le résultat du traitement, Encaissement compris
+     * @param catchUpSessionId la séance payée pour un rattrapage, {@code null} pour un versement
+     *                         de série
      */
-    public void remember(String key, PaymentAllocationResult result, java.util.Date originPaymentDate) {
+    public void remember(String key, PaymentAllocationResult result, Long catchUpSessionId) {
         if (key == null) {
             return;
         }
+        EncashmentEntity encashment = result.encashment();
         idempotencyRepository.save(PaymentIdempotencyEntity.builder()
                 .idempotencyKey(key)
                 .studentId(result.studentId())
                 .groupId(result.groupId())
                 .sessionSeriesId(result.seriesId())
+                .sessionId(catchUpSessionId)
                 .amountReceived(result.amountReceived())
                 .amountAllocated(result.amountAllocated())
                 .payment(result.payment())
-                .originPaymentDate(originPaymentDate)
+                .originPaymentDate(encashment.getReceivedAt())
+                .encashment(encashment)
                 .build());
     }
 
@@ -146,41 +175,58 @@ public class PaymentIdempotencyService {
     // Interne
     // ------------------------------------------------------------------
 
-    private void assertSameRequest(PaymentIdempotencyEntity record, String key, Long studentId,
-                                   Long groupId, Long seriesId, BigDecimal amount) {
-        boolean sameRequest = record.getStudentId().equals(studentId)
-                && record.getGroupId().equals(groupId)
-                && record.getSessionSeriesId().equals(seriesId)
-                && record.getAmountReceived().compareTo(amount) == 0;
+    private Optional<PaymentIdempotencyEntity> find(String key) {
+        if (key == null) {
+            return Optional.empty();
+        }
+        return idempotencyRepository.findByIdempotencyKey(key);
+    }
 
+    private PaymentAllocationResult replay(PaymentIdempotencyEntity record, String key, boolean sameRequest) {
         if (!sameRequest) {
             throw new CustomServiceException(
                     "La clé d'idempotence " + key + " a déjà servi pour un encaissement différent "
                             + "(étudiant " + record.getStudentId() + ", série "
-                            + record.getSessionSeriesId() + ", "
-                            + record.getAmountReceived().toPlainString() + " DA). Utiliser une clé "
+                            + record.getSessionSeriesId()
+                            + (record.getSessionId() == null ? "" : ", rattrapage de la séance " + record.getSessionId())
+                            + ", " + record.getAmountReceived().toPlainString() + " DA). Utiliser une clé "
                             + "neuve pour un nouveau versement.",
                     HttpStatus.CONFLICT);
         }
+
+        LOGGER.info("Rejeu détecté sur la clé {} : aucun second versement créé, résultat du "
+                + "traitement original restitué.", key);
+
+        return rebuild(record);
     }
 
     /**
-     * Reconstitue le résultat original, reports compris, depuis la table qui fait foi.
+     * Reconstitue le résultat original depuis les Imputations de l'Encaissement.
      *
-     * <p>Les reports sont relus plutôt que recopiés : une copie pourrait diverger de
-     * {@code payment_carry_over}, que consultent les relevés et l'historique.</p>
+     * <p>Les Imputations sont relues plutôt que recopiées : elles sont la source de l'argent
+     * compté sur chaque série. Actives ou non : si l'Encaissement a été annulé depuis, le rejeu
+     * rend tout de même la répartition telle qu'elle a été faite, c'est-à-dire la réponse
+     * originale. La ligne de paiement, elle, est relue telle qu'elle est aujourd'hui.</p>
      */
     private PaymentAllocationResult rebuild(PaymentIdempotencyEntity record) {
-        List<PaymentCarryOverEntity> carryOvers = carryOverRepository
-                .findByStudentIdAndSourceSeriesIdAndOriginPaymentDateAndActiveTrueOrderByIdAsc(
-                        record.getStudentId(), record.getSessionSeriesId(),
-                        record.getOriginPaymentDate());
+        EncashmentEntity encashment = Objects.requireNonNull(record.getEncashment(),
+                () -> "Empreinte d'idempotence " + record.getIdempotencyKey() + " sans encaissement.");
 
-        List<PaymentAllocationResult.CarriedOverAmount> restored = carryOvers.stream()
-                .map(carryOver -> new PaymentAllocationResult.CarriedOverAmount(
-                        carryOver.getTargetSeries().getId(),
-                        carryOver.getTargetSeries().getName(),
-                        carryOver.getAmount()))
+        List<EncashmentAllocationEntity> allocations =
+                allocationRepository.findByEncashmentIdOrderByIdAsc(encashment.getId());
+
+        BigDecimal direct = allocations.stream()
+                .filter(allocation -> !Boolean.TRUE.equals(allocation.getCarriedOver()))
+                .map(EncashmentAllocationEntity::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .setScale(PaymentCostCalculator.MONEY_SCALE, PaymentCostCalculator.MONEY_ROUNDING);
+
+        List<PaymentAllocationResult.CarriedOverAmount> carryOvers = allocations.stream()
+                .filter(allocation -> Boolean.TRUE.equals(allocation.getCarriedOver()))
+                .map(allocation -> new PaymentAllocationResult.CarriedOverAmount(
+                        allocation.getSeries().getId(),
+                        allocation.getSeries().getName(),
+                        allocation.getAmount()))
                 .toList();
 
         return new PaymentAllocationResult(
@@ -188,8 +234,9 @@ public class PaymentIdempotencyService {
                 record.getGroupId(),
                 record.getSessionSeriesId(),
                 record.getAmountReceived(),
-                record.getAmountAllocated(),
-                restored,
-                record.getPayment());
+                direct,
+                carryOvers,
+                record.getPayment(),
+                encashment);
     }
 }

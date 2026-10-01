@@ -78,7 +78,12 @@ payment_idempotency   + encashment_id
 - **Qui désigne quoi.** Une ligne de ventilation et un report sont chacun une *part* d'une
   Imputation : ils la désignent, et l'Encaissement s'en déduit. Les relier aussi directement à
   l'Encaissement dupliquerait l'information, avec le risque de deux valeurs contradictoires.
-  L'empreinte d'idempotence porte sur la requête entière : elle désigne l'Encaissement.
+  L'empreinte d'idempotence porte sur la requête entière : elle désigne l'Encaissement. Le rejeu
+  relit ses Imputations, actives ou non, pour rendre la réponse d'origine même après annulation.
+- **Rattrapage (1.7).** Même Encaissement (`kind = CATCH_UP`), même clé ; l'empreinte ajoute la
+  séance payée (`payment_idempotency.session_id`) : deux rattrapages du même montant sur deux
+  séances sont deux encaissements, et une clé passée d'un chemin à l'autre est réutilisée (409).
+  Plafond : prix net de la séance et reste dû de la série ; aucun report.
 
 - **Une ligne de ventilation par (Encaissement, Séance).** `distributeToSession` ne complète plus
   une ligne partagée : il crée la ligne de l'Encaissement courant, plafonnée à ce qui reste dû sur

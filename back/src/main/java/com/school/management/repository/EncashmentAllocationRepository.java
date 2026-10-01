@@ -17,6 +17,12 @@ public interface EncashmentAllocationRepository extends JpaRepository<Encashment
     List<EncashmentAllocationEntity> findByEncashmentIdAndActiveTrueOrderByIdAsc(Long encashmentId);
 
     /**
+     * Toutes les Imputations d'un encaissement, actives ou non, dans l'ordre de création : la
+     * répartition telle qu'elle a été faite, que restitue le rejeu d'une requête.
+     */
+    List<EncashmentAllocationEntity> findByEncashmentIdOrderByIdAsc(Long encashmentId);
+
+    /**
      * Cumul d'une série pour un étudiant : la somme des Imputations actives de sa ligne de paiement.
      * C'est la définition de {@code payments.amount_paid} (spec admin-corrections, exigence 1.4).
      */

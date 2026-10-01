@@ -17,7 +17,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
@@ -256,34 +255,9 @@ public class PaymentDistributionService {
                 .toList();
     }
 
-    public List<SessionEntity> getAllSessionsForSeries(Long sessionSeriesId) {
-        return sessionRepository
-                .findBySessionSeriesId(sessionSeriesId)
-                .stream()
-                .sorted(Comparator.comparing(SessionEntity::getSessionTimeStart))
-                .toList();
-    }
-
-    public double calculateAttendedSessionsCost(Long studentId, Long sessionSeriesId, GroupEntity group) {
-        List<AttendanceEntity> existingAttendances = attendanceRepository
-                .findByStudentIdAndSessionSeriesIdAndActiveTrue(studentId, sessionSeriesId);
-
-        double pricePerSession = group.getPrice().getPrice();
-
-        if (!existingAttendances.isEmpty()) {
-            int attendedSessionsCount = existingAttendances.size();
-            double cost = attendedSessionsCount * pricePerSession;
-            LOGGER.debug("Student {} (CATCH-UP): {} sessions attended, cost: {}",
-                    studentId, attendedSessionsCount, cost);
-            return cost;
-        } else {
-            List<SessionEntity> allSessions = getAllSessionsForSeries(sessionSeriesId);
-            double cost = allSessions.size() * pricePerSession;
-            LOGGER.debug("Student {} (NORMAL): {} sessions in series, cost: {}",
-                    studentId, allSessions.size(), cost);
-            return cost;
-        }
-    }
+    // calculateAttendedSessionsCost (statut du rattrapage : présences × tarif catalogue) a été
+    // retiré avec A.4 (spec admin-corrections) : le rattrapage passe par EncashmentService, dont le
+    // statut se compare au coût au prorata, réduction comprise, comme pour tout versement.
 
     /**
      * Refuse un versement nul ou négatif, avec un message nommant la cause réelle.

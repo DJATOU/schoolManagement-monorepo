@@ -789,7 +789,7 @@ export class PaymentDialogComponent implements OnInit {
 
     const paymentRequest: Observable<PaymentAllocationResult | Payment> =
       paymentData.sessionId && this.nextCatchUpSessionId
-        ? this.paymentService.processCatchUpPayment(paymentData)
+        ? this.paymentService.processCatchUpPayment(paymentData, this.idempotencyKey)
         : this.paymentService.processPayment(paymentData, this.idempotencyKey);
 
     // Contexte capturé avant l'appel : la génération du reçu s'appuie sur la saisie et le

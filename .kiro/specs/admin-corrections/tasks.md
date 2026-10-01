@@ -29,8 +29,24 @@ Socle de tout le reste : sans Encaissement identifiable, aucune correction d'arg
   deux transactions, annulation sans numéro consommé. Mutations vérifiées : verrou retiré, plafond
   d'imputation retiré
   _Exigences : 1.1, 1.2, 1.4 — D2, D3_
-- [ ] A.4 `PaymentProcessingService` et chemin rattrapage : encaissement via `EncashmentService` ;
-  idempotence sur le chemin rattrapage
+- [x] A.4 `PaymentProcessingService` et chemin rattrapage : encaissement via `EncashmentService` ;
+  idempotence sur le chemin rattrapage. Fait :
+  - chaque versement ouvre un Encaissement (`REGULAR` ou `CATCH_UP`) portant mode et note ; chaque
+    part du plan est une Imputation ; le cumul n'est plus incrémenté, il est recalculé ;
+  - report rattaché à son Imputation (refus si elle ne lui correspond pas) ; une seule date,
+    celle de l'Encaissement ;
+  - empreinte d'idempotence : désigne l'Encaissement, porte la séance d'un rattrapage
+    (`payment_idempotency.session_id`, ajoutée à V6) ; rejeu relu depuis les Imputations ;
+  - rattrapage : `Idempotency-Key`, plafond = prix net de la séance et reste dû de la série, pas
+    de report ; statut au prorata (l'ancienne règle « présences × tarif catalogue » est retirée).
+    Changement assumé : un rattrapage compensatoire ou « à préciser » n'est plus encaissable ;
+  - front : la clé est aussi envoyée sur `/process/catch-up` (chemin que l'écran n'emprunte pas
+    aujourd'hui, `nextCatchUpSessionId` n'étant jamais renseigné).
+  Tests : `PaymentProcessingServiceTest`, `PaymentIdempotencyServiceTest`,
+  `PaymentCarryOverServiceTest`, `PaymentProcessingEndpointIntegrationTest` (Encaissement de bout en
+  bout, annulation qui fait retomber le cumul, six cas du rattrapage). Mutations vérifiées : lien du
+  report retiré, séance hors empreinte, rejeu sur les seules Imputations actives, plafond du
+  rattrapage retiré
   _Exigences : 1.1, 1.7_
 - [ ] A.5 `PaymentDistributionService` : une ligne par (Encaissement, Séance), plafond au prix net ;
   lecteurs de A.1 adaptés

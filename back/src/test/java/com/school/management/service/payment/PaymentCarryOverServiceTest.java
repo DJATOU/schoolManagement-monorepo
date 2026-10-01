@@ -1,5 +1,6 @@
 package com.school.management.service.payment;
 
+import com.school.management.persistance.EncashmentAllocationEntity;
 import com.school.management.persistance.PaymentCarryOverEntity;
 import com.school.management.persistance.PaymentEntity;
 import com.school.management.persistance.SessionSeriesEntity;
@@ -83,6 +84,17 @@ class PaymentCarryOverServiceTest {
         return payment;
     }
 
+    /** Imputation reportée vers la série destination, du montant donné. */
+    private EncashmentAllocationEntity allocation(String amount) {
+        return EncashmentAllocationEntity.builder()
+                .id(900L)
+                .series(series(TARGET_SERIES_ID))
+                .amount(new BigDecimal(amount))
+                .carriedOver(true)
+                .active(true)
+                .build();
+    }
+
     /** Simule les trois lectures du chemin nominal. */
     private void givenExistingReferences() {
         when(studentRepository.findById(STUDENT_ID)).thenReturn(Optional.of(student()));
@@ -108,9 +120,10 @@ class PaymentCarryOverServiceTest {
         givenExistingReferences();
         givenSaveReturnsItsArgument();
         PaymentEntity payment = targetPayment();
+        EncashmentAllocationEntity imputation = allocation("6000.00");
 
         PaymentCarryOverEntity saved = service.record(STUDENT_ID, SOURCE_SERIES_ID,
-                TARGET_SERIES_ID, payment, new BigDecimal("6000.00"), ORIGIN_DATE);
+                TARGET_SERIES_ID, payment, new BigDecimal("6000.00"), ORIGIN_DATE, imputation);
 
         ArgumentCaptor<PaymentCarryOverEntity> captor =
                 ArgumentCaptor.forClass(PaymentCarryOverEntity.class);
@@ -123,7 +136,45 @@ class PaymentCarryOverServiceTest {
         assertThat(persisted.getTargetPayment()).isSameAs(payment);
         assertThat(persisted.getAmount()).isEqualByComparingTo("6000.00");
         assertThat(persisted.getOriginPaymentDate()).isEqualTo(ORIGIN_DATE);
+        // Rattachée à son Imputation : annuler l'Encaissement désactivera cette trace avec elle.
+        assertThat(persisted.getEncashmentAllocation()).isSameAs(imputation);
         assertThat(saved).isSameAs(persisted);
+    }
+
+    // ------------------------------------------------------------------
+    // Rattachement à l'Imputation (spec admin-corrections, D3)
+    // ------------------------------------------------------------------
+
+    @Test
+    @DisplayName("Sans Imputation : refusé, une trace orpheline survivrait à l'annulation de l'Encaissement")
+    void rejectsMissingAllocation() {
+        assertThatThrownBy(() -> service.record(STUDENT_ID, SOURCE_SERIES_ID, TARGET_SERIES_ID,
+                targetPayment(), new BigDecimal("500.00"), ORIGIN_DATE, null))
+                .isInstanceOf(CustomServiceException.class)
+                .hasMessageContaining("imputation reportée");
+
+        verifyNoInteractions(paymentCarryOverRepository);
+    }
+
+    @Test
+    @DisplayName("Imputation d'un autre montant, d'une autre série ou directe : refusée, sans écriture")
+    void rejectsAllocationThatDoesNotDescribeTheCarryOver() {
+        EncashmentAllocationEntity otherAmount = allocation("400.00");
+        EncashmentAllocationEntity otherSeries = allocation("500.00");
+        otherSeries.setSeries(series(SOURCE_SERIES_ID));
+        EncashmentAllocationEntity direct = allocation("500.00");
+        direct.setCarriedOver(false);
+
+        for (EncashmentAllocationEntity wrong : new EncashmentAllocationEntity[] { otherAmount, otherSeries, direct }) {
+            assertThatThrownBy(() -> service.record(STUDENT_ID, SOURCE_SERIES_ID, TARGET_SERIES_ID,
+                    targetPayment(), new BigDecimal("500.00"), ORIGIN_DATE, wrong))
+                    .isInstanceOf(CustomServiceException.class)
+                    .hasMessageContaining("incohérent")
+                    .extracting(e -> ((CustomServiceException) e).getStatus())
+                    .isEqualTo(HttpStatus.BAD_REQUEST);
+        }
+
+        verifyNoInteractions(paymentCarryOverRepository);
     }
 
     @Test
@@ -133,7 +184,7 @@ class PaymentCarryOverServiceTest {
         givenSaveReturnsItsArgument();
 
         PaymentCarryOverEntity saved = service.record(STUDENT_ID, SOURCE_SERIES_ID,
-                TARGET_SERIES_ID, targetPayment(), new BigDecimal("1500.005"), ORIGIN_DATE);
+                TARGET_SERIES_ID, targetPayment(), new BigDecimal("1500.005"), ORIGIN_DATE, allocation("1500.01"));
 
         // HALF_UP sur la troisième décimale : 1500.005 devient 1500.01, jamais 1500.00
         assertThat(saved.getAmount()).isEqualByComparingTo("1500.01");
@@ -148,7 +199,7 @@ class PaymentCarryOverServiceTest {
     @DisplayName("Un montant nul est refusé sans rien écrire")
     void rejectsZeroAmount() {
         assertThatThrownBy(() -> service.record(STUDENT_ID, SOURCE_SERIES_ID, TARGET_SERIES_ID,
-                targetPayment(), BigDecimal.ZERO, ORIGIN_DATE))
+                targetPayment(), BigDecimal.ZERO, ORIGIN_DATE, allocation("500.00")))
                 .isInstanceOf(CustomServiceException.class)
                 .hasMessageContaining("strictement positif")
                 .extracting(e -> ((CustomServiceException) e).getStatus())
@@ -161,7 +212,7 @@ class PaymentCarryOverServiceTest {
     @DisplayName("Un montant négatif est refusé sans rien écrire")
     void rejectsNegativeAmount() {
         assertThatThrownBy(() -> service.record(STUDENT_ID, SOURCE_SERIES_ID, TARGET_SERIES_ID,
-                targetPayment(), new BigDecimal("-10.00"), ORIGIN_DATE))
+                targetPayment(), new BigDecimal("-10.00"), ORIGIN_DATE, allocation("500.00")))
                 .isInstanceOf(CustomServiceException.class)
                 .hasMessageContaining("strictement positif");
 
@@ -172,7 +223,7 @@ class PaymentCarryOverServiceTest {
     @DisplayName("Un montant qui s'arrondit à zéro est refusé : la trace serait vide")
     void rejectsAmountRoundingToZero() {
         assertThatThrownBy(() -> service.record(STUDENT_ID, SOURCE_SERIES_ID, TARGET_SERIES_ID,
-                targetPayment(), new BigDecimal("0.004"), ORIGIN_DATE))
+                targetPayment(), new BigDecimal("0.004"), ORIGIN_DATE, allocation("500.00")))
                 .isInstanceOf(CustomServiceException.class)
                 .hasMessageContaining("strictement positif");
 
@@ -187,7 +238,7 @@ class PaymentCarryOverServiceTest {
     @DisplayName("Un report dont la destination est la série source est refusé")
     void rejectsCarryOverOntoSourceSeries() {
         assertThatThrownBy(() -> service.record(STUDENT_ID, SOURCE_SERIES_ID, SOURCE_SERIES_ID,
-                targetPayment(), new BigDecimal("500.00"), ORIGIN_DATE))
+                targetPayment(), new BigDecimal("500.00"), ORIGIN_DATE, allocation("500.00")))
                 .isInstanceOf(CustomServiceException.class)
                 .hasMessageContaining("propre série source");
 
@@ -198,7 +249,7 @@ class PaymentCarryOverServiceTest {
     @DisplayName("Une ligne de paiement absente est refusée : le report ne créditerait rien")
     void rejectsMissingTargetPayment() {
         assertThatThrownBy(() -> service.record(STUDENT_ID, SOURCE_SERIES_ID, TARGET_SERIES_ID,
-                null, new BigDecimal("500.00"), ORIGIN_DATE))
+                null, new BigDecimal("500.00"), ORIGIN_DATE, allocation("500.00")))
                 .isInstanceOf(CustomServiceException.class)
                 .hasMessageContaining("ligne de paiement");
 
@@ -209,7 +260,7 @@ class PaymentCarryOverServiceTest {
     @DisplayName("Une date de versement d'origine absente est refusée (exigence 6.1)")
     void rejectsMissingOriginPaymentDate() {
         assertThatThrownBy(() -> service.record(STUDENT_ID, SOURCE_SERIES_ID, TARGET_SERIES_ID,
-                targetPayment(), new BigDecimal("500.00"), null))
+                targetPayment(), new BigDecimal("500.00"), null, allocation("500.00")))
                 .isInstanceOf(CustomServiceException.class)
                 .hasMessageContaining("date du versement d'origine");
 
@@ -226,7 +277,7 @@ class PaymentCarryOverServiceTest {
         when(studentRepository.findById(STUDENT_ID)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.record(STUDENT_ID, SOURCE_SERIES_ID, TARGET_SERIES_ID,
-                targetPayment(), new BigDecimal("500.00"), ORIGIN_DATE))
+                targetPayment(), new BigDecimal("500.00"), ORIGIN_DATE, allocation("500.00")))
                 .isInstanceOf(CustomServiceException.class)
                 .extracting(e -> ((CustomServiceException) e).getStatus())
                 .isEqualTo(HttpStatus.NOT_FOUND);
@@ -243,7 +294,7 @@ class PaymentCarryOverServiceTest {
         when(sessionSeriesRepository.findById(TARGET_SERIES_ID)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.record(STUDENT_ID, SOURCE_SERIES_ID, TARGET_SERIES_ID,
-                targetPayment(), new BigDecimal("500.00"), ORIGIN_DATE))
+                targetPayment(), new BigDecimal("500.00"), ORIGIN_DATE, allocation("500.00")))
                 .isInstanceOf(CustomServiceException.class)
                 .hasMessageContaining("Série destination introuvable");
 

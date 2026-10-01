@@ -1,5 +1,6 @@
 package com.school.management.service.payment;
 
+import com.school.management.persistance.EncashmentEntity;
 import com.school.management.persistance.PaymentEntity;
 
 import java.math.BigDecimal;
@@ -30,6 +31,8 @@ import java.util.Objects;
  *                        vide lorsque le versement tient sur la série visée
  * @param payment         la ligne de paiement principale créditée : celle de la série visée si
  *                        elle a reçu quelque chose, sinon celle de la première série créditée
+ * @param encashment      l'Encaissement enregistré pour ce versement, porteur du numéro de reçu
+ *                        (spec admin-corrections, exigence 1.1)
  */
 public record PaymentAllocationResult(
         Long studentId,
@@ -38,12 +41,14 @@ public record PaymentAllocationResult(
         BigDecimal amountReceived,
         BigDecimal amountAllocated,
         List<CarriedOverAmount> carryOvers,
-        PaymentEntity payment) {
+        PaymentEntity payment,
+        EncashmentEntity encashment) {
 
     public PaymentAllocationResult {
         Objects.requireNonNull(amountReceived, "amountReceived ne doit pas être nul.");
         Objects.requireNonNull(amountAllocated, "amountAllocated ne doit pas être nul.");
         carryOvers = List.copyOf(Objects.requireNonNull(carryOvers, "carryOvers ne doit pas être nul."));
+        Objects.requireNonNull(encashment, "encashment ne doit pas être nul : tout versement est un Encaissement.");
     }
 
     /**

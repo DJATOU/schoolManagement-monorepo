@@ -223,11 +223,18 @@ export class PaymentService {
    * Backend: PaymentController.processCatchUpPayment()
    * Endpoint: POST /api/payments/process/catch-up
    *
+   * Même règle d'idempotence que processPayment : la clé est celle de la soumission, engendrée à
+   * l'ouverture du formulaire.
+   *
    * @param payment Données du paiement (studentId, sessionId, amountPaid)
+   * @param idempotencyKey Clé de la soumission, engendrée à l'ouverture du formulaire
    * @returns Observable<Payment>
    */
-  processCatchUpPayment(payment: Payment): Observable<Payment> {
-    return this.http.post<Payment>(`${this.baseUrl}/process/catch-up`, payment).pipe(
+  processCatchUpPayment(payment: Payment, idempotencyKey?: string): Observable<Payment> {
+    const options = idempotencyKey
+      ? { headers: new HttpHeaders({ 'Idempotency-Key': idempotencyKey }) }
+      : {};
+    return this.http.post<Payment>(`${this.baseUrl}/process/catch-up`, payment, options).pipe(
       catchError(this.handleError)
     );
   }

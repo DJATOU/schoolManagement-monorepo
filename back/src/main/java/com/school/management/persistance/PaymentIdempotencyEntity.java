@@ -104,4 +104,12 @@ public class PaymentIdempotencyEntity extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "encashment_id")
     private EncashmentEntity encashment;
+
+    /**
+     * Séance payée, pour un encaissement de rattrapage ; nulle pour un versement de série. Elle
+     * complète l'empreinte : deux rattrapages du même montant sur deux séances de la même série
+     * sont deux encaissements, et une clé passée d'un chemin à l'autre est une clé réutilisée.
+     */
+    @Column(name = "session_id")
+    private Long sessionId;
 }
