@@ -1,5 +1,6 @@
 package com.school.management.util;
 
+import com.school.management.service.correction.StalePreviewException;
 import com.school.management.service.exception.CustomServiceException;
 import com.school.management.shared.exception.ResourceNotFoundException;
 import jakarta.persistence.EntityNotFoundException;
@@ -23,6 +24,17 @@ public class GlobalExceptionHandler {
         ApiErrorResponse error = new ApiErrorResponse(status, e.getMessage(), status.name());
         logger.error("CustomServiceException: {}", e.getMessage());
         return new ResponseEntity<>(error, status);
+    }
+
+    /**
+     * Aperçu périmé : 409 avec le nouvel Aperçu, que l'écran présente à la place de l'ancien
+     * (exigence 4.3). Plus spécifique que {@link CustomServiceException}, ce gestionnaire l'emporte.
+     */
+    @ExceptionHandler(StalePreviewException.class)
+    public ResponseEntity<StalePreviewErrorResponse> handleStalePreviewException(StalePreviewException e) {
+        logger.warn("Stale correction preview: {}", e.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(new StalePreviewErrorResponse(
+                HttpStatus.CONFLICT, e.getMessage(), "STALE_PREVIEW", e.getPreview(), e.getPreviewToken()));
     }
 
     @ExceptionHandler(ResourceNotFoundException.class)

@@ -207,8 +207,29 @@ des lignes) ; `StudentHistoryService.allocatePayments`.
 
 ## Lot B — Corriger l'argent (exigences 2, 3, 4)
 
-- [ ] B.1 `CorrectionRunner` : exécution en mode PREVIEW / CONFIRM, photographie des Séries, Aperçu
-  canonique, jeton SHA-256, 409 sur Aperçu périmé
+- [x] B.1 `CorrectionRunner` : exécution en mode PREVIEW / CONFIRM, photographie des Séries, Aperçu
+  canonique, jeton SHA-256, 409 sur Aperçu périmé. Fait (`service/correction`) :
+  - `CorrectionCommand` (empreinte de la commande, portée, exécution) ; `CorrectionScope` déclare
+    avant toute écriture les Séries (ou groupes entiers) susceptibles d'être touchées ; une Série
+    touchée hors portée est une erreur de programmation, refusée ;
+  - `AmountSnapshot` (coût, dû à ce jour, versé, reste, en retard), tiré de `PaymentCostResolver` ;
+    `CorrectionPreview` ne liste que les Séries dont un montant change, et dit explicitement quand
+    aucun ne change (4.4) ; effets typés (`CorrectionEffectType`) ;
+  - une transaction par exécution, refusée dans une transaction déjà ouverte ; écriture forcée
+    avant la mesure « après », pour qu'une correction que la base refuserait échoue dès l'Aperçu ;
+  - jeton = SHA-256 du format canonique (version, empreinte de la commande, montants, effets,
+    champs préfixés de leur longueur) : un jeton ne confirme pas une autre commande ; jeton
+    manquant : 400 ; différent : `StalePreviewException`, 409 avec le nouvel Aperçu et son jeton
+    (`GlobalExceptionHandler`, `STALE_PREVIEW`) ;
+  - un Aperçu ne consomme aucun numéro de reçu.
+  Tests : `CorrectionRunnerIntegrationTest` (H2, vrais services : Aperçu sans écriture, numéro non
+  consommé, Séries inchangées tues, confirmation = Aperçu, Aperçu périmé par un montant ou par un
+  effet seul, jeton d'une autre commande, jeton manquant, refus métier après écriture, refus de la
+  base dès l'Aperçu, portée, transaction ouverte), `CorrectionValuesTest`,
+  `StalePreviewErrorHandlingTest`. Runner et valeurs sous le seuil JaCoCo 100 %. Onze mutations
+  vérifiées (annulation de l'Aperçu, comparaison du jeton, commande, montants et effets hors
+  empreinte, « avant » mesuré après, flush, portée, transaction ouverte, Séries inchangées,
+  gestionnaire du 409)
   _Exigences : 4.1 à 4.4 — D7_
 - [ ] B.2 `CorrectionAuditService` (`CorrectionReason` et `CorrectionReasonType` livrés en A.2/A.3) avec `summary` et
   `amount_effect` rédigés à l'écriture

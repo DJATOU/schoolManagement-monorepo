@@ -178,6 +178,20 @@ règle n'est codée deux fois. Le jeton n'est pas stocké : l'Aperçu lui-même 
 de reçu consommés par une exécution annulée ne sont pas réservés : la séquence est recalculée à la
 confirmation.
 
+Précisions (B.1) :
+
+- **Portée déclarée avant d'écrire.** La commande déclare les Séries, ou les groupes entiers quand un
+  report peut atteindre des Séries suivantes, qu'elle peut toucher. Une Série touchée hors portée
+  n'aurait pas d'état « avant » : le runner refuse la correction.
+- **Le jeton lie l'Aperçu à la commande.** L'empreinte couvre la description canonique de la commande
+  (type et paramètres) en plus des montants et des effets : un jeton obtenu pour annuler un reçu ne
+  confirme pas l'annulation d'un autre reçu au même Aperçu. Les effets ne citent donc que des valeurs
+  stables d'une exécution à l'autre — jamais un identifiant, un numéro de reçu attribué pendant
+  l'exécution ou une date du jour.
+- **Une transaction à lui.** Le runner refuse d'être appelé dans une transaction ouverte, et force
+  l'écriture avant la mesure « après » : une correction que la base refuserait échoue dès l'Aperçu,
+  et non à la confirmation.
+
 ### D8 — Trace commune et lisible
 
 ```

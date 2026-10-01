@@ -399,6 +399,20 @@
                                              (RoutingVerdict). -->
                                         <include>com.school.management.service.CatchUpRoutingService*</include>
                                         <include>com.school.management.service.CatchUpBillingResolutionService</include>
+                                        <!-- Spec admin-corrections, B.1 : le runner décide si une
+                                             correction est écrite ou annulée, et ses valeurs portent
+                                             ce que l'Aperçu annonce. Une branche non testée y
+                                             produit un Aperçu qui ment, ou une confirmation qui
+                                             écrit autre chose que ce qui a été lu. Sha256 reste
+                                             hors seuil : son seul cas non testé est une JVM sans
+                                             SHA-256. -->
+                                        <include>com.school.management.service.correction.CorrectionRunner</include>
+                                        <include>com.school.management.service.correction.CorrectionScope*</include>
+                                        <include>com.school.management.service.correction.AmountSnapshot</include>
+                                        <include>com.school.management.service.correction.CorrectionPreview</include>
+                                        <include>com.school.management.service.correction.CorrectionEffect</include>
+                                        <include>com.school.management.service.correction.CorrectionExecution</include>
+                                        <include>com.school.management.service.correction.SeriesKey</include>
                                     </includes>
                                     <limits>
                                         <limit>
