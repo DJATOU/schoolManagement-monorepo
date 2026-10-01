@@ -11,9 +11,9 @@ est restauré.
 
 Socle de tout le reste : sans Encaissement identifiable, aucune correction d'argent n'est possible.
 
-- [ ] A.1 Inventaire des lecteurs qui supposent une ligne de ventilation unique par (paiement,
+- [x] A.1 Inventaire des lecteurs qui supposent une ligne de ventilation unique par (paiement,
   Séance), dont `findByPaymentIdAndSessionId` ; liste consignée dans ce fichier avant tout code
-  _Design : Risques, D3_
+  _Design : Risques, D3_ — voir « Inventaire A.1 » ci-dessous
 - [ ] A.2 Migration V6 (partie paiement) : `encashment`, `encashment_allocation`, colonnes
   `encashment_id` sur ventilation, report, idempotence ; `correction_audit` et sa séquence
   _Exigences : 1.1, 1.3, 11.4 — D2, D3, D8_
@@ -35,6 +35,63 @@ Socle de tout le reste : sans Encaissement identifiable, aucune correction d'arg
   _Exigences : 1.2_
 - [ ] A.10 Historique élève : liste des Encaissements
   _Exigences : 1.1_
+
+### Inventaire A.1 — ventilation : une ligne par (paiement, Séance) aujourd'hui
+
+Établi par lecture du code (branche `feat/admin-corrections`, base `c43394e`). Les défauts
+marqués « déjà présent » sont déduits du code, non reproduits par un test : A.5 les épingle.
+
+**Lecteurs qui casseraient ou fausseraient avec plusieurs lignes actives par Séance**
+
+| # | Emplacement | Hypothèse | Effet avec plusieurs lignes |
+|---|---|---|---|
+| 1 | `PaymentDetailRepository.findByPaymentIdAndSessionId` (l.25), seul appelant `PaymentDistributionService.distributeToSession` (l.155) | `Optional` : une ligne au plus | `IncorrectResultSizeDataAccessException`, le versement est annulé. **Déjà présent** : la branche « ligne inactive » (l.203-213) crée une 2ᵉ ligne à côté de l'inactive ; le versement suivant sur la Séance échoue |
+| 2 | `distributeToSession`, complément (l.188-200) | `stillOwed = prix − ligne unique` | doit devenir prix net − somme des lignes actives de la Séance, tous Encaissements confondus (1.6) |
+| 3 | `distributeToSession`, ligne supprimée définitivement (l.161-166) | une suppression bloque la Séance | `IllegalStateException`, donc 500. **Déjà présent** : après la suppression d'une ligne par l'admin, plus aucun versement ne peut toucher cette Séance |
+| 4 | `StudentHistoryService` l.201, `toMap(…, (existing, r) -> existing)` ; lu l.706 | une ligne par Séance | Séance non facturable : seul le montant de la première ligne s'affiche. Les Séances facturables passent par `allocatePayments` (cascade) et restent justes |
+| 5 | `PaymentCrudService.convertToPaymentDetailDto` (`remainingBalance = prix catalogue − ligne`) | une ligne = la Séance | reste faux sur chaque ligne. **Déjà présent** : prix catalogue au lieu du prix net |
+| 6 | `PaymentCrudService.getPaymentDetailsForSeries` → `payment-confirmation-dialog` (`paymentDetails: PaymentDetail[]`) | une ligne par Séance à l'écran | plusieurs lignes par Séance dans le récapitulatif ; affichage non relu en détail, à regrouper |
+| 7 | `payment-management.component` (admin) : une ligne de tableau par ligne de ventilation, modifier / supprimer / rembourser | idem | doublons par Séance ; à remplacer par la liste des Encaissements (lot B) |
+
+**Lecteurs justes avec plusieurs lignes** : agrégations `SUM … GROUP BY` par groupe, série, Séance
+et mois (`sumCollected*`, `revenue*`) ; `PaymentStatusService.getSessionPaymentStatuses` (somme
+des lignes) ; `StudentHistoryService.allocatePayments`.
+
+**Écritures de `payment_detail`, à faire passer toutes par l'Encaissement**
+
+- `PaymentDistributionService.distributeToSession` : trois créations et un complément.
+- `PaymentDetailAdminService` : modification libre du montant, suppression, réactivation,
+  puis `recalculatePayment` (défaut 2, A.6). La modification libre d'un montant viole
+  l'invariant 1.4 : à retirer au profit de l'Annulation et du Remplacement (lot B).
+- `PaymentDetailDeactivationService` (appelé par `SessionService`) : désactive et **réactive**
+  toutes les lignes d'une Séance. La réactivation doit ignorer les lignes d'un Encaissement
+  annulé, sinon de l'argent annulé redevient actif.
+
+**Lecteurs de la date d'une ligne, à faire lire `encashment.received_at`**
+
+- `sumCollectedByGroupGroupedByMonth`, `revenueByMonth`, filtre de dates `REVENUE_FILTERS`,
+  `findAllWithFilters`, `countWithFilters` : `pd.paymentDate`. **Déjà présent** : une ligne
+  complétée voit sa date réécrite, donc une Séance payée en deux fois, sur deux mois, est
+  entièrement comptée au mois du second versement. Le nouveau modèle corrige ce défaut.
+- `searchPaymentDetailsWithCompleteData` : `pd.dateCreation`.
+- `StudentHistoryService` : tri chronologique des lignes et date affichée par Séance.
+- `PaymentCrudService.convertToPaymentDetailDto` : date affichée.
+
+**Autres constats**
+
+- `PaymentStatusService.getPaidSessions` : toute ligne, même inactive, annulée ou partielle,
+  rend la Séance « payée ». **Déjà présent**, sans lien avec le nombre de lignes.
+- `sumAmountByStudentAndGroup`, `sumAmountByStudentAndSeries` : sans filtre actif ni annulé,
+  sans appelant. Code mort, à supprimer.
+- Branche « paiement CANCELLED » de `distributeToSession` (l.169-184) : inatteignable, la
+  recherche portant sur le paiement courant non annulé.
+
+**Tests qui figent l'hypothèse d'unicité, à réécrire**
+
+- `PaymentDistributionServiceTest` : bouchonne `findByPaymentIdAndSessionId → Optional.empty()`.
+- `PaymentDetailAdminServiceTest` : `recalculatePayment` (cumul = somme des lignes actives,
+  `PENDING`, `CANCELLED`) fige le défaut 2 ; à réécrire avec A.6.
+- `PaymentStatusServiceTest` : lit déjà une liste par Séance, inchangé.
 
 ## Lot B — Corriger l'argent (exigences 2, 3, 4)
 
