@@ -1,51 +1,46 @@
 package com.school.management.service.payment;
 
 import com.school.management.dto.PaymentDetailSearchDTO;
-import com.school.management.dto.PaymentDetailUpdateDTO;
+import com.school.management.persistance.EncashmentAllocationEntity;
 import com.school.management.persistance.PaymentDetailEntity;
-import com.school.management.persistance.PaymentEntity;
 import com.school.management.repository.PaymentDetailRepository;
-import com.school.management.repository.PaymentRepository;
-import com.school.management.service.ReadOnlyYearGuard;
 import com.school.management.service.exception.CustomServiceException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Objects;
 
+/**
+ * Consultation des lignes de ventilation pour l'écran « Gestion des paiements ».
+ *
+ * <h2>Une ligne ne se corrige plus à l'unité (spec admin-corrections, A.6)</h2>
+ * Cet écran permettait de modifier le montant d'une ligne, de la désactiver, de la supprimer
+ * définitivement ou de la réactiver. Depuis que l'argent reçu est porté par l'Encaissement, une
+ * ligne n'est plus que la part, sur une séance, d'un versement enregistré tel qu'il a eu lieu :
+ * <ul>
+ *   <li>la modifier ne corrige pas le versement — le reçu, le cumul et le dû restent ceux de
+ *       l'Encaissement ;</li>
+ *   <li>mais elle fait diverger les recettes, qui somment la ventilation, de l'argent au
+ *       registre : deux écrans affichent deux montants pour le même versement.</li>
+ * </ul>
+ * Ces actions sont donc refusées, avec le reçu à corriger. Un versement se corrige par
+ * l'Annulation ou le Remplacement de son Encaissement (lot B), qui réécrit sa ventilation avec
+ * lui. L'historique d'audit des lignes reste consultable.
+ */
 @Service
 public class PaymentDetailAdminService {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(PaymentDetailAdminService.class);
-
     private final PaymentDetailRepository paymentDetailRepository;
-    private final PaymentRepository paymentRepository;
-    private final PaymentDetailAuditService paymentDetailAuditService;
-    private final ReadOnlyYearGuard readOnlyYearGuard;
-
-    /** Seule source du cumul et du statut d'une série : la somme des Imputations actives. */
-    private final EncashmentService encashmentService;
 
     @Autowired
-    public PaymentDetailAdminService(PaymentDetailRepository paymentDetailRepository,
-            PaymentRepository paymentRepository,
-            PaymentDetailAuditService paymentDetailAuditService,
-            ReadOnlyYearGuard readOnlyYearGuard,
-            EncashmentService encashmentService) {
+    public PaymentDetailAdminService(PaymentDetailRepository paymentDetailRepository) {
         this.paymentDetailRepository = paymentDetailRepository;
-        this.paymentRepository = paymentRepository;
-        this.paymentDetailAuditService = paymentDetailAuditService;
-        this.readOnlyYearGuard = readOnlyYearGuard;
-        this.encashmentService = encashmentService;
     }
 
     @Transactional(readOnly = true)
@@ -102,147 +97,37 @@ public class PaymentDetailAdminService {
 
     @Transactional(readOnly = true)
     public PaymentDetailEntity getPaymentDetail(Long id) {
+        return findDetail(id);
+    }
+
+    /**
+     * Refuse toute correction d'une ligne de ventilation — montant, désactivation, suppression,
+     * réactivation — en nommant le reçu à corriger à la place.
+     *
+     * @throws CustomServiceException 404 si la ligne est introuvable, 409 sinon
+     */
+    @Transactional(readOnly = true)
+    public void refuseLineCorrection(Long id) {
+        PaymentDetailEntity detail = findDetail(id);
+        String receipt = receiptOf(detail);
+        throw new CustomServiceException("Une ligne par séance ne se corrige pas à l'unité : elle est la part du "
+                + "reçu " + receipt + ", enregistré tel qu'il a été encaissé. Pour corriger le montant ou "
+                + "retirer ce versement, annulez ou corrigez le reçu " + receipt + " depuis la fiche de l'élève : "
+                + "sa répartition par séance suivra.",
+                HttpStatus.CONFLICT);
+    }
+
+    private PaymentDetailEntity findDetail(Long id) {
         return paymentDetailRepository.findById(Objects.requireNonNull(id))
-                .orElseThrow(() -> new RuntimeException("Payment detail not found with id: " + id));
+                .orElseThrow(() -> new CustomServiceException(
+                        "Ligne de paiement introuvable : " + id, HttpStatus.NOT_FOUND));
     }
 
-    @Transactional
-    public PaymentDetailEntity updatePaymentDetail(Long id, PaymentDetailUpdateDTO updateDTO, String adminName) {
-        validateReason(updateDTO.getReason());
-
-        PaymentDetailEntity detail = paymentDetailRepository.findById(Objects.requireNonNull(id))
-                .orElseThrow(() -> new RuntimeException("Payment detail not found with id: " + id));
-        assertYearMutable(detail);
-
-        String oldValue = buildValueString(detail);
-
-        if (updateDTO.getAmount() != null) {
-            detail.setAmountPaid(updateDTO.getAmount());
+    private static String receiptOf(PaymentDetailEntity detail) {
+        EncashmentAllocationEntity allocation = detail.getEncashmentAllocation();
+        if (allocation == null || allocation.getEncashment() == null) {
+            return "d'origine";
         }
-        if (updateDTO.getActive() != null) {
-            if (Boolean.TRUE.equals(updateDTO.getActive()) && !Boolean.TRUE.equals(detail.getActive())) {
-                assertNotFromCancelledEncashment(detail);
-            }
-            detail.setActive(updateDTO.getActive());
-        }
-
-        String newValue = buildValueString(detail);
-        paymentDetailRepository.save(Objects.requireNonNull(detail));
-
-        paymentDetailAuditService.logAction(id, "MODIFIED", adminName, oldValue, newValue, updateDTO.getReason());
-        recalculatePayment(detail.getPayment().getId());
-
-        return detail;
-    }
-
-    @Transactional
-    public void deletePaymentDetail(Long id, String reason, String adminName) {
-        validateReason(reason);
-
-        PaymentDetailEntity detail = paymentDetailRepository.findById(Objects.requireNonNull(id))
-                .orElseThrow(() -> new RuntimeException("Payment detail not found with id: " + id));
-        assertYearMutable(detail);
-
-        String oldValue = buildValueString(detail);
-        detail.setActive(false);
-        detail.setPermanentlyDeleted(true); // SUPPRESSION DÉFINITIVE - irréversible
-        paymentDetailRepository.save(detail);
-
-        paymentDetailAuditService.logAction(id, "DELETED", adminName, oldValue, buildValueString(detail), reason);
-        recalculatePayment(detail.getPayment().getId());
-    }
-
-    @Transactional
-    public PaymentDetailEntity reactivatePaymentDetail(Long id, String reason, String adminName) {
-        validateReason(reason);
-
-        PaymentDetailEntity detail = paymentDetailRepository.findById(Objects.requireNonNull(id))
-                .orElseThrow(() -> new RuntimeException("Payment detail not found with id: " + id));
-        assertYearMutable(detail);
-
-        if (detail.getActive() != null && detail.getActive()) {
-            throw new IllegalStateException("Payment detail is already active");
-        }
-
-        // IMPORTANT: Empêcher la réactivation des suppressions définitives
-        if (detail.getPermanentlyDeleted() != null && detail.getPermanentlyDeleted()) {
-            throw new IllegalStateException(
-                    "Cannot reactivate a permanently deleted payment detail. This deletion is irreversible.");
-        }
-        assertNotFromCancelledEncashment(detail);
-
-        String oldValue = buildValueString(detail);
-        detail.setActive(true);
-        paymentDetailRepository.save(detail);
-
-        paymentDetailAuditService.logAction(id, "REACTIVATED", adminName, oldValue, buildValueString(detail), reason);
-        recalculatePayment(detail.getPayment().getId());
-
-        return detail;
-    }
-
-    /**
-     * Recalcule le statut de la ligne de paiement après une écriture sur sa ventilation.
-     *
-     * <p><b>Le cumul ne vient plus de la ventilation</b> (spec admin-corrections, défaut 2). Il
-     * remplaçait le montant versé par la somme des lignes actives : toute part non ventilée
-     * disparaissait du registre à la première correction d'une ligne, et rien n'empêchait le
-     * cumul de passer sous le total déjà remboursé. Le cumul est désormais la somme des
-     * Imputations actives, que seul un Encaissement fait varier. Corriger une ligne de
-     * ventilation ne crée ni ne détruit d'argent reçu.</p>
-     *
-     * <p>Le statut suit {@link PaymentLineStatus}, comme pour un encaissement ou son annulation.
-     * La règle « toutes les lignes supprimées définitivement : CANCELLED » disparaît avec : une
-     * ligne annulée sortait du statut et des devis tout en gardant son argent, et le versement
-     * suivant ouvrait une seconde ligne pour la même série.</p>
-     */
-    @Transactional
-    public void recalculatePayment(Long paymentId) {
-        PaymentEntity payment = paymentRepository.findByIdForUpdate(Objects.requireNonNull(paymentId))
-                .orElseThrow(() -> new RuntimeException("Payment not found with id: " + paymentId));
-        encashmentService.refreshSeriesCumul(payment);
-    }
-
-    /**
-     * Refuse de rendre active une ligne d'un Encaissement annulé : l'argent qu'elle ventile n'est
-     * plus au registre, et la réactiver le ferait revenir dans les recettes (spec
-     * admin-corrections, inventaire A.1).
-     */
-    private void assertNotFromCancelledEncashment(PaymentDetailEntity detail) {
-        if (detail.getEncashmentAllocation() != null
-                && !Boolean.TRUE.equals(detail.getEncashmentAllocation().getActive())) {
-            throw new CustomServiceException("Cette ligne appartient à un encaissement annulé : elle ne peut "
-                    + "pas être réactivée. L'argent qu'elle ventilait ne figure plus au registre.",
-                    HttpStatus.CONFLICT);
-        }
-    }
-
-    /**
-     * Refuse toute écriture sur un détail de paiement rattaché à une année scolaire
-     * close (exigence 9.2). L'année est résolue via la séance, avec repli sur le groupe
-     * du paiement.
-     */
-    private void assertYearMutable(PaymentDetailEntity detail) {
-        if (detail.getSession() != null) {
-            readOnlyYearGuard.assertSessionMutable(detail.getSession());
-            return;
-        }
-        readOnlyYearGuard.assertGroupMutable(detail.getPayment() == null ? null : detail.getPayment().getGroup());
-    }
-
-    private void validateReason(String reason) {
-        if (!StringUtils.hasText(reason)) {
-            throw new IllegalArgumentException("Reason is required for audit logging.");
-        }
-    }
-
-    private String buildValueString(PaymentDetailEntity detail) {
-        return "PaymentDetail{" +
-                "id=" + detail.getId() +
-                ", amountPaid=" + detail.getAmountPaid() +
-                ", active=" + detail.getActive() +
-                ", sessionId=" + (detail.getSession() != null ? detail.getSession().getId() : null) +
-                ", paymentId=" + (detail.getPayment() != null ? detail.getPayment().getId() : null) +
-                '}';
+        return allocation.getEncashment().getReceiptNumber();
     }
 }

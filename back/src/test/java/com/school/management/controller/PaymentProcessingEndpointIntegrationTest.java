@@ -58,6 +58,8 @@ import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.not;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -118,7 +120,6 @@ class PaymentProcessingEndpointIntegrationTest {
     @Autowired private EncashmentAllocationRepository allocationRepository;
     @Autowired private ReceiptCounterRepository receiptCounterRepository;
     @Autowired private EncashmentService encashmentService;
-    @Autowired private com.school.management.service.payment.PaymentDetailAdminService paymentDetailAdminService;
 
     private SchoolYearEntity currentYear;
     private GroupEntity group;
@@ -424,25 +425,31 @@ class PaymentProcessingEndpointIntegrationTest {
         }
 
         @Test
-        @DisplayName("défaut 2 : corriger ou supprimer une ligne de ventilation n'efface plus d'argent reçu")
-        void corrigerLaVentilationNeChangePasLArgentRecu() throws Exception {
+        @DisplayName("défaut 2 : modifier, supprimer ou réactiver une ligne est refusé (409, reçu nommé), rien ne bouge")
+        void uneLigneNeSeCorrigePasALUnite() throws Exception {
             pay(s1.getId(), 4000).andExpect(status().isOk());
-            List<PaymentDetailEntity> lines = paymentDetailRepository.findAll();
-            assertThat(lines).hasSize(2);
+            Long lineId = paymentDetailRepository.findAll().get(0).getId();
+            Ledger before = ledger();
 
-            com.school.management.dto.PaymentDetailUpdateDTO lower = new com.school.management.dto.PaymentDetailUpdateDTO();
-            lower.setReason("saisie corrigée");
-            lower.setAmount(500.0);
-            paymentDetailAdminService.updatePaymentDetail(lines.get(0).getId(), lower, "admin");
-            paymentDetailAdminService.deletePaymentDetail(lines.get(1).getId(), "ligne en double", "admin");
+            // Avant A.6, ramener une ligne à 500 DA et supprimer l'autre faisait tomber le cumul à
+            // 500 DA et annulait la série : 3 500 DA encaissés disparaissaient du registre.
+            mockMvc.perform(patch("/api/payment-details/" + lineId).contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"amount\":500,\"reason\":\"saisie corrigée\"}"))
+                    .andExpect(status().isConflict())
+                    .andExpect(jsonPath("$.message", allOf(containsString(receipt(1)),
+                            containsString("annulez ou corrigez le reçu"))));
+            mockMvc.perform(delete("/api/payment-details/" + lineId).contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"reason\":\"ligne en double\"}"))
+                    .andExpect(status().isConflict());
+            mockMvc.perform(post("/api/payment-details/" + lineId + "/reactivate").contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"reason\":\"erreur\"}"))
+                    .andExpect(status().isConflict());
 
-            // Avant A.6, le cumul devenait 500 DA, la somme des lignes restantes, et la série
-            // passait annulée : 3 500 DA encaissés disparaissaient du registre.
+            assertThat(ledger()).isEqualTo(before);
+            assertThat(paymentDetailRepository.findAll())
+                    .allSatisfy(line -> assertThat(line.getActive()).isTrue())
+                    .extracting(PaymentDetailEntity::getAmountPaid).containsOnly(2000.0);
             assertThat(cumulOf(s1.getId(), student.getId())).isEqualTo(4000.0);
-            assertThat(paymentRepository.findAll()).singleElement()
-                    .satisfies(line -> assertThat(line.getStatus()).isEqualTo("COMPLETED"));
-            // La série reste soldée : rien de plus n'est encaissable dessus.
-            pay(s1.getId(), 100).andExpect(status().isBadRequest());
         }
 
         @Test

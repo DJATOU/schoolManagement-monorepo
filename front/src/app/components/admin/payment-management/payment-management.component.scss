@@ -43,6 +43,18 @@
     font-size: 14px;
   }
 
+  // Note durable, pas une alerte : contraste suffisant (texte #1f3a5f sur #eef4fb).
+  .correction-notice {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 8px;
+    padding: 6px 10px;
+    border-radius: 4px;
+    background: #eef4fb;
+    color: #1f3a5f;
+  }
+
   button {
     white-space: nowrap;
   }

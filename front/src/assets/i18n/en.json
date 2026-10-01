@@ -754,62 +754,18 @@
   },
   "payment": {
     "admin": {
-      "edit": {
-        "title": "Edit payment",
-        "subtitle": "Payment #{{id}}",
-        "context": {
-          "student": "Student",
-          "group": "Group",
-          "series": "Series",
-          "session": "Session"
-        },
-        "amount": "Amount",
-        "amountPlaceholder": "0",
-        "amountRequired": "The amount is required.",
-        "amountMin": "The amount must be positive.",
-        "amountChanged": "Original amount: {{original}} → new: {{updated}}",
-        "status": "Status",
-        "statusActive": "Active",
-        "statusInactive": "Inactive",
-        "reason": "Reason for the change",
-        "reasonTooltip": "The reason is recorded in the payment audit history.",
-        "reasonPlaceholder": "E.g. amount entered by mistake",
-        "reasonRequired": "The reason is required.",
-        "requiredNote": "Fill in the amount and the reason to save.",
-        "save": "Save",
-        "saving": "Saving…",
-        "error": "Error while updating the payment. Please try again."
-      },
       "messages": {
-        "updated": "Payment updated successfully",
-        "reactivated": "Payment reactivated successfully",
-        "permanentlyDeleted": "This payment has been permanently deleted and cannot be reactivated.",
-        "reactivateError": "Error while reactivating the payment",
         "filtersCleared": "Filters cleared successfully",
-        "deleted": "Payment permanently deleted. This session can be paid again.",
         "loadError": "Unable to load payments. Please try again.",
-        "deleteError": "Deleting the payment failed. Nothing was changed.",
         "filterOptionsError": "Some filter lists could not be loaded.",
         "csvExported": "{{count}} row(s) exported to CSV"
-      },
-      "reasonDialog": {
-        "label": "Reason",
-        "defaultPlaceholder": "Specify the reason for this action",
-        "required": "The reason is required.",
-        "reactivateTitle": "Reactivate payment",
-        "reactivateMessage": "This payment will be counted again in the student's balances. The reason is kept in the audit history.",
-        "reactivateConfirm": "Reactivate",
-        "reactivatePlaceholder": "E.g. deactivated by mistake",
-        "deleteTitle": "Permanently delete the payment",
-        "deleteMessage": "This payment will be permanently deleted and cannot be reactivated. The session will be payable again. The reason is kept in the audit history.",
-        "deleteConfirm": "Delete permanently",
-        "deletePlaceholder": "E.g. wrong amount entered, payment cancelled by the family"
       },
       "page": {
         "title": "Payment management",
         "subtitle": "Search and administration of payments",
         "export": "Export",
-        "exportTooltip": "Export the displayed rows as CSV"
+        "exportTooltip": "Export the displayed rows as CSV",
+        "correctionNotice": "A payment is corrected from its receipt (cancel or correct), on the student's page. The rows below show how it is split across sessions."
       },
       "filters": {
         "title": "Search filters",
@@ -868,10 +824,7 @@
         "cancelledHint": "The parent payment is cancelled: this entry no longer counts towards balances."
       },
       "actions": {
-        "edit": "Edit payment",
-        "history": "View audit history",
-        "delete": "Delete permanently",
-        "reactivate": "Reactivate payment"
+        "history": "View audit history"
       },
       "audit": {
         "title": "Action history",

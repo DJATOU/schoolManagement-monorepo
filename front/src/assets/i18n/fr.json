@@ -754,62 +754,18 @@
   },
   "payment": {
     "admin": {
-      "edit": {
-        "title": "Modifier le paiement",
-        "subtitle": "Paiement n° {{id}}",
-        "context": {
-          "student": "Étudiant",
-          "group": "Groupe",
-          "series": "Série",
-          "session": "Séance"
-        },
-        "amount": "Montant",
-        "amountPlaceholder": "0",
-        "amountRequired": "Le montant est obligatoire.",
-        "amountMin": "Le montant doit être positif.",
-        "amountChanged": "Montant d'origine : {{original}} → nouveau : {{updated}}",
-        "status": "Statut",
-        "statusActive": "Actif",
-        "statusInactive": "Inactif",
-        "reason": "Motif de la modification",
-        "reasonTooltip": "Le motif est enregistré dans l'historique d'audit du paiement.",
-        "reasonPlaceholder": "Ex. : erreur de saisie du montant",
-        "reasonRequired": "Le motif est obligatoire.",
-        "requiredNote": "Renseignez le montant et le motif pour enregistrer.",
-        "save": "Enregistrer",
-        "saving": "Enregistrement…",
-        "error": "Erreur lors de la modification du paiement. Veuillez réessayer."
-      },
       "messages": {
-        "updated": "Paiement modifié avec succès",
-        "reactivated": "Paiement réactivé avec succès",
-        "permanentlyDeleted": "Ce paiement a été définitivement supprimé et ne peut pas être réactivé.",
-        "reactivateError": "Erreur lors de la réactivation du paiement",
         "filtersCleared": "Filtres effacés avec succès",
-        "deleted": "Versement supprimé définitivement. Cette séance peut de nouveau être payée.",
         "loadError": "Impossible de charger les paiements. Veuillez réessayer.",
-        "deleteError": "La suppression du versement a échoué. Aucune modification n'a été enregistrée.",
         "filterOptionsError": "Certaines listes de filtres n'ont pas pu être chargées.",
         "csvExported": "{{count}} ligne(s) exportée(s) en CSV"
-      },
-      "reasonDialog": {
-        "label": "Motif",
-        "defaultPlaceholder": "Précisez la raison de cette action",
-        "required": "Le motif est obligatoire.",
-        "reactivateTitle": "Réactiver le paiement",
-        "reactivateMessage": "Ce paiement sera de nouveau pris en compte dans les soldes de l'étudiant. Le motif est conservé dans l'historique d'audit.",
-        "reactivateConfirm": "Réactiver",
-        "reactivatePlaceholder": "Ex. : désactivation par erreur",
-        "deleteTitle": "Supprimer définitivement le versement",
-        "deleteMessage": "Ce versement sera supprimé définitivement et ne pourra pas être réactivé. La séance pourra de nouveau être payée. Le motif est conservé dans l'historique d'audit.",
-        "deleteConfirm": "Supprimer définitivement",
-        "deletePlaceholder": "Ex. : erreur de saisie, paiement annulé par la famille"
       },
       "page": {
         "title": "Gestion des paiements",
         "subtitle": "Recherche et administration des versements",
         "export": "Exporter",
-        "exportTooltip": "Exporter les lignes affichées au format CSV"
+        "exportTooltip": "Exporter les lignes affichées au format CSV",
+        "correctionNotice": "Un versement se corrige depuis son reçu (annuler ou corriger), sur la fiche de l'élève. Les lignes ci-dessous en montrent la répartition par séance."
       },
       "filters": {
         "title": "Filtres de recherche",
@@ -868,10 +824,7 @@
         "cancelledHint": "Le paiement parent est annulé : ce versement n'entre plus dans les soldes."
       },
       "actions": {
-        "edit": "Modifier le versement",
-        "history": "Voir l'historique d'audit",
-        "delete": "Supprimer définitivement",
-        "reactivate": "Réactiver le versement"
+        "history": "Voir l'historique d'audit"
       },
       "audit": {
         "title": "Historique des actions",

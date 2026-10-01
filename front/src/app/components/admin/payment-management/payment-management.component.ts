@@ -23,9 +23,7 @@ import { API_BASE_URL } from '../../../api-base-url';
 import { AdminOnlyDirective } from '../../../shared/admin-only.directive';
 import { resolveLocale } from '../../../shared/locale';
 import { GroupService } from '../../../services/group.service';
-import { EditPaymentDetailDialogComponent } from './dialogs/edit-payment-detail-dialog.component';
 import { PaymentDetailHistoryDialogComponent } from './dialogs/payment-detail-history-dialog.component';
-import { ReasonDialogComponent, ReasonDialogData } from './dialogs/reason-dialog.component';
 import { RefundCreateDialogComponent } from '../../payment/refund-create-dialog/refund-create-dialog.component';
 import { Refund } from '../../../models/refund/refund';
 import { LevelService } from '../../../services/level.service';
@@ -80,7 +78,6 @@ interface PaymentDetailView {
     MatSnackBarModule,
     TranslateModule,
     AdminOnlyDirective,
-    EditPaymentDetailDialogComponent,
     PaymentDetailHistoryDialogComponent,
     RefundCreateDialogComponent
   ]
@@ -551,26 +548,6 @@ export class PaymentManagementComponent implements OnInit {
     this.loadPaymentDetails();
   }
 
-  openEditDialog(detail: PaymentDetailView): void {
-    const dialogRef = this.dialog.open(EditPaymentDetailDialogComponent, {
-      width: '540px',
-      maxWidth: '95vw',
-      autoFocus: false,
-      data: detail
-    });
-
-    dialogRef.afterClosed().subscribe(result => {
-      if (result) {
-        this.loadPaymentDetails();
-        this.snackBar.open(this.msg('updated'), this.closeLabel, {
-          duration: 3000,
-          horizontalPosition: 'center',
-          verticalPosition: 'bottom'
-        });
-      }
-    });
-  }
-
   openHistoryDialog(detail: PaymentDetailView): void {
     this.dialog.open(PaymentDetailHistoryDialogComponent, {
       width: '600px',
@@ -638,97 +615,6 @@ export class PaymentManagementComponent implements OnInit {
   /** Libellé traduit de l'action de fermeture des notifications. */
   private get closeLabel(): string {
     return this.translate.instant('common.close');
-  }
-
-  /**
-   * Ouvre le dialogue de saisie du motif (remplace le {@code window.prompt} natif) et
-   * renvoie le motif saisi, ou {@code undefined} si l'utilisateur annule.
-   */
-  private askReason(data: ReasonDialogData) {
-    return this.dialog.open(ReasonDialogComponent, {
-      width: '460px',
-      maxWidth: '95vw',
-      autoFocus: false,
-      data
-    }).afterClosed();
-  }
-
-  /** Récapitulatif de la ligne concernée, affiché dans l'en-tête du dialogue de motif. */
-  private detailSummary(detail: PaymentDetailView): string {
-    const student = `${detail.studentFirstName ?? ''} ${detail.studentLastName ?? ''}`.trim();
-    const parts = [student, detail.groupName, detail.seriesName].filter(Boolean);
-    return parts.join(' · ');
-  }
-
-  deletePaymentDetail(detail: PaymentDetailView): void {
-    this.askReason({
-      // Le backend pose permanentlyDeleted = true : l'action est irréversible, le libellé
-      // doit le dire. L'ancien texte annonçait une simple désactivation réversible.
-      title: this.translate.instant('payment.admin.reasonDialog.deleteTitle'),
-      message: this.translate.instant('payment.admin.reasonDialog.deleteMessage'),
-      confirmLabel: this.translate.instant('payment.admin.reasonDialog.deleteConfirm'),
-      placeholder: this.translate.instant('payment.admin.reasonDialog.deletePlaceholder'),
-      tone: 'danger',
-      summary: this.detailSummary(detail)
-    }).subscribe((reason?: string) => {
-      if (!reason) {
-        return;
-      }
-
-      this.http.delete(`${API_BASE_URL}/api/payment-details/${detail.id}`, { body: { reason } })
-        .subscribe({
-          next: () => {
-            this.loadPaymentDetails();
-            this.snackBar.open(this.msg('deleted'), this.closeLabel, {
-              duration: 5000,
-              horizontalPosition: 'center',
-              verticalPosition: 'bottom'
-            });
-          },
-          // Une suppression définitive qui échoue en silence est le pire des cas :
-          // l'utilisateur croirait l'opération faite.
-          error: error => this.notifyError(error, 'deleteError')
-        });
-    });
-  }
-
-  reactivatePaymentDetail(detail: PaymentDetailView): void {
-    // Vérifier si c'est une suppression définitive
-    if (detail.permanentlyDeleted) {
-      this.snackBar.open(this.msg('permanentlyDeleted'), this.closeLabel, {
-        duration: 5000,
-        horizontalPosition: 'center',
-        verticalPosition: 'bottom',
-        panelClass: ['error-snackbar']
-      });
-      return;
-    }
-
-    this.askReason({
-      title: this.translate.instant('payment.admin.reasonDialog.reactivateTitle'),
-      message: this.translate.instant('payment.admin.reasonDialog.reactivateMessage'),
-      confirmLabel: this.translate.instant('payment.admin.reasonDialog.reactivateConfirm'),
-      placeholder: this.translate.instant('payment.admin.reasonDialog.reactivatePlaceholder'),
-      tone: 'primary',
-      summary: this.detailSummary(detail)
-    }).subscribe((reason?: string) => {
-      if (!reason) {
-        return;
-      }
-
-      this.http.post(`${API_BASE_URL}/api/payment-details/${detail.id}/reactivate`, { reason })
-        .subscribe({
-          next: () => {
-            this.loadPaymentDetails();
-            this.snackBar.open(this.msg('reactivated'), this.closeLabel, {
-              duration: 3000,
-              horizontalPosition: 'center',
-              verticalPosition: 'bottom'
-            });
-          },
-          error: error => this.notifyError(error, 'reactivateError')
-        });
-    });
   }
 
   resetFilters(): void {

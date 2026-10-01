@@ -84,10 +84,14 @@ Socle de tout le reste : sans Encaissement identifiable, aucune correction d'arg
   Tests : `PaymentDetailAdminServiceTest` réécrit, bout en bout « défaut 2 », test PostgreSQL
   (V7, refus SQL des trois lignes sans Encaissement), H2 (ligne sans Imputation refusée). Quatre
   mutations vérifiées.
-  ⚠ Point ouvert : la correction d'un montant de ligne ne déplace plus que la ventilation, et les
-  recettes (`sumCollected*`, `revenue*`) somment la ventilation. Corriger un montant fait donc
-  diverger recettes et registre ; décision à prendre (refuser la correction de montant jusqu'au
-  lot B, ou lire les totaux de recettes dans les Imputations)
+  Décision (propriétaire produit, aucune installation avant la fin des quatre lots) : une ligne
+  de ventilation ne se corrige plus à l'unité. Modifier, désactiver, supprimer ou réactiver une
+  ligne ne corrigeait pas le versement mais faisait diverger les recettes (qui somment la
+  ventilation) du registre. `PATCH`, `DELETE` et `POST …/reactivate` sur `/api/payment-details`
+  renvoient 409 en nommant le reçu à annuler ou corriger ; `recalculatePayment`,
+  `PaymentDetailUpdateDTO`, `logAction` et les dialogues front de modification et de motif sont
+  retirés ; l'écran « Gestion des paiements » garde la recherche, l'historique et le
+  remboursement, avec une note qui renvoie au reçu. Mutation vérifiée (refus retiré)
   _Défaut 2 — D3, Data Models_
 - [ ] A.7 Propriété P1 « conservation de l'argent »
   _Exigences : 1.4_
@@ -171,7 +175,9 @@ des lignes) ; `StudentHistoryService.allocatePayments`.
 - [ ] B.6 Propriétés P2 « remplacer équivaut à avoir bien saisi », P3 « indivisibilité »,
   P4 « l'Aperçu ne ment pas »
 - [ ] B.7 `CorrectionPreviewDialog` (composant commun) ; actions « annuler », « corriger »,
-  « réimprimer » dans l'historique ; tampon « ANNULÉ » à la réimpression
+  « réimprimer » dans l'historique ; tampon « ANNULÉ » à la réimpression. Ce sont les actions
+  qu'annoncent déjà la note de « Gestion des paiements » et le refus 409 des corrections de ligne
+  (A.6) : elles doivent exister à la livraison
   _Exigences : 2.6, 3.7, 4.1_
 
 ## Lot C — Dates d'arrivée et de départ, Feuille_Appel (exigences 5, 6, 7)

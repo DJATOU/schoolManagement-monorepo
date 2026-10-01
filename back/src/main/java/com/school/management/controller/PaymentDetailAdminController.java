@@ -2,7 +2,6 @@ package com.school.management.controller;
 
 import com.school.management.dto.PaymentDetailAuditDTO;
 import com.school.management.dto.PaymentDetailSearchDTO;
-import com.school.management.dto.PaymentDetailUpdateDTO;
 import com.school.management.persistance.PaymentDetailEntity;
 import com.school.management.service.payment.PaymentDetailAdminService;
 import com.school.management.service.payment.PaymentDetailAuditService;
@@ -14,9 +13,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.AnonymousAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Date;
@@ -39,8 +35,6 @@ public class PaymentDetailAdminController {
             "id", "amountPaid", "dateCreation", "paymentDate", "active");
 
     private static final String DEFAULT_SORT = "id";
-
-    private static final String SYSTEM_ACTOR = "system";
 
     private final PaymentDetailAdminService paymentDetailAdminService;
     private final PaymentDetailAuditService paymentDetailAuditService;
@@ -84,20 +78,21 @@ public class PaymentDetailAdminController {
         return ResponseEntity.ok(response);
     }
 
+    // Modifier, supprimer ou réactiver une ligne : refusé, 409 avec le reçu à corriger (spec
+    // admin-corrections, A.6). Une ligne est la part d'un Encaissement ; elle se corrige avec lui,
+    // par son Annulation ou son Remplacement. Les routes restent déclarées pour qu'un ancien client
+    // reçoive l'explication plutôt qu'un 405.
+
     @PatchMapping("/{id}")
-    public ResponseEntity<PaymentDetailEntity> updatePaymentDetail(@PathVariable Long id,
-            @RequestBody PaymentDetailUpdateDTO updateDTO) {
-        return ResponseEntity.ok(paymentDetailAdminService.updatePaymentDetail(id, updateDTO, currentActor()));
+    public ResponseEntity<Void> updatePaymentDetail(@PathVariable Long id) {
+        paymentDetailAdminService.refuseLineCorrection(id);
+        return ResponseEntity.status(HttpStatus.CONFLICT).build();
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Map<String, String>> deletePaymentDetail(@PathVariable Long id,
-            @RequestBody Map<String, String> requestBody) {
-        String reason = requestBody.get("reason");
-        paymentDetailAdminService.deletePaymentDetail(id, reason, currentActor());
-        Map<String, String> response = new HashMap<>();
-        response.put("message", "Payment detail deleted successfully");
-        return ResponseEntity.ok(response);
+    public ResponseEntity<Void> deletePaymentDetail(@PathVariable Long id) {
+        paymentDetailAdminService.refuseLineCorrection(id);
+        return ResponseEntity.status(HttpStatus.CONFLICT).build();
     }
 
     @GetMapping("/{id}/history")
@@ -111,30 +106,14 @@ public class PaymentDetailAdminController {
     }
 
     @PostMapping("/{id}/reactivate")
-    public ResponseEntity<PaymentDetailEntity> reactivatePaymentDetail(@PathVariable Long id,
-            @RequestBody Map<String, String> requestBody) {
-        String reason = requestBody.get("reason");
-        return ResponseEntity.ok(paymentDetailAdminService.reactivatePaymentDetail(id, reason, currentActor()));
+    public ResponseEntity<Void> reactivatePaymentDetail(@PathVariable Long id) {
+        paymentDetailAdminService.refuseLineCorrection(id);
+        return ResponseEntity.status(HttpStatus.CONFLICT).build();
     }
 
     // ------------------------------------------------------------------
     // Helpers
     // ------------------------------------------------------------------
-
-    /**
-     * Auteur de l'action, lu dans le contexte de sécurité.
-     *
-     * <p>L'ancien en-tête {@code X-Admin-Name} était renseigné par le client (le frontend
-     * envoyait la constante « Admin ») : le journal d'audit était à la fois inexploitable et
-     * falsifiable. L'identité vient désormais du jeton vérifié côté serveur.</p>
-     */
-    private String currentActor() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || !auth.isAuthenticated() || auth instanceof AnonymousAuthenticationToken) {
-            return SYSTEM_ACTOR;
-        }
-        return auth.getName();
-    }
 
     /** Tri restreint aux colonnes connues, avec repli sur l'identifiant. */
     private Sort resolveSort(String sort, String direction) {
@@ -142,20 +121,5 @@ public class PaymentDetailAdminController {
         Sort.Direction resolvedDirection = Sort.Direction.fromOptionalString(
                 Objects.toString(direction, "")).orElse(Sort.Direction.DESC);
         return Sort.by(resolvedDirection, field);
-    }
-
-    // ------------------------------------------------------------------
-    // Gestion des erreurs : sans ces gestionnaires, un motif manquant ou une
-    // réactivation impossible remontait en 500 générique côté client.
-    // ------------------------------------------------------------------
-
-    @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<Map<String, String>> handleValidation(IllegalArgumentException e) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", e.getMessage()));
-    }
-
-    @ExceptionHandler(IllegalStateException.class)
-    public ResponseEntity<Map<String, String>> handleConflict(IllegalStateException e) {
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message", e.getMessage()));
     }
 }
