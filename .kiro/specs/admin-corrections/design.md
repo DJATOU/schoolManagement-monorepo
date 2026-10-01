@@ -285,8 +285,9 @@ est jamais exécuté. `MigrationSchemaPostgresIntegrationTest` applique toutes l
 base PostgreSQL jetable, valide chaque entité contre le schéma obtenu (Hibernate `validate`), puis
 éprouve les contraintes en SQL. Il est ignoré, en le disant, si aucun PostgreSQL n'est joignable.
 
-Conséquence pratique : la base de développement locale doit être réinitialisée avant de lancer
-l'application sur cette branche, comme celle de test l'a été.
+Conséquence pratique : V6 ne fait qu'ajouter et s'applique sur la base de développement locale
+telle quelle. V7 échouera en revanche sur les lignes de paiement existantes sans Encaissement :
+la base locale doit être réinitialisée avant de lancer A.6.
 
 ## Frontend
 
