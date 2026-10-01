@@ -1,5 +1,6 @@
 package com.school.management.util;
 
+import com.school.management.service.correction.RefundFloorException;
 import com.school.management.service.correction.StalePreviewException;
 import com.school.management.service.exception.CustomServiceException;
 import com.school.management.shared.exception.ResourceNotFoundException;
@@ -35,6 +36,17 @@ public class GlobalExceptionHandler {
         logger.warn("Stale correction preview: {}", e.getMessage());
         return ResponseEntity.status(HttpStatus.CONFLICT).body(new StalePreviewErrorResponse(
                 HttpStatus.CONFLICT, e.getMessage(), "STALE_PREVIEW", e.getPreview(), e.getPreviewToken()));
+    }
+
+    /**
+     * Versé qui passerait sous le remboursé : 409 nommant les remboursements en cause
+     * (exigence 2.4).
+     */
+    @ExceptionHandler(RefundFloorException.class)
+    public ResponseEntity<RefundFloorErrorResponse> handleRefundFloorException(RefundFloorException e) {
+        logger.warn("Correction below refunds: {}", e.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(new RefundFloorErrorResponse(
+                HttpStatus.CONFLICT, e.getMessage(), "REFUND_FLOOR", e.getBlockingRefunds()));
     }
 
     @ExceptionHandler(ResourceNotFoundException.class)

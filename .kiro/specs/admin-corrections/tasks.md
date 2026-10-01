@@ -255,8 +255,25 @@ des lignes) ; `StudentHistoryService.allocatePayments`.
   disparition des données), `CorrectionAuditServiceIntegrationTest`, `AmountEffectWriterTest`.
   Quatorze mutations vérifiées
   _Exigences : 11.1 à 11.6 — D8, D10_
-- [ ] B.3 `EncashmentCorrectionService.cancel` : neutralisation, refus sous le total remboursé,
-  refus d'une seconde annulation, année close
+- [x] B.3 `EncashmentCorrectionService.cancel` : neutralisation, refus sous le total remboursé,
+  refus d'une seconde annulation, année close. Fait :
+  - commande exécutée par le runner ; portée = le groupe entier de l'Encaissement (Série visée et
+    Séries suivantes du report), le runner refusant toute Série touchée hors portée ;
+  - neutralisation par `EncashmentService.neutralize` (Imputations, reports, ventilation,
+    cumuls) ; l'Encaissement reste au registre, marqué date, auteur, Motif (2.2, 2.3) ;
+  - refus : introuvable (404) ; déjà annulé, « le JJ/MM/AAAA par X » (409, 2.5) ; année close,
+    reçu nommé (409, 2.7) ; versé sous le remboursé, vérifié **après** neutralisation sur le
+    cumul recalculé, chaque remboursement nommé (numéro, date, montant) — `RefundFloorException`,
+    409 `REFUND_FLOOR` avec `blockingRefunds` (2.4) ; descendre exactement au remboursé est permis ;
+  - Motifs admis : erreur de saisie, mauvais élève, montant mal saisi, autre (D10) ; un autre
+    Motif : 400 avant toute exécution ; le Motif et son texte entrent dans l'empreinte ;
+  - effets : « Reçu … de 3 000,00 DA annulé », « Imputation de … sur « Janvier » neutralisée »,
+    « Report de … sur « Février » neutralisé » ; trace « Reçu … de … DA annulé (Janvier, Math 1ère A) ».
+  Tests : `EncashmentCancellationIntegrationTest` (Aperçu sans écriture, confirmation complète et
+  tracée, report neutralisé sur chaque Série, autres versements intacts, seconde annulation, 404,
+  année close, plancher des remboursements à un et deux remboursements, égalité permise, Motif
+  lié au jeton, Motifs admis et refusés), rendu HTTP du 409. Socle commun
+  `CorrectionIntegrationTestSupport`. Onze mutations vérifiées
   _Exigences : 2.1 à 2.5, 2.7_
 - [ ] B.4 `EncashmentCorrectionService.correct` : Remplacement par le chemin ordinaire, liens
   dans les deux sens ; mode et note sans Remplacement

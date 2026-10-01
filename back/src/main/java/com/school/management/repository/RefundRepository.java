@@ -43,6 +43,17 @@ public interface RefundRepository extends JpaRepository<RefundEntity, Long> {
                                              @Param("sessionSeriesId") Long sessionSeriesId);
 
     /**
+     * Remboursements actifs d'un étudiant sur une série, du plus ancien au plus récent : ceux
+     * qu'une correction nomme quand elle ferait passer le versé sous le remboursé (spec
+     * admin-corrections, exigence 2.4). Même périmètre que {@link #sumRefundsForStudentAndSeries}.
+     */
+    @Query("SELECT r FROM RefundEntity r " +
+           "WHERE r.student.id = :studentId AND r.payment.sessionSeries.id = :sessionSeriesId " +
+           "AND r.active = true ORDER BY r.id ASC")
+    List<RefundEntity> findActiveForStudentAndSeries(@Param("studentId") Long studentId,
+                                                     @Param("sessionSeriesId") Long sessionSeriesId);
+
+    /**
      * Somme des remboursements <strong>actifs</strong> déjà accordés sur un paiement.
      *
      * <p>Base du Plafond_Remboursable (exigence 7.1) : le plafond est le montant versé diminué de
