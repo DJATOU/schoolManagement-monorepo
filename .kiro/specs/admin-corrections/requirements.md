@@ -69,7 +69,11 @@ Inchangés : prorata, report, rattrapage, neutralité de la justification, monta
 
 ### Hors périmètre
 
-Changent les données qui entrent dans le calcul et la manière de les corriger, pas le reste. La réconciliation de fin d'année reste différée. La préinscription dans un Groupe de
+Changent les données qui entrent dans le calcul et la manière de les corriger, pas le reste.
+
+**Aucune reprise de données.** Le Système est encore en test : la base est réinitialisée avant
+l'installation chez le client. Aucune migration ne transforme de données existantes ; les
+migrations de l'étape 1 ne font qu'ajouter des tables et des colonnes. La réconciliation de fin d'année reste différée. La préinscription dans un Groupe de
 l'année scolaire suivante est exclue : ce Groupe appartient à une année qui n'est pas encore
 courante, donc en lecture seule.
 
@@ -125,10 +129,6 @@ tel qu'il a eu lieu, afin de pouvoir retrouver, annuler ou corriger précisémen
    comprise.
 7. LE Système DOIT appliquer la même règle au chemin d'encaissement d'un rattrapage, y compris la
    clé d'idempotence.
-8. QUAND la migration s'applique à des données existantes, LE Système DOIT créer un Encaissement
-   « historique » par cumul existant, pour le montant de ce cumul, sans perte ni doublon, et sans
-   modifier aucun montant dû ni aucun statut. Son numéro, `RECU-HIST-<n>`, le distingue des reçus
-   émis : aucun reçu n'a été imprimé sous ce numéro.
 
 ### Requirement 2: Annuler un Encaissement
 

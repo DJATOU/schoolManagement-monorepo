@@ -40,7 +40,7 @@ encashment
   status            ACTIVE | CANCELLED
   cancelled_at, cancelled_by, cancel_reason_type, cancel_reason_text,
   replaces_id, replaced_by_id,
-  kind              REGULAR | CATCH_UP | LEGACY
+  kind              REGULAR | CATCH_UP
 ```
 
 `receipt_number` suit le modèle éprouvé de `RefundNumberService` (`REMB-AAAA-NNNN`) : rang extrait
@@ -112,10 +112,7 @@ student_groups  + date_left DATE-like TIMESTAMP (00:00), nullable
 
 Le changement du résolveur est le premier des deux changements de calcul assumés dans les
 exigences. `removeStudentFromGroup` (clôture sans date) devient la clôture avec Date_Sortie.
-
-**Migration des clôtures existantes** : `date_left = jour(date_update)` pour les inscriptions
-inactives. C'est la meilleure approximation disponible ; l'Aperçu de l'exigence 6.5 permet de la
-corriger.
+Une inscription inactive porte donc toujours une Date_Sortie : aucune n'est créée sans elle.
 
 ### D6 — Déplacement de ventilation, jamais d'argent
 
@@ -260,18 +257,20 @@ facturable. La confirmation enregistre la date et les Présences choisies en une
 
 ## Data Models — migrations
 
-- **V6** — `encashment`, `encashment_allocation`, séquence `correction_audit_rank_seq`,
-  `correction_audit` ; colonnes
-  `encashment_id` / `encashment_allocation_id` sur `payment_detail`, `payment_carry_over`,
-  `payment_idempotency` ; `student_groups.date_left` ; troncature au jour de `date_assigned` ;
-  `date_left = date_trunc('day', date_update)` pour les inscriptions inactives.
-- **V7** — reprise des données existantes (1.8) : pour chaque ligne `payments` non annulée de
-  montant non nul, un Encaissement `LEGACY`, numéro `RECU-HIST-<id>`, une Imputation de même
-  montant, et rattachement de ses lignes de ventilation. Un Encaissement `LEGACY` s'affiche
-  « historique non détaillé » : il est annulable, mais pas réimprimable comme reçu.
+**Structure seulement, aucune donnée transformée** : la base est réinitialisée avant
+l'installation chez le client (exigences, hors périmètre).
 
-Migration séparée de la création de schéma : si la reprise échoue, le schéma V6 reste valide et
-l'erreur nomme la ligne en cause.
+- **V6** — tables `encashment`, `encashment_allocation`, `correction_audit` et séquence
+  `correction_audit_rank_seq` ; colonne `encashment_id` sur `payment_detail`,
+  `payment_carry_over`, `payment_idempotency`, et `encashment_allocation_id` sur
+  `payment_detail` ; colonne `student_groups.date_left`.
+
+Sans données anciennes à reprendre, ces colonnes sont **`NOT NULL` dès V6** : une ligne de
+ventilation, un report ou une empreinte sans Encaissement est impossible par construction, au lieu
+d'être seulement évité par le code. C'est l'invariant 1.3 porté par le stockage.
+
+Conséquence pratique : V6 ne s'applique que sur une base vide de paiements. La base de
+développement locale doit être réinitialisée avant de la lancer, comme celle de test l'a été.
 
 ## Frontend
 
@@ -315,15 +314,14 @@ Sur H2 réel, jqwik, vérifiées par mutation comme `JustificationNeutralityProp
 - **P6 — Déplacer la ventilation ne change aucun montant.** (5.9, D6)
 - **P7 — Une Trace par changement effectif**, aucune sur refus ou sans changement, rangs
   strictement croissants. (11.3 à 11.5)
-- **P8 — Reprise sans perte.** Après V7, pour chaque Étudiant et Série, cumul, montant dû et
-  statut sont identiques à avant la migration. (1.8)
 
 Plus des tests HTTP de bout en bout (statuts, corps, absence d'écriture après refus, 403 VIEWER sur
 chaque `preview` et `confirm`), et des tests Karma des composants d'Aperçu et de correction.
 
 ## Mise à jour chez le client
 
-V6 et V7 modifient des données existantes. La procédure de mise à jour livrée avec l'étape 1 :
+L'installation initiale part d'une base vide. La procédure ci-dessous sert aux mises à jour
+**suivantes**, dès que l'école aura saisi de vraies données — à commencer par l'étape 2 :
 
 1. sauvegarde (`pg_dump` depuis le conteneur, fichier daté sur le poste et sur clé USB) ;
 2. `docker compose pull` / `build`, puis `up` ;
@@ -335,8 +333,6 @@ Un script `mise-a-jour.ps1` enchaîne ces étapes sur le Mini PC Windows.
 ## Risques
 
 - **Ventilation multiple par Séance** (D3) : tout lecteur qui suppose une ligne unique par
-  (paiement, Séance) doit être revu. Inventaire à faire en tâche 1, avant toute écriture.
-- **Reprise V7** sur une base réelle : P8 l'éprouve sur données générées ; la procédure de
-  sauvegarde couvre le reste.
+  (paiement, Séance) doit être revu. Inventaire établi en A.1 (`tasks.md`).
 - **Volume** : l'étape 1 est plus grosse que prévu. Le plan la livre en quatre lots indépendants,
   chacun déployable.

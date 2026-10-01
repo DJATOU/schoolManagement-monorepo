@@ -14,8 +14,9 @@ Socle de tout le reste : sans Encaissement identifiable, aucune correction d'arg
 - [x] A.1 Inventaire des lecteurs qui supposent une ligne de ventilation unique par (paiement,
   Séance), dont `findByPaymentIdAndSessionId` ; liste consignée dans ce fichier avant tout code
   _Design : Risques, D3_ — voir « Inventaire A.1 » ci-dessous
-- [ ] A.2 Migration V6 (partie paiement) : `encashment`, `encashment_allocation`, colonnes
-  `encashment_id` sur ventilation, report, idempotence ; `correction_audit` et sa séquence
+- [ ] A.2 Migration V6 (partie paiement), structure seulement : `encashment`,
+  `encashment_allocation`, colonnes `encashment_id` `NOT NULL` sur ventilation, report,
+  idempotence ; `correction_audit` et sa séquence. Base locale réinitialisée avant de la lancer
   _Exigences : 1.1, 1.3, 11.4 — D2, D3, D8_
 - [ ] A.3 `EncashmentService` : création, `RECU-AAAA-NNNN` (modèle `RefundNumberService`),
   neutralisation ; cumul de Série recalculé depuis les Imputations actives
@@ -28,12 +29,11 @@ Socle de tout le reste : sans Encaissement identifiable, aucune correction d'arg
   _Exigences : 1.3, 1.6 — D3_
 - [ ] A.6 `recalculatePayment` ne réécrit plus le cumul depuis la ventilation
   _Défaut 2 — D3_
-- [ ] A.7 Migration V7 : reprise `LEGACY` des cumuls existants
-  _Exigences : 1.8_
-- [ ] A.8 Propriété P1 « conservation de l'argent » ; propriété P8 « reprise sans perte »
-- [ ] A.9 Reçu : `receipt_number` renvoyé par l'API et imprimé ; `GET /api/encashments/{id}`
+- [ ] A.7 Propriété P1 « conservation de l'argent »
+  _Exigences : 1.4_
+- [ ] A.8 Reçu : `receipt_number` renvoyé par l'API et imprimé ; `GET /api/encashments/{id}`
   _Exigences : 1.2_
-- [ ] A.10 Historique élève : liste des Encaissements
+- [ ] A.9 Historique élève : liste des Encaissements
   _Exigences : 1.1_
 
 ### Inventaire A.1 — ventilation : une ligne par (paiement, Séance) aujourd'hui
@@ -116,8 +116,7 @@ des lignes) ; `StudentHistoryService.allocatePayments`.
 
 ## Lot C — Dates d'arrivée et de départ, Feuille_Appel (exigences 5, 6, 7)
 
-- [ ] C.1 V6 (partie inscription) : `date_left`, troncature au jour, `date_left` des clôtures
-  existantes
+- [ ] C.1 V6 (partie inscription) : colonne `date_left`
   _D1, D5_
 - [ ] C.2 `EnrolmentWindow` ; `StudentGroupEntity.onCreate` ne pose la date que si elle est
   absente ; retrait de `@PastOrPresent`, contrôle dans l'année courante
