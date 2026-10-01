@@ -85,8 +85,7 @@ public class PaymentQuoteService {
 
         BigDecimal grossPrice = resolveGrossPrice(series.getGroup());
         BigDecimal rate = normalizeRate(discountService.resolveRate(studentId, seriesId));
-        BigDecimal netPrice = grossPrice.multiply(BigDecimal.ONE.subtract(rate))
-                .setScale(MONEY_SCALE, MONEY_ROUNDING);
+        BigDecimal netPrice = net(grossPrice, rate);
 
         // Même source de vérité que le PaymentCostResolver : le décompte des séances suivies
         // porte sur les seules séances facturables, borné à la série (exigence 1.5).
@@ -182,6 +181,31 @@ public class PaymentQuoteService {
     }
 
     /** Tarif catalogue de la séance, 0 si le groupe ou son tarif est absent. */
+    /**
+     * Prix net d'une séance de la série pour l'étudiant, réduction comprise : la valeur
+     * {@code netPricePerSession} du devis, sans le reste du calcul.
+     *
+     * <p>C'est le plafond de ce qu'une séance peut recevoir dans la ventilation, et le seuil qui
+     * la dit réglée (spec admin-corrections, exigence 1.6). Une seule définition, ici, pour que la
+     * ventilation, le reste à régler affiché et la liste des séances impayées ne divergent pas.</p>
+     *
+     * @throws CustomServiceException 404 si la série est introuvable
+     */
+    @Transactional(readOnly = true)
+    public BigDecimal netPricePerSession(Long studentId, Long seriesId) {
+        Objects.requireNonNull(studentId, "studentId ne doit pas être nul.");
+        Objects.requireNonNull(seriesId, "seriesId ne doit pas être nul.");
+        SessionSeriesEntity series = sessionSeriesRepository.findById(seriesId)
+                .orElseThrow(() -> new CustomServiceException(
+                        "Série introuvable pour l'identifiant : " + seriesId, HttpStatus.NOT_FOUND));
+        return net(resolveGrossPrice(series.getGroup()),
+                normalizeRate(discountService.resolveRate(studentId, seriesId)));
+    }
+
+    private static BigDecimal net(BigDecimal grossPrice, BigDecimal rate) {
+        return grossPrice.multiply(BigDecimal.ONE.subtract(rate)).setScale(MONEY_SCALE, MONEY_ROUNDING);
+    }
+
     private BigDecimal resolveGrossPrice(GroupEntity group) {
         if (group == null) {
             return zero();

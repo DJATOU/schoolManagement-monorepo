@@ -3,8 +3,10 @@ package com.school.management.controller;
 import com.school.management.persistance.AttendanceEntity;
 import com.school.management.persistance.CatchUpBillingState;
 import com.school.management.persistance.CorrectionReasonType;
+import com.school.management.persistance.EncashmentAllocationEntity;
 import com.school.management.persistance.EncashmentEntity;
 import com.school.management.persistance.EncashmentKind;
+import com.school.management.persistance.PaymentDetailEntity;
 import com.school.management.persistance.EncashmentStatus;
 import com.school.management.persistance.GroupEntity;
 import com.school.management.persistance.PaymentEntity;
@@ -381,6 +383,43 @@ class PaymentProcessingEndpointIntegrationTest {
             pay(s1.getId(), 2000).andExpect(status().isOk());
             assertThat(encashmentRepository.findAll()).singleElement()
                     .satisfies(encashment -> assertThat(encashment.getReceiptNumber()).isEqualTo(receipt(1)));
+        }
+
+        @Test
+        @DisplayName("deux Encaissements sur une séance : une ligne chacun, à son Imputation et à sa date ; "
+                + "annuler l'un laisse l'autre intact")
+        void uneLigneParEncaissementEtParSeance() throws Exception {
+            pay(s1.getId(), 1000).andExpect(status().isOk());
+            pay(s1.getId(), 3000).andExpect(status().isOk());
+
+            // Séance 1 : 1 000 DA du premier versement, puis 1 000 DA du second, en deux lignes.
+            // Avant A.5, la ligne du premier était complétée par le second : elle mêlait les deux.
+            List<PaymentDetailEntity> lines = paymentDetailRepository.findAll();
+            assertThat(lines).hasSize(3).allSatisfy(line -> assertThat(line.getEncashmentAllocation()).isNotNull());
+
+            for (EncashmentAllocationEntity imputation : allocationRepository.findAll()) {
+                Date receivedAt = encashmentRepository.findById(imputation.getEncashment().getId())
+                        .orElseThrow().getReceivedAt();
+                List<PaymentDetailEntity> own = lines.stream()
+                        .filter(line -> line.getEncashmentAllocation().getId().equals(imputation.getId()))
+                        .toList();
+                assertThat(own.stream().mapToDouble(PaymentDetailEntity::getAmountPaid).sum())
+                        .as("la ventilation d'une Imputation égale son montant")
+                        .isEqualTo(imputation.getAmount().doubleValue());
+                assertThat(own).allSatisfy(line ->
+                        assertThat(line.getPaymentDate().getTime()).isEqualTo(receivedAt.getTime()));
+            }
+
+            EncashmentEntity first = encashmentRepository.findAll().stream()
+                    .filter(encashment -> encashment.getReceiptNumber().equals(receipt(1)))
+                    .findFirst().orElseThrow();
+            encashmentService.neutralize(first.getId(), CorrectionReason.of(CorrectionReasonType.WRONG_AMOUNT));
+
+            assertThat(paymentDetailRepository.findAll())
+                    .filteredOn(line -> Boolean.TRUE.equals(line.getActive()))
+                    .extracting(PaymentDetailEntity::getAmountPaid)
+                    .containsExactlyInAnyOrder(1000.0, 2000.0);
+            assertThat(cumulOf(s1.getId(), student.getId())).isEqualTo(3000.0);
         }
 
         @Test

@@ -8,7 +8,6 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import java.util.List;
-import java.util.Optional;
 
 /**
  * Repository pour gérer les PaymentDetails.
@@ -22,7 +21,18 @@ public interface PaymentDetailRepository
 
         // ========== MÉTHODES EXISTANTES (NE PAS TOUCHER) ==========
 
-        Optional<PaymentDetailEntity> findByPaymentIdAndSessionId(Long id, Long id1);
+        /**
+         * Part déjà ventilée sur une séance pour une ligne de paiement, tous Encaissements
+         * confondus : la somme de ses lignes actives (spec admin-corrections, exigence 1.6).
+         *
+         * <p>Remplace {@code findByPaymentIdAndSessionId}, qui supposait une ligne au plus par
+         * séance. Une séance porte désormais une ligne par Encaissement ; une ligne inactive,
+         * désactivée ou supprimée définitivement, ne compte plus et ne bloque plus rien.</p>
+         */
+        @Query("SELECT COALESCE(SUM(pd.amountPaid), 0) FROM PaymentDetailEntity pd "
+                        + "WHERE pd.payment.id = :paymentId AND pd.session.id = :sessionId AND pd.active = true")
+        Double sumActiveAmountForPaymentAndSession(@Param("paymentId") Long paymentId,
+                        @Param("sessionId") Long sessionId);
 
         /** Lignes de ventilation d'une Imputation, neutralisées avec son encaissement. */
         List<PaymentDetailEntity> findByEncashmentAllocationId(Long encashmentAllocationId);
@@ -252,15 +262,6 @@ public interface PaymentDetailRepository
 
         @Query("SELECT pd FROM PaymentDetailEntity pd WHERE pd.payment.sessionSeries.id = :sessionSeriesId")
         List<PaymentDetailEntity> findBySessionSeriesId(@Param("sessionSeriesId") Long sessionSeriesId);
-
-        @Query("SELECT COALESCE(SUM(pd.amountPaid), 0) FROM PaymentDetailEntity pd " +
-                        "WHERE pd.payment.student.id = :studentId AND pd.payment.group.id = :groupId")
-        Double sumAmountByStudentAndGroup(@Param("studentId") Long studentId, @Param("groupId") Long groupId);
-
-        @Query("SELECT COALESCE(SUM(pd.amountPaid), 0) FROM PaymentDetailEntity pd " +
-                        "WHERE pd.payment.student.id = :studentId AND pd.payment.sessionSeries.id = :sessionSeriesId")
-        Double sumAmountByStudentAndSeries(@Param("studentId") Long studentId,
-                        @Param("sessionSeriesId") Long sessionSeriesId);
 
         /**
          * Search query with complete data for Payment Management UI

@@ -48,8 +48,24 @@ Socle de tout le reste : sans Encaissement identifiable, aucune correction d'arg
   report retiré, séance hors empreinte, rejeu sur les seules Imputations actives, plafond du
   rattrapage retiré
   _Exigences : 1.1, 1.7_
-- [ ] A.5 `PaymentDistributionService` : une ligne par (Encaissement, Séance), plafond au prix net ;
-  lecteurs de A.1 adaptés
+- [x] A.5 `PaymentDistributionService` : une ligne par (Encaissement, Séance), plafond au prix net ;
+  lecteurs de A.1 adaptés. Fait :
+  - `distribute(imputation)` : lignes neuves seulement, chacune rattachée à son Imputation et datée
+    de son Encaissement ; plafond = prix net − lignes actives de la séance ; une ligne inactive ou
+    supprimée définitivement ne bloque plus (fin de l'erreur 500) ; `isCatchUp` renseigné ;
+  - prix net : une seule définition, `PaymentQuoteService.netPricePerSession` ;
+  - `PaymentDetailEntity` : une mise à jour ne redate plus la ligne (recettes par mois justes) ;
+  - lecteurs : historique (somme des lignes d'une séance non facturable), reste à régler du détail
+    de série (prix net − lignes de la séance), séances payées / impayées (seuil au prix net,
+    lignes inactives exclues), revalidation d'une séance (lignes d'un Encaissement annulé ou
+    supprimées définitivement laissées inactives) ;
+  - supprimés : `findByPaymentIdAndSessionId`, `sumAmountByStudentAndGroup/Series` (morts),
+    `calculateTotalCost` et l'alerte au tarif catalogue.
+  Lecteur 6 (écran de confirmation) : la liste est transmise mais pas affichée, rien à regrouper ;
+  lecteur 7 (gestion admin) reste au lot B. Tests : `PaymentDistributionServiceTest` réécrit,
+  `PaymentDetailVentilationIntegrationTest` (H2), `PaymentDetailDeactivationServiceTest`,
+  `PaymentCrudServiceSeriesDetailsTest`, `PaymentStatusServiceTest`, `StudentHistoryServiceTest`,
+  bout en bout (deux Encaissements sur une séance, annulation de l'un). Huit mutations vérifiées
   _Exigences : 1.3, 1.6 — D3_
 - [ ] A.6 `recalculatePayment` ne réécrit plus le cumul depuis la ventilation ; migration V7 :
   liens vers l'Encaissement `NOT NULL`, et bascule de l'assertion « facultatifs » du test des

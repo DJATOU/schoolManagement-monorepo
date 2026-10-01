@@ -660,29 +660,81 @@ class PaymentStatusServiceTest {
         assertThat(service.getAttendedSessions(STUDENT_ID)).containsExactly(s1);
     }
 
+    /** Séance d'une série au tarif donné, la série connue du dépôt (prix net = tarif, sans réduction). */
+    private SessionEntity billedSession(Long sessionId, Long seriesId, GroupEntity group) {
+        SessionEntity session = sessionIn(sessionId, "S" + sessionId, group);
+        SessionSeriesEntity series = seriesIn(seriesId, group);
+        session.setSessionSeries(series);
+        when(seriesRepo.findById(seriesId)).thenReturn(Optional.of(series));
+        return session;
+    }
+
+    private static PaymentDetailEntity line(SessionEntity session, double amount, boolean active) {
+        PaymentDetailEntity line = PaymentDetailEntity.builder().session(session).amountPaid(amount).build();
+        line.setActive(active);
+        return line;
+    }
+
     @Test
-    @DisplayName("getPaidSessions retourne l'ensemble des sessions payées")
+    @DisplayName("getPaidSessions : une séance est réglée quand ses lignes actives atteignent le prix net")
     void getPaidSessionsReturnsSet() {
-        SessionEntity s1 = sessionIn(1L, "S1", groupWithPrice(1L, "G", 30.0));
-        PaymentDetailEntity d1 = PaymentDetailEntity.builder().session(s1).amountPaid(30.0).build();
-        when(paymentDetailRepository.findByPayment_StudentId(STUDENT_ID)).thenReturn(List.of(d1));
+        SessionEntity s1 = billedSession(1L, 10L, groupWithPrice(1L, "G", 30.0));
+        when(paymentDetailRepository.findByPayment_StudentId(STUDENT_ID)).thenReturn(List.of(line(s1, 30.0, true)));
 
         assertThat(service.getPaidSessions(STUDENT_ID)).containsExactly(s1);
     }
 
     @Test
-    @DisplayName("getUnpaidAttendedSessions retourne les sessions suivies mais non payées")
+    @DisplayName("getPaidSessions : deux lignes d'Encaissements différents se cumulent ; partielle, inactive : impayée")
+    void getPaidSessionsSumsLinesAndIgnoresInactiveOrPartialOnes() {
+        GroupEntity group = groupWithPrice(1L, "G", 30.0);
+        SessionEntity twoLines = billedSession(1L, 10L, group);
+        SessionEntity partial = billedSession(2L, 10L, group);
+        SessionEntity inactive = billedSession(3L, 10L, group);
+        when(paymentDetailRepository.findByPayment_StudentId(STUDENT_ID)).thenReturn(List.of(
+                line(twoLines, 10.0, true), line(twoLines, 20.0, true),
+                line(partial, 15.0, true),
+                line(inactive, 30.0, false)));
+
+        // Avant A.5, toute ligne rendait la séance « payée » : les trois l'étaient.
+        assertThat(service.getPaidSessions(STUDENT_ID)).containsExactly(twoLines);
+    }
+
+    @Test
+    @DisplayName("getPaidSessions : le seuil est le prix net, réduction comprise")
+    void getPaidSessionsComparesWithTheNetPrice() {
+        SessionEntity session = billedSession(1L, 10L, groupWithPrice(1L, "G", 30.0));
+        when(discountService.resolveRate(STUDENT_ID, 10L)).thenReturn(new BigDecimal("0.20"));
+        when(paymentDetailRepository.findByPayment_StudentId(STUDENT_ID)).thenReturn(List.of(line(session, 24.0, true)));
+
+        assertThat(service.getPaidSessions(STUDENT_ID)).containsExactly(session);
+    }
+
+    @Test
+    @DisplayName("getUnpaidAttendedSessions retourne les sessions suivies mais non réglées")
     void getUnpaidAttendedSessionsFiltersPaid() {
         GroupEntity group = groupWithPrice(1L, "G", 30.0);
-        SessionEntity attendedPaid = sessionIn(1L, "payée", group);
-        SessionEntity attendedUnpaid = sessionIn(2L, "impayée", group);
+        SessionEntity attendedPaid = billedSession(1L, 10L, group);
+        SessionEntity attendedPartial = billedSession(2L, 10L, group);
+        SessionEntity attendedUnpaid = billedSession(3L, 10L, group);
 
         when(attendanceRepo.findByStudentIdAndIsPresent(STUDENT_ID, true))
-                .thenReturn(List.of(attendedPaid, attendedUnpaid));
-        PaymentDetailEntity paid = PaymentDetailEntity.builder().session(attendedPaid).amountPaid(30.0).build();
-        when(paymentDetailRepository.findByPayment_StudentId(STUDENT_ID)).thenReturn(List.of(paid));
+                .thenReturn(List.of(attendedPaid, attendedPartial, attendedUnpaid));
+        when(paymentDetailRepository.findByPayment_StudentId(STUDENT_ID))
+                .thenReturn(List.of(line(attendedPaid, 30.0, true), line(attendedPartial, 10.0, true)));
 
-        assertThat(service.getUnpaidAttendedSessions(STUDENT_ID)).containsExactly(attendedUnpaid);
+        assertThat(service.getUnpaidAttendedSessions(STUDENT_ID)).containsExactly(attendedPartial, attendedUnpaid);
+    }
+
+    @Test
+    @DisplayName("getUnpaidAttendedSessions : un étudiant exempté n'a aucune séance impayée")
+    void getUnpaidAttendedSessionsIgnoresNothingDue() {
+        SessionEntity attended = billedSession(1L, 10L, groupWithPrice(1L, "G", 30.0));
+        when(discountService.resolveRate(STUDENT_ID, 10L)).thenReturn(new BigDecimal("1.00"));
+        when(attendanceRepo.findByStudentIdAndIsPresent(STUDENT_ID, true)).thenReturn(List.of(attended));
+        when(paymentDetailRepository.findByPayment_StudentId(STUDENT_ID)).thenReturn(List.of());
+
+        assertThat(service.getUnpaidAttendedSessions(STUDENT_ID)).isEmpty();
     }
 
     // ------------------------------------------------------------------

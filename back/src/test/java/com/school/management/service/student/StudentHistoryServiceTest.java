@@ -846,6 +846,31 @@ class StudentHistoryServiceTest {
     }
 
     @Test
+    void getStudentFullHistory_nonBillableSessionWithTwoLines_showsTheirSumAndLastDate() {
+        // Une séance porte une ligne par Encaissement (spec admin-corrections, D3). Sur une séance
+        // non facturable, l'historique ne gardait que la première ligne : 500 DA affichés sur
+        // 1 200 DA réellement rattachés.
+        StudentEntity student = studentJoiningOnLastOfFourSessions(2000.0);
+        when(studentRepository.findById(STUDENT_ID)).thenReturn(Optional.of(student));
+
+        StudentGroupEntity enrollment = new StudentGroupEntity();
+        enrollment.setDateAssigned(day(4));
+        when(studentGroupRepository.findByGroupIdAndStudentIdAndActiveTrue(GROUP_ID, STUDENT_ID))
+                .thenReturn(Optional.of(enrollment));
+
+        SessionEntity firstSession = sessionById(student, SESSION_ID);
+        when(paymentDetailRepository.findByPayment_StudentIdAndSession_SessionSeriesId(STUDENT_ID, SERIES_ID))
+                .thenReturn(List.of(
+                        paymentDetail(600L, student, firstSession, 500.0, day(2)),
+                        paymentDetail(601L, student, firstSession, 700.0, day(3))));
+
+        SessionHistoryDTO first = sessionsOrdered(service.getStudentFullHistory(STUDENT_ID)).get(0);
+
+        assertThat(first.getAmountPaid()).isEqualTo(1200.0);
+        assertThat(first.getPaymentDate()).isEqualTo(day(3));
+    }
+
+    @Test
     void getStudentFullHistory_seriesCostComesFromTheSharedQuote() {
         // Preuve de la source unique : l'historique ne recalcule plus le coût de série. Si le
         // devis annonce un coût au prorata donné, c'est lui qui fait foi, y compris quand il

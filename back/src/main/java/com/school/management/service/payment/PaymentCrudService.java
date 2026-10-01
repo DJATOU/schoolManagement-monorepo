@@ -14,7 +14,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -35,11 +38,16 @@ public class PaymentCrudService {
     private final PaymentRepository paymentRepository;
     private final PaymentDetailRepository paymentDetailRepository;
 
+    /** Prix net de la séance, réduction comprise, pour le reste à régler d'une ligne. */
+    private final PaymentQuoteService paymentQuoteService;
+
     public PaymentCrudService(
             PaymentRepository paymentRepository,
-            PaymentDetailRepository paymentDetailRepository) {
+            PaymentDetailRepository paymentDetailRepository,
+            PaymentQuoteService paymentQuoteService) {
         this.paymentRepository = paymentRepository;
         this.paymentDetailRepository = paymentDetailRepository;
+        this.paymentQuoteService = paymentQuoteService;
     }
 
     /**
@@ -192,10 +200,27 @@ public class PaymentCrudService {
         // IMPORTANT: Filter only ACTIVE payment details AND exclude CANCELLED payments
         // Inactive payments and CANCELLED payments should not appear in student payment
         // history
-        List<PaymentDetailDTO> activeDetails = details.stream()
+        List<PaymentDetailEntity> active = details.stream()
                 .filter(detail -> detail.getActive() != null && detail.getActive())
                 .filter(detail -> !"CANCELLED".equals(detail.getPayment().getStatus()))
-                .map(this::convertToPaymentDetailDto)
+                .toList();
+
+        // Une séance porte une ligne par Encaissement (spec admin-corrections, D3) : son reste à
+        // régler est le prix net moins la somme de SES lignes, et non le tarif catalogue moins la
+        // ligne affichée. Chaque ligne d'une même séance annonce donc le même reste.
+        BigDecimal netPrice = paymentQuoteService.netPricePerSession(studentId, sessionSeriesId);
+        Map<Long, BigDecimal> ventilatedBySession = new HashMap<>();
+        for (PaymentDetailEntity detail : active) {
+            ventilatedBySession.merge(detail.getSession().getId(),
+                    BigDecimal.valueOf(detail.getAmountPaid() == null ? 0.0 : detail.getAmountPaid()),
+                    BigDecimal::add);
+        }
+
+        List<PaymentDetailDTO> activeDetails = active.stream()
+                .map(detail -> convertToPaymentDetailDto(detail,
+                        netPrice.subtract(ventilatedBySession.get(detail.getSession().getId()))
+                                .max(BigDecimal.ZERO)
+                                .setScale(PaymentCostCalculator.MONEY_SCALE, PaymentCostCalculator.MONEY_ROUNDING)))
                 .toList();
 
         LOGGER.debug("Returning {} active payment details (excluding CANCELLED)", activeDetails.size());
@@ -227,16 +252,17 @@ public class PaymentCrudService {
     /**
      * Convertit une entité PaymentDetailEntity en PaymentDetailDTO.
      *
-     * @param detail l'entité à convertir
+     * @param detail           l'entité à convertir
+     * @param remainingBalance reste à régler sur la séance, toutes lignes confondues
      * @return le DTO
      */
-    private PaymentDetailDTO convertToPaymentDetailDto(PaymentDetailEntity detail) {
+    private PaymentDetailDTO convertToPaymentDetailDto(PaymentDetailEntity detail, BigDecimal remainingBalance) {
         return PaymentDetailDTO.builder()
                 .paymentDetailId(detail.getId())
                 .sessionId(detail.getSession().getId())
                 .sessionName(detail.getSession().getTitle())
                 .amountPaid(detail.getAmountPaid())
-                .remainingBalance(detail.getSession().getGroup().getPrice().getPrice() - detail.getAmountPaid())
+                .remainingBalance(remainingBalance.doubleValue())
                 // La date était omise : l'historique et le reçu PDF affichaient « N/A »
                 // alors que l'entité la renseigne à la création.
                 .paymentDate(detail.getPaymentDate())

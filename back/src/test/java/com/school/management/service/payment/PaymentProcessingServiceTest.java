@@ -46,7 +46,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.anyDouble;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
@@ -247,6 +247,12 @@ class PaymentProcessingServiceTest {
         return captor.getValue();
     }
 
+    /** Imputation portant sur la série donnée. */
+    private static org.mockito.ArgumentMatcher<EncashmentAllocationEntity> onSeries(Long seriesId) {
+        return imputation -> imputation != null && imputation.getSeries() != null
+                && seriesId.equals(imputation.getSeries().getId());
+    }
+
     private static HttpStatus statusOf(Throwable e) {
         return ((CustomServiceException) e).getStatus();
     }
@@ -292,7 +298,7 @@ class PaymentProcessingServiceTest {
             assertThat(imputation.getCarriedOver()).isFalse();
         });
 
-        verify(distributionService).distributePayment(any(PaymentEntity.class), eq(SERIES_ID), eq(100.0));
+        verify(distributionService).distribute(same(imputations.get(0)));
         verifyNoInteractions(carryOverService);
     }
 
@@ -314,7 +320,8 @@ class PaymentProcessingServiceTest {
         // aussi, il compterait deux fois le versement.
         assertThat(existing.getAmountPaid()).isEqualTo(90.00);
         // Seul le montant imputé est ventilé, pas le cumul (exigence 4.4).
-        verify(distributionService).distributePayment(same(existing), eq(SERIES_ID), eq(60.0));
+        verify(distributionService).distribute(argThat(i -> i != null && i.getPayment() == existing
+                && i.getAmount().compareTo(new BigDecimal("60.00")) == 0));
     }
 
     // ------------------------------------------------------------------
@@ -433,7 +440,7 @@ class PaymentProcessingServiceTest {
         // numéro de reçu n'a été attribué.
         verifyNoInteractions(encashmentService, carryOverService);
         verify(paymentRepository, never()).save(any(PaymentEntity.class));
-        verify(distributionService, never()).distributePayment(any(), anyLong(), anyDouble());
+        verify(distributionService, never()).distribute(any());
     }
 
     @Test
@@ -509,7 +516,7 @@ class PaymentProcessingServiceTest {
                 new SeriesAllocation(SERIES_ID, "Série 10", new BigDecimal("240.00"), false),
                 new SeriesAllocation(NEXT_SERIES_ID, "Série 11", new BigDecimal("60.00"), true)));
         doThrow(new IllegalStateException("ventilation impossible"))
-                .when(distributionService).distributePayment(any(), eq(SERIES_ID), anyDouble());
+                .when(distributionService).distribute(argThat(onSeries(SERIES_ID)));
 
         assertThatThrownBy(() -> service.processPayment(STUDENT_ID, GROUP_ID, SERIES_ID, 300.0))
                 .isInstanceOf(IllegalStateException.class);
@@ -518,7 +525,7 @@ class PaymentProcessingServiceTest {
         // trace de report n'est écrite. L'annulation de l'Encaissement et de l'Imputation déjà
         // faite est assurée par la transaction unique de processPayment (exigences 4.9, 5.5, 5.7).
         assertThat(imputations).extracting(imputation -> imputation.getSeries().getId()).containsExactly(SERIES_ID);
-        verify(distributionService, never()).distributePayment(any(), eq(NEXT_SERIES_ID), anyDouble());
+        verify(distributionService, never()).distribute(argThat(onSeries(NEXT_SERIES_ID)));
         verifyNoInteractions(carryOverService);
     }
 
@@ -529,7 +536,7 @@ class PaymentProcessingServiceTest {
                 new SeriesAllocation(SERIES_ID, "Série 10", new BigDecimal("240.00"), false),
                 new SeriesAllocation(NEXT_SERIES_ID, "Série 11", new BigDecimal("60.00"), true)));
         doThrow(new IllegalStateException("ventilation impossible"))
-                .when(distributionService).distributePayment(any(), eq(NEXT_SERIES_ID), anyDouble());
+                .when(distributionService).distribute(argThat(onSeries(NEXT_SERIES_ID)));
 
         assertThatThrownBy(() -> service.processPayment(STUDENT_ID, GROUP_ID, SERIES_ID, 300.0))
                 .isInstanceOf(IllegalStateException.class);
@@ -609,7 +616,7 @@ class PaymentProcessingServiceTest {
             });
             assertThat(result.amountAllocated()).isEqualByComparingTo("2000.00");
             assertThat(result.carryOvers()).isEmpty();
-            verify(distributionService).distributePayment(any(PaymentEntity.class), eq(SERIES_ID), eq(2000.0));
+            verify(distributionService).distribute(same(imputations.get(0)));
             verifyNoInteractions(allocationService, carryOverService);
         }
 

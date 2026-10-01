@@ -16,8 +16,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -385,31 +387,88 @@ public class PaymentStatusService {
         }
 
         /**
-         * Récupère les sessions qui ont été payées par un étudiant.
+         * Séances réglées par un étudiant : celles dont les lignes actives atteignent le prix net.
+         *
+         * <p>Toute ligne, même désactivée, annulée ou partielle, rendait auparavant la séance
+         * « payée ». Une séance porte désormais une ligne par Encaissement (spec
+         * admin-corrections, D3) : c'est leur somme qui la solde, face à son prix net réduction
+         * comprise (exigence 1.6).</p>
          *
          * @param studentId l'ID de l'étudiant
          * @return l'ensemble des sessions payées
          */
         public Set<SessionEntity> getPaidSessions(Long studentId) {
-                List<PaymentDetailEntity> details = paymentDetailRepository.findByPayment_StudentId(studentId);
-                return details.stream()
-                                .map(PaymentDetailEntity::getSession)
+                Map<Long, SessionEntity> sessions = new HashMap<>();
+                Map<Long, BigDecimal> ventilated = ventilatedBySession(studentId, sessions);
+                NetPrices prices = new NetPrices(studentId);
+                return sessions.values().stream()
+                                .filter(session -> ventilated.get(session.getId())
+                                                .compareTo(prices.of(session)) >= 0)
                                 .collect(Collectors.toSet());
         }
 
         /**
          * Récupère les sessions auxquelles un étudiant a assisté mais qu'il n'a pas
-         * payées.
+         * réglées : la somme de leurs lignes actives n'atteint pas leur prix net. Une séance
+         * sans rien à payer (exemption) n'y figure pas.
          *
          * @param studentId l'ID de l'étudiant
          * @return la liste des sessions impayées
          */
         public List<SessionEntity> getUnpaidAttendedSessions(Long studentId) {
                 List<SessionEntity> attended = getAttendedSessions(studentId);
-                Set<SessionEntity> paid = getPaidSessions(studentId);
+                Map<Long, BigDecimal> ventilated = ventilatedBySession(studentId, new HashMap<>());
+                NetPrices prices = new NetPrices(studentId);
 
                 return attended.stream()
-                                .filter(session -> !paid.contains(session))
+                                .filter(session -> ventilated.getOrDefault(session.getId(), BigDecimal.ZERO)
+                                                .compareTo(prices.of(session)) < 0)
                                 .toList();
+        }
+
+        /**
+         * Somme des lignes actives de l'étudiant par séance, lignes d'un paiement annulé exclues.
+         *
+         * @param sessions reçoit les séances rencontrées, par identifiant
+         */
+        private Map<Long, BigDecimal> ventilatedBySession(Long studentId, Map<Long, SessionEntity> sessions) {
+                Map<Long, BigDecimal> ventilated = new HashMap<>();
+                for (PaymentDetailEntity detail : paymentDetailRepository.findByPayment_StudentId(studentId)) {
+                        if (!Boolean.TRUE.equals(detail.getActive()) || detail.getSession() == null
+                                        || (detail.getPayment() != null
+                                                        && "CANCELLED".equals(detail.getPayment().getStatus()))) {
+                                continue;
+                        }
+                        sessions.putIfAbsent(detail.getSession().getId(), detail.getSession());
+                        ventilated.merge(detail.getSession().getId(),
+                                        BigDecimal.valueOf(detail.getAmountPaid() == null ? 0.0 : detail.getAmountPaid()),
+                                        BigDecimal::add);
+                }
+                return ventilated;
+        }
+
+        /**
+         * Prix net par série, calculé une fois par série. Une séance hors série n'a pas de
+         * réduction applicable : son prix est le tarif de son groupe.
+         */
+        private final class NetPrices {
+                private final Long studentId;
+                private final Map<Long, BigDecimal> bySeries = new HashMap<>();
+
+                NetPrices(Long studentId) {
+                        this.studentId = studentId;
+                }
+
+                BigDecimal of(SessionEntity session) {
+                        if (session.getSessionSeries() != null && session.getSessionSeries().getId() != null) {
+                                return bySeries.computeIfAbsent(session.getSessionSeries().getId(),
+                                                seriesId -> paymentQuoteService.netPricePerSession(studentId, seriesId));
+                        }
+                        GroupEntity group = session.getGroup();
+                        if (group == null || group.getPrice() == null || group.getPrice().getPrice() == null) {
+                                return BigDecimal.ZERO;
+                        }
+                        return BigDecimal.valueOf(group.getPrice().getPrice());
+                }
         }
 }

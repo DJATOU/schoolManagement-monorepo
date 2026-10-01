@@ -197,13 +197,11 @@ public class StudentHistoryService {
                 .filter(pd -> !"CANCELLED".equals(pd.getPayment().getStatus()))
                 .toList();
 
-        // Créer une map sessionId -> PaymentDetail pour un accès rapide
-        Map<Long, PaymentDetailEntity> paymentDetailMap = activePaymentDetails.stream()
-                .collect(Collectors.toMap(
-                        pd -> pd.getSession().getId(),
-                        pd -> pd,
-                        (existing, replacement) -> existing // En cas de doublon, garder le premier
-                ));
+        // Lignes actives par séance. Une séance porte une ligne par Encaissement qui l'a réglée
+        // (spec admin-corrections, D3) : n'en garder qu'une afficherait une partie du montant.
+        Map<Long, List<PaymentDetailEntity>> paymentDetailMap = activePaymentDetails.stream()
+                .filter(pd -> pd.getSession() != null)
+                .collect(Collectors.groupingBy(pd -> pd.getSession().getId()));
 
         // Séances facturables, séances écartées, inscription et date d'inscription : tout
         // provient du résolveur partagé. L'historique ne reproduit plus la règle du prorata.
@@ -602,7 +600,7 @@ public class StudentHistoryService {
 
     // ===================== mapSessionEntityToDTO ======================
     private SessionHistoryDTO mapSessionEntityToDTO(SessionEntity session, StudentEntity student,
-            Map<Long, PaymentDetailEntity> paymentDetailMap, boolean exempted,
+            Map<Long, List<PaymentDetailEntity>> paymentDetailMap, boolean exempted,
             Map<Long, SessionCoverage> coverages, BigDecimal netSessionPrice,
             BillingInclusionReason inclusionReason, CatchUpMentions catchUpMentions) {
         SessionHistoryDTO dto = new SessionHistoryDTO();
@@ -702,13 +700,18 @@ public class StudentHistoryService {
         dto.setAmountRemaining(zeroMoney());
 
         // Séance non facturable à cet étudiant (antérieure à son inscription et non suivie).
-        // On n'affiche un montant que si un versement lui a malgré tout été rattaché.
-        PaymentDetailEntity paymentDetail = paymentDetailMap.get(session.getId());
-        if (paymentDetail != null) {
-            double amountPaid = paymentDetail.getAmountPaid() != null ? paymentDetail.getAmountPaid() : 0.0;
+        // On n'affiche un montant que si un versement lui a malgré tout été rattaché : la somme
+        // de ses lignes, datée du dernier versement.
+        List<PaymentDetailEntity> sessionDetails = paymentDetailMap.getOrDefault(session.getId(), List.of());
+        if (!sessionDetails.isEmpty()) {
+            double amountPaid = sumAmounts(sessionDetails);
             dto.setPaymentStatus(amountPaid > 0 ? PAYMENT_PAID : PAYMENT_UNPAID);
             dto.setAmountPaid(amountPaid);
-            dto.setPaymentDate(paymentDetail.getPaymentDate());
+            dto.setPaymentDate(sessionDetails.stream()
+                    .map(PaymentDetailEntity::getPaymentDate)
+                    .filter(Objects::nonNull)
+                    .max(Comparator.naturalOrder())
+                    .orElse(null));
         } else {
             dto.setPaymentStatus(PAYMENT_UNPAID);
             dto.setAmountPaid(0.0);

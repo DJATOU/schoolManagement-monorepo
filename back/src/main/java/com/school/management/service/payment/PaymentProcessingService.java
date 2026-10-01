@@ -271,9 +271,9 @@ public class PaymentProcessingService {
                                         encashment, payment, allocation.amount(), allocation.carriedOver());
 
                         // Un versement n'est traité qu'une fois sa ventilation achevée (exigence
-                        // 4.8) : un échec ici remonte et annule la transaction entière.
-                        distributionService.distributePayment(payment, allocation.seriesId(),
-                                        allocation.amount().doubleValue());
+                        // 4.8) : un échec ici remonte et annule la transaction entière. Chaque ligne
+                        // créée est une part de cette Imputation (exigence 1.3).
+                        distributionService.distribute(imputation);
 
                         if (allocation.carriedOver()) {
                                 carryOverService.record(studentId, sessionSeriesId, allocation.seriesId(),
@@ -394,9 +394,9 @@ public class PaymentProcessingService {
 
                 PaymentEntity payment = getOrCreateSeriesPayment(student, group, series.getId());
                 payment.setPaymentDate(encashment.getReceivedAt());
-                encashmentService.allocate(encashment, payment, amount, false);
+                EncashmentAllocationEntity imputation = encashmentService.allocate(encashment, payment, amount, false);
 
-                distributionService.distributePayment(payment, series.getId(), amount.doubleValue());
+                distributionService.distribute(imputation);
 
                 PaymentAllocationResult result = new PaymentAllocationResult(studentId, group.getId(),
                                 series.getId(), amount, amount, List.of(), payment, encashment);

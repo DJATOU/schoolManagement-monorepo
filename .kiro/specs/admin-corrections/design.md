@@ -88,7 +88,10 @@ payment_idempotency   + encashment_id
 - **Une ligne de ventilation par (Encaissement, Séance).** `distributeToSession` ne complète plus
   une ligne partagée : il crée la ligne de l'Encaissement courant, plafonnée à ce qui reste dû sur
   la Séance **au prix net** (1.6). Une Séance peut donc porter plusieurs lignes, une par
-  Encaissement ; `findByPaymentIdAndSessionId` (Optional) devient une liste, et ses lecteurs somment.
+  Encaissement ; `findByPaymentIdAndSessionId` (Optional) est remplacé par la somme des lignes
+  actives de la séance (`sumActiveAmountForPaymentAndSession`), et ses lecteurs somment. Le prix
+  net a une seule définition, `PaymentQuoteService.netPricePerSession`. Une ligne garde la date de
+  son Encaissement : une mise à jour ne la redate plus.
 - **Le cumul `payments.amount_paid` = Σ Imputations actives de la Série.** Il est recalculé à
   chaque écriture d'Imputation, jamais depuis la ventilation (défaut 2). `recalculatePayment`
   ne recalcule plus que le statut.
