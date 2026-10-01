@@ -1,6 +1,7 @@
 package com.school.management.service.payment;
 
 import com.school.management.dto.PaymentDetailUpdateDTO;
+import com.school.management.persistance.EncashmentAllocationEntity;
 import com.school.management.persistance.GroupEntity;
 import com.school.management.persistance.PaymentDetailEntity;
 import com.school.management.persistance.PaymentEntity;
@@ -9,13 +10,13 @@ import com.school.management.persistance.StudentEntity;
 import com.school.management.repository.PaymentDetailRepository;
 import com.school.management.repository.PaymentRepository;
 import com.school.management.service.ReadOnlyYearGuard;
+import com.school.management.service.exception.CustomServiceException;
 import com.school.management.service.exception.ReadOnlySchoolYearException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpStatus;
 
-import java.math.BigDecimal;
-import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -27,30 +28,35 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
- * Tests du recalcul de statut de paiement administré.
+ * Corrections administrées d'une ligne de ventilation (spec admin-corrections, A.6, défaut 2).
  *
- * <p>Le coût de référence doit venir du {@link PaymentCostResolver} (donc réduction
- * appliquée, séances planifiées issues de la série), et non d'un calcul local. Ces tests
- * verrouillent les quatre statuts possibles ainsi que le refus d'écriture sur une année
- * scolaire close.</p>
+ * <p><b>Ce que ces tests verrouillent.</b> Corriger, supprimer ou réactiver une ligne de
+ * ventilation ne change pas l'argent reçu : le cumul d'une série est la somme de ses Imputations
+ * actives, recalculée par {@link EncashmentService}, et n'est plus jamais réécrit depuis les
+ * lignes. Avant A.6, {@code recalculatePayment} remplaçait le cumul par la somme des lignes
+ * actives : toute part non ventilée disparaissait du registre, et le cumul pouvait passer sous le
+ * total remboursé.</p>
+ *
+ * <p>Le calcul du statut lui-même est éprouvé sur une vraie base par
+ * {@code EncashmentServiceIntegrationTest} et par {@link PaymentLineStatusTest}.</p>
  */
 class PaymentDetailAdminServiceTest {
 
     private static final Long PAYMENT_ID = 500L;
     private static final Long DETAIL_ID = 900L;
-    private static final Long STUDENT_ID = 1L;
-    private static final Long SERIES_ID = 10L;
 
     private PaymentDetailRepository paymentDetailRepository;
     private PaymentRepository paymentRepository;
     private PaymentDetailAuditService auditService;
     private ReadOnlyYearGuard readOnlyYearGuard;
-    private PaymentCostResolver paymentCostResolver;
+    private EncashmentService encashmentService;
 
     private PaymentDetailAdminService service;
+    private PaymentEntity payment;
 
     @BeforeEach
     void setUp() {
@@ -58,150 +64,144 @@ class PaymentDetailAdminServiceTest {
         paymentRepository = mock(PaymentRepository.class);
         auditService = mock(PaymentDetailAuditService.class);
         readOnlyYearGuard = mock(ReadOnlyYearGuard.class);
-        paymentCostResolver = mock(PaymentCostResolver.class);
+        encashmentService = mock(EncashmentService.class);
 
         lenient().when(paymentDetailRepository.save(any(PaymentDetailEntity.class)))
                 .thenAnswer(inv -> inv.getArgument(0));
 
+        payment = payment();
+        lenient().when(paymentRepository.findByIdForUpdate(PAYMENT_ID)).thenReturn(Optional.of(payment));
+
         service = new PaymentDetailAdminService(paymentDetailRepository, paymentRepository,
-                auditService, readOnlyYearGuard, paymentCostResolver);
+                auditService, readOnlyYearGuard, encashmentService);
     }
 
     // ------------------------------------------------------------------
     // Helpers
     // ------------------------------------------------------------------
 
-    private PaymentEntity payment(boolean withSeries) {
+    private static PaymentEntity payment() {
         StudentEntity student = new StudentEntity();
-        student.setId(STUDENT_ID);
-
+        student.setId(1L);
         GroupEntity group = new GroupEntity();
         group.setId(100L);
+        SessionSeriesEntity series = new SessionSeriesEntity();
+        series.setId(10L);
+        series.setGroup(group);
 
         PaymentEntity payment = PaymentEntity.builder()
-                .student(student)
-                .group(group)
-                .status("PENDING")
+                .student(student).group(group).sessionSeries(series)
+                .amountPaid(4000.0).status("COMPLETED")
                 .build();
         payment.setId(PAYMENT_ID);
-
-        if (withSeries) {
-            SessionSeriesEntity series = new SessionSeriesEntity();
-            series.setId(SERIES_ID);
-            series.setGroup(group);
-            payment.setSessionSeries(series);
-        }
         return payment;
     }
 
-    private PaymentDetailEntity detail(PaymentEntity payment, double amount, boolean active,
-            boolean permanentlyDeleted) {
-        return PaymentDetailEntity.builder()
+    /** Ligne de 2 000 DA, part d'une Imputation active ou neutralisée. */
+    private PaymentDetailEntity detail(boolean active, boolean imputationActive) {
+        PaymentDetailEntity detail = PaymentDetailEntity.builder()
+                .id(DETAIL_ID)
                 .payment(payment)
-                .amountPaid(amount)
-                .active(active)
-                .permanentlyDeleted(permanentlyDeleted)
+                .amountPaid(2000.0)
+                .permanentlyDeleted(false)
+                .encashmentAllocation(EncashmentAllocationEntity.builder().id(70L).active(imputationActive).build())
                 .build();
+        detail.setActive(active);
+        when(paymentDetailRepository.findById(DETAIL_ID)).thenReturn(Optional.of(detail));
+        return detail;
     }
 
-    private void stubMonthTotalCost(String monthTotalCost) {
-        when(paymentCostResolver.resolve(STUDENT_ID, SERIES_ID)).thenReturn(
-                new PaymentCostResolver.PaymentStatusResult(
-                        new BigDecimal(monthTotalCost),
-                        BigDecimal.ZERO,
-                        BigDecimal.ZERO,
-                        false,
-                        false));
+    private static PaymentDetailUpdateDTO update(Double amount, Boolean active) {
+        PaymentDetailUpdateDTO dto = new PaymentDetailUpdateDTO();
+        dto.setReason("correction");
+        dto.setAmount(amount);
+        dto.setActive(active);
+        return dto;
     }
 
-    private void recalculate(PaymentEntity payment, List<PaymentDetailEntity> details) {
-        when(paymentRepository.findById(PAYMENT_ID)).thenReturn(Optional.of(payment));
-        when(paymentDetailRepository.findByPaymentId(PAYMENT_ID)).thenReturn(details);
+    // ------------------------------------------------------------------
+    // Le cumul ne vient plus de la ventilation (défaut 2)
+    // ------------------------------------------------------------------
+
+    @Test
+    @DisplayName("recalcul : la ligne de paiement est verrouillée, puis cumul et statut viennent des Imputations")
+    void recalculationDelegatesToTheImputations() {
         service.recalculatePayment(PAYMENT_ID);
+
+        verify(paymentRepository).findByIdForUpdate(PAYMENT_ID);
+        verify(encashmentService).refreshSeriesCumul(payment);
+        // Les lignes ne sont plus lues : elles ne définissent plus le cumul.
+        verify(paymentDetailRepository, never()).findByPaymentId(anyLong());
+    }
+
+    @Test
+    @DisplayName("montant d'une ligne corrigé : la ventilation change, le cumul reste celui des Imputations")
+    void correctingALineAmountLeavesTheCumulToTheImputations() {
+        PaymentDetailEntity detail = detail(true, true);
+
+        service.updatePaymentDetail(DETAIL_ID, update(500.0, null), "admin");
+
+        assertThat(detail.getAmountPaid()).isEqualTo(500.0);
+        // Avant A.6 : 4 000 DA reçus devenaient 2 500 DA, la somme des lignes restantes.
+        assertThat(payment.getAmountPaid()).isEqualTo(4000.0);
+        verify(encashmentService).refreshSeriesCumul(payment);
+    }
+
+    @Test
+    @DisplayName("ligne supprimée définitivement : le cumul reste, et la ligne de paiement n'est pas annulée")
+    void deletingALineNeitherErasesMoneyNorCancelsTheLine() {
+        detail(true, true);
+
+        service.deletePaymentDetail(DETAIL_ID, "erreur de saisie", "admin");
+
+        // Avant A.6 : toutes les lignes supprimées rendaient la série CANCELLED, sortie des devis
+        // avec son argent, et le versement suivant ouvrait une seconde ligne pour la même série.
+        assertThat(payment.getStatus()).isEqualTo("COMPLETED");
+        assertThat(payment.getAmountPaid()).isEqualTo(4000.0);
+        verify(encashmentService).refreshSeriesCumul(payment);
     }
 
     // ------------------------------------------------------------------
-    // recalculatePayment — statuts
+    // Une ligne d'un Encaissement annulé ne revient pas
     // ------------------------------------------------------------------
 
     @Test
-    @DisplayName("Versé >= coût du mois résolu → COMPLETED")
-    void completedWhenPaidReachesResolvedMonthCost() {
-        PaymentEntity payment = payment(true);
-        stubMonthTotalCost("240.00");
+    @DisplayName("réactivation d'une ligne d'un Encaissement annulé : 409, rien n'est écrit")
+    void reactivatingALineOfACancelledEncashmentIsRefused() {
+        PaymentDetailEntity detail = detail(false, false);
 
-        recalculate(payment, List.of(detail(payment, 120.0, true, false), detail(payment, 120.0, true, false)));
+        assertThatThrownBy(() -> service.reactivatePaymentDetail(DETAIL_ID, "erreur", "admin"))
+                .isInstanceOf(CustomServiceException.class)
+                .hasMessageContaining("encaissement annulé")
+                .satisfies(e -> assertThat(((CustomServiceException) e).getStatus()).isEqualTo(HttpStatus.CONFLICT));
 
-        assertThat(payment.getStatus()).isEqualTo("COMPLETED");
-        assertThat(payment.getAmountPaid()).isEqualTo(240.0);
+        assertThat(detail.getActive()).isFalse();
+        verify(paymentDetailRepository, never()).save(any(PaymentDetailEntity.class));
+        verifyNoInteractions(auditService, encashmentService);
     }
 
     @Test
-    @DisplayName("Versé partiel → IN_PROGRESS (le coût vient de la série, pas d'un repli à une séance)")
-    void inProgressWhenPartiallyPaid() {
-        PaymentEntity payment = payment(true);
-        stubMonthTotalCost("240.00");
+    @DisplayName("même refus par la modification « active = vrai »")
+    void activatingThroughTheUpdateIsRefusedToo() {
+        PaymentDetailEntity detail = detail(false, false);
 
-        recalculate(payment, List.of(detail(payment, 30.0, true, false)));
+        assertThatThrownBy(() -> service.updatePaymentDetail(DETAIL_ID, update(null, true), "admin"))
+                .isInstanceOf(CustomServiceException.class)
+                .hasMessageContaining("encaissement annulé");
 
-        assertThat(payment.getStatus()).isEqualTo("IN_PROGRESS");
+        assertThat(detail.getActive()).isFalse();
+        verify(paymentDetailRepository, never()).save(any(PaymentDetailEntity.class));
     }
 
     @Test
-    @DisplayName("Détails inactifs seulement → versé nul → PENDING")
-    void pendingWhenNothingActivePaid() {
-        PaymentEntity payment = payment(true);
-        stubMonthTotalCost("240.00");
+    @DisplayName("réactivation d'une ligne d'un Encaissement actif : acceptée")
+    void reactivatingALineOfALiveEncashmentIsAccepted() {
+        PaymentDetailEntity detail = detail(false, true);
 
-        recalculate(payment, List.of(detail(payment, 120.0, false, false)));
+        service.reactivatePaymentDetail(DETAIL_ID, "dévalidation annulée", "admin");
 
-        assertThat(payment.getStatus()).isEqualTo("PENDING");
-        assertThat(payment.getAmountPaid()).isZero();
-    }
-
-    @Test
-    @DisplayName("Tous les détails définitivement supprimés → CANCELLED")
-    void cancelledWhenAllPermanentlyDeleted() {
-        PaymentEntity payment = payment(true);
-        stubMonthTotalCost("240.00");
-
-        recalculate(payment, List.of(detail(payment, 120.0, false, true)));
-
-        assertThat(payment.getStatus()).isEqualTo("CANCELLED");
-    }
-
-    @Test
-    @DisplayName("Étudiant exempté (coût du mois nul) → COMPLETED, plus de statut bloqué")
-    void completedWhenExempted() {
-        PaymentEntity payment = payment(true);
-        stubMonthTotalCost("0.00");
-
-        recalculate(payment, List.of());
-
-        assertThat(payment.getStatus()).isEqualTo("COMPLETED");
-    }
-
-    @Test
-    @DisplayName("Coût inconnu (paiement sans série) → jamais COMPLETED")
-    void neverCompletedWhenCostUnknown() {
-        PaymentEntity payment = payment(false);
-
-        recalculate(payment, List.of(detail(payment, 5000.0, true, false)));
-
-        assertThat(payment.getStatus()).isEqualTo("IN_PROGRESS");
-        verify(paymentCostResolver, never()).resolve(anyLong(), anyLong());
-    }
-
-    @Test
-    @DisplayName("Résolution du coût en échec → jamais COMPLETED")
-    void neverCompletedWhenResolutionFails() {
-        PaymentEntity payment = payment(true);
-        when(paymentCostResolver.resolve(STUDENT_ID, SERIES_ID))
-                .thenThrow(new IllegalStateException("série introuvable"));
-
-        recalculate(payment, List.of(detail(payment, 5000.0, true, false)));
-
-        assertThat(payment.getStatus()).isEqualTo("IN_PROGRESS");
+        assertThat(detail.getActive()).isTrue();
+        verify(encashmentService).refreshSeriesCumul(payment);
     }
 
     // ------------------------------------------------------------------
@@ -211,28 +211,20 @@ class PaymentDetailAdminServiceTest {
     @Test
     @DisplayName("Modification sur une année close → refusée, rien n'est enregistré")
     void updateRejectedOnClosedYear() {
-        PaymentEntity payment = payment(true);
-        PaymentDetailEntity detail = detail(payment, 120.0, true, false);
-        when(paymentDetailRepository.findById(DETAIL_ID)).thenReturn(Optional.of(detail));
+        detail(true, true);
         doThrow(new ReadOnlySchoolYearException()).when(readOnlyYearGuard).assertGroupMutable(any());
 
-        PaymentDetailUpdateDTO dto = new PaymentDetailUpdateDTO();
-        dto.setReason("correction");
-        dto.setAmount(60.0);
-
-        assertThatThrownBy(() -> service.updatePaymentDetail(DETAIL_ID, dto, "admin"))
+        assertThatThrownBy(() -> service.updatePaymentDetail(DETAIL_ID, update(60.0, null), "admin"))
                 .isInstanceOf(ReadOnlySchoolYearException.class);
 
         verify(paymentDetailRepository, never()).save(any(PaymentDetailEntity.class));
-        verify(paymentRepository, never()).save(any(PaymentEntity.class));
+        verifyNoInteractions(encashmentService);
     }
 
     @Test
     @DisplayName("Suppression sur une année close → refusée, rien n'est enregistré")
     void deleteRejectedOnClosedYear() {
-        PaymentEntity payment = payment(true);
-        PaymentDetailEntity detail = detail(payment, 120.0, true, false);
-        when(paymentDetailRepository.findById(DETAIL_ID)).thenReturn(Optional.of(detail));
+        detail(true, true);
         doThrow(new ReadOnlySchoolYearException()).when(readOnlyYearGuard).assertGroupMutable(any());
 
         assertThatThrownBy(() -> service.deletePaymentDetail(DETAIL_ID, "erreur de saisie", "admin"))

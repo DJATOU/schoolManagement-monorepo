@@ -67,9 +67,27 @@ Socle de tout le reste : sans Encaissement identifiable, aucune correction d'arg
   `PaymentCrudServiceSeriesDetailsTest`, `PaymentStatusServiceTest`, `StudentHistoryServiceTest`,
   bout en bout (deux Encaissements sur une séance, annulation de l'un). Huit mutations vérifiées
   _Exigences : 1.3, 1.6 — D3_
-- [ ] A.6 `recalculatePayment` ne réécrit plus le cumul depuis la ventilation ; migration V7 :
+- [x] A.6 `recalculatePayment` ne réécrit plus le cumul depuis la ventilation ; migration V7 :
   liens vers l'Encaissement `NOT NULL`, et bascule de l'assertion « facultatifs » du test des
-  migrations
+  migrations. Fait :
+  - `recalculatePayment` = verrou + `EncashmentService.refreshSeriesCumul` : corriger, supprimer
+    ou réactiver une ligne ne change plus l'argent reçu ; la règle « toutes les lignes supprimées
+    → CANCELLED » disparaît (elle sortait la série des devis avec son argent) ;
+  - réactiver une ligne d'un Encaissement annulé (réactivation ou « active = vrai ») : 409 ;
+  - `POST /api/payments` retiré (cumul pris tel quel dans la requête, sans Encaissement ; aucun
+    écran ne l'appelait), avec `PaymentCrudService.createPayment/save` et le service front ;
+  - V7 et `@JoinColumn(nullable = false)` sur les trois liens : H2 refuse comme PostgreSQL une
+    ligne sans Encaissement ; fixtures H2 rattachées à une Imputation ;
+  - base locale `schoolManagement4` réinitialisée (sauvegarde `~/schoolManagement4-avant-A6.dump`),
+    V1 à V7 appliquées au démarrage, encaissement de contrôle par l'API puis nettoyé ;
+    `reset-database.sql` couvre les tables d'Encaissement et remet le compteur de reçus à zéro.
+  Tests : `PaymentDetailAdminServiceTest` réécrit, bout en bout « défaut 2 », test PostgreSQL
+  (V7, refus SQL des trois lignes sans Encaissement), H2 (ligne sans Imputation refusée). Quatre
+  mutations vérifiées.
+  ⚠ Point ouvert : la correction d'un montant de ligne ne déplace plus que la ventilation, et les
+  recettes (`sumCollected*`, `revenue*`) somment la ventilation. Corriger un montant fait donc
+  diverger recettes et registre ; décision à prendre (refuser la correction de montant jusqu'au
+  lot B, ou lire les totaux de recettes dans les Imputations)
   _Défaut 2 — D3, Data Models_
 - [ ] A.7 Propriété P1 « conservation de l'argent »
   _Exigences : 1.4_

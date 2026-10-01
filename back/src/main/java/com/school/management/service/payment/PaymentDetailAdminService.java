@@ -7,48 +7,45 @@ import com.school.management.persistance.PaymentEntity;
 import com.school.management.repository.PaymentDetailRepository;
 import com.school.management.repository.PaymentRepository;
 import com.school.management.service.ReadOnlyYearGuard;
+import com.school.management.service.exception.CustomServiceException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 
 @Service
 public class PaymentDetailAdminService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(PaymentDetailAdminService.class);
 
-    private static final int MONEY_SCALE = 2;
-    private static final RoundingMode MONEY_ROUNDING = RoundingMode.HALF_UP;
-
     private final PaymentDetailRepository paymentDetailRepository;
     private final PaymentRepository paymentRepository;
     private final PaymentDetailAuditService paymentDetailAuditService;
     private final ReadOnlyYearGuard readOnlyYearGuard;
-    private final PaymentCostResolver paymentCostResolver;
+
+    /** Seule source du cumul et du statut d'une série : la somme des Imputations actives. */
+    private final EncashmentService encashmentService;
 
     @Autowired
     public PaymentDetailAdminService(PaymentDetailRepository paymentDetailRepository,
             PaymentRepository paymentRepository,
             PaymentDetailAuditService paymentDetailAuditService,
             ReadOnlyYearGuard readOnlyYearGuard,
-            PaymentCostResolver paymentCostResolver) {
+            EncashmentService encashmentService) {
         this.paymentDetailRepository = paymentDetailRepository;
         this.paymentRepository = paymentRepository;
         this.paymentDetailAuditService = paymentDetailAuditService;
         this.readOnlyYearGuard = readOnlyYearGuard;
-        this.paymentCostResolver = paymentCostResolver;
+        this.encashmentService = encashmentService;
     }
 
     @Transactional(readOnly = true)
@@ -123,6 +120,9 @@ public class PaymentDetailAdminService {
             detail.setAmountPaid(updateDTO.getAmount());
         }
         if (updateDTO.getActive() != null) {
+            if (Boolean.TRUE.equals(updateDTO.getActive()) && !Boolean.TRUE.equals(detail.getActive())) {
+                assertNotFromCancelledEncashment(detail);
+            }
             detail.setActive(updateDTO.getActive());
         }
 
@@ -169,6 +169,7 @@ public class PaymentDetailAdminService {
             throw new IllegalStateException(
                     "Cannot reactivate a permanently deleted payment detail. This deletion is irreversible.");
         }
+        assertNotFromCancelledEncashment(detail);
 
         String oldValue = buildValueString(detail);
         detail.setActive(true);
@@ -180,74 +181,39 @@ public class PaymentDetailAdminService {
         return detail;
     }
 
+    /**
+     * Recalcule le statut de la ligne de paiement après une écriture sur sa ventilation.
+     *
+     * <p><b>Le cumul ne vient plus de la ventilation</b> (spec admin-corrections, défaut 2). Il
+     * remplaçait le montant versé par la somme des lignes actives : toute part non ventilée
+     * disparaissait du registre à la première correction d'une ligne, et rien n'empêchait le
+     * cumul de passer sous le total déjà remboursé. Le cumul est désormais la somme des
+     * Imputations actives, que seul un Encaissement fait varier. Corriger une ligne de
+     * ventilation ne crée ni ne détruit d'argent reçu.</p>
+     *
+     * <p>Le statut suit {@link PaymentLineStatus}, comme pour un encaissement ou son annulation.
+     * La règle « toutes les lignes supprimées définitivement : CANCELLED » disparaît avec : une
+     * ligne annulée sortait du statut et des devis tout en gardant son argent, et le versement
+     * suivant ouvrait une seconde ligne pour la même série.</p>
+     */
     @Transactional
     public void recalculatePayment(Long paymentId) {
-        PaymentEntity payment = paymentRepository.findById(Objects.requireNonNull(paymentId))
+        PaymentEntity payment = paymentRepository.findByIdForUpdate(Objects.requireNonNull(paymentId))
                 .orElseThrow(() -> new RuntimeException("Payment not found with id: " + paymentId));
-
-        // Récupérer TOUS les PaymentDetails (actifs et inactifs)
-        List<PaymentDetailEntity> allDetails = paymentDetailRepository.findByPaymentId(paymentId);
-
-        // Vérifier si tous les PaymentDetails ont été définitivement supprimés
-        boolean allPermanentlyDeleted = !allDetails.isEmpty() &&
-                allDetails.stream()
-                        .allMatch(detail -> detail.getPermanentlyDeleted() != null && detail.getPermanentlyDeleted());
-
-        // Calculer le total payé (uniquement les actifs) en BigDecimal (audit H4).
-        BigDecimal totalPaid = allDetails.stream()
-                .filter(detail -> detail.getActive() != null && detail.getActive())
-                .map(PaymentDetailEntity::getAmountPaid)
-                .filter(Objects::nonNull)
-                .map(BigDecimal::valueOf)
-                .reduce(BigDecimal.ZERO, BigDecimal::add)
-                .setScale(MONEY_SCALE, MONEY_ROUNDING);
-
-        payment.setAmountPaid(totalPaid.doubleValue());
-
-        Optional<BigDecimal> monthTotalCost = resolveMonthTotalCost(payment);
-
-        // LOGIQUE DE STATUT (cf. business-rules.md) :
-        // 1. Tous les détails définitivement supprimés → CANCELLED ;
-        // 2. coût du mois connu : versé >= coût → COMPLETED (couvre le coût nul d'un
-        //    étudiant exempté), versé nul → PENDING, sinon IN_PROGRESS ;
-        // 3. coût inconnu (série absente, résolution impossible) : on ne prétend jamais
-        //    COMPLETED.
-        if (allPermanentlyDeleted) {
-            payment.setStatus("CANCELLED");
-        } else if (monthTotalCost.isPresent() && totalPaid.compareTo(monthTotalCost.get()) >= 0) {
-            payment.setStatus("COMPLETED");
-        } else if (totalPaid.signum() <= 0) {
-            payment.setStatus("PENDING");
-        } else {
-            payment.setStatus("IN_PROGRESS");
-        }
-
-        paymentRepository.save(payment);
+        encashmentService.refreshSeriesCumul(payment);
     }
 
     /**
-     * Coût total du mois pour le paiement, délégué au {@link PaymentCostResolver}.
-     *
-     * <p>L'ancien calcul local ({@code prix × totalSessions}, avec repli silencieux sur
-     * {@code sessions = 1}) ignorait les réductions et divergeait de la source de vérité
-     * monétaire : un étudiant exempté restait éternellement « en cours », et un paiement
-     * mal rattaché à une série passait « soldé » dès le premier versement.</p>
-     *
-     * @return le coût du mois, ou {@link Optional#empty()} si l'information est
-     *         indisponible (paiement sans étudiant ou sans série, série introuvable)
+     * Refuse de rendre active une ligne d'un Encaissement annulé : l'argent qu'elle ventile n'est
+     * plus au registre, et la réactiver le ferait revenir dans les recettes (spec
+     * admin-corrections, inventaire A.1).
      */
-    private Optional<BigDecimal> resolveMonthTotalCost(PaymentEntity payment) {
-        if (payment.getStudent() == null || payment.getSessionSeries() == null) {
-            return Optional.empty();
-        }
-
-        try {
-            return Optional.of(paymentCostResolver
-                    .resolve(payment.getStudent().getId(), payment.getSessionSeries().getId())
-                    .monthTotalCost());
-        } catch (RuntimeException e) {
-            LOGGER.warn("Coût du mois non résolu pour le paiement {} : {}", payment.getId(), e.getMessage());
-            return Optional.empty();
+    private void assertNotFromCancelledEncashment(PaymentDetailEntity detail) {
+        if (detail.getEncashmentAllocation() != null
+                && !Boolean.TRUE.equals(detail.getEncashmentAllocation().getActive())) {
+            throw new CustomServiceException("Cette ligne appartient à un encaissement annulé : elle ne peut "
+                    + "pas être réactivée. L'argent qu'elle ventilait ne figure plus au registre.",
+                    HttpStatus.CONFLICT);
         }
     }
 

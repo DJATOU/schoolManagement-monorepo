@@ -1,5 +1,9 @@
 package com.school.management.repository;
 
+import com.school.management.persistance.EncashmentAllocationEntity;
+import com.school.management.persistance.EncashmentEntity;
+import com.school.management.persistance.EncashmentKind;
+import com.school.management.persistance.EncashmentStatus;
 import com.school.management.persistance.GroupEntity;
 import com.school.management.persistance.PaymentDetailEntity;
 import com.school.management.persistance.PaymentEntity;
@@ -96,10 +100,12 @@ class GroupRevenueQueriesIntegrationTest {
      */
     private void persistDetail(PaymentEntity payment, SessionEntity session, double amount,
             boolean active, Boolean permanentlyDeleted, Date paymentDate) {
+        // Une ligne de ventilation est la part d'une Imputation, obligatoire depuis V7.
         PaymentDetailEntity detail = PaymentDetailEntity.builder()
                 .payment(payment)
                 .session(session)
                 .amountPaid(amount)
+                .encashmentAllocation(persistImputation(payment, amount))
                 .build();
         em.persist(detail);
         em.flush();
@@ -114,6 +120,26 @@ class GroupRevenueQueriesIntegrationTest {
                 .setParameter("id", detail.getId())
                 .executeUpdate();
         em.clear();
+    }
+
+    private int receiptRank;
+
+    /** Encaissement d'un seul versement et son Imputation, dont la ligne sera la part. */
+    private EncashmentAllocationEntity persistImputation(PaymentEntity payment, double amount) {
+        BigDecimal money = BigDecimal.valueOf(amount).setScale(2, java.math.RoundingMode.HALF_UP);
+        EncashmentEntity encashment = em.persist(EncashmentEntity.builder()
+                .receiptNumber(String.format("RECU-2030-%04d", ++receiptRank))
+                .student(student).group(group).targetSeries(series)
+                .amountReceived(money)
+                .kind(EncashmentKind.REGULAR)
+                .receivedAt(new Date())
+                .receivedBy("test")
+                .status(EncashmentStatus.ACTIVE)
+                .build());
+        return em.persist(EncashmentAllocationEntity.builder()
+                .encashment(encashment).series(series).payment(payment)
+                .amount(money).carriedOver(false).active(true)
+                .build());
     }
 
     private Date date(int year, int month, int day) {

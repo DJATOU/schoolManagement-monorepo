@@ -89,20 +89,6 @@ public class PaymentCrudService {
     }
 
     /**
-     * Crée un nouveau paiement.
-     *
-     * @param payment le paiement à créer
-     * @return le paiement créé
-     */
-    @Transactional
-    public PaymentEntity createPayment(PaymentEntity payment) {
-        LOGGER.info("Creating new payment for student: {}", payment.getStudent().getId());
-        PaymentEntity saved = paymentRepository.save(payment);
-        LOGGER.debug("Payment created with ID: {}", saved.getId());
-        return saved;
-    }
-
-    /**
      * Met à jour un paiement existant.
      *
      * @param id l'ID du paiement à mettre à jour
@@ -118,17 +104,8 @@ public class PaymentCrudService {
         return paymentRepository.save(Objects.requireNonNull(existingPayment));
     }
 
-    /**
-     * Sauvegarde ou met à jour un paiement.
-     *
-     * @param payment le paiement à sauvegarder
-     * @return le paiement sauvegardé
-     */
-    @Transactional
-    public PaymentEntity save(PaymentEntity payment) {
-        LOGGER.debug("Saving payment: {}", payment.getId());
-        return paymentRepository.save(payment);
-    }
+    // createPayment et save (écriture d'une ligne de paiement telle quelle) retirés avec A.6 :
+    // le cumul d'une série n'est écrit que par EncashmentService, depuis les Imputations.
 
     /**
      * Récupère tous les paiements ACTIFS (non CANCELLED) d'un étudiant, triés par

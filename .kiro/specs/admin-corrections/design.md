@@ -94,7 +94,9 @@ payment_idempotency   + encashment_id
   son Encaissement : une mise à jour ne la redate plus.
 - **Le cumul `payments.amount_paid` = Σ Imputations actives de la Série.** Il est recalculé à
   chaque écriture d'Imputation, jamais depuis la ventilation (défaut 2). `recalculatePayment`
-  ne recalcule plus que le statut.
+  délègue à `EncashmentService.refreshSeriesCumul` : le cumul reste celui des Imputations, seul
+  le statut peut bouger. Aucun autre point d'entrée n'écrit le cumul (`POST /api/payments`
+  retiré en A.6).
 - **Neutraliser un Encaissement** = désactiver ses Imputations, ses lignes de ventilation et ses
   reports, puis recalculer les cumuls et statuts des Séries touchées.
 

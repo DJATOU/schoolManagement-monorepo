@@ -239,21 +239,6 @@ export class PaymentService {
     );
   }
 
-  /**
-   * Crée un paiement de base
-   *
-   * Backend: PaymentController.createPayment()
-   * Endpoint: POST /api/payments
-   *
-   * @param payment Données du paiement
-   * @returns Observable<Payment>
-   */
-  createPayment(payment: Payment): Observable<Payment> {
-    return this.http.post<Payment>(this.baseUrl, payment).pipe(
-      catchError(this.handleError)
-    );
-  }
-
   // =========================================================================
   // PAYMENT STATUS (PaymentStatusService backend)
   // =========================================================================
@@ -330,10 +315,10 @@ export class PaymentService {
   }
 
   /**
-   * @deprecated À supprimer - Utiliser createPayment() ou processPayment()
+   * @deprecated À supprimer - Utiliser processPayment()
    */
   addPayment(payment: Payment): Observable<PaymentAllocationResult> {
-    console.warn('[DEPRECATED] Use createPayment() or processPayment() instead');
+    console.warn('[DEPRECATED] Use processPayment() instead');
     return this.processPayment(payment);
   }
 

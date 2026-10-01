@@ -254,22 +254,22 @@ class MigrationSchemaPostgresIntegrationTest {
     // ------------------------------------------------------------------
 
     @Test
-    @DisplayName("V1 à V6 appliquées sur une base vide, et chaque entité correspond à sa table")
+    @DisplayName("V1 à V7 appliquées sur une base vide, et chaque entité correspond à sa table")
     void allMigrationsApplyAndEntitiesValidate() {
         // Le démarrage du contexte en mode validate a déjà vérifié les entités ; reste à s'assurer
         // que toutes les migrations ont réussi, dans l'ordre, sans en sauter aucune.
         List<String> versions = jdbc.queryForList(
                 "SELECT version FROM flyway_schema_history WHERE success ORDER BY installed_rank", String.class);
-        assertThat(versions).containsExactly("1", "2", "3", "4", "5", "6");
+        assertThat(versions).containsExactly("1", "2", "3", "4", "5", "6", "7");
         assertThat(jdbc.queryForObject(
                 "SELECT count(*) FROM flyway_schema_history WHERE NOT success", Integer.class)).isZero();
     }
 
     @Test
-    @DisplayName("Liens vers l'Encaissement facultatifs tant que le code ne les écrit pas")
-    void linksOnExistingTablesAreNullableForNow() {
-        // Cette assertion bascule quand la migration qui les rend obligatoires est livrée, avec le
-        // code qui les écrit. Les rendre obligatoires avant ferait échouer tout encaissement.
+    @DisplayName("Liens vers l'Encaissement obligatoires depuis V7 : tout argent compté dit d'où il vient")
+    void linksToTheEncashmentAreMandatory() {
+        // V6 les a créés facultatifs, le temps que A.4 et A.5 les écrivent ; V7 les rend
+        // obligatoires (exigence 1.3).
         Map<String, String> nullability = new LinkedHashMap<>();
         for (String[] column : new String[][] {
                 { "payment_detail", "encashment_allocation_id" },
@@ -283,7 +283,28 @@ class MigrationSchemaPostgresIntegrationTest {
                 "payment_detail.encashment_allocation_id",
                 "payment_carry_over.encashment_allocation_id",
                 "payment_idempotency.encashment_id");
-        assertThat(nullability.values()).containsOnly("YES");
+        assertThat(nullability.values()).containsOnly("NO");
+    }
+
+    @Test
+    @DisplayName("Ligne de ventilation, report ou empreinte sans Encaissement : refusés par le stockage")
+    void rowsWithoutEncashmentAreRejected() {
+        assertThatThrownBy(() -> jdbc.update(
+                "INSERT INTO payment_detail (amount_paid, payment_id) VALUES (100, ?)", paymentId))
+                .isInstanceOf(DataIntegrityViolationException.class)
+                .hasMessageContaining("encashment_allocation_id");
+        assertThatThrownBy(() -> jdbc.update(
+                "INSERT INTO payment_carry_over (student_id, source_series_id, target_series_id, target_payment_id, "
+                        + "amount, origin_payment_date) VALUES (?, ?, ?, ?, 100, now())",
+                studentId, seriesId, otherSeriesId, paymentId))
+                .isInstanceOf(DataIntegrityViolationException.class)
+                .hasMessageContaining("encashment_allocation_id");
+        assertThatThrownBy(() -> jdbc.update(
+                "INSERT INTO payment_idempotency (idempotency_key, student_id, group_id, session_series_id, "
+                        + "amount_received, amount_allocated, origin_payment_date) VALUES ('k', ?, ?, ?, 100, 100, now())",
+                studentId, groupId, seriesId))
+                .isInstanceOf(DataIntegrityViolationException.class)
+                .hasMessageContaining("encashment_id");
     }
 
     // ------------------------------------------------------------------

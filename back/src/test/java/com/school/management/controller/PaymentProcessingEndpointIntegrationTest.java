@@ -118,6 +118,7 @@ class PaymentProcessingEndpointIntegrationTest {
     @Autowired private EncashmentAllocationRepository allocationRepository;
     @Autowired private ReceiptCounterRepository receiptCounterRepository;
     @Autowired private EncashmentService encashmentService;
+    @Autowired private com.school.management.service.payment.PaymentDetailAdminService paymentDetailAdminService;
 
     private SchoolYearEntity currentYear;
     private GroupEntity group;
@@ -420,6 +421,28 @@ class PaymentProcessingEndpointIntegrationTest {
                     .extracting(PaymentDetailEntity::getAmountPaid)
                     .containsExactlyInAnyOrder(1000.0, 2000.0);
             assertThat(cumulOf(s1.getId(), student.getId())).isEqualTo(3000.0);
+        }
+
+        @Test
+        @DisplayName("défaut 2 : corriger ou supprimer une ligne de ventilation n'efface plus d'argent reçu")
+        void corrigerLaVentilationNeChangePasLArgentRecu() throws Exception {
+            pay(s1.getId(), 4000).andExpect(status().isOk());
+            List<PaymentDetailEntity> lines = paymentDetailRepository.findAll();
+            assertThat(lines).hasSize(2);
+
+            com.school.management.dto.PaymentDetailUpdateDTO lower = new com.school.management.dto.PaymentDetailUpdateDTO();
+            lower.setReason("saisie corrigée");
+            lower.setAmount(500.0);
+            paymentDetailAdminService.updatePaymentDetail(lines.get(0).getId(), lower, "admin");
+            paymentDetailAdminService.deletePaymentDetail(lines.get(1).getId(), "ligne en double", "admin");
+
+            // Avant A.6, le cumul devenait 500 DA, la somme des lignes restantes, et la série
+            // passait annulée : 3 500 DA encaissés disparaissaient du registre.
+            assertThat(cumulOf(s1.getId(), student.getId())).isEqualTo(4000.0);
+            assertThat(paymentRepository.findAll()).singleElement()
+                    .satisfies(line -> assertThat(line.getStatus()).isEqualTo("COMPLETED"));
+            // La série reste soldée : rien de plus n'est encaissable dessus.
+            pay(s1.getId(), 100).andExpect(status().isBadRequest());
         }
 
         @Test

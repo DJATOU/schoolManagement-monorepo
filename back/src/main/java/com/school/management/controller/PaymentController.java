@@ -84,36 +84,11 @@ public class PaymentController {
         this.paymentMapper = paymentMapper;
     }
 
-    /**
-     * Crée un nouveau paiement de base.
-     *
-     * <p>Note libre facultative (requirement 11) : l'endpoint d'enregistrement de paiement
-     * {@code POST /api/payments} porte le champ optionnel {@code notes}. Ce champ transite
-     * par {@link PaymentMapper} qui le mappe dans les deux sens
-     * ({@code PaymentDTO.notes ↔ PaymentEntity.notes}). Une note fournie est persistée avec
-     * le paiement ; en son absence, {@code null} est persisté (requirement 11.1, 11.3), et
-     * la note est renvoyée dans la réponse (requirement 11.2). Le chemin {@code /process}
-     * (via {@code PaymentProcessingService} avec des arguments primitifs) ne porte pas de
-     * note et reste inchangé, tout comme les endpoints multipart d'upload.</p>
-     *
-     * @param paymentDto les données du paiement
-     * @return le paiement créé
-     */
-    @PostMapping
-    public ResponseEntity<PaymentDTO> createPayment(@Valid @RequestBody PaymentDTO paymentDto) {
-        LOGGER.info("Creating payment for student: {}", paymentDto.getStudentId());
-
-        // Note: Pour utiliser PaymentMapper.toEntity, il faut un MappingContext
-        // Pour l'instant, on utilise directement le service qui ne nécessite pas de
-        // mapper
-        // TODO: Créer un MappingContext dans PaymentCrudService si nécessaire
-
-        PaymentEntity savedPayment = paymentCrudService.createPayment(
-                paymentMapper.toEntity(paymentDto, null) // TODO: passer le mapping context
-        );
-
-        return new ResponseEntity<>(paymentMapper.toDto(savedPayment), HttpStatus.CREATED);
-    }
+    // POST / (création d'une ligne de paiement « de base ») retiré avec A.6 (spec
+    // admin-corrections) : il enregistrait un cumul pris tel quel dans la requête, sans
+    // Encaissement ni Imputation. Le cumul d'une série est la somme des Imputations actives
+    // (exigence 1.4) ; un versement entre par /process ou /process/catch-up, et nulle part
+    // ailleurs. Aucun écran ne l'appelait.
 
     // PATCH /{id} générique retiré : il projetait une Map arbitraire du client sur l'entité
     // (ModelMapper), permettant d'écraser n'importe quel champ d'un paiement — dont le montant,

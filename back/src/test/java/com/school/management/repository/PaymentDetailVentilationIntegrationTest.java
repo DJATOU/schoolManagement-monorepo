@@ -1,5 +1,9 @@
 package com.school.management.repository;
 
+import com.school.management.persistance.EncashmentAllocationEntity;
+import com.school.management.persistance.EncashmentEntity;
+import com.school.management.persistance.EncashmentKind;
+import com.school.management.persistance.EncashmentStatus;
 import com.school.management.persistance.GroupEntity;
 import com.school.management.persistance.PaymentDetailEntity;
 import com.school.management.persistance.PaymentEntity;
@@ -14,11 +18,14 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.test.context.TestPropertySource;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Date;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Lignes de ventilation sur une vraie base (H2) : part déjà ventilée d'une séance, et date d'une
@@ -66,9 +73,28 @@ class PaymentDetailVentilationIntegrationTest {
                 .amountPaid(0.0).build());
     }
 
+    private int receiptRank;
+
+    /** Une ligne est la part d'une Imputation (obligatoire depuis V7) : un Encaissement par ligne. */
+    private EncashmentAllocationEntity imputation(PaymentEntity owner, double amount) {
+        BigDecimal money = BigDecimal.valueOf(amount).setScale(2, RoundingMode.HALF_UP);
+        EncashmentEntity encashment = em.persist(EncashmentEntity.builder()
+                .receiptNumber(String.format("RECU-2030-%04d", ++receiptRank))
+                .student(owner.getStudent()).group(owner.getGroup()).targetSeries(owner.getSessionSeries())
+                .amountReceived(money).kind(EncashmentKind.REGULAR)
+                .receivedAt(at(1, 10)).receivedBy("test").status(EncashmentStatus.ACTIVE)
+                .build());
+        return em.persist(EncashmentAllocationEntity.builder()
+                .encashment(encashment).series(owner.getSessionSeries()).payment(owner)
+                .amount(money).carriedOver(false).active(true)
+                .build());
+    }
+
     private PaymentDetailEntity line(PaymentEntity owner, SessionEntity session, double amount) {
         return em.persist(PaymentDetailEntity.builder()
-                .payment(owner).session(session).amountPaid(amount).paymentDate(at(1, 10)).build());
+                .payment(owner).session(session).amountPaid(amount).paymentDate(at(1, 10))
+                .encashmentAllocation(imputation(owner, amount))
+                .build());
     }
 
     @Test
@@ -123,11 +149,25 @@ class PaymentDetailVentilationIntegrationTest {
     }
 
     @Test
+    @DisplayName("ligne sans Imputation : refusée par le stockage, comme le fait V7 sur PostgreSQL")
+    void aLineWithoutImputationIsRejected() {
+        // Clé IDENTITY : l'insertion, donc le refus, a lieu dès persist.
+        assertThatThrownBy(() -> {
+            em.persist(PaymentDetailEntity.builder().payment(payment).session(first).amountPaid(100.0).build());
+            em.flush();
+        })
+                .isInstanceOf(jakarta.persistence.PersistenceException.class)
+                .hasStackTraceContaining("ENCASHMENT_ALLOCATION_ID");
+    }
+
+    @Test
     @DisplayName("ligne créée sans date : datée de l'instant")
     void aLineWithoutDateIsDatedNow() {
         Date before = new Date();
         PaymentDetailEntity detail = em.persist(PaymentDetailEntity.builder()
-                .payment(payment).session(first).amountPaid(100.0).build());
+                .payment(payment).session(first).amountPaid(100.0)
+                .encashmentAllocation(imputation(payment, 100.0))
+                .build());
         em.flush();
         em.clear();
 

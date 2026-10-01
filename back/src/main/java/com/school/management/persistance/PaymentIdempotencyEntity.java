@@ -99,10 +99,11 @@ public class PaymentIdempotencyEntity extends BaseEntity {
 
     /**
      * Encaissement produit par la requête d'origine (spec admin-corrections, D3) : un rejeu
-     * renverra son numéro de reçu. Facultatif tant que le code d'encaissement ne l'écrit pas.
+     * renverra son numéro de reçu, et relit sa répartition depuis ses Imputations. Obligatoire
+     * depuis V7.
      */
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "encashment_id")
+    @JoinColumn(name = "encashment_id", nullable = false)
     private EncashmentEntity encashment;
 
     /**
