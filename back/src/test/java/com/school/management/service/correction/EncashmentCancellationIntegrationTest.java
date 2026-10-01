@@ -271,7 +271,7 @@ class EncashmentCancellationIntegrationTest extends CorrectionIntegrationTestSup
             Ledger before = ledger();
 
             for (CorrectionReasonType type : CorrectionReasonType.values()) {
-                if (EncashmentCorrectionService.CANCEL_REASONS.contains(type)) {
+                if (EncashmentCorrectionService.ENCASHMENT_REASONS.contains(type)) {
                     continue;
                 }
                 CustomServiceException refused = refusal(() -> corrections.cancel(id,
@@ -284,7 +284,7 @@ class EncashmentCancellationIntegrationTest extends CorrectionIntegrationTestSup
         @Test
         @DisplayName("chaque Motif d'annulation est accepté")
         void everyCancelReasonIsAccepted() {
-            for (CorrectionReasonType type : EncashmentCorrectionService.CANCEL_REASONS) {
+            for (CorrectionReasonType type : EncashmentCorrectionService.ENCASHMENT_REASONS) {
                 Long id = pay(s1, 500).encashment().getId();
                 CorrectionReason reason = new CorrectionReason(type, type == CorrectionReasonType.OTHER ? "Doublon" : null);
                 corrections.cancel(id, reason, CorrectionMode.CONFIRM,

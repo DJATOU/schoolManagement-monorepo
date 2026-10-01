@@ -275,8 +275,36 @@ des lignes) ; `StudentHistoryService.allocatePayments`.
   lié au jeton, Motifs admis et refusés), rendu HTTP du 409. Socle commun
   `CorrectionIntegrationTestSupport`. Onze mutations vérifiées
   _Exigences : 2.1 à 2.5, 2.7_
-- [ ] B.4 `EncashmentCorrectionService.correct` : Remplacement par le chemin ordinaire, liens
-  dans les deux sens ; mode et note sans Remplacement
+- [x] B.4 `EncashmentCorrectionService.correct` : Remplacement par le chemin ordinaire, liens
+  dans les deux sens ; mode et note sans Remplacement. Fait :
+  - l'administratrice décrit l'Encaissement tel qu'il aurait dû être saisi (`EncashmentChanges` :
+    montant, élève, groupe, Série, mode, note — l'état voulu complet, rien d'implicite) ;
+  - montant, élève, groupe ou Série changés → Remplacement : neutralisation de l'original, puis
+    `PaymentProcessingService.processPayment` tel quel (plafond, report, refus en totalité,
+    inscription, année close), liens `replaces` / `replaced_by`, une seule transaction : un
+    remplacement refusé n'annule rien (3.2 à 3.5). Plancher des remboursements jugé sur l'état
+    final ;
+  - seuls le mode ou la note changés → correction en place (`EncashmentService.editDetails`,
+    mêmes normalisations qu'à l'encaissement), aucun nouveau reçu, Aperçu « aucun montant ne
+    change » (3.6, 4.4) ; rien de changé, espaces compris → 400 (11.3) ;
+  - un seul point d'entrée pour les deux cas, avec Aperçu : le `PATCH …/details` du design n'a
+    plus lieu d'être ;
+  - traces : « Reçu X de 5 000,00 DA annulé, remplacé par Y de 2 000,00 DA (élève A → B, groupe
+    « … » → « … », série « … » → « … ») » ; quand l'élève change, une seconde trace au nom du
+    nouvel élève, pour que chaque Journal montre son argent ; « Reçu X : mode de paiement espèces
+    → chèque, note aucune → « … » » ;
+  - le jeton couvre montant, élève, groupe, Série, mode, note et Motif ; les effets ne citent pas
+    le numéro du reçu de remplacement, attribué à la confirmation ;
+  - limite assumée : un versement de rattrapage (`CATCH_UP`) ne se remplace pas — l'Encaissement
+    ne garde pas la séance payée ; il s'annule, puis se ré-encaisse. Son mode et sa note se
+    corrigent ;
+  - un reçu déjà annulé : le refus nomme son remplacement.
+  Tests : `EncashmentReplacementIntegrationTest` (Aperçu, confirmation reliée et tracée, report du
+  remplacement, élève faux et ses deux traces, Série puis groupe faux, montant et note ensemble,
+  groupe sans sa Série, refus des règles d'encaissement, élève non inscrit, plancher sur l'état
+  final, rattrapage, reçu déjà remplacé, année close, jeton lié aux changements, au mode et à la
+  note ; mode et note en place, l'un ou l'autre, rien de changé, mode trop long ; entrées
+  incomplètes). Quatorze mutations vérifiées
   _Exigences : 3.1 à 3.6 — D4_
 - [ ] B.5 Points d'entrée `cancel` et `correct`, `preview` et `confirm`
 - [ ] B.6 Propriétés P2 « remplacer équivaut à avoir bien saisi », P3 « indivisibilité »,

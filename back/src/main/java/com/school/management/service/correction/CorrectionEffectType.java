@@ -27,5 +27,8 @@ public enum CorrectionEffectType {
     SESSION_BECAME_NOT_BILLABLE,
 
     /** Une part de ventilation change de Séance, sans changer de Série ni d'Encaissement. */
-    VENTILATION_MOVED
+    VENTILATION_MOVED,
+
+    /** Le mode de paiement ou la note d'un Encaissement changent, sans Remplacement. */
+    ENCASHMENT_DETAILS_EDITED
 }

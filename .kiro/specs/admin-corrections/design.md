@@ -121,7 +121,14 @@ aussi (3.5). Réutiliser le chemin ordinaire garantit que corriger « 20 000 →
 exactement ce qu'aurait produit un encaissement correct de 2 000 : c'est la propriété P2.
 
 Refus d'Annulation si le cumul passait sous le total remboursé de la Série (2.4) : les
-remboursements restent rattachés au cumul, dont ils bornent la diminution.
+remboursements restent rattachés au cumul, dont ils bornent la diminution. Pour un Remplacement,
+le plancher se juge sur l'état final : un remplacement sur la même Série peut rendre ce que
+l'annulation retirait.
+
+Précisions (B.4) : la correction reçoit l'état voulu complet ; seuls le mode et la note changés,
+elle corrige en place (3.6), sinon elle remplace. Quand l'élève change, une seconde Trace au nom du
+nouvel élève alimente son Journal. Un Encaissement de rattrapage ne se remplace pas : il ne garde
+pas la séance payée, que le chemin de rattrapage exige ; il s'annule puis se ré-encaisse.
 
 ### D5 — Fenêtre_Inscription
 
@@ -252,7 +259,8 @@ controller/
 controller/correction/
   EncashmentCorrectionController   POST /api/encashments/{id}/cancel/{preview|confirm}
                                    POST /api/encashments/{id}/correct/{preview|confirm}
-                                   PATCH /api/encashments/{id}/details        (mode, note)
+                                        (mode et note seuls : corrigés en place, sans
+                                        Remplacement ni nouveau reçu — B.4)
   EnrolmentCorrectionController    POST /api/enrolments/{id}/arrival/{preview|confirm}
                                    POST /api/enrolments/{id}/departure/{preview|confirm}
   AttendanceCorrectionController   POST /api/attendances/{id}/correct/{preview|confirm}

@@ -119,10 +119,7 @@ public class EncashmentService {
                     + " » n'appartient pas au groupe « " + request.group().getName() + " ».");
         }
         BigDecimal amount = positiveMoney(request.amount(), "Montant reçu");
-        String paymentMethod = blankToNull(request.paymentMethod());
-        if (paymentMethod != null && paymentMethod.length() > MAX_PAYMENT_METHOD_LENGTH) {
-            throw badRequest("Mode de paiement trop long : " + MAX_PAYMENT_METHOD_LENGTH + " caractères au plus.");
-        }
+        String paymentMethod = normalizedPaymentMethod(request.paymentMethod());
 
         Date receivedAt = new Date();
         EncashmentEntity encashment = EncashmentEntity.builder()
@@ -133,7 +130,7 @@ public class EncashmentService {
                 .amountReceived(amount)
                 .kind(request.kind())
                 .paymentMethod(paymentMethod)
-                .notes(blankToNull(request.notes()))
+                .notes(normalizedNotes(request.notes()))
                 .receivedAt(receivedAt)
                 .receivedBy(currentAuditor())
                 .status(EncashmentStatus.ACTIVE)
@@ -270,6 +267,43 @@ public class EncashmentService {
         LOGGER.info("Encaissement {} neutralisé ({}), {} série(s) recalculée(s)",
                 encashment.getReceiptNumber(), reason.type(), touched.size());
         return encashment;
+    }
+
+    // ------------------------------------------------------------------
+    // Mode de paiement et note
+    // ------------------------------------------------------------------
+
+    /**
+     * Corrige le mode de paiement et la note d'un encaissement actif (spec admin-corrections,
+     * exigence 3.6). Ni le montant, ni l'étudiant, ni les séries ne changent : aucun montant n'est
+     * recalculé. Valeurs normalisées comme à l'encaissement.
+     *
+     * @throws CustomServiceException 409 si l'encaissement est annulé ; 400 si le mode est trop long
+     */
+    @Transactional
+    public EncashmentEntity editDetails(EncashmentEntity encashment, String paymentMethod, String notes) {
+        Objects.requireNonNull(encashment, "encashment");
+        if (!encashment.isActive()) {
+            throw new CustomServiceException("L'encaissement " + encashment.getReceiptNumber()
+                    + " est annulé : il ne se corrige plus.", HttpStatus.CONFLICT);
+        }
+        encashment.setPaymentMethod(normalizedPaymentMethod(paymentMethod));
+        encashment.setNotes(normalizedNotes(notes));
+        return encashmentRepository.save(encashment);
+    }
+
+    /** Mode de paiement tel qu'un encaissement le conserve : espaces retirés, vide = absent. */
+    public static String normalizedPaymentMethod(String paymentMethod) {
+        String method = blankToNull(paymentMethod);
+        if (method != null && method.length() > MAX_PAYMENT_METHOD_LENGTH) {
+            throw badRequest("Mode de paiement trop long : " + MAX_PAYMENT_METHOD_LENGTH + " caractères au plus.");
+        }
+        return method;
+    }
+
+    /** Note telle qu'un encaissement la conserve : espaces retirés, vide = absente. */
+    public static String normalizedNotes(String notes) {
+        return blankToNull(notes);
     }
 
     // ------------------------------------------------------------------
