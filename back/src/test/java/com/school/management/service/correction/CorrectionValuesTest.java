@@ -72,15 +72,43 @@ class CorrectionValuesTest {
     void listsAreCopied() {
         List<CorrectionEffect> effects = new ArrayList<>();
         Set<SeriesKey> touched = new HashSet<>();
-        CorrectionExecution<String> execution = new CorrectionExecution<>("r", effects, touched);
+        List<AuditDraft> audits = new ArrayList<>();
+        CorrectionExecution<String> execution = new CorrectionExecution<>("r", effects, touched, audits);
         CorrectionPreview preview = CorrectionPreview.of(new ArrayList<>(), effects);
 
         effects.add(new CorrectionEffect(CorrectionEffectType.ALLOCATION_CREATED, "Imputation"));
         touched.add(new SeriesKey(1L, 2L));
+        audits.add(AuditDraft.builder().domain(com.school.management.persistance.CorrectionDomain.ENCASHMENT)
+                .action(com.school.management.persistance.CorrectionAction.ENCASHMENT_CANCELLED).entityId(1L)
+                .summary("Reçu annulé")
+                .reason(CorrectionReason.of(com.school.management.persistance.CorrectionReasonType.WRONG_AMOUNT))
+                .build());
 
         assertThat(execution.effects()).isEmpty();
         assertThat(execution.touched()).isEmpty();
+        assertThat(execution.audits()).isEmpty();
         assertThat(preview.effects()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("une trace doit dire ce qui a été corrigé, sur quoi, et pourquoi")
+    void aTraceMustBeComplete() {
+        var reason = CorrectionReason.of(com.school.management.persistance.CorrectionReasonType.WRONG_AMOUNT);
+        var domain = com.school.management.persistance.CorrectionDomain.ENCASHMENT;
+        var action = com.school.management.persistance.CorrectionAction.ENCASHMENT_CANCELLED;
+
+        assertThatThrownBy(() -> AuditDraft.builder().domain(domain).action(action).entityId(1L).reason(reason)
+                .summary(" ").build()).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> AuditDraft.builder().domain(domain).action(action).entityId(1L).reason(reason)
+                .build()).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> AuditDraft.builder().action(action).entityId(1L).reason(reason).summary("s")
+                .build()).isInstanceOf(NullPointerException.class).hasMessage("domain");
+        assertThatThrownBy(() -> AuditDraft.builder().domain(domain).entityId(1L).reason(reason).summary("s")
+                .build()).isInstanceOf(NullPointerException.class).hasMessage("action");
+        assertThatThrownBy(() -> AuditDraft.builder().domain(domain).action(action).reason(reason).summary("s")
+                .build()).isInstanceOf(NullPointerException.class).hasMessage("entityId");
+        assertThatThrownBy(() -> AuditDraft.builder().domain(domain).action(action).entityId(1L).summary("s")
+                .build()).isInstanceOf(NullPointerException.class).hasMessage("reason");
     }
 
     @Test
@@ -148,7 +176,7 @@ class CorrectionValuesTest {
 
             @Override
             public CorrectionExecution<Void> execute() {
-                return new CorrectionExecution<>(null, List.of(), Set.of());
+                return new CorrectionExecution<>(null, List.of(), Set.of(), List.of());
             }
         };
     }

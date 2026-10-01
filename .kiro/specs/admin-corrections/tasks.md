@@ -231,8 +231,29 @@ des lignes) ; `StudentHistoryService.allocatePayments`.
   empreinte, « avant » mesuré après, flush, portée, transaction ouverte, Séries inchangées,
   gestionnaire du 409)
   _Exigences : 4.1 à 4.4 — D7_
-- [ ] B.2 `CorrectionAuditService` (`CorrectionReason` et `CorrectionReasonType` livrés en A.2/A.3) avec `summary` et
-  `amount_effect` rédigés à l'écriture
+- [x] B.2 `CorrectionAuditService` (`CorrectionReason` et `CorrectionReasonType` livrés en A.2/A.3) avec `summary` et
+  `amount_effect` rédigés à l'écriture. Fait :
+  - la correction rédige ses traces (`AuditDraft` : domaine, action, donnée, étudiant, groupe,
+    séance, Série, valeurs avant/après, résumé, motif) et les rend au runner dans
+    `CorrectionExecution.audits` ; le runner les écrit une fois l'Aperçu mesuré, dans les deux
+    modes et avant la comparaison du jeton : aucune trace après un Aperçu, un Aperçu périmé ou
+    un refus (11.5) ;
+  - `amount_effect` rédigé par `AmountEffectWriter` depuis les Séries changées de l'étudiant de
+    la trace : « Janvier (Math 1ère A) : versé 3 000,00 → 0,00 DA, reste 1 000,00 → 4 000,00 DA,
+    à jour → en retard » ; seuls les montants qui changent ; espace ordinaire entre les milliers
+    (imprimable en PDF) ;
+  - auteur = utilisateur authentifié lu dans le contexte de sécurité ; sans lui, refus 401
+    plutôt qu'une trace signée « system » (11.4) ; rang = identifiant (11.4) ; `MANDATORY` :
+    aucune trace hors de la transaction d'une correction ;
+  - refus 400 « sans changement effectif » : valeurs avant et après identiques, ou correction
+    qui ne rend aucune trace (11.3) ; une correction qui change un montant ou produit un effet
+    sans trace est une erreur de programmation ;
+  - valeurs structurées en JSON, clés triées, montants à leur échelle (`3000.00`, et non
+    `3E+3` que produisait Jackson par défaut) ; résumé et effet ramenés à 500 caractères.
+  Tests : `CorrectionRunnerIntegrationTest$Trace` (trace complète à la confirmation, aucune
+  sans confirmation, refus sans authentification, valeurs identiques, rangs, survie à la
+  disparition des données), `CorrectionAuditServiceIntegrationTest`, `AmountEffectWriterTest`.
+  Quatorze mutations vérifiées
   _Exigences : 11.1 à 11.6 — D8, D10_
 - [ ] B.3 `EncashmentCorrectionService.cancel` : neutralisation, refus sous le total remboursé,
   refus d'une seconde annulation, année close

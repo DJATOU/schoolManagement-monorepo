@@ -38,6 +38,7 @@ import java.util.stream.Stream;
  *   <li>exécuter la correction ;</li>
  *   <li>photographier de nouveau les mêmes Séries ;</li>
  *   <li>construire l'Aperçu — Séries dont un montant change, effets — et son empreinte SHA-256 ;</li>
+ *   <li>écrire les traces de la correction, avec son effet mesuré sur les montants (B.2) ;</li>
  *   <li>Aperçu : annuler la transaction. Confirmation : valider si l'empreinte est celle de l'Aperçu
  *       lu, sinon annuler et renvoyer le nouvel Aperçu (409).</li>
  * </ol>
@@ -62,6 +63,7 @@ public class CorrectionRunner {
     private final PaymentCostResolver costResolver;
     private final SessionSeriesRepository seriesRepository;
     private final StudentRepository studentRepository;
+    private final CorrectionAuditService auditService;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -69,11 +71,13 @@ public class CorrectionRunner {
     public CorrectionRunner(PlatformTransactionManager transactionManager,
                             PaymentCostResolver costResolver,
                             SessionSeriesRepository seriesRepository,
-                            StudentRepository studentRepository) {
+                            StudentRepository studentRepository,
+                            CorrectionAuditService auditService) {
         this.transactions = new TransactionTemplate(transactionManager);
         this.costResolver = costResolver;
         this.seriesRepository = seriesRepository;
         this.studentRepository = studentRepository;
+        this.auditService = auditService;
     }
 
     /**
@@ -118,6 +122,7 @@ public class CorrectionRunner {
             // Les montants « après » sont relus en base : tout ce que la correction a écrit doit y être.
             entityManager.flush();
             CorrectionPreview preview = CorrectionPreview.of(changes(before, snapshot(scope)), execution.effects());
+            writeAudits(command, execution, preview);
             String token = fingerprint(command, preview);
 
             if (mode == CorrectionMode.PREVIEW) {
@@ -135,6 +140,34 @@ public class CorrectionRunner {
                     command.fingerprint(), preview.series().size());
             return new CorrectionOutcome<>(mode, preview, token, execution.result());
         });
+    }
+
+    // ------------------------------------------------------------------
+    // Traces
+    // ------------------------------------------------------------------
+
+    /**
+     * Écrit les traces de la correction, avec son effet mesuré sur les montants (exigences 11.3,
+     * 11.5, 12.3).
+     *
+     * <p>Écrites dans les deux modes, avant la comparaison du jeton : l'Aperçu exécute ainsi tout ce
+     * que la confirmation exécutera, refus de la trace compris, et un Aperçu périmé n'en laisse
+     * aucune. Une correction sans trace n'a rien changé, et elle est refusée (11.3) ; si elle a
+     * pourtant changé un montant ou produit un effet, c'est une erreur de programmation.</p>
+     */
+    private void writeAudits(CorrectionCommand<?> command, CorrectionExecution<?> execution,
+                             CorrectionPreview preview) {
+        if (execution.audits().isEmpty()) {
+            if (!preview.amountsUnchanged() || !preview.effects().isEmpty()) {
+                throw new IllegalStateException("Correction « " + command.fingerprint()
+                        + " » sans trace, alors qu'elle change des montants ou produit des effets.");
+            }
+            throw new CustomServiceException(
+                    "Correction sans changement effectif : rien à enregistrer.", HttpStatus.BAD_REQUEST);
+        }
+        for (AuditDraft draft : execution.audits()) {
+            auditService.record(draft, preview.series());
+        }
     }
 
     // ------------------------------------------------------------------

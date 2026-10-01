@@ -10,12 +10,16 @@ import java.util.Set;
  * @param result  résultat métier, rendu à l'appelant à la confirmation seulement
  * @param effects effets autres que les écarts de montants, dans l'ordre où ils se sont produits
  * @param touched Séries dont la correction a écrit un montant ; chacune doit figurer dans la portée
+ * @param audits  traces à écrire, une par changement effectif ; le runner y ajoute l'effet sur les
+ *                montants et les écrit dans la transaction de la correction
  * @param <T>     type du résultat
  */
-public record CorrectionExecution<T>(T result, List<CorrectionEffect> effects, Set<SeriesKey> touched) {
+public record CorrectionExecution<T>(T result, List<CorrectionEffect> effects, Set<SeriesKey> touched,
+                                     List<AuditDraft> audits) {
 
     public CorrectionExecution {
         effects = List.copyOf(Objects.requireNonNull(effects, "effects"));
         touched = Set.copyOf(Objects.requireNonNull(touched, "touched"));
+        audits = List.copyOf(Objects.requireNonNull(audits, "audits"));
     }
 }

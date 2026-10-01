@@ -413,6 +413,12 @@
                                         <include>com.school.management.service.correction.CorrectionEffect</include>
                                         <include>com.school.management.service.correction.CorrectionExecution</include>
                                         <include>com.school.management.service.correction.SeriesKey</include>
+                                        <!-- B.2 : la trace est la seule mémoire de qui a corrigé
+                                             quoi ; son effet sur les montants est ce qu'on montre à
+                                             un parent qui conteste. -->
+                                        <include>com.school.management.service.correction.CorrectionAuditService</include>
+                                        <include>com.school.management.service.correction.AuditDraft</include>
+                                        <include>com.school.management.service.correction.AmountEffectWriter</include>
                                     </includes>
                                     <limits>
                                         <limit>

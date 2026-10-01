@@ -1,6 +1,8 @@
 package com.school.management.service.correction;
 
 import com.school.management.persistance.AttendanceEntity;
+import com.school.management.persistance.CorrectionAction;
+import com.school.management.persistance.CorrectionDomain;
 import com.school.management.persistance.CorrectionReasonType;
 import com.school.management.persistance.EncashmentAllocationEntity;
 import com.school.management.persistance.GroupEntity;
@@ -12,6 +14,7 @@ import com.school.management.persistance.SessionSeriesEntity;
 import com.school.management.persistance.StudentEntity;
 import com.school.management.persistance.StudentGroupEntity;
 import com.school.management.repository.AttendanceRepository;
+import com.school.management.repository.CorrectionAuditRepository;
 import com.school.management.repository.EncashmentAllocationRepository;
 import com.school.management.repository.EncashmentRepository;
 import com.school.management.repository.GroupRepository;
@@ -31,6 +34,7 @@ import com.school.management.service.payment.EncashmentService;
 import com.school.management.service.payment.PaymentAllocationResult;
 import com.school.management.service.payment.PaymentCostResolver;
 import com.school.management.service.payment.PaymentProcessingService;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -39,6 +43,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -48,6 +55,7 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -104,6 +112,7 @@ class CorrectionRunnerIntegrationTest {
     @Autowired private EncashmentRepository encashmentRepository;
     @Autowired private EncashmentAllocationRepository allocationRepository;
     @Autowired private ReceiptCounterRepository receiptCounterRepository;
+    @Autowired private CorrectionAuditRepository auditRepository;
 
     private GroupEntity group;
     private StudentEntity student;
@@ -114,6 +123,34 @@ class CorrectionRunnerIntegrationTest {
     /** Base vidée avant chaque test : {@code @SpringBootTest} n'annule aucune transaction. */
     @BeforeEach
     void setUp() {
+        // Une correction est tracée au nom de l'administrateur authentifié (exigence 11.4).
+        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
+                "admin-test", null, List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))));
+        auditRepository.deleteAll();
+        deleteDomainData();
+
+        SchoolYearEntity year = schoolYearRepository.save(SchoolYearEntity.builder()
+                .label("2029-2030").startDate(date(2029, 9, 1)).endDate(date(2030, 6, 30))
+                .isCurrent(true).build());
+        PricingEntity pricing = pricingRepository.save(PricingEntity.builder().price(PRICE).build());
+        group = groupRepository.save(GroupEntity.builder()
+                .name("Math 1ère A").price(pricing).schoolYear(year).sessionNumberPerSerie(2).build());
+        student = studentRepository.save(StudentEntity.builder().firstName("Amine").lastName("Belkacem").build());
+        studentGroupRepository.save(StudentGroupEntity.builder().student(student).group(group).build());
+        s1 = persistSeries(group, "Janvier", date(2030, 1, 7), date(2030, 1, 14));
+        s1First = sessionRepository.findAll().stream()
+                .filter(s -> s.getSessionSeries().getId().equals(s1.getId()))
+                .min((a, b) -> a.getSessionTimeStart().compareTo(b.getSessionTimeStart())).orElseThrow();
+        s2 = persistSeries(group, "Février", date(2030, 2, 4), date(2030, 2, 11));
+    }
+
+    @AfterEach
+    void clearSecurityContext() {
+        SecurityContextHolder.clearContext();
+    }
+
+    /** Toutes les données métier, traces exceptées. */
+    private void deleteDomainData() {
         idempotencyRepository.deleteAll();
         carryOverRepository.deleteAll();
         paymentDetailRepository.deleteAll();
@@ -129,20 +166,6 @@ class CorrectionRunnerIntegrationTest {
         studentRepository.deleteAll();
         pricingRepository.deleteAll();
         schoolYearRepository.deleteAll();
-
-        SchoolYearEntity year = schoolYearRepository.save(SchoolYearEntity.builder()
-                .label("2029-2030").startDate(date(2029, 9, 1)).endDate(date(2030, 6, 30))
-                .isCurrent(true).build());
-        PricingEntity pricing = pricingRepository.save(PricingEntity.builder().price(PRICE).build());
-        group = groupRepository.save(GroupEntity.builder()
-                .name("Math 1ère A").price(pricing).schoolYear(year).sessionNumberPerSerie(2).build());
-        student = studentRepository.save(StudentEntity.builder().firstName("Amine").lastName("Belkacem").build());
-        studentGroupRepository.save(StudentGroupEntity.builder().student(student).group(group).build());
-        s1 = persistSeries(group, "Janvier", date(2030, 1, 7), date(2030, 1, 14));
-        s1First = sessionRepository.findAll().stream()
-                .filter(s -> s.getSessionSeries().getId().equals(s1.getId()))
-                .min((a, b) -> a.getSessionTimeStart().compareTo(b.getSessionTimeStart())).orElseThrow();
-        s2 = persistSeries(group, "Février", date(2030, 2, 4), date(2030, 2, 11));
     }
 
     // ------------------------------------------------------------------
@@ -203,7 +226,7 @@ class CorrectionRunnerIntegrationTest {
         void saysExplicitlyWhenNoAmountChanges() {
             pay(s1, 3000);
 
-            CorrectionOutcome<String> outcome = runner.run(noOp("RIEN"), CorrectionMode.PREVIEW, null);
+            CorrectionOutcome<String> outcome = runner.run(traceOnly("RIEN"), CorrectionMode.PREVIEW, null);
 
             assertThat(outcome.preview().amountsUnchanged()).isTrue();
             assertThat(outcome.preview().series()).isEmpty();
@@ -245,9 +268,9 @@ class CorrectionRunnerIntegrationTest {
         void tokenIsDeterministicAndBoundToTheCommand() {
             pay(s1, 3000);
 
-            String first = runner.run(noOp("A"), CorrectionMode.PREVIEW, null).previewToken();
-            String again = runner.run(noOp("A"), CorrectionMode.PREVIEW, null).previewToken();
-            String other = runner.run(noOp("B"), CorrectionMode.PREVIEW, null).previewToken();
+            String first = runner.run(traceOnly("A"), CorrectionMode.PREVIEW, null).previewToken();
+            String again = runner.run(traceOnly("A"), CorrectionMode.PREVIEW, null).previewToken();
+            String other = runner.run(traceOnly("B"), CorrectionMode.PREVIEW, null).previewToken();
 
             assertThat(again).isEqualTo(first);
             assertThat(other).as("même Aperçu, autre commande").isNotEqualTo(first);
@@ -417,6 +440,32 @@ class CorrectionRunnerIntegrationTest {
         }
 
         @Test
+        @DisplayName("une correction qui ne change rien est refusée (exigence 11.3)")
+        void aCorrectionThatChangesNothingIsRefused() {
+            for (CorrectionMode mode : CorrectionMode.values()) {
+                CustomServiceException refused = catchThrowableOfType(
+                        () -> runner.run(noOp("RIEN"), mode, "jeton"), CustomServiceException.class);
+                assertThat(refused.getStatus()).isEqualTo(HttpStatus.BAD_REQUEST);
+                assertThat(refused.getMessage()).contains("sans changement effectif");
+            }
+        }
+
+        @Test
+        @DisplayName("un montant changé sans trace est une erreur de programmation, et rien n'est écrit")
+        void aChangeWithoutTraceIsRefused() {
+            Long encashmentId = pay(s1, 3000).encashment().getId();
+            Ledger before = ledger();
+
+            assertThatThrownBy(() -> runner.run(untraced(cancel(encashmentId)), CorrectionMode.PREVIEW, null))
+                    .isInstanceOf(IllegalStateException.class).hasMessageContaining("sans trace");
+            // Un effet seul, sans aucun montant changé, doit lui aussi être tracé.
+            assertThatThrownBy(() -> runner.run(untraced(replaceNote(encashmentId, "Note")),
+                    CorrectionMode.PREVIEW, null))
+                    .isInstanceOf(IllegalStateException.class).hasMessageContaining("sans trace");
+            assertThat(ledger()).isEqualTo(before);
+        }
+
+        @Test
         @DisplayName("refuse d'être appelé dans une transaction déjà ouverte")
         void refusesToRunInsideAnOpenTransaction() {
             TransactionTemplate outer = new TransactionTemplate(transactionManager);
@@ -425,6 +474,120 @@ class CorrectionRunnerIntegrationTest {
                     runner.run(noOp("RIEN"), CorrectionMode.PREVIEW, null)))
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessageContaining("propre transaction");
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Traces (B.2)
+    // ------------------------------------------------------------------
+
+    @Nested
+    @DisplayName("Trace")
+    class Trace {
+
+        @Test
+        @DisplayName("la confirmation écrit la trace : qui, quoi, motif, et l'effet mesuré sur les montants")
+        void confirmationWritesTheTrace() {
+            attend(s1First);
+            Long encashmentId = pay(s1, 3000).encashment().getId();
+            String token = runner.run(cancel(encashmentId), CorrectionMode.PREVIEW, null).previewToken();
+
+            runner.run(cancel(encashmentId), CorrectionMode.CONFIRM, token);
+
+            assertThat(jdbc.queryForList("SELECT * FROM correction_audit")).singleElement().satisfies(row -> {
+                assertThat(row.get("DOMAIN")).isEqualTo("ENCASHMENT");
+                assertThat(row.get("ACTION")).isEqualTo("ENCASHMENT_CANCELLED");
+                assertThat(((Number) row.get("ENTITY_ID")).longValue()).isEqualTo(encashmentId);
+                assertThat(((Number) row.get("STUDENT_ID")).longValue()).isEqualTo(student.getId());
+                assertThat(((Number) row.get("GROUP_ID")).longValue()).isEqualTo(group.getId());
+                assertThat(row.get("OLD_VALUE")).isEqualTo("{\"status\":\"ACTIVE\"}");
+                assertThat(row.get("NEW_VALUE")).isEqualTo("{\"status\":\"CANCELLED\"}");
+                assertThat(row.get("SUMMARY")).isEqualTo("Reçu " + receiptOf(encashmentId) + " annulé");
+                assertThat(row.get("AMOUNT_EFFECT")).isEqualTo("Janvier (Math 1ère A) : versé 3 000,00 → 0,00 DA, "
+                        + "reste 1 000,00 → 4 000,00 DA, à jour → en retard");
+                assertThat(row.get("REASON_TYPE")).isEqualTo("WRONG_AMOUNT");
+                assertThat(row.get("PERFORMED_BY")).as("l'administrateur authentifié").isEqualTo("admin-test");
+                assertThat(row.get("PERFORMED_AT")).isNotNull();
+            });
+        }
+
+        @Test
+        @DisplayName("un Aperçu, un Aperçu périmé ou un refus ne laissent aucune trace")
+        void noTraceWithoutConfirmation() {
+            Long encashmentId = pay(s1, 3000).encashment().getId();
+            String token = runner.run(cancel(encashmentId), CorrectionMode.PREVIEW, null).previewToken();
+            pay(s1, 500);
+
+            assertThatThrownBy(() -> runner.run(cancel(encashmentId), CorrectionMode.CONFIRM, token))
+                    .isInstanceOf(StalePreviewException.class);
+            assertThatThrownBy(() -> runner.run(cancelThenRefuse(encashmentId), CorrectionMode.CONFIRM, token))
+                    .isInstanceOf(CustomServiceException.class);
+            assertThat(count("SELECT COUNT(*) FROM correction_audit")).isZero();
+        }
+
+        @Test
+        @DisplayName("sans administrateur authentifié, la correction est refusée et rien n'est écrit")
+        void refusedWithoutAuthenticatedUser() {
+            Long encashmentId = pay(s1, 3000).encashment().getId();
+            SecurityContextHolder.clearContext();
+            Ledger before = ledger();
+
+            CustomServiceException refused = catchThrowableOfType(
+                    () -> runner.run(cancel(encashmentId), CorrectionMode.PREVIEW, null), CustomServiceException.class);
+
+            assertThat(refused.getStatus()).isEqualTo(HttpStatus.UNAUTHORIZED);
+            assertThat(ledger()).isEqualTo(before);
+        }
+
+        @Test
+        @DisplayName("des valeurs avant et après identiques sont refusées : aucune trace sans changement")
+        void identicalValuesAreRefused() {
+            Long encashmentId = pay(s1, 3000).encashment().getId();
+            jdbc.update("UPDATE encashment SET notes = 'Versement du père' WHERE id = ?", encashmentId);
+            Ledger before = ledger();
+
+            CustomServiceException refused = catchThrowableOfType(
+                    () -> runner.run(replaceNote(encashmentId, "Versement du père"), CorrectionMode.PREVIEW, null),
+                    CustomServiceException.class);
+
+            assertThat(refused.getStatus()).isEqualTo(HttpStatus.BAD_REQUEST);
+            assertThat(ledger()).isEqualTo(before);
+        }
+
+        @Test
+        @DisplayName("le rang des traces suit l'ordre des corrections")
+        void ranksFollowTheOrderOfCorrections() {
+            Long first = pay(s1, 1000).encashment().getId();
+            Long second = pay(s1, 1000).encashment().getId();
+
+            runner.run(cancel(second), CorrectionMode.CONFIRM,
+                    runner.run(cancel(second), CorrectionMode.PREVIEW, null).previewToken());
+            runner.run(cancel(first), CorrectionMode.CONFIRM,
+                    runner.run(cancel(first), CorrectionMode.PREVIEW, null).previewToken());
+
+            assertThat(jdbc.queryForList("SELECT entity_id FROM correction_audit ORDER BY id", Long.class))
+                    .containsExactly(second, first);
+        }
+
+        @Test
+        @DisplayName("la trace survit à la disparition de ce qu'elle décrit, et reste lisible")
+        void theTraceSurvivesTheData() {
+            attend(s1First);
+            Long encashmentId = pay(s1, 3000).encashment().getId();
+            String receipt = receiptOf(encashmentId);
+            runner.run(cancel(encashmentId), CorrectionMode.CONFIRM,
+                    runner.run(cancel(encashmentId), CorrectionMode.PREVIEW, null).previewToken());
+
+            // Tout ce que la trace désigne disparaît : encaissement, Série, groupe, étudiant.
+            deleteDomainData();
+            assertThat(count("SELECT COUNT(*) FROM encashment")).isZero();
+            assertThat(count("SELECT COUNT(*) FROM student")).isZero();
+
+            assertThat(jdbc.queryForList("SELECT summary, amount_effect FROM correction_audit"))
+                    .singleElement().satisfies(row -> {
+                        assertThat(row.get("SUMMARY")).isEqualTo("Reçu " + receipt + " annulé");
+                        assertThat((String) row.get("AMOUNT_EFFECT")).startsWith("Janvier (Math 1ère A) : versé");
+                    });
         }
     }
 
@@ -458,7 +621,10 @@ class CorrectionRunnerIntegrationTest {
                 return new CorrectionExecution<>(receipt,
                         List.of(new CorrectionEffect(CorrectionEffectType.ENCASHMENT_CANCELLED,
                                 "Reçu " + receipt + " annulé")),
-                        touched);
+                        touched,
+                        List.of(trace(CorrectionAction.ENCASHMENT_CANCELLED, encashmentId,
+                                Map.of("status", "ACTIVE"), Map.of("status", "CANCELLED"),
+                                "Reçu " + receipt + " annulé")));
             }
         };
     }
@@ -504,7 +670,9 @@ class CorrectionRunnerIntegrationTest {
                 return new CorrectionExecution<>(result.encashment().getReceiptNumber(),
                         List.of(new CorrectionEffect(CorrectionEffectType.ENCASHMENT_CREATED,
                                 "Versement de " + amount + " DA sur « " + series.getName() + " »")),
-                        Set.of(new SeriesKey(student.getId(), series.getId())));
+                        Set.of(new SeriesKey(student.getId(), series.getId())),
+                        List.of(trace(CorrectionAction.ENCASHMENT_REPLACED, result.encashment().getId(),
+                                null, Map.of("amount", amount), "Versement de " + amount + " DA")));
             }
         };
     }
@@ -524,10 +692,12 @@ class CorrectionRunnerIntegrationTest {
 
             @Override
             public CorrectionExecution<String> execute() {
-                paymentRepository.save(PaymentEntity.builder()
+                PaymentEntity payment = paymentRepository.save(PaymentEntity.builder()
                         .student(student).sessionSeries(series).amountPaid(amount).status("PARTIAL").build());
                 return new CorrectionExecution<>("ok", List.of(),
-                        Set.of(new SeriesKey(student.getId(), series.getId())));
+                        Set.of(new SeriesKey(student.getId(), series.getId())),
+                        List.of(trace(CorrectionAction.ENCASHMENT_REPLACED, payment.getId(),
+                                null, Map.of("amount", amount), "Cumul écrit directement")));
             }
         };
     }
@@ -548,7 +718,9 @@ class CorrectionRunnerIntegrationTest {
             @Override
             public CorrectionExecution<String> execute() {
                 encashmentRepository.findById(encashmentId).orElseThrow().setReceiptNumber(taken);
-                return new CorrectionExecution<>("doublon", List.of(), Set.of());
+                return new CorrectionExecution<>("doublon", List.of(), Set.of(),
+                        List.of(trace(CorrectionAction.ENCASHMENT_DETAILS_EDITED, encashmentId,
+                                Map.of("receipt", "autre"), Map.of("receipt", taken), "Numéro dupliqué")));
             }
         };
     }
@@ -575,7 +747,9 @@ class CorrectionRunnerIntegrationTest {
                 return new CorrectionExecution<>(note,
                         List.of(new CorrectionEffect(CorrectionEffectType.ENCASHMENT_CREATED,
                                 "Note « " + old + " » remplacée par « " + note + " »")),
-                        Set.of());
+                        Set.of(),
+                        List.of(trace(CorrectionAction.ENCASHMENT_DETAILS_EDITED, encashmentId,
+                                Map.of("notes", old), Map.of("notes", note), "Note corrigée")));
             }
         };
     }
@@ -595,9 +769,63 @@ class CorrectionRunnerIntegrationTest {
 
             @Override
             public CorrectionExecution<String> execute() {
-                return new CorrectionExecution<>("rien", List.of(), Set.of());
+                return new CorrectionExecution<>("rien", List.of(), Set.of(), List.of());
             }
         };
+    }
+
+    /** Ne change aucun montant et ne produit aucun effet, mais trace un changement de valeur. */
+    private CorrectionCommand<String> traceOnly(String fingerprint) {
+        return new CorrectionCommand<>() {
+            @Override
+            public String fingerprint() {
+                return fingerprint;
+            }
+
+            @Override
+            public CorrectionScope scope() {
+                return CorrectionScope.empty().group(student.getId(), group.getId());
+            }
+
+            @Override
+            public CorrectionExecution<String> execute() {
+                return new CorrectionExecution<>("tracé", List.of(), Set.of(),
+                        List.of(trace(CorrectionAction.ENCASHMENT_DETAILS_EDITED, 1L,
+                                Map.of("v", "a"), Map.of("v", "b"), "Valeur corrigée")));
+            }
+        };
+    }
+
+    /** La même correction, privée de ses traces : un changement que personne ne retrouverait. */
+    private CorrectionCommand<String> untraced(CorrectionCommand<String> command) {
+        return new CorrectionCommand<>() {
+            @Override
+            public String fingerprint() {
+                return command.fingerprint();
+            }
+
+            @Override
+            public CorrectionScope scope() {
+                return command.scope();
+            }
+
+            @Override
+            public CorrectionExecution<String> execute() {
+                CorrectionExecution<String> execution = command.execute();
+                return new CorrectionExecution<>(execution.result(), execution.effects(), execution.touched(),
+                        List.of());
+            }
+        };
+    }
+
+    private AuditDraft trace(CorrectionAction action, Long entityId, Map<String, ?> oldValue,
+                             Map<String, ?> newValue, String summary) {
+        return AuditDraft.builder()
+                .domain(CorrectionDomain.ENCASHMENT).action(action).entityId(entityId)
+                .studentId(student.getId()).groupId(group.getId())
+                .oldValue(oldValue).newValue(newValue).summary(summary)
+                .reason(CorrectionReason.of(CorrectionReasonType.WRONG_AMOUNT))
+                .build();
     }
 
     // ------------------------------------------------------------------
@@ -630,9 +858,9 @@ class CorrectionRunnerIntegrationTest {
                 new BigDecimal(remaining), late);
     }
 
-    /** Ce qu'une correction annulée ne doit pas toucher, relu en SQL. */
+    /** Ce qu'une correction annulée ne doit pas toucher, relu en SQL, traces comprises. */
     private record Ledger(long encashments, long activeEncashments, long activeAllocations, long activeLines,
-                          BigDecimal cumuls, long payments, long receiptRank) {
+                          BigDecimal cumuls, long payments, long receiptRank, long traces) {
     }
 
     private Ledger ledger() {
@@ -644,7 +872,8 @@ class CorrectionRunnerIntegrationTest {
                 jdbc.queryForObject("SELECT COALESCE(SUM(amount_paid), 0) FROM payments", BigDecimal.class)
                         .setScale(2, java.math.RoundingMode.HALF_UP),
                 count("SELECT COUNT(*) FROM payments"),
-                lastRank());
+                lastRank(),
+                count("SELECT COUNT(*) FROM correction_audit"));
     }
 
     private long count(String sql) {

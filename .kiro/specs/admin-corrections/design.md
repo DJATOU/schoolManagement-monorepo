@@ -206,6 +206,12 @@ correction_audit
 
 - `summary` est rédigé **à l'écriture**, quand toutes les données sont disponibles : une Trace
   reste lisible même si la Séance ou l'Encaissement a disparu ensuite.
+- **Qui écrit la Trace (B.2).** La correction rédige sa Trace (`AuditDraft`) ; le
+  `CorrectionRunner` l'écrit, une fois l'Aperçu mesuré, avec `amount_effect` tiré des Séries
+  changées de l'étudiant de la Trace. L'effet sur les montants n'est connu qu'après la mesure :
+  la correction ne peut pas l'écrire elle-même. Une correction sans Trace n'a rien changé, et
+  elle est refusée (11.3). Sans utilisateur authentifié, la correction est refusée : une Trace
+  signée « system » ne dirait pas qui a corrigé.
 - **Le rang est l'identifiant** (colonne d'identité), et non une séquence à part : attribué par
   la base, strictement croissant dans l'ordre des écritures, sans course (11.4). Une séquence
   dédiée n'apporterait rien de plus, et une valeur par défaut `nextval` n'existerait pas dans le
