@@ -96,4 +96,12 @@ public class PaymentIdempotencyEntity extends BaseEntity {
     @Temporal(TemporalType.TIMESTAMP)
     @Column(name = "origin_payment_date", nullable = false)
     private java.util.Date originPaymentDate;
+
+    /**
+     * Encaissement produit par la requête d'origine (spec admin-corrections, D3) : un rejeu
+     * renverra son numéro de reçu. Facultatif tant que le code d'encaissement ne l'écrit pas.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "encashment_id")
+    private EncashmentEntity encashment;
 }

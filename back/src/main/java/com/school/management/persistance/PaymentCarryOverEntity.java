@@ -70,4 +70,13 @@ public class PaymentCarryOverEntity extends BaseEntity {
     @Temporal(TemporalType.TIMESTAMP)
     @Column(name = "origin_payment_date")
     private Date originPaymentDate;
+
+    /**
+     * Imputation reportée dont ce report est la trace (spec admin-corrections, D3). Elle désigne
+     * l'Encaissement d'origine sans recourir au triplet (étudiant, série source, horodatage).
+     * Facultative tant que le code d'encaissement ne l'écrit pas.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "encashment_allocation_id")
+    private EncashmentAllocationEntity encashmentAllocation;
 }

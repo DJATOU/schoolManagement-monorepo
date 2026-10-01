@@ -14,9 +14,11 @@ Socle de tout le reste : sans Encaissement identifiable, aucune correction d'arg
 - [x] A.1 Inventaire des lecteurs qui supposent une ligne de ventilation unique par (paiement,
   Séance), dont `findByPaymentIdAndSessionId` ; liste consignée dans ce fichier avant tout code
   _Design : Risques, D3_ — voir « Inventaire A.1 » ci-dessous
-- [ ] A.2 Migration V6 (partie paiement), structure seulement : `encashment`,
-  `encashment_allocation`, colonnes `encashment_id` `NOT NULL` sur ventilation, report,
-  idempotence ; `correction_audit` et sa séquence. Base locale réinitialisée avant de la lancer
+- [x] A.2 Migration V6 (partie paiement), structure seulement : `encashment`,
+  `encashment_allocation`, `correction_audit` ; liens facultatifs sur ventilation, report,
+  idempotence ; entités et dépôts. Tests : `MigrationSchemaPostgresIntegrationTest` (V1 à V6 sur
+  PostgreSQL jetable, validation Hibernate de toutes les entités, contraintes en SQL, vérifié par
+  mutation) et `EncashmentPersistenceIntegrationTest` (écriture et relecture JPA)
   _Exigences : 1.1, 1.3, 11.4 — D2, D3, D8_
 - [ ] A.3 `EncashmentService` : création, `RECU-AAAA-NNNN` (modèle `RefundNumberService`),
   neutralisation ; cumul de Série recalculé depuis les Imputations actives
@@ -27,8 +29,10 @@ Socle de tout le reste : sans Encaissement identifiable, aucune correction d'arg
 - [ ] A.5 `PaymentDistributionService` : une ligne par (Encaissement, Séance), plafond au prix net ;
   lecteurs de A.1 adaptés
   _Exigences : 1.3, 1.6 — D3_
-- [ ] A.6 `recalculatePayment` ne réécrit plus le cumul depuis la ventilation
-  _Défaut 2 — D3_
+- [ ] A.6 `recalculatePayment` ne réécrit plus le cumul depuis la ventilation ; migration V7 :
+  liens vers l'Encaissement `NOT NULL`, et bascule de l'assertion « facultatifs » du test des
+  migrations
+  _Défaut 2 — D3, Data Models_
 - [ ] A.7 Propriété P1 « conservation de l'argent »
   _Exigences : 1.4_
 - [ ] A.8 Reçu : `receipt_number` renvoyé par l'API et imprimé ; `GET /api/encashments/{id}`
@@ -167,10 +171,12 @@ des lignes) ; `StudentHistoryService.allocatePayments`.
 - [ ] T.2 Tests Karma des composants du lot
 - [ ] T.3 Clés i18n FR et EN, parité vérifiée
 - [ ] T.4 `npm run build` et `./mvnw test` verts
-- [ ] T.5 Déploiement sur une copie de la base de l'école : sauvegarde, `docker compose up`,
-  vérification des migrations et du fuseau, parcours du lot, retour arrière testé
+- [ ] T.5 Déploiement sur une base neuve avec `docker compose up` : migrations et fuseau
+  vérifiés, parcours du lot
 
 ## Livraison
 
-- [ ] L.1 Script `mise-a-jour.ps1` : sauvegarde datée, mise à jour, vérification, retour arrière
+- [ ] L.1 Script `mise-a-jour.ps1` pour les mises à jour après la mise en service : sauvegarde
+  datée, mise à jour, vérification, retour arrière. Inutile pour l'installation initiale, qui
+  part d'une base vide
 - [ ] L.2 Mode d'emploi administrateur d'une page par lot, en français, avec captures

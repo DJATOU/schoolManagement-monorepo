@@ -56,10 +56,15 @@ et note sont modifiables avec Trace (3.6) : ils n'entrent dans aucun calcul.
 encashment_allocation
   id, encashment_id, series_id, payment_id, amount NUMERIC(12,2),
   carried_over BOOLEAN, active BOOLEAN
-payment_detail        + encashment_id, + encashment_allocation_id
-payment_carry_over    + encashment_id
+payment_detail        + encashment_allocation_id
+payment_carry_over    + encashment_allocation_id
 payment_idempotency   + encashment_id
 ```
+
+- **Qui désigne quoi.** Une ligne de ventilation et un report sont chacun une *part* d'une
+  Imputation : ils la désignent, et l'Encaissement s'en déduit. Les relier aussi directement à
+  l'Encaissement dupliquerait l'information, avec le risque de deux valeurs contradictoires.
+  L'empreinte d'idempotence porte sur la requête entière : elle désigne l'Encaissement.
 
 - **Une ligne de ventilation par (Encaissement, Séance).** `distributeToSession` ne complète plus
   une ligne partagée : il crée la ligne de l'Encaissement courant, plafonnée à ce qui reste dû sur
@@ -158,13 +163,15 @@ correction_audit
   summary  VARCHAR(500),           -- phrase en français, pour l'Administratrice (12.2)
   amount_effect VARCHAR(500),      -- « dû 6 000,00 → 4 000,00 DA » ou vide (12.3)
   reason_type, reason_text,
-  performed_by, performed_at,
-  sequence_rank BIGINT DEFAULT nextval('correction_audit_rank_seq')
+  performed_by, performed_at
 ```
 
 - `summary` est rédigé **à l'écriture**, quand toutes les données sont disponibles : une Trace
   reste lisible même si la Séance ou l'Encaissement a disparu ensuite.
-- Rang tiré d'une séquence de base : strictement croissant, sans course (11.4).
+- **Le rang est l'identifiant** (colonne d'identité), et non une séquence à part : attribué par
+  la base, strictement croissant dans l'ordre des écritures, sans course (11.4). Une séquence
+  dédiée n'apporterait rien de plus, et une valeur par défaut `nextval` n'existerait pas dans le
+  schéma H2 des tests, généré depuis les entités.
 - Pas de clé étrangère : la Trace survit à la donnée (11.6).
 - Les trois tables d'audit existantes ne sont pas migrées. Le Journal les lit par un adaptateur qui
   rédige leurs entrées en français. Pour `payment_detail_audit`, dont les valeurs sont des chaînes
@@ -260,17 +267,26 @@ facturable. La confirmation enregistre la date et les Présences choisies en une
 **Structure seulement, aucune donnée transformée** : la base est réinitialisée avant
 l'installation chez le client (exigences, hors périmètre).
 
-- **V6** — tables `encashment`, `encashment_allocation`, `correction_audit` et séquence
-  `correction_audit_rank_seq` ; colonne `encashment_id` sur `payment_detail`,
-  `payment_carry_over`, `payment_idempotency`, et `encashment_allocation_id` sur
-  `payment_detail` ; colonne `student_groups.date_left`.
+- **V6** (A.2) — tables `encashment`, `encashment_allocation`, `correction_audit` ; colonne
+  `encashment_allocation_id` sur `payment_detail` et `payment_carry_over`, `encashment_id` sur
+  `payment_idempotency`, **facultatives** ; contraintes de cohérence de l'Encaissement (montant
+  positif, annulation datée et motivée, remplacé forcément annulé, motif « Autre » avec texte).
+- **V7** (A.6) — ces trois colonnes deviennent **`NOT NULL`**. Une ligne de ventilation, un report
+  ou une empreinte sans Encaissement devient impossible par construction : l'invariant 1.3 porté
+  par le stockage, possible parce qu'aucune ligne ancienne n'est à reprendre.
+- **Colonne `student_groups.date_left`** — avec le lot C.
 
-Sans données anciennes à reprendre, ces colonnes sont **`NOT NULL` dès V6** : une ligne de
-ventilation, un report ou une empreinte sans Encaissement est impossible par construction, au lieu
-d'être seulement évité par le code. C'est l'invariant 1.3 porté par le stockage.
+**Pourquoi deux migrations et non une.** Le code n'écrit ces liens qu'à partir de A.4 et A.5.
+Des colonnes obligatoires dès V6 feraient échouer tout encaissement dans l'intervalle, donc la
+suite de tests, que chaque tâche doit laisser verte. V7 est livrée avec le code qui les écrit.
 
-Conséquence pratique : V6 ne s'applique que sur une base vide de paiements. La base de
-développement locale doit être réinitialisée avant de la lancer, comme celle de test l'a été.
+**Vérification.** La suite de tests tourne sur H2, Flyway désactivé : le SQL des migrations n'y
+est jamais exécuté. `MigrationSchemaPostgresIntegrationTest` applique toutes les migrations à une
+base PostgreSQL jetable, valide chaque entité contre le schéma obtenu (Hibernate `validate`), puis
+éprouve les contraintes en SQL. Il est ignoré, en le disant, si aucun PostgreSQL n'est joignable.
+
+Conséquence pratique : la base de développement locale doit être réinitialisée avant de lancer
+l'application sur cette branche, comme celle de test l'a été.
 
 ## Frontend
 

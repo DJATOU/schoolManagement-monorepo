@@ -49,6 +49,20 @@ public class PaymentDetailEntity extends BaseEntity {
     @Builder.Default
     private Boolean permanentlyDeleted = false;
 
+    /**
+     * Imputation dont cette ligne est une part (spec admin-corrections, D3). L'Encaissement s'en
+     * déduit. Facultative tant que le code d'encaissement ne l'écrit pas ; rendue obligatoire par
+     * une migration livrée avec lui.
+     *
+     * <p>Ignorée en JSON : cette entité est encore renvoyée telle quelle par
+     * {@code PaymentDetailAdminController}, et sérialiser l'association chargerait l'encaissement
+     * entier dans chaque réponse.</p>
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "encashment_allocation_id")
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    private EncashmentAllocationEntity encashmentAllocation;
+
     @Override
     protected void onCreate() {
         super.onCreate();
