@@ -934,6 +934,25 @@
       "footerNote": "Ce reçu ne couvre que le versement mentionné ci-dessus.",
       "error": "Paiement enregistré, mais le reçu n'a pas pu être généré."
     },
+    "encashments": {
+      "title": "Versements",
+      "empty": "Aucun versement enregistré pour cet élève.",
+      "loadError": "Les versements n'ont pas pu être chargés.",
+      "status": {
+        "ACTIVE": "Valide",
+        "CANCELLED": "Annulé"
+      },
+      "catchUp": "Rattrapage",
+      "receivedBy": "encaissé par {{user}}",
+      "carriedOverTo": "Reporté sur « {{series}} » : {{amount}} DA",
+      "cancelledOn": "Annulé le {{date}} par {{user}}",
+      "replaces": "Remplace le reçu {{number}}",
+      "replacedBy": "Remplacé par le reçu {{number}}",
+      "reprint": "Réimprimer le reçu",
+      "reprintAria": "Réimprimer le reçu {{number}}",
+      "reprintError": "Le reçu n'a pas pu être réimprimé.",
+      "cancelledMeanwhile": "Le versement {{number}} a été annulé entre-temps : son reçu n'est plus valable."
+    },
     "history": {
       "fields": {
         "groups": "Groupes",

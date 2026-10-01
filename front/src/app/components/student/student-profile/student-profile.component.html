@@ -182,6 +182,12 @@
     </mat-expansion-panel>
   </mat-accordion>
 
+  <!--
+    Versements de l'élève, un reçu par ligne (A.9). Réservé à l'ADMIN comme toute donnée
+    financière : le serveur refuserait la lecture aux autres rôles.
+  -->
+  <app-student-encashments *appHasRole="'ADMIN'" [studentId]="student?.id"></app-student-encashments>
+
   <!-- Parcours par année scolaire -->
   <mat-accordion class="pf-accordion">
     <mat-expansion-panel [expanded]="true">

@@ -934,6 +934,25 @@
       "footerNote": "This receipt covers only the payment shown above.",
       "error": "Payment recorded, but the receipt could not be generated."
     },
+    "encashments": {
+      "title": "Payments received",
+      "empty": "No payment recorded for this student.",
+      "loadError": "Payments could not be loaded.",
+      "status": {
+        "ACTIVE": "Valid",
+        "CANCELLED": "Cancelled"
+      },
+      "catchUp": "Catch-up",
+      "receivedBy": "received by {{user}}",
+      "carriedOverTo": "Carried over to \"{{series}}\": {{amount}} DA",
+      "cancelledOn": "Cancelled on {{date}} by {{user}}",
+      "replaces": "Replaces receipt {{number}}",
+      "replacedBy": "Replaced by receipt {{number}}",
+      "reprint": "Reprint receipt",
+      "reprintAria": "Reprint receipt {{number}}",
+      "reprintError": "The receipt could not be reprinted.",
+      "cancelledMeanwhile": "Payment {{number}} has been cancelled in the meantime: its receipt is no longer valid."
+    },
     "history": {
       "fields": {
         "groups": "Groups",

@@ -127,7 +127,25 @@ Socle de tout le reste : sans Encaissement identifiable, aucune correction d'arg
   série au tarif du groupe, séance sans tarif. Quatre mutations vérifiées. Le contrôle se lit
   désormais au code de sortie de Maven, pas seulement aux rapports surefire
   _Exigences : 1.2_
-- [ ] A.9 Historique élève : liste des Encaissements
+- [x] A.9 Historique élève : liste des Encaissements. Fait :
+  - panneau « Versements » sur la fiche élève (`StudentEncashmentsComponent`, ADMIN seul via
+    `*appHasRole`) : un reçu par ligne, le plus récent d'abord — numéro, statut en toutes
+    lettres, rattrapage, montant, date et heure, groupe, série visée, mode, auteur, note, une
+    ligne par report ; un versement annulé reste listé, barré, avec date et auteur de
+    l'annulation ; liens « remplace / remplacé par » affichés dès que B.4 les renseigne ;
+  - réimpression : l'Encaissement est relu (`GET /api/encashments/{id}`) ; annulé entre-temps,
+    rien n'est imprimé et la liste se recharge. Le reçu (`receiptFromEncashment`) reprend
+    numéro, date, auteur, montant, imputé et reports ; la situation de la série au moment du
+    versement n'étant pas conservée, elle n'est pas réimprimée. Un versement annulé ne se
+    réimprime pas encore : le tampon « ANNULÉ » vient avec B.7 ;
+  - la liste se recharge après un encaissement depuis la fiche ;
+  - modes de règlement partagés (`PAYMENT_METHOD_OPTIONS`) entre dialogue et historique ;
+  - le dialogue « Historique des paiements » (relevé par série et par séance) reste : il porte
+    la facturation séance par séance (séances écartées, rattrapages à préciser).
+  Tests : `receiptFromEncashment`, `StudentEncashmentsComponent` (ordre, contenu, annulé,
+  vide, erreur, réimpression relue, annulé entre-temps), fiche (rechargement après versement,
+  rien après annulation du dialogue). Mutations vérifiées : reports comptés dans l'imputé,
+  réimpression d'un annulé, impression sans relecture, rechargement absent ou systématique
   _Exigences : 1.1_
 
 ### Inventaire A.1 — ventilation : une ligne par (paiement, Séance) aujourd'hui

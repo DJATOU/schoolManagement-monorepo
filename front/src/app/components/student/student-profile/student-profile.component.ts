@@ -7,7 +7,7 @@ import { StudentService } from '../services/student.service';
 import { GroupService } from '../../../services/group.service';
 import { LevelService } from '../../../services/level.service';
 import { GroupTypeService } from '../../../services/GroupTypeService';
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import { Student } from '../domain/student';
 import { Group } from '../../../models/group/group';
 import { GroupType } from '../../../models/GroupType/groupType';
@@ -39,6 +39,8 @@ import { AuthService } from '../../../services/auth.service';
 import { LinkTutorDialogComponent } from '../../tutor/link-tutor-dialog/link-tutor-dialog.component';
 import { SecureImageDirective } from '../../../shared/secure-image.directive';
 import { GroupChangeNoticeComponent } from '../../shared/group-change-notice/group-change-notice.component';
+import { HasRoleDirective } from '../../../shared/has-role.directive';
+import { StudentEncashmentsComponent } from '../student-encashments/student-encashments.component';
 
 const errorMessages = {
   PAYMENT_EXCEEDS_SESSIONS: "Le paiement ne peut pas être effectué car il dépasse le coût des sessions actuellement créées.",
@@ -60,7 +62,9 @@ const errorMessages = {
     AdminOnlyDirective
   ,
     SecureImageDirective,
-    GroupChangeNoticeComponent
+    GroupChangeNoticeComponent,
+    HasRoleDirective,
+    StudentEncashmentsComponent
   ],
   templateUrl: './student-profile.component.html',
   styleUrls: ['./student-profile.component.scss'],
@@ -87,6 +91,9 @@ export class StudentProfileComponent implements OnInit {
   avatarColor: string = '#6366f1';
   tutor: Tutor | null = null;
   parcours: Parcours | null = null;
+
+  /** Historique des versements, absent pour un rôle autre qu'ADMIN. */
+  @ViewChild(StudentEncashmentsComponent) encashmentsPanel?: StudentEncashmentsComponent;
 
   /**
    * Vue en lecture seule (Read_Only_History) lorsque l'année scolaire
@@ -550,9 +557,11 @@ export class StudentProfileComponent implements OnInit {
           }
         });
 
+        // Le dialogue se ferme sur la réponse d'encaissement : le versement est enregistré,
+        // l'historique des versements doit le montrer sans recharger la page.
         dialogRef.afterClosed().subscribe(result => {
           if (result) {
-            this.submitPayment(result);
+            this.encashmentsPanel?.reload();
           }
         });
       },
@@ -605,10 +614,6 @@ export class StudentProfileComponent implements OnInit {
         this.onSubmitGroups();
       }
     });
-  }
-
-  submitPayment(paymentData: any): void {
-    console.log('Submitting payment data:', paymentData);
   }
 
   onEdit(): void {

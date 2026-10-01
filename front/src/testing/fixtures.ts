@@ -3,6 +3,7 @@ import { Group } from '../app/models/group/group';
 import { Teacher } from '../app/models/teacher/teacher';
 import { StudentPaymentStatus } from '../app/models/student-payment-status';
 import { Session } from '../app/models/session/session';
+import { Encashment } from '../app/models/payment/encashment';
 
 /**
  * Fabriques d'objets de test.
@@ -121,6 +122,26 @@ export function aSession(overrides: Partial<Session> = {}): Session {
     teacherName: 'Karim Saïdi',
     active: true,
     students: [],
+    ...overrides
+  };
+}
+
+/**
+ * Encaissement actif de 5 000 DA : 3 000 imputés sur Octobre, 1 500 reportés sur Novembre et
+ * 500 sur Décembre.
+ */
+export function anEncashment(overrides: Partial<Encashment> = {}): Encashment {
+  return {
+    id: 3, receiptNumber: 'RECU-2026-0042', status: 'ACTIVE', kind: 'REGULAR',
+    amountReceived: 5000, paymentMethod: 'cash', notes: 'Versement du père',
+    receivedAt: '2026-10-03T09:15:00', receivedBy: 'caissier1',
+    studentId: 42, studentName: 'Amina Belkacem', groupId: 5, groupName: 'Maths 1B',
+    targetSeriesId: 7, targetSeriesName: 'Octobre',
+    allocations: [
+      { seriesId: 7, seriesName: 'Octobre', amount: 3000, carriedOver: false, active: true },
+      { seriesId: 8, seriesName: 'Novembre', amount: 1500, carriedOver: true, active: true },
+      { seriesId: 9, seriesName: 'Décembre', amount: 500, carriedOver: true, active: true }
+    ],
     ...overrides
   };
 }

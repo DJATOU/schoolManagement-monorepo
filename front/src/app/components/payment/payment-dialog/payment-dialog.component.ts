@@ -27,6 +27,7 @@ import { PaymentAllocationResult } from '../../../models/payment/payment-allocat
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { AdminOnlyDirective } from '../../../shared/admin-only.directive';
 import { PaymentReceiptPdfService } from '../../../services/payment-receipt-pdf.service';
+import { PAYMENT_METHOD_OPTIONS } from '../../../utils/form-options';
 import { GroupChangeNoticeComponent } from '../../shared/group-change-notice/group-change-notice.component';
 
 /**
@@ -130,12 +131,7 @@ export class PaymentDialogComponent implements OnInit {
   paymentForm: FormGroup;
   groups: Group[];
   sessionSeries: SessionSeries[] = [];
-  paymentMethods = [
-    { value: 'cash', labelKey: 'payment.dialog.methods.cash' },
-    { value: 'cheque', labelKey: 'payment.dialog.methods.cheque' },
-    { value: 'carte_bancaire', labelKey: 'payment.dialog.methods.card' },
-    { value: 'autre', labelKey: 'payment.dialog.methods.other' }
-  ];
+  readonly paymentMethods = PAYMENT_METHOD_OPTIONS;
   studentId: number;
   /** Nom de l'étudiant, imprimé sur le reçu. Vide si l'appelant ne l'a pas fourni. */
   studentName: string;

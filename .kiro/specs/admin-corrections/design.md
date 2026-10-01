@@ -323,7 +323,7 @@ la base locale doit être réinitialisée avant de lancer A.6.
 
 | Écran | Changement |
 |---|---|
-| Fiche élève, historique des paiements | liste des **Encaissements** (reçu, date, montant, Série, statut), au lieu des lignes par Séance ; actions « annuler », « corriger », « réimprimer » ; lien « remplace / remplacé par » |
+| Fiche élève, panneau « Versements » | liste des **Encaissements** (reçu, date, montant, Série, statut) ; actions « annuler », « corriger », « réimprimer » ; lien « remplace / remplacé par ». Le relevé par Série et par Séance reste dans le dialogue « Historique des paiements » : il porte la facturation séance par séance |
 | Dialogue de paiement | reçu imprimé avec le `receipt_number` renvoyé par le serveur |
 | Réimpression | tampon « ANNULÉ » et renvoi vers le reçu de remplacement |
 | Fiche élève, groupes | date d'arrivée et date de départ ; « corriger l'arrivée », « enregistrer le départ », « rouvrir » |

@@ -1,0 +1,86 @@
+<mat-accordion class="pf-accordion">
+  <mat-expansion-panel [expanded]="true">
+    <mat-expansion-panel-header>
+      <mat-panel-title>
+        <mat-icon>receipt_long</mat-icon>
+        {{ 'payment.encashments.title' | translate }} ({{ encashments.length }})
+      </mat-panel-title>
+    </mat-expansion-panel-header>
+
+    <div class="enc-loading" *ngIf="loading">
+      <mat-spinner diameter="32"></mat-spinner>
+    </div>
+
+    <p class="enc-error" role="alert" *ngIf="!loading && errorMessage">{{ errorMessage }}</p>
+
+    <ng-container *ngIf="!loading && !errorMessage">
+      <div class="pf-empty" *ngIf="encashments.length === 0">
+        <mat-icon>receipt_long</mat-icon>
+        <span>{{ 'payment.encashments.empty' | translate }}</span>
+      </div>
+
+      <ul class="enc-list" *ngIf="encashments.length > 0">
+        <li class="enc-item" *ngFor="let encashment of encashments; trackBy: trackById"
+          [class.enc-item--cancelled]="encashment.status === 'CANCELLED'">
+          <div class="enc-head">
+            <span class="enc-number">{{ encashment.receiptNumber }}</span>
+            <!-- Statut en toutes lettres : la seule teinte ne distinguerait pas un versement
+                 annulé d'un versement actif, ni à l'impression ni pour un daltonien. -->
+            <span class="enc-status" [class.enc-status--cancelled]="encashment.status === 'CANCELLED'">
+              {{ ('payment.encashments.status.' + encashment.status) | translate }}
+            </span>
+            <span class="enc-kind" *ngIf="encashment.kind === 'CATCH_UP'">
+              {{ 'payment.encashments.catchUp' | translate }}
+            </span>
+            <span class="enc-amount">{{ encashment.amountReceived | number:'1.2-2' }} {{ currencySuffix }}</span>
+          </div>
+
+          <p class="enc-meta">
+            {{ encashment.receivedAt | date:'dd/MM/yyyy HH:mm' }}
+            · {{ encashment.groupName }} · {{ encashment.targetSeriesName }}
+            <ng-container *ngIf="methodLabel(encashment)"> · {{ methodLabel(encashment) }}</ng-container>
+            · {{ 'payment.encashments.receivedBy' | translate: { user: encashment.receivedBy } }}
+          </p>
+
+          <p class="enc-detail" *ngFor="let carryOver of carryOvers(encashment)">
+            <mat-icon aria-hidden="true">redo</mat-icon>
+            {{ 'payment.encashments.carriedOverTo' | translate: {
+                 series: carryOver.seriesName,
+                 amount: (carryOver.amount | number:'1.2-2')
+               } }}
+          </p>
+
+          <p class="enc-detail" *ngIf="encashment.notes">
+            <mat-icon aria-hidden="true">sticky_note_2</mat-icon>{{ encashment.notes }}
+          </p>
+
+          <p class="enc-detail enc-detail--cancelled" *ngIf="encashment.status === 'CANCELLED'">
+            <mat-icon aria-hidden="true">block</mat-icon>
+            {{ 'payment.encashments.cancelledOn' | translate: {
+                 date: (encashment.cancelledAt | date:'dd/MM/yyyy HH:mm'),
+                 user: encashment.cancelledBy
+               } }}
+            <ng-container *ngIf="encashment.cancelReasonText"> — {{ encashment.cancelReasonText }}</ng-container>
+          </p>
+
+          <p class="enc-detail" *ngIf="encashment.replacesReceiptNumber">
+            <mat-icon aria-hidden="true">swap_horiz</mat-icon>
+            {{ 'payment.encashments.replaces' | translate: { number: encashment.replacesReceiptNumber } }}
+          </p>
+          <p class="enc-detail" *ngIf="encashment.replacedByReceiptNumber">
+            <mat-icon aria-hidden="true">swap_horiz</mat-icon>
+            {{ 'payment.encashments.replacedBy' | translate: { number: encashment.replacedByReceiptNumber } }}
+          </p>
+
+          <div class="enc-actions" *ngIf="canReprint(encashment)">
+            <button mat-stroked-button type="button" class="enc-reprint" (click)="reprint(encashment)"
+              [disabled]="reprintingId !== null"
+              [attr.aria-label]="'payment.encashments.reprintAria' | translate: { number: encashment.receiptNumber }">
+              <mat-icon>print</mat-icon>{{ 'payment.encashments.reprint' | translate }}
+            </button>
+          </div>
+        </li>
+      </ul>
+    </ng-container>
+  </mat-expansion-panel>
+</mat-accordion>

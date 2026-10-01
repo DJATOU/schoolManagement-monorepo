@@ -410,8 +410,7 @@ export class PaymentReceiptPdfService {
    * la famille, que l'intégralité du versement est restée sur la série qu'elle a réglée. La
    * taire laisserait planer un doute qu'un reçu est justement censé lever.</p>
    *
-   * <p>Le bloc est omis quand l'appelant ne fournit aucune répartition — chemin rattrapage, qui
-   * ne reporte rien : imprimer « imputé : montant total, reporté : 0 » n'apporterait rien.</p>
+   * <p>Le bloc est omis quand l'appelant ne fournit aucune répartition.</p>
    */
   private buildAllocation(data: PaymentReceiptData): Content[] {
     if (data.amountAllocated == null) {
@@ -455,7 +454,7 @@ export class PaymentReceiptPdfService {
    * le montant annoncé par l'appelant signale une répartition incomplète : le serveur refusant
    * tout encaissement partiel, il ne doit jamais s'en produire, d'où la trace en console.</p>
    *
-   * <p>Sans répartition — chemin rattrapage — le montant du versement fait foi.</p>
+   * <p>Sans répartition, le montant du versement fait foi.</p>
    */
   private receivedTotal(data: PaymentReceiptData): number {
     if (data.amountAllocated == null) {
