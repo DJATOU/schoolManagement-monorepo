@@ -24,6 +24,9 @@ public interface PaymentDetailRepository
 
         Optional<PaymentDetailEntity> findByPaymentIdAndSessionId(Long id, Long id1);
 
+        /** Lignes de ventilation d'une Imputation, neutralisées avec son encaissement. */
+        List<PaymentDetailEntity> findByEncashmentAllocationId(Long encashmentAllocationId);
+
         List<PaymentDetailEntity> findByPayment_StudentId(Long studentId);
 
         List<PaymentDetailEntity> findByPayment_StudentIdAndSessionId(Long studentId, Long sessionId);

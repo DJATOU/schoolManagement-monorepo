@@ -41,6 +41,9 @@ public interface PaymentCarryOverRepository extends JpaRepository<PaymentCarryOv
      */
     List<PaymentCarryOverEntity> findByTargetPaymentIdAndActiveTrueOrderByIdAsc(Long targetPaymentId);
 
+    /** Reports portés par une Imputation, neutralisés avec son encaissement. */
+    List<PaymentCarryOverEntity> findByEncashmentAllocationId(Long encashmentAllocationId);
+
     /**
      * Reports nés d'un encaissement précis, identifié par son étudiant, sa série source et son
      * horodatage.

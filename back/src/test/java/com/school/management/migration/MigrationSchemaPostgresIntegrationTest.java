@@ -1,8 +1,12 @@
 package com.school.management.migration;
 
+import com.school.management.persistance.ReceiptCounterEntity;
+import com.school.management.repository.ReceiptCounterRepository;
+import com.school.management.service.payment.ReceiptNumberService;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -14,20 +18,37 @@ import org.springframework.boot.autoconfigure.flyway.FlywayAutoConfiguration;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.boot.autoconfigure.jdbc.JdbcTemplateAutoConfiguration;
 import org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration;
+import org.springframework.boot.autoconfigure.transaction.TransactionAutoConfiguration;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.FilterType;
+import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
@@ -120,8 +141,32 @@ class MigrationSchemaPostgresIntegrationTest {
             context.close();
         }
         if (serverReachable()) {
-            execAsAdmin("DROP DATABASE IF EXISTS " + database + " WITH (FORCE)");
+            dropWithRetry();
         }
+    }
+
+    /**
+     * {@code DROP DATABASE} simple d'abord : PostgreSQL y arrête lui-même un autovacuum en cours
+     * sur la base. {@code WITH (FORCE)} ne sait pas le faire sans droit superutilisateur ; il ne
+     * sert qu'à couper une connexion du test restée ouverte.
+     */
+    private void dropWithRetry() throws SQLException {
+        SQLException last = null;
+        for (int attempt = 0; attempt < 5; attempt++) {
+            try {
+                execAsAdmin("DROP DATABASE IF EXISTS " + database + (attempt % 2 == 0 ? "" : " WITH (FORCE)"));
+                return;
+            } catch (SQLException e) {
+                last = e;
+                try {
+                    Thread.sleep(500);
+                } catch (InterruptedException interrupted) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+            }
+        }
+        throw last;
     }
 
     private String databaseUrl() {
@@ -403,6 +448,111 @@ class MigrationSchemaPostgresIntegrationTest {
     }
 
     @Nested
+    @DisplayName("Compteur des numéros de reçu")
+    class CompteurDeRecus {
+
+        private ReceiptNumberService numbers;
+        private TransactionTemplate transactions;
+
+        /** Midi en 2030 : loin de tout changement d'année, quel que soit le fuseau du poste. */
+        private final Date in2030 = Date.from(LocalDateTime.of(2030, 6, 1, 12, 0)
+                .atZone(ZoneId.systemDefault()).toInstant());
+
+        @BeforeEach
+        void resetCounter() {
+            numbers = context.getBean(ReceiptNumberService.class);
+            transactions = new TransactionTemplate(context.getBean(PlatformTransactionManager.class));
+            jdbc.update("UPDATE receipt_counter SET counter_year = 2030, last_rank = 5");
+        }
+
+        @Test
+        @DisplayName("créé par V6 en une seule ligne, et une seconde ligne est refusée")
+        void seededAsASingleRow() {
+            assertThat(jdbc.queryForList("SELECT id FROM receipt_counter", Long.class))
+                    .containsExactly(ReceiptCounterEntity.SINGLETON_ID);
+            assertThatThrownBy(() -> jdbc.update(
+                    "INSERT INTO receipt_counter (id, counter_year, last_rank) VALUES (2, 2030, 0)"))
+                    .hasMessageContaining("ck_receipt_counter_single");
+            assertThatThrownBy(() -> jdbc.update("UPDATE receipt_counter SET last_rank = -1"))
+                    .hasMessageContaining("ck_receipt_counter_rank");
+        }
+
+        @Test
+        @DisplayName("deux encaissements simultanés : le second attend le premier et prend le rang suivant")
+        void concurrentEncashmentsGetConsecutiveNumbers() throws Exception {
+            CountDownLatch firstHoldsTheCounter = new CountDownLatch(1);
+            CountDownLatch secondIsWaiting = new CountDownLatch(1);
+            AtomicLong firstReleasesAt = new AtomicLong();
+            AtomicLong secondObtainsAt = new AtomicLong();
+
+            ExecutorService pool = Executors.newFixedThreadPool(2);
+            try {
+                Future<String> first = pool.submit(() -> transactions.execute(status -> {
+                    String number = numbers.next(in2030);
+                    firstHoldsTheCounter.countDown();
+                    await(secondIsWaiting);
+                    // Laisser au second le temps d'arriver sur le verrou avant de valider.
+                    sleep(Duration.ofMillis(500));
+                    firstReleasesAt.set(System.nanoTime());
+                    return number;
+                }));
+                Future<String> second = pool.submit(() -> {
+                    await(firstHoldsTheCounter);
+                    secondIsWaiting.countDown();
+                    return transactions.execute(status -> {
+                        String number = numbers.next(in2030);
+                        secondObtainsAt.set(System.nanoTime());
+                        return number;
+                    });
+                });
+
+                assertThat(first.get(30, TimeUnit.SECONDS)).isEqualTo("RECU-2030-0006");
+                assertThat(second.get(30, TimeUnit.SECONDS)).isEqualTo("RECU-2030-0007");
+                // Le second n'a obtenu son numéro qu'après que le premier a lâché le compteur.
+                assertThat(secondObtainsAt.get()).isGreaterThan(firstReleasesAt.get());
+            } finally {
+                pool.shutdownNow();
+            }
+            assertThat(jdbc.queryForObject("SELECT last_rank FROM receipt_counter", Integer.class)).isEqualTo(7);
+        }
+
+        @Test
+        @DisplayName("transaction annulée : aucun numéro consommé, le suivant reprend le même rang")
+        void rolledBackTransactionConsumesNoNumber() {
+            String abandoned = transactions.execute(status -> {
+                String number = numbers.next(in2030);
+                status.setRollbackOnly();
+                return number;
+            });
+            assertThat(abandoned).isEqualTo("RECU-2030-0006");
+            assertThat(jdbc.queryForObject("SELECT last_rank FROM receipt_counter", Integer.class)).isEqualTo(5);
+
+            String next = transactions.execute(status -> numbers.next(in2030));
+            assertThat(next).isEqualTo("RECU-2030-0006");
+        }
+
+        private static void await(CountDownLatch latch) {
+            try {
+                if (!latch.await(30, TimeUnit.SECONDS)) {
+                    throw new IllegalStateException("Attente expirée : l'autre transaction ne s'est pas présentée");
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new IllegalStateException(e);
+            }
+        }
+
+        private static void sleep(Duration duration) {
+            try {
+                Thread.sleep(duration.toMillis());
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new IllegalStateException(e);
+            }
+        }
+    }
+
+    @Nested
     @DisplayName("Trace de correction")
     class Trace {
 
@@ -439,14 +589,23 @@ class MigrationSchemaPostgresIntegrationTest {
     // Contexte minimal : base de données, Flyway, Hibernate en validation
     // ------------------------------------------------------------------
 
+    /**
+     * Seul le dépôt du compteur est activé, avec le service qui le verrouille : c'est le seul code
+     * dont le comportement dépend de PostgreSQL (verrou de ligne, annulation de transaction).
+     */
     @Configuration
     @ImportAutoConfiguration({
             DataSourceAutoConfiguration.class,
             FlywayAutoConfiguration.class,
             HibernateJpaAutoConfiguration.class,
-            JdbcTemplateAutoConfiguration.class
+            JdbcTemplateAutoConfiguration.class,
+            TransactionAutoConfiguration.class
     })
     @EntityScan("com.school.management.persistance")
+    @EnableJpaRepositories(basePackageClasses = ReceiptCounterRepository.class,
+            includeFilters = @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE,
+                    classes = ReceiptCounterRepository.class))
+    @Import(ReceiptNumberService.class)
     static class SchemaCheckContext {
     }
 }

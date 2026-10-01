@@ -43,9 +43,23 @@ encashment
   kind              REGULAR | CATCH_UP
 ```
 
-`receipt_number` suit le modèle éprouvé de `RefundNumberService` (`REMB-AAAA-NNNN`) : rang extrait
-des numéros existants de l'année civile, contrainte unique, trois tentatives sur collision.
-Préfixe `RECU-`.
+`receipt_number` (`RECU-AAAA-NNNN`) vient d'un **compteur verrouillé**, et non du modèle
+`RefundNumberService` (rang `MAX + 1`, rejeu sur collision). Ce rejeu ne peut pas réussir sur
+PostgreSQL : la violation de contrainte interrompt la transaction, que Spring marque à annuler.
+
+```
+receipt_counter
+  id = 1 (ck_receipt_counter_single), counter_year, last_rank >= 0
+```
+
+- `ReceiptNumberService.next` verrouille l'unique ligne (`PESSIMISTIC_WRITE`) dans la transaction de
+  l'encaissement (`MANDATORY`) : deux encaissements simultanés sont numérotés l'un après l'autre.
+- Un encaissement refusé, ou un Aperçu exécuté puis annulé, ne consomme aucun numéro.
+- Le rang repart à 1 à chaque année civile. Une horloge revenue à une année antérieure est refusée
+  (409) : repartir à 1 réattribuerait un numéro déjà remis à une famille.
+- Au-delà de 9999, le rang s'écrit en entier, sans troncature. L'index unique reste un filet.
+
+Le même défaut du rejeu existe dans `RefundService.saveWithNumber` : relevé, non corrigé ici.
 
 Un Encaissement n'est jamais modifié sur ses champs monétaires (exigence 1.5). Mode de paiement
 et note sont modifiables avec Trace (3.6) : ils n'entrent dans aucun calcul.
@@ -225,7 +239,11 @@ service/correction/
   VentilationMover                 D6
   CorrectionJournalService         exigence 12, adaptateurs des audits existants
 service/payment/
-  EncashmentService                création, numéro de reçu, neutralisation (D2, D3)
+  EncashmentService                création, imputation, neutralisation (D2, D3) ; mécanique
+                                   seule, les gardes métier d'une annulation sont au lot B
+  ReceiptNumberService             compteur verrouillé RECU-AAAA-NNNN (D2)
+  PaymentLineStatus                statut stocké d'une ligne de paiement, partagé avec
+                                   recalculatePayment (A.6)
   PaymentProcessingService         encaisse via EncashmentService
   PaymentDistributionService       ventilation par Encaissement, prix net
 ```

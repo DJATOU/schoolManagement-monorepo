@@ -94,8 +94,31 @@ CREATE TABLE encashment (
     CONSTRAINT ck_encashment_not_self CHECK (replaces_id <> id AND replaced_by_id <> id)
 );
 
--- La garantie réelle qu'un numéro de reçu ne sert qu'une fois.
+-- Le filet de sécurité : un numéro de reçu ne sert qu'une fois, quoi qu'il arrive.
 CREATE UNIQUE INDEX uk_encashment_receipt_number ON encashment (receipt_number);
+
+-- Compteur des numéros de reçu : une seule ligne, verrouillée à chaque attribution.
+--
+-- Calculer le rang par MAX + 1 laisse deux encaissements simultanés obtenir le
+-- même numéro ; l'index unique refuse alors le second, mais sur PostgreSQL
+-- l'erreur interrompt toute la transaction : on ne peut pas retenter dans la
+-- même. Verrouiller cette ligne sérialise les attributions, donc aucune
+-- collision n'a à être rattrapée.
+--
+-- Une seule ligne, et non une par année : elle existe toujours, si bien que le
+-- premier encaissement de l'année n'a pas de ligne à créer — création qui, faite
+-- par deux encaissements à la fois, retomberait dans la même collision.
+--
+-- Le compteur est modifié dans la transaction de l'encaissement : un
+-- encaissement refusé, ou un aperçu exécuté puis annulé, ne consomme aucun numéro.
+CREATE TABLE receipt_counter (
+    id              BIGINT   PRIMARY KEY,
+    counter_year    INTEGER  NOT NULL,
+    last_rank       INTEGER  NOT NULL,
+    CONSTRAINT ck_receipt_counter_single CHECK (id = 1),
+    CONSTRAINT ck_receipt_counter_rank   CHECK (last_rank >= 0)
+);
+INSERT INTO receipt_counter (id, counter_year, last_rank) VALUES (1, 0, 0);
 -- Historique des encaissements d'un étudiant, le plus récent d'abord.
 CREATE INDEX idx_encashment_student ON encashment (student_id, received_at DESC);
 CREATE INDEX idx_encashment_series  ON encashment (target_series_id);

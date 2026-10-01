@@ -20,8 +20,14 @@ Socle de tout le reste : sans Encaissement identifiable, aucune correction d'arg
   PostgreSQL jetable, validation Hibernate de toutes les entités, contraintes en SQL, vérifié par
   mutation) et `EncashmentPersistenceIntegrationTest` (écriture et relecture JPA)
   _Exigences : 1.1, 1.3, 11.4 — D2, D3, D8_
-- [ ] A.3 `EncashmentService` : création, `RECU-AAAA-NNNN` (modèle `RefundNumberService`),
-  neutralisation ; cumul de Série recalculé depuis les Imputations actives
+- [x] A.3 `EncashmentService` : création, imputation, neutralisation ; cumul de Série recalculé
+  depuis les Imputations actives. `RECU-AAAA-NNNN` par compteur verrouillé (`receipt_counter`,
+  ajouté à V6 jamais appliquée hors tests) au lieu du modèle `RefundNumberService`, dont le rejeu
+  échoue sur PostgreSQL. `PaymentLineStatus` partagé ; `CorrectionReason` créé dès A.3 (prévu en
+  B.2). Tests : `EncashmentServiceIntegrationTest`, `ReceiptNumberServiceTest`,
+  `PaymentLineStatusTest`, `CorrectionReasonTest`, et sur PostgreSQL ligne unique, verrou entre
+  deux transactions, annulation sans numéro consommé. Mutations vérifiées : verrou retiré, plafond
+  d'imputation retiré
   _Exigences : 1.1, 1.2, 1.4 — D2, D3_
 - [ ] A.4 `PaymentProcessingService` et chemin rattrapage : encaissement via `EncashmentService` ;
   idempotence sur le chemin rattrapage
@@ -102,7 +108,7 @@ des lignes) ; `StudentHistoryService.allocatePayments`.
 - [ ] B.1 `CorrectionRunner` : exécution en mode PREVIEW / CONFIRM, photographie des Séries, Aperçu
   canonique, jeton SHA-256, 409 sur Aperçu périmé
   _Exigences : 4.1 à 4.4 — D7_
-- [ ] B.2 `CorrectionReason`, `CorrectionReasonType`, `CorrectionAuditService` avec `summary` et
+- [ ] B.2 `CorrectionAuditService` (`CorrectionReason` et `CorrectionReasonType` livrés en A.2/A.3) avec `summary` et
   `amount_effect` rédigés à l'écriture
   _Exigences : 11.1 à 11.6 — D8, D10_
 - [ ] B.3 `EncashmentCorrectionService.cancel` : neutralisation, refus sous le total remboursé,
