@@ -323,8 +323,32 @@ des lignes) ; `StudentHistoryService.allocatePayments`.
   déjà annulé, remplacement et reçu à imprimer, mode et note en place, corrections incomplètes ou
   refusées, 403 VIEWER sur chaque Aperçu et confirmation, 401 anonyme, liste des Motifs). Huit
   mutations vérifiées (dont la règle de sécurité)
-- [ ] B.6 Propriétés P2 « remplacer équivaut à avoir bien saisi », P3 « indivisibilité »,
-  P4 « l'Aperçu ne ment pas »
+- [x] B.6 Propriétés P2 « remplacer équivaut à avoir bien saisi », P3 « indivisibilité »,
+  P4 « l'Aperçu ne ment pas ». Fait (`CorrectionPropertiesTest`, jqwik, H2 réelle, états relus en
+  SQL et comparés par rangs) :
+  - **P2a** (100 essais) : historique quelconque, A, puis A remplacé par B = historique, puis B saisi
+    directement — montants de chaque Série, cumuls et statuts des lignes, reports, ventilation par
+    séance ; refus de l'un ⟺ refus de l'autre, au même statut ;
+  - **P2b** (100 essais) : pour un A quelconque, remplacer = annuler puis encaisser B, quand les
+    deux aboutissent ;
+  - **P3** (200 essais) : refus à l'Aperçu, à la confirmation, Aperçu périmé par un versement
+    intermédiaire, plancher des remboursements → rien n'est écrit (Encaissements, Imputations,
+    ventilation, reports, cumuls, remboursements, compteur de reçus, Traces) ; une confirmation
+    n'est refusée que si l'Aperçu a changé — et le 409 porte exactement le nouvel Aperçu — ou si
+    la correction est devenue impossible ;
+  - **P4** (100 essais) : un Aperçu n'écrit rien ; confirmé aussitôt, il est accepté, ses montants
+    « avant » sont ceux d'avant et ses montants « après » ceux d'après, les Séries non listées
+    restant inchangées ; annulations, remplacements et corrections de mode et note ;
+  - **P1** étendue : `MoneyConservationPropertyTest` intègre les remplacements (Aperçu puis
+    confirmation, acceptés ou refusés).
+  Couverture exigée de chaque cas (refus, reports, Aperçus périmés, plancher, aucun montant
+  changé). Écart assumé avec l'énoncé du design : un remplacement ne recalcule pas la
+  répartition des versements postérieurs à A ; l'équivalence avec « B saisi à la place de A »
+  n'est donc exacte que pour le dernier versement (P2a), P2b couvrant les autres. Une ligne de
+  paiement entièrement annulée reste, à 0 et « en attente » (ses Imputations neutralisées la
+  désignent) : elle compte comme absente dans la comparaison. Sept mutations vérifiées (Aperçu
+  non annulé, « après » mesuré avant, jeton non comparé, remplacement sur la mauvaise Série, B
+  encaissé avant l'annulation de A, refus du remplacement avalé, original non annulé)
 - [ ] B.7 `CorrectionPreviewDialog` (composant commun) ; actions « annuler », « corriger »,
   « réimprimer » dans l'historique ; tampon « ANNULÉ » à la réimpression. Ce sont les actions
   qu'annoncent déjà la note de « Gestion des paiements » et le refus 409 des corrections de ligne

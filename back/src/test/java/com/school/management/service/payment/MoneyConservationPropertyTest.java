@@ -15,8 +15,19 @@ import com.school.management.repository.StudentGroupRepository;
 import com.school.management.repository.StudentRepository;
 import com.school.management.service.DiscountService;
 import com.school.management.service.ReadOnlyYearGuard;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.school.management.service.correction.CorrectionAuditService;
+import com.school.management.service.correction.CorrectionMode;
 import com.school.management.service.correction.CorrectionReason;
+import com.school.management.service.correction.CorrectionRunner;
+import com.school.management.service.correction.EncashmentChanges;
+import com.school.management.service.correction.EncashmentCorrection;
+import com.school.management.service.correction.EncashmentCorrectionService;
 import com.school.management.service.exception.CustomServiceException;
+import net.jqwik.api.lifecycle.BeforeTry;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import net.jqwik.api.Arbitraries;
 import net.jqwik.api.Arbitrary;
 import net.jqwik.api.Combinators;
@@ -60,8 +71,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * Propriété P1 — conservation de l'argent (spec admin-corrections, exigences 1.4 et 2.2).
  *
- * <p><b>Énoncé.</b> Pour toute suite d'encaissements, acceptés ou refusés, et d'annulations, après
- * chaque étape :</p>
+ * <p><b>Énoncé.</b> Pour toute suite d'encaissements, acceptés ou refusés, d'annulations et de
+ * remplacements (Aperçu puis confirmation, acceptés ou refusés — B.6), après chaque étape :</p>
  * <ol>
  *   <li>le cumul de chaque ligne de paiement vaut la somme de ses Imputations actives ;</li>
  *   <li>la somme des Encaissements actifs vaut la somme des cumuls : l'argent au registre est
@@ -95,6 +106,7 @@ class MoneyConservationPropertyTest {
     private static ConfigurableApplicationContext context;
     private static PaymentProcessingService processing;
     private static EncashmentService encashments;
+    private static EncashmentCorrectionService corrections;
     private static JdbcTemplate jdbc;
     private static StudentRepository studentRepository;
     private static GroupRepository groupRepository;
@@ -120,6 +132,7 @@ class MoneyConservationPropertyTest {
 
         processing = context.getBean(PaymentProcessingService.class);
         encashments = context.getBean(EncashmentService.class);
+        corrections = context.getBean(EncashmentCorrectionService.class);
         jdbc = context.getBean(JdbcTemplate.class);
         studentRepository = context.getBean(StudentRepository.class);
         groupRepository = context.getBean(GroupRepository.class);
@@ -131,9 +144,17 @@ class MoneyConservationPropertyTest {
 
     @AfterContainer
     static void stopContext() {
+        SecurityContextHolder.clearContext();
         if (context != null) {
             context.close();
         }
+    }
+
+    /** Un remplacement est tracé au nom de l'administrateur authentifié (spec admin-corrections, 11.4). */
+    @BeforeTry
+    void authenticate() {
+        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
+                "admin-test", null, List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))));
     }
 
     // ------------------------------------------------------------------
@@ -141,7 +162,15 @@ class MoneyConservationPropertyTest {
     // ------------------------------------------------------------------
 
     /** Une étape du scénario. */
-    sealed interface Step permits Pay, Cancel {
+    sealed interface Step permits Pay, Cancel, Replace {
+    }
+
+    /**
+     * Remplacement d'un encaissement déjà enregistré, choisi par son rang, par un versement de
+     * l'élève, de la Série et du montant donnés — Aperçu puis confirmation (spec admin-corrections,
+     * B.6). Il peut être refusé : remplacement non plaçable, encaissement déjà annulé, rien de changé.
+     */
+    record Replace(int pick, int student, int series, int amount) implements Step {
     }
 
     /**
@@ -170,9 +199,17 @@ class MoneyConservationPropertyTest {
                         Arbitraries.integers().between(1, 18).map(units -> units * 500))
                 .as(Pay::new);
         Arbitrary<Step> cancel = Arbitraries.integers().between(0, 20).map(Cancel::new);
+        Arbitrary<Step> replace = Combinators.combine(
+                        Arbitraries.integers().between(0, 20),
+                        Arbitraries.integers().between(0, STUDENT_COUNT - 1),
+                        Arbitraries.integers().between(0, SERIES_COUNT - 1),
+                        Arbitraries.integers().between(1, 18).map(units -> units * 500))
+                .as(Replace::new);
+        // Annulations aussi fréquentes qu'avant l'ajout des remplacements : leur couverture est exigée.
         Arbitrary<Step> step = Arbitraries.frequencyOf(
-                net.jqwik.api.Tuple.of(3, pay),
-                net.jqwik.api.Tuple.of(1, cancel));
+                net.jqwik.api.Tuple.of(6, pay),
+                net.jqwik.api.Tuple.of(3, cancel),
+                net.jqwik.api.Tuple.of(2, replace));
         return Combinators.combine(
                         Arbitraries.integers().between(0, 3).list().ofSize(SERIES_COUNT),
                         step.list().ofMinSize(1).ofMaxSize(12))
@@ -189,6 +226,7 @@ class MoneyConservationPropertyTest {
         List<Long> encashmentIds = new ArrayList<>();
         int refusals = 0;
         int cancellations = 0;
+        int replacements = 0;
 
         int index = 0;
         for (Step step : scenario.steps()) {
@@ -220,6 +258,29 @@ class MoneyConservationPropertyTest {
                     assertThat(activeEncashmentsTotal()).as(where + " : l'annulation retire exactement le montant reçu")
                             .isEqualByComparingTo(before.subtract(amount));
                 }
+            } else if (step instanceof Replace replace && !encashmentIds.isEmpty()) {
+                Long id = encashmentIds.get(replace.pick() % encashmentIds.size());
+                BigDecimal before = activeEncashmentsTotal();
+                Ledger ledgerBefore = ledger();
+                BigDecimal amount = jdbc.queryForObject(
+                        "SELECT amount_received FROM encashment WHERE id = ?", BigDecimal.class, id);
+                EncashmentChanges changes = new EncashmentChanges(BigDecimal.valueOf(replace.amount()),
+                        fixture.students().get(replace.student()), fixture.groupId(),
+                        fixture.series().get(replace.series()), null, null);
+                CorrectionReason reason = CorrectionReason.of(CorrectionReasonType.WRONG_AMOUNT);
+                try {
+                    String token = corrections.correct(id, changes, reason, CorrectionMode.PREVIEW, null).previewToken();
+                    EncashmentCorrection done = corrections.correct(id, changes, reason, CorrectionMode.CONFIRM, token)
+                            .result();
+                    replacements++;
+                    encashmentIds.add(done.replacement().id());
+                    assertThat(activeEncashmentsTotal()).as(where + " : le remplacement échange A contre B, exactement")
+                            .isEqualByComparingTo(before.subtract(amount).add(BigDecimal.valueOf(replace.amount())));
+                } catch (CustomServiceException refused) {
+                    assertThat(refused.getStatus()).as(where + " : un refus est une erreur de saisie ou un conflit")
+                            .isIn(HttpStatus.BAD_REQUEST, HttpStatus.CONFLICT);
+                    assertThat(ledger()).as(where + " : un remplacement refusé ne change rien").isEqualTo(ledgerBefore);
+                }
             }
 
             assertInvariants(where, scenario);
@@ -236,6 +297,8 @@ class MoneyConservationPropertyTest {
         Statistics.label("report").coverage(c -> c.check(true).percentage(p -> p >= 20));
         Statistics.label("annulation").coverage(c -> c.check(true).percentage(p -> p >= 20));
         Statistics.label("annulation d'un versement reporté").coverage(c -> c.check(true).percentage(p -> p >= 3));
+        Statistics.label("remplacement").collect(replacements > 0);
+        Statistics.label("remplacement").coverage(c -> c.check(true).percentage(p -> p >= 10));
     }
 
     // ------------------------------------------------------------------
@@ -342,7 +405,7 @@ class MoneyConservationPropertyTest {
     }
 
     private Fixture persist(Scenario scenario) {
-        for (String table : List.of("payment_idempotency", "payment_carry_over", "payment_detail",
+        for (String table : List.of("correction_audit", "payment_idempotency", "payment_carry_over", "payment_detail",
                 "encashment_allocation", "encashment", "receipt_counter", "payments", "attendance", "session",
                 "session_series", "student_groups", "groups", "student", "price")) {
             jdbc.update("DELETE FROM " + table);
@@ -398,8 +461,15 @@ class MoneyConservationPropertyTest {
     @Import({ BillableSessionsResolverImpl.class, CatchUpBillingQualifierImpl.class, DiscountService.class,
             PaymentCostResolver.class, PaymentQuoteService.class, PaymentAllocationService.class,
             PaymentDistributionService.class, PaymentCarryOverService.class, PaymentIdempotencyService.class,
-            EncashmentService.class, ReceiptNumberService.class, PaymentProcessingService.class })
+            EncashmentService.class, ReceiptNumberService.class, PaymentProcessingService.class,
+            EncashmentQueryService.class, CorrectionAuditService.class, CorrectionRunner.class,
+            EncashmentCorrectionService.class })
     static class ConservationTestContext {
+
+        @Bean
+        ObjectMapper objectMapper() {
+            return new ObjectMapper();
+        }
 
         @Bean
         AuditorAware<String> auditorAware() {

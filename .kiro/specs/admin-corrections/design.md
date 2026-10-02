@@ -377,9 +377,11 @@ Sur H2 réel, jqwik, vérifiées par mutation comme `JustificationNeutralityProp
   Remplacements, le cumul de chaque Série vaut la somme des Imputations actives, et la somme des
   Encaissements actifs vaut la somme des cumuls. Aucune correction ne crée ni ne détruit d'argent
   reçu. (1.4, 2.2)
-- **P2 — Remplacer équivaut à avoir bien saisi.** Remplacer un Encaissement de A par B donne les
-  mêmes montants, reports et statuts qu'un jeu de données où B aurait été encaissé directement.
-  (3.2, 3.4)
+- **P2 — Remplacer équivaut à avoir bien saisi.** Remplacer le dernier Encaissement A par B donne
+  les mêmes montants, reports, statuts et ventilation qu'un jeu de données où B aurait été encaissé
+  à la place de A, et l'un est refusé si et seulement si l'autre l'est (P2a). Pour un A quelconque,
+  remplacer équivaut à annuler A puis encaisser B (P2b) : un remplacement ne recalcule pas la
+  répartition des versements postérieurs à A, qui a pu dépendre de lui. (3.2, 3.4)
 - **P3 — Indivisibilité.** Toute Correction refusée ou échouée laisse Encaissements, Imputations,
   ventilation, Présences, dates et Traces inchangés. (3.5, 5.8, 11.5)
 - **P4 — L'Aperçu ne ment pas.** Pour toute Correction, les montants après confirmation sont ceux
