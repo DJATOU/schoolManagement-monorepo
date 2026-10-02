@@ -7,12 +7,15 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
 public interface StudentGroupRepository extends JpaRepository<StudentGroupEntity, Long> {
 
+    /**
+     * Toutes les inscriptions du groupe, <strong>closes comprises</strong> : la Feuille_Appel
+     * d'une Séance retient celles dont la fenêtre contient son jour, actives ou non (6.2).
+     */
     @Query("SELECT sg FROM StudentGroupEntity sg WHERE sg.group.id = :groupId")
     List<StudentGroupEntity> findByGroupId(Long groupId);
 
@@ -40,23 +43,6 @@ public interface StudentGroupRepository extends JpaRepository<StudentGroupEntity
      * @return les inscriptions de l'étudiant, actives et clôturées
      */
     List<StudentGroupEntity> findByStudentId(Long studentId);
-
-    /**
-     * Étudiants affectés au groupe au moment d'une séance : l'affectation doit être
-     * antérieure au début de la séance, ce qui évite de faire apparaître comme absent
-     * un étudiant inscrit après coup.
-     *
-     * <p>L'affectation doit aussi être encore active : sans ce filtre, un étudiant retiré
-     * du groupe continuait d'apparaître sur la feuille de présence. Les lignes héritées
-     * dont {@code active} est nul sont considérées actives.</p>
-     */
-    @Query("SELECT sg FROM StudentGroupEntity sg "
-            + "WHERE sg.group.id = :groupId AND sg.dateAssigned <= :sessionDate "
-            + "AND (sg.active IS NULL OR sg.active = true)")
-    List<StudentGroupEntity> findByGroupIdAndDateAssignedBefore(
-            @Param("groupId") Long groupId,
-            @Param("sessionDate") Date sessionDate
-    );
 
     /**
      * Étudiants distincts inscrits (inscription active) dans un groupe appartenant à l'année

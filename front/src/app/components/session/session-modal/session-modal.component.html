@@ -105,6 +105,12 @@
                  [matTooltip]="'SESSION_MODAL.OPEN_NEW_TAB' | translate">
                 <span class="student-name-text">{{ student.firstName }} {{ student.lastName }}</span>
                 <span *ngIf="student.isCatchUp" class="catch-up-label">{{ 'SESSION_MODAL.CATCH_UP' | translate }}</span>
+                <!-- Parti après la séance : il reste attendu jusqu'à son départ inclus, et la
+                     feuille dit pourquoi il y figure encore. -->
+                <span *ngIf="student.enrolmentDeparture" class="departed-label"
+                      [matTooltip]="'SESSION_MODAL.LEFT_ON_HINT' | translate">
+                  {{ 'SESSION_MODAL.LEFT_ON' | translate: { day: day(student.enrolmentDeparture) } }}
+                </span>
                 <!-- Rattrapage à préciser : la séance est consommée mais personne ne la facture
                      encore. Le badge la rend visible sans empêcher la validation de la séance
                      pour les autres étudiants — le pointage doit rester rapide. -->
@@ -137,6 +143,30 @@
                 (change)="onJustifiedChange(student)">
                 {{ 'SESSION_MODAL.JUSTIFIED' | translate }}
               </mat-checkbox>
+            </div>
+          </div>
+
+          <p *ngIf="rollCallError" class="roll-call-error" role="alert">
+            <mat-icon aria-hidden="true">error_outline</mat-icon>
+            {{ 'SESSION_MODAL.ROLL_CALL_ERROR' | translate }}
+          </p>
+
+          <!-- Feuille vide : jamais complétée par le groupe, elle s'explique (exigence 7.2). -->
+          <div *ngIf="rollCall && sessionData.students.length === 0"
+               class="roll-call-empty" role="status">
+            <mat-icon aria-hidden="true">info_outline</mat-icon>
+            <div>
+              <p *ngIf="rollCall.notConcerned.length === 0">
+                {{ 'SESSION_MODAL.ROLL_CALL_EMPTY_NO_ENROLMENT' | translate }}
+              </p>
+              <ng-container *ngIf="rollCall.notConcerned.length > 0">
+                <p>{{ 'SESSION_MODAL.ROLL_CALL_EMPTY_NOT_CONCERNED' | translate: { day: day(rollCall.sessionDay) } }}</p>
+                <ul>
+                  <li *ngFor="let other of rollCall.notConcerned">
+                    {{ other.firstName }} {{ other.lastName }} : {{ describeWindows(other) }}
+                  </li>
+                </ul>
+              </ng-container>
             </div>
           </div>
         </mat-card-content>

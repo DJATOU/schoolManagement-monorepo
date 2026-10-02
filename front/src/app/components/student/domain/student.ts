@@ -32,6 +32,11 @@ export interface Student {
      * être visible, sans pour autant bloquer la validation de la séance.
      */
     catchUpBillingState?: 'PENDING' | 'RESOLVED' | 'HOST_BILLED';
+    /**
+     * Jour de départ (`yyyy-MM-dd`) sur la feuille d'appel : un étudiant parti reste attendu aux
+     * séances de sa fenêtre, et l'écran doit dire pourquoi il y figure.
+     */
+    enrolmentDeparture?: string | null;
     /** Statut d'inscription : ACTIVE (par défaut) ou INACTIVE (étudiant désactivé/parti). */
     status?: 'ACTIVE' | 'INACTIVE' | string;
     active?: boolean;

@@ -4,14 +4,13 @@ import { catchError, Observable, throwError } from 'rxjs';
 import { API_BASE_URL } from '../api-base-url';
 import { Session } from '../models/session/session';
 import { RecurringSessionRequest, RecurringSessionResult } from '../models/session/recurring-session';
-import { Student } from '../components/student/domain/student';
+import { RollCall } from '../models/session/roll-call';
 
 @Injectable({
   providedIn: 'root'
 })
 export class SessionService {
   private apiUrl = `${API_BASE_URL}/api/sessions`;
-  private apiUrl2 = `${API_BASE_URL}/api/student-groups`;
 
   constructor(private http: HttpClient) { }
 
@@ -60,14 +59,15 @@ export class SessionService {
     return this.http.patch<Session>(`${this.apiUrl}/${id}`, session);
   }
 
-  getStudentsByGroupId(groupId: number): Observable<Student[]> {
-    return this.http.get<Student[]>(`${this.apiUrl2}/${groupId}/students`);
-  }
-
-  getStudentsForSession(groupId: number, sessionDate: Date): Observable<Student[]> {
-    return this.http.get<Student[]>(
-      `${this.apiUrl2}/${groupId}/studentsForSession?date=${sessionDate}`
-    );
+  /**
+   * Feuille_Appel de la séance : les étudiants dont la fenêtre d'inscription contient son jour,
+   * inscriptions closes comprises, et ceux du groupe qu'elle ne concerne pas.
+   *
+   * La séance suffit : le serveur connaît son jour et son groupe. Il ne faut pas compléter une
+   * feuille vide par le reste du groupe, ce qui noterait absents des étudiants non concernés.
+   */
+  getRollCall(sessionId: number): Observable<RollCall> {
+    return this.http.get<RollCall>(`${this.apiUrl}/${sessionId}/roll-call`);
   }
 
   markSessionAsFinished(sessionId: number): Observable<Session> {

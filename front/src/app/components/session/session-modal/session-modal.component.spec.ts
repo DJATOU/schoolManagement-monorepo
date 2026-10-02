@@ -1,9 +1,16 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { HttpRequest } from '@angular/common/http';
+import { HttpTestingController } from '@angular/common/http/testing';
+import { By } from '@angular/platform-browser';
+import { MatTabGroup } from '@angular/material/tabs';
+import { TranslateService } from '@ngx-translate/core';
 import { firstValueFrom } from 'rxjs';
 
 import { SessionModalComponent } from './session-modal.component';
 import { createDialogRefSpy, DialogRefSpy, matDialogProviders, setupComponentTestBed } from '../../../../testing/setup';
 import { aSession, aStudent } from '../../../../testing/fixtures';
+import { RollCall, RollCallStudent } from '../../../models/session/roll-call';
+import { Student } from '../../student/domain/student';
 
 /**
  * Fiche détaillée d'une séance, ouverte depuis le calendrier.
@@ -54,5 +61,158 @@ describe('SessionModalComponent', () => {
     component.openGroup();
 
     expect(open).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * Feuille d'appel servie par le serveur (spec admin-corrections, C.3 ; exigences 6.2, 7.1, 7.2).
+ *
+ * <p>La séance du 14/01/2030 du groupe « Maths 1B ». Le défaut corrigé : quand la feuille revenait
+ * vide, l'écran la complétait par tous les étudiants du groupe, cochés présents par défaut —
+ * un étudiant arrivé après la séance pouvait ainsi être noté absent d'une séance qui ne le
+ * concernait pas.</p>
+ */
+describe('SessionModalComponent — feuille d\'appel', () => {
+  let http: HttpTestingController;
+
+  const rollCallUrl = (req: HttpRequest<unknown>) => req.url.endsWith('/api/sessions/100/roll-call');
+
+  function aRollCall(overrides: Partial<RollCall> = {}): RollCall {
+    return { sessionId: 100, groupId: 5, sessionDay: '2030-01-14', students: [], notConcerned: [], ...overrides };
+  }
+
+  function aRollCallStudent(overrides: Partial<RollCallStudent> = {}): RollCallStudent {
+    return { id: 1, firstName: 'Amine', lastName: 'Belkacem', gender: 'M', arrival: '2029-09-01', departure: null,
+      ...overrides };
+  }
+
+  async function open(students: Student[] = []): Promise<ComponentFixture<SessionModalComponent>> {
+    await setupComponentTestBed(SessionModalComponent, {
+      providers: matDialogProviders({ ...aSession(), students }, createDialogRefSpy())
+    });
+    const translate = TestBed.inject(TranslateService);
+    translate.setTranslation('fr', {
+      SESSION_MODAL: {
+        LEFT_ON: 'Parti le {{day}}',
+        ROLL_CALL_ERROR: 'Feuille non chargée',
+        ROLL_CALL_EMPTY_NO_ENROLMENT: 'Aucun inscrit',
+        ROLL_CALL_EMPTY_NOT_CONCERNED: 'Personne le {{day}} :',
+        WINDOW_FROM: 'à partir du {{from}}',
+        WINDOW_FROM_TO: 'du {{from}} au {{to}}',
+        WINDOW_UNDATED: 'non datée'
+      }
+    });
+    translate.use('fr');
+    http = TestBed.inject(HttpTestingController);
+    const fixture = TestBed.createComponent(SessionModalComponent);
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  /** Répond à la feuille d'appel, puis aux présences déjà saisies (aucune). */
+  async function answer(fixture: ComponentFixture<SessionModalComponent>, rollCall: RollCall): Promise<void> {
+    http.expectOne(rollCallUrl).flush(rollCall);
+    await fixture.whenStable();
+    http.match(req => req.url.includes('/api/attendances/session/')).forEach(req => req.flush([]));
+    fixture.detectChanges();
+  }
+
+  function text(fixture: ComponentFixture<SessionModalComponent>): string {
+    return (fixture.nativeElement as HTMLElement).textContent ?? '';
+  }
+
+  /** Le contenu d'un onglet n'est rendu qu'à son activation : on ouvre « Présences ». */
+  async function attendancesTab(fixture: ComponentFixture<SessionModalComponent>): Promise<HTMLElement> {
+    fixture.debugElement.query(By.directive(MatTabGroup)).componentInstance.selectedIndex = 1;
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    return fixture.nativeElement as HTMLElement;
+  }
+
+  // « Liste du groupe » : toute lecture « …/students », par /api/groups comme par /api/student-groups.
+  it('demande la feuille de la séance, et jamais la liste du groupe', async () => {
+    const fixture = await open();
+    await answer(fixture, aRollCall({ students: [aRollCallStudent()] }));
+
+    expect(http.match(req => /\/students\b/.test(req.url)).length).toBe(0);
+    expect((fixture.componentInstance.sessionData.students as Student[]).map(s => s.lastName)).toEqual(['Belkacem']);
+  });
+
+  it('coche présents les étudiants attendus', async () => {
+    const fixture = await open();
+    await answer(fixture, aRollCall({ students: [aRollCallStudent(), aRollCallStudent({ id: 2, lastName: 'Haddad' })] }));
+
+    expect(fixture.componentInstance.sessionData.students.map(s => s.isPresent)).toEqual([true, true]);
+    expect((fixture.componentInstance.sessionData.students as Student[]).map(s => s.isCatchUp)).toEqual([false, false]);
+  });
+
+  it('signale l\'étudiant parti dont la séance est dans la période', async () => {
+    const fixture = await open();
+    await answer(fixture, aRollCall({ students: [aRollCallStudent({ departure: '2030-01-14' })] }));
+
+    expect((await attendancesTab(fixture)).querySelector('.departed-label')?.textContent?.trim()).toBe('Parti le 14/01/2030');
+  });
+
+  it('feuille vide : ne la complète pas, et nomme les étudiants non concernés avec leurs périodes', async () => {
+    const fixture = await open();
+    await answer(fixture, aRollCall({
+      notConcerned: [
+        { id: 2, firstName: 'Lina', lastName: 'Haddad', windows: [{ arrival: '2030-01-21', departure: null }] },
+        { id: 3, firstName: 'Nour', lastName: 'Zerrouki', windows: [
+          { arrival: '2029-09-01', departure: '2029-12-31' }, { arrival: '2030-02-01', departure: null }] }
+      ]
+    }));
+
+    expect(fixture.componentInstance.sessionData.students).toEqual([]);
+    expect(http.match(req => /\/students\b/.test(req.url)).length)
+      .withContext('aucun repli sur la liste du groupe').toBe(0);
+    const tab = await attendancesTab(fixture);
+    expect(tab.querySelector('.roll-call-empty')?.textContent).toContain('Personne le 14/01/2030 :');
+    const lines = Array.from(tab.querySelectorAll('.roll-call-empty li')).map(li => li.textContent?.trim());
+    expect(lines).toEqual([
+      'Lina Haddad : à partir du 21/01/2030',
+      'Nour Zerrouki : du 01/09/2029 au 31/12/2029 ; à partir du 01/02/2030'
+    ]);
+  });
+
+  it('feuille vide d\'un groupe sans inscrit : le dit', async () => {
+    const fixture = await open();
+    await answer(fixture, aRollCall());
+
+    expect((await attendancesTab(fixture)).querySelector('.roll-call-empty')?.textContent).toContain('Aucun inscrit');
+  });
+
+  it('inscription non datée : expliquée comme telle', async () => {
+    const fixture = await open();
+    await answer(fixture, aRollCall({
+      notConcerned: [{ id: 4, firstName: 'Sami', lastName: 'Kaci', windows: [{ arrival: null, departure: null }] }]
+    }));
+
+    expect((await attendancesTab(fixture)).querySelector('.roll-call-empty li')?.textContent?.trim())
+      .toBe('Sami Kaci : non datée');
+  });
+
+  it('feuille non chargée : le dit, sans la faire passer pour une feuille vide', async () => {
+    const fixture = await open();
+    http.expectOne(rollCallUrl).flush({ message: 'panne' }, { status: 500, statusText: 'Server Error' });
+    await fixture.whenStable();
+    http.match(req => req.url.includes('/api/attendances/session/')).forEach(req => req.flush([]));
+    fixture.detectChanges();
+
+    const tab = await attendancesTab(fixture);
+    expect(fixture.componentInstance.rollCallError).toBeTrue();
+    expect(tab.querySelector('.roll-call-error')?.textContent).toContain('Feuille non chargée');
+    expect(tab.querySelector('.roll-call-empty')).toBeNull();
+    expect(text(fixture)).not.toContain('Aucun inscrit');
+  });
+
+  it('étudiants déjà fournis par l\'appelant : la feuille n\'est pas redemandée', async () => {
+    const fixture = await open([aStudent()]);
+    await fixture.whenStable();
+    http.match(req => req.url.includes('/api/attendances/session/')).forEach(req => req.flush([]));
+
+    expect(http.match(rollCallUrl).length).toBe(0);
+    expect(fixture.componentInstance.rollCall).toBeNull();
   });
 });

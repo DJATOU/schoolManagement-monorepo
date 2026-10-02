@@ -383,7 +383,15 @@
     "CATCH_UP_PENDING": "À préciser",
     "CATCH_UP_PENDING_HINT": "Rattrapage à préciser : indiquez la séance manquée et si elle était déjà payée. Rien n'est facturé tant que la décision n'est pas prise. Vous pouvez valider la séance sans attendre.",
     "CATCH_UP_HOST_BILLED": "Facturée sur place",
-    "CATCH_UP_HOST_BILLED_HINT": "L'étudiant n'appartient à aucun groupe du même niveau et de la même matière : aucune place ne lui est réservée ailleurs, la séance lui est donc facturée dans ce groupe."
+    "CATCH_UP_HOST_BILLED_HINT": "L'étudiant n'appartient à aucun groupe du même niveau et de la même matière : aucune place ne lui est réservée ailleurs, la séance lui est donc facturée dans ce groupe.",
+    "LEFT_ON": "Parti le {{day}}",
+    "LEFT_ON_HINT": "L'étudiant a quitté le groupe, mais cette séance fait partie de sa période d'inscription : il reste attendu jusqu'à son départ inclus.",
+    "ROLL_CALL_ERROR": "La feuille d'appel n'a pas pu être chargée. Fermez la séance et rouvrez-la.",
+    "ROLL_CALL_EMPTY_NO_ENROLMENT": "Aucun étudiant n'est inscrit à ce groupe.",
+    "ROLL_CALL_EMPTY_NOT_CONCERNED": "Aucun étudiant n'est inscrit au groupe le {{day}}. La séance ne concerne pas :",
+    "WINDOW_FROM": "inscrit à partir du {{from}}",
+    "WINDOW_FROM_TO": "inscrit du {{from}} au {{to}}",
+    "WINDOW_UNDATED": "inscription sans date d'arrivée"
   },
   "STUDENT_FORM": {
     "TITLE": "Inscription d'un étudiant",

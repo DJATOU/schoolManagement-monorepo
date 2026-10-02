@@ -411,7 +411,19 @@ des lignes) ; `StudentHistoryService.allocatePayments`.
   Tests : `EnrolmentWindowTest`, `StudentGroupEnrolmentEndpointIntegrationTest` (HTTP, dates relues
   en SQL), détecteur et requêtes de changement de groupe adaptés ; 17 mutations tuées
   _Exigences : 5.1 à 5.4 — D1, D5_
-- [ ] C.3 Feuille_Appel par fenêtre, clôtures comprises ; suppression du repli côté écran
+- [x] C.3 Feuille_Appel par fenêtre, clôtures comprises ; suppression du repli côté écran.
+  `GET /api/sessions/{id}/roll-call` (`RollCallService`) : désignée par la Séance, le serveur lit
+  son jour et son groupe ; retient chaque étudiant dont une inscription, active ou close, contient
+  ce jour — une fois, même revenu dans le groupe ; renvoie aussi les non-concernés et leurs
+  fenêtres, qui expliquent une feuille vide. Retirés : `GET /api/student-groups/{id}/studentsForSession`
+  (inscriptions actives seulement, instants comparés, date venue du navigateur), et
+  `GET /api/student-groups/{id}/students` (toutes inscriptions, sans fenêtre), qui ne servait qu'au
+  repli. Écran : feuille du serveur sans repli ; badge « Parti le … » ; feuille vide expliquée
+  (« Lina Haddad : inscrit à partir du 21/01/2030 ») ; échec de chargement dit comme tel, et non
+  présenté comme une feuille vide ; jours affichés sans conversion en `Date` (`formatCalendarDay`).
+  Tests : `RollCallEndpointIntegrationTest` (arrivée et départ le jour même, lendemain du départ à
+  00:30, retour dans le groupe, feuille vide, VIEWER, 404), `RollCallServiceTest` (cas limites),
+  Karma de la feuille et du format de jour ; 17 mutations tuées
   _Exigences : 6.2, 7.1, 7.2_
 - [ ] C.4 Refus serveur des absences hors fenêtre, en bloc à la validation, sur tous les points
   d'entrée

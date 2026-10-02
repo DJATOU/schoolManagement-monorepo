@@ -24,10 +24,12 @@ import { SessionAttendancePdfService, SessionAttendanceStudentRow } from '../../
 import { ConfirmationDialogComponent } from '../../shared/confirmation-dialog/confirmation-dialog.component';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { Observable, combineLatest, forkJoin } from 'rxjs';
+import { Observable, combineLatest, firstValueFrom, forkJoin } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { SchoolYearContextService } from '../../../services/school-year-context.service';
 import { AuthService } from '../../../services/auth.service';
+import { NotConcernedStudent, RollCall } from '../../../models/session/roll-call';
+import { formatCalendarDay } from '../../../utils/calendar-day';
 
 @Component({
   selector: 'app-session-modal',
@@ -113,37 +115,59 @@ export class SessionModalComponent implements OnInit {
     }
   }
 
+  /**
+   * Feuille d'appel servie par le serveur : les étudiants dont la fenêtre d'inscription contient
+   * le jour de la séance. Nulle tant qu'elle n'est pas chargée.
+   *
+   * Une feuille vide n'est plus complétée par le reste du groupe : cela notait absents des
+   * étudiants arrivés après la séance ou déjà partis. Elle s'explique par les non-concernés.
+   */
+  rollCall: RollCall | null = null;
+
+  /** La feuille n'a pas pu être chargée : une liste vide ne doit pas passer pour une feuille vide. */
+  rollCallError = false;
+
   private async loadStudentsData(): Promise<void> {
     // On ne charge les étudiants que si la liste est vide
-    if (!this.sessionData.students || this.sessionData.students.length === 0) {
-      try {
-        const sessionDate = this.sessionData.sessionTimeStart;
-
-        // 1) Étudiants assignés au groupe avant la date de la session
-        let students = await this.sessionService
-          .getStudentsForSession(this.sessionData.groupId, sessionDate)
-          .toPromise();
-
-        // 2) Fallback : si rien (ex. assignations sans date antérieure),
-        //    on remonte tous les étudiants du groupe pour la prise de présence
-        if (!students || students.length === 0) {
-          students = await this.sessionService
-            .getStudentsByGroupId(this.sessionData.groupId)
-            .toPromise();
-        }
-
-        this.sessionData.students = students?.map(student => ({
-          ...student,
-          id: student.id as number,
-          isPresent: true,
-          description: '',
-          isCatchUp: false
-        })) ?? [];
-
-      } catch (error) {
-        console.error('Error fetching students:', error);
-      }
+    if (this.sessionData.students && this.sessionData.students.length > 0) {
+      return;
     }
+    try {
+      const rollCall = await firstValueFrom(this.sessionService.getRollCall(this.sessionData.id));
+      this.rollCall = rollCall;
+      this.sessionData.students = rollCall.students.map(student => ({
+        id: student.id,
+        firstName: student.firstName,
+        lastName: student.lastName,
+        gender: student.gender ?? '',
+        enrolmentDeparture: student.departure,
+        isPresent: true,
+        description: '',
+        isCatchUp: false
+      } as Student & { id: number; isPresent: boolean }));
+    } catch (error) {
+      this.rollCallError = true;
+      this.sessionData.students = this.sessionData.students ?? [];
+      console.error('Error fetching roll call:', error);
+    }
+  }
+
+  /** Jour `yyyy-MM-dd` affiché `dd/MM/yyyy`. */
+  day(value: string | null | undefined): string {
+    return formatCalendarDay(value);
+  }
+
+  /** Fenêtres d'un étudiant non concerné, en clair : « à partir du 14/01/2030 », « du … au … ». */
+  describeWindows(student: NotConcernedStudent): string {
+    return student.windows.map(window => {
+      if (!window.arrival) {
+        return this.translate.instant('SESSION_MODAL.WINDOW_UNDATED');
+      }
+      return window.departure
+        ? this.translate.instant('SESSION_MODAL.WINDOW_FROM_TO',
+            { from: this.day(window.arrival), to: this.day(window.departure) })
+        : this.translate.instant('SESSION_MODAL.WINDOW_FROM', { from: this.day(window.arrival) });
+    }).join(' ; ');
   }
   
 

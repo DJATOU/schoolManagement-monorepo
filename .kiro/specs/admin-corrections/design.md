@@ -164,6 +164,11 @@ Précisions (C.1, C.2) :
 - Le départ par `DELETE` est daté du jour même, sans Motif ni Aperçu, jusqu'à C.6. Une inscription
   dont l'arrivée est future ne peut pas se terminer : il faut corriger l'arrivée.
 
+Précisions (C.3) : la Feuille_Appel est `GET /api/sessions/{id}/roll-call`. Elle est désignée par
+la Séance et non par un groupe et une date : le jour d'une Séance se lit dans le fuseau qui a écrit
+les dates d'inscription, que le navigateur ne connaît pas. Elle renvoie aussi les étudiants du
+groupe non concernés, avec leurs fenêtres : une feuille vide s'explique au lieu d'être complétée.
+
 ### D6 — Déplacement de ventilation, jamais d'argent
 
 Quand une correction de date rend non facturable une Séance ventilée (5.9), ses lignes de

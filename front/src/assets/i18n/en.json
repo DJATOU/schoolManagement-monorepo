@@ -383,7 +383,15 @@
     "CATCH_UP_PENDING": "To be decided",
     "CATCH_UP_PENDING_HINT": "Catch-up awaiting a decision: indicate which session was missed and whether it was already paid. Nothing is billed until the decision is made. You can validate the session right away.",
     "CATCH_UP_HOST_BILLED": "Billed here",
-    "CATCH_UP_HOST_BILLED_HINT": "The student belongs to no group of the same level and subject: no seat is reserved elsewhere, so the session is billed in this group."
+    "CATCH_UP_HOST_BILLED_HINT": "The student belongs to no group of the same level and subject: no seat is reserved elsewhere, so the session is billed in this group.",
+    "LEFT_ON": "Left on {{day}}",
+    "LEFT_ON_HINT": "The student left the group, but this session is within their enrolment period: they remain expected up to and including their departure day.",
+    "ROLL_CALL_ERROR": "The roll call could not be loaded. Close the session and open it again.",
+    "ROLL_CALL_EMPTY_NO_ENROLMENT": "No student is enrolled in this group.",
+    "ROLL_CALL_EMPTY_NOT_CONCERNED": "No student is enrolled in the group on {{day}}. This session does not concern:",
+    "WINDOW_FROM": "enrolled from {{from}}",
+    "WINDOW_FROM_TO": "enrolled from {{from}} to {{to}}",
+    "WINDOW_UNDATED": "enrolment without an arrival date"
   },
   "STUDENT_FORM": {
     "TITLE": "Student registration",

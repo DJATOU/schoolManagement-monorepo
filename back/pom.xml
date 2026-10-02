@@ -426,6 +426,10 @@
                                              concernent un étudiant ; une borne fausse d'un jour
                                              le fait attendre, noter absent ou facturer à tort. -->
                                         <include>com.school.management.domain.valueobject.EnrolmentWindow</include>
+                                        <!-- C.3 : la Feuille_Appel dit qui une séance concerne ;
+                                             un oubli y fait noter absent un non-concerné, ou
+                                             disparaître un concerné parti depuis. -->
+                                        <include>com.school.management.service.session.RollCallService*</include>
                                     </includes>
                                     <limits>
                                         <limit>

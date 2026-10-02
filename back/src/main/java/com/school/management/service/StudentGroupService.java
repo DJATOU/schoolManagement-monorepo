@@ -2,7 +2,6 @@ package com.school.management.service;
 
 import com.school.management.domain.valueobject.EnrolmentWindow;
 import com.school.management.dto.GroupDTO;
-import com.school.management.dto.StudentDTO;
 import com.school.management.dto.StudentGroupDTO;
 import com.school.management.mapper.GroupMapper;
 import com.school.management.persistance.GroupEntity;
@@ -23,10 +22,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 @Service
 public class StudentGroupService {
@@ -235,19 +232,6 @@ public class StudentGroupService {
         }
     }
 
-    public List<StudentDTO> getStudentsByGroupId(Long groupId) {
-        List<StudentGroupEntity> studentGroups = studentGroupRepository.findByGroupId(groupId);
-        return studentGroups.stream()
-                .map(sg -> StudentDTO.builder()
-                        .id(sg.getStudent().getId())
-                        .gender(sg.getStudent().getGender())
-                        .lastName(sg.getStudent().getLastName())
-                        .firstName(sg.getStudent().getFirstName())
-                        .build())
-                .collect(Collectors.toList());
-    }
-
-    // In `StudentGroupService.java`
     @Transactional
     public void removeStudentFromGroup(Long groupId, Long studentId) {
         StudentGroupEntity studentGroup = studentGroupRepository
@@ -308,19 +292,4 @@ public class StudentGroupService {
         return group.getSchoolYear() != null
                 && schoolYearId.equals(group.getSchoolYear().getId());
     }
-
-    public List<StudentDTO> getStudentsForSession(Long groupId, Date sessionStartDate) {
-        List<StudentGroupEntity> studentGroups = studentGroupRepository
-                .findByGroupIdAndDateAssignedBefore(groupId, sessionStartDate);
-
-        return studentGroups.stream()
-                .map(sg -> StudentDTO.builder()
-                        .id(sg.getStudent().getId())
-                        .gender(sg.getStudent().getGender())
-                        .lastName(sg.getStudent().getLastName())
-                        .firstName(sg.getStudent().getFirstName())
-                        .build())
-                .collect(Collectors.toList());
-    }
-
 }
