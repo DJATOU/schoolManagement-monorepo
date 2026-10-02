@@ -363,6 +363,12 @@ la base locale doit être réinitialisée avant de lancer A.6.
 Le composant d'Aperçu est unique : toutes les Corrections présentent leur effet de la même façon
 (11, « ne pas apprendre une règle par écran »).
 
+Précisions (B.7) : `CorrectionPreviewComponent` affiche l'Aperçu ; `CorrectionDialogComponent` mène
+la correction (Motif, Aperçu, confirmation, reprise sur un Aperçu périmé) sans rien connaître d'elle
+qu'une fonction `run(step, motif, jeton)`. Corriger un Encaissement enchaîne deux dialogues — la
+saisie de l'état voulu, puis l'Aperçu, avec « Modifier » pour revenir à la saisie ; annuler ouvre
+directement l'Aperçu.
+
 ## Error Handling
 
 `CustomServiceException` avec statut explicite ; aucun 500 pour un cas métier. Corps

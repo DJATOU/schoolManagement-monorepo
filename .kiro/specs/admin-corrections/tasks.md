@@ -349,10 +349,37 @@ des lignes) ; `StudentHistoryService.allocatePayments`.
   désignent) : elle compte comme absente dans la comparaison. Sept mutations vérifiées (Aperçu
   non annulé, « après » mesuré avant, jeton non comparé, remplacement sur la mauvaise Série, B
   encaissé avant l'annulation de A, refus du remplacement avalé, original non annulé)
-- [ ] B.7 `CorrectionPreviewDialog` (composant commun) ; actions « annuler », « corriger »,
+- [x] B.7 `CorrectionPreviewDialog` (composant commun) ; actions « annuler », « corriger »,
   « réimprimer » dans l'historique ; tampon « ANNULÉ » à la réimpression. Ce sont les actions
   qu'annoncent déjà la note de « Gestion des paiements » et le refus 409 des corrections de ligne
-  (A.6) : elles doivent exister à la livraison
+  (A.6) : elles doivent exister à la livraison. Fait :
+  - `CorrectionPreviewComponent` (présentationnel) : par Série, coût, dû à ce jour, versé, reste,
+    statut, avant / après ; changement marqué par une flèche et du gras, pas par la seule couleur ;
+    « Aucun montant ne change » en toutes lettres ; autres effets listés (4.1, 4.2, 4.4) ;
+  - `CorrectionDialogComponent` (commun à toutes les corrections, ne connaît d'elles qu'une fonction
+    `run(step, motif, jeton)`) : Motif sans valeur par défaut, « Autre » avec texte, Aperçu,
+    confirmation du jeton lu ; changer de Motif efface l'Aperçu ; 409 périmé → nouvel Aperçu
+    affiché avec avertissement, à confirmer ; refus rédigé par le serveur, remboursements en cause
+    listés ; « Modifier » pour revenir à la saisie ;
+  - `EncashmentEditDialogComponent` : l'état voulu (montant, groupe parmi ceux où l'élève peut payer,
+    élève parmi les inscrits du groupe, Série, mode, note) ; « Continuer » désactivé tant que rien ne
+    change. Un versement à reporter sur un élève sans groupe commun s'annule puis s'encaisse depuis
+    sa fiche ;
+  - panneau « Versements » : « Corriger », « Annuler » sur un versement actif (désactivés en lecture
+    seule, année passée), « Réimprimer » sur tous ; après un Remplacement, « Imprimer le nouveau
+    reçu » proposé (3.7) ; liste rechargée après chaque correction ;
+  - réimpression d'un versement annulé : tampon « ANNULÉ » sur toute la page, date de l'annulation,
+    reçu de remplacement (2.6) ; un versement annulé depuis le chargement ressort tamponné ;
+  - `EncashmentService` : Motifs, annuler et corriger en Aperçu / confirmation ; les refus gardent
+    le nouvel Aperçu, son jeton et les remboursements en cause (`CorrectionError`) ;
+  - traductions fr / en (`correction.*`, mentions d'annulation du reçu).
+  Tests Karma : dialogue (Motif, « Autre », Aperçu, jeton confirmé, Motif changé, Aperçu périmé,
+  refus et remboursements, erreur inattendue, retour), Aperçu (lignes, marques, statut, effets,
+  aucun montant), saisie (valeurs initiales, listes, normalisation, changement de groupe, valeurs
+  actuelles toujours présentes, montant nul, retour d'Aperçu), panneau (actions selon statut et
+  lecture seule, réimpression tamponnée, annulation, Motifs chargés une fois, correction, retour,
+  impression proposée, mode et note), service (routes, corps, refus enrichis), reçu et document
+  PDF annulés
   _Exigences : 2.6, 3.7, 4.1_
 
 ## Lot C — Dates d'arrivée et de départ, Feuille_Appel (exigences 5, 6, 7)

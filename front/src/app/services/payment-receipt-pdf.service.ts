@@ -82,6 +82,19 @@ export interface PaymentReceiptData {
   carryOvers?: ReceiptCarryOver[];
   /** Compte qui a encaissé CE versement, tel qu'enregistré par le serveur. */
   adminUsername: string;
+  /**
+   * Versement annulé : le reçu réimprimé porte le tampon « ANNULÉ », la date de l'annulation et, s'il
+   * existe, le reçu qui le remplace (spec admin-corrections, exigence 2.6). Absent pour un versement
+   * valide.
+   */
+  cancellation?: ReceiptCancellation;
+}
+
+/** Annulation d'un versement, telle que le reçu réimprimé l'énonce. */
+export interface ReceiptCancellation {
+  cancelledAt: Date;
+  /** Numéro du reçu de remplacement, s'il y en a un. */
+  replacedBy?: string | null;
 }
 
 /**
@@ -249,13 +262,28 @@ export class PaymentReceiptPdfService {
   /**
    * Reçu au format A5 : il tient sur une demi-feuille, format habituel d'un justificatif
    * remis en main propre, et deux reçus s'impriment sur une A4.
+   *
+   * <p>Public pour être vérifié sans passer par l'impression : la définition du document est ce
+   * que la famille aura entre les mains.</p>
    */
-  private buildDocument(data: PaymentReceiptData, logo: string): TDocumentDefinitions {
+  buildDocument(data: PaymentReceiptData, logo: string): TDocumentDefinitions {
     return {
       pageSize: 'A5',
       pageMargins: [32, 32, 32, 40],
+      // Un reçu annulé ne doit pas pouvoir passer pour valide, même photocopié en noir et blanc :
+      // le tampon traverse toute la page.
+      ...(data.cancellation ? {
+        watermark: {
+          text: this.t('payment.receipt.cancelledStamp'),
+          color: '#dc2626',
+          opacity: 0.25,
+          bold: true,
+          angle: -35
+        }
+      } : {}),
       content: [
         this.buildHeader(data, logo),
+        ...this.buildCancellation(data),
         this.buildDivider(),
         this.buildAmountBanner(data),
         ...this.buildDetails(data),
@@ -320,6 +348,37 @@ export class PaymentReceiptPdfService {
       : [titleBlock, dateBlock];
 
     return { columns, columnGap: 0 };
+  }
+
+  /**
+   * Mention d'annulation, en clair sous l'en-tête : la date et, s'il existe, le reçu qui remplace
+   * celui-ci — la seule pièce valide à présenter (exigence 2.6).
+   */
+  private buildCancellation(data: PaymentReceiptData): Content[] {
+    if (!data.cancellation) {
+      return [];
+    }
+    const lines: Content[] = [{
+      text: this.t('payment.receipt.cancelledOn', { date: this.formatDateTime(data.cancellation.cancelledAt) }),
+      bold: true
+    }];
+    if (data.cancellation.replacedBy) {
+      lines.push({ text: this.t('payment.receipt.replacedBy', { number: data.cancellation.replacedBy }) });
+    }
+    return [{
+      table: {
+        widths: ['*'],
+        body: [[{
+          stack: lines,
+          color: '#991b1b',
+          fillColor: '#fee2e2',
+          margin: [8, 6, 8, 6],
+          border: [false, false, false, false]
+        }]]
+      },
+      layout: 'noBorders',
+      margin: [0, 8, 0, 0]
+    }];
   }
 
   private buildDivider(): Content {

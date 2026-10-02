@@ -50,6 +50,27 @@ describe('receiptFromEncashment', () => {
     expect(receipt.description).toBeUndefined();
   });
 
+  it('un versement valide n\'est pas marqué annulé', () => {
+    expect(receiptFromEncashment(anEncashment(), 'Espèces').cancellation).toBeUndefined();
+  });
+
+  it('un versement annulé porte la date de son annulation et son remplacement (exigence 2.6)', () => {
+    const receipt = receiptFromEncashment(anEncashment({
+      status: 'CANCELLED', cancelledAt: '2030-02-10T14:30:00', replacedByReceiptNumber: 'RECU-2030-0043'
+    }), 'Espèces');
+
+    expect(receipt.cancellation).toEqual({
+      cancelledAt: new Date('2030-02-10T14:30:00'), replacedBy: 'RECU-2030-0043'
+    });
+  });
+
+  it('un versement annulé sans remplacement ne nomme aucun reçu', () => {
+    const receipt = receiptFromEncashment(anEncashment({ status: 'CANCELLED', cancelledAt: '2030-02-10T14:30:00' }),
+      'Espèces');
+
+    expect(receipt.cancellation?.replacedBy).toBeNull();
+  });
+
   it('ne reprend pas la situation de la série, non conservée depuis le versement', () => {
     const receipt = receiptFromEncashment(anEncashment(), 'Espèces');
 

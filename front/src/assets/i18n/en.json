@@ -932,7 +932,10 @@
       "studentSignature": "Student signature",
       "adminSignature": "Received by",
       "footerNote": "This receipt covers only the payment shown above.",
-      "error": "Payment recorded, but the receipt could not be generated."
+      "error": "Payment recorded, but the receipt could not be generated.",
+      "cancelledStamp": "CANCELLED",
+      "cancelledOn": "Receipt cancelled on {{date}}: it is no longer valid proof of payment.",
+      "replacedBy": "Replaced by receipt {{number}}."
     },
     "encashments": {
       "title": "Payments received",
@@ -950,8 +953,7 @@
       "replacedBy": "Replaced by receipt {{number}}",
       "reprint": "Reprint receipt",
       "reprintAria": "Reprint receipt {{number}}",
-      "reprintError": "The receipt could not be reprinted.",
-      "cancelledMeanwhile": "Payment {{number}} has been cancelled in the meantime: its receipt is no longer valid."
+      "reprintError": "The receipt could not be reprinted."
     },
     "history": {
       "fields": {
@@ -1508,6 +1510,75 @@
     },
     "ERRORS": {
       "MISSING_CONTEXT": "This catch-up is linked to neither a student nor a group: no missed session can be offered."
+    }
+  },
+  "correction": {
+    "subject": "Receipt {{number}} of {{amount}} DA — {{series}} ({{group}})",
+    "reason": {
+      "DATA_ENTRY_ERROR": "Data entry error",
+      "DOCUMENT_RECEIVED": "Supporting document received",
+      "ARRIVAL_DATE_CORRECTED": "Arrival date corrected",
+      "STUDENT_LEFT": "Student left",
+      "WRONG_STUDENT": "Payment recorded for the wrong student",
+      "WRONG_AMOUNT": "Wrong amount",
+      "OTHER": "Other"
+    },
+    "dialog": {
+      "reason": "Reason",
+      "reasonRequired": "Choose the reason for the correction.",
+      "reasonText": "Details (optional)",
+      "reasonTextRequired": "Explain in a few words",
+      "preview": "See preview",
+      "previewTitle": "What will change",
+      "confirm": "Confirm",
+      "back": "Edit",
+      "stale": "The data changed since the preview: here is the new preview. Read it again before confirming.",
+      "blockingRefund": "Refund {{number}} of {{date}}: {{amount}} DA on \"{{series}}\"",
+      "error": "The correction could not be completed. Try again."
+    },
+    "preview": {
+      "amountsUnchanged": "No amount changes.",
+      "before": "Before",
+      "after": "After",
+      "cost": "Series cost",
+      "dueSoFar": "Due so far",
+      "paid": "Paid",
+      "remaining": "Remaining",
+      "status": "Status",
+      "upToDate": "Up to date",
+      "late": "Late",
+      "effects": "Other effects"
+    },
+    "cancel": {
+      "action": "Cancel",
+      "aria": "Cancel payment {{number}}",
+      "title": "Cancel the payment",
+      "done": "Receipt {{number}} is cancelled."
+    },
+    "correct": {
+      "action": "Correct",
+      "aria": "Correct payment {{number}}",
+      "title": "Correct the payment",
+      "detailsDone": "Receipt {{number}} is corrected.",
+      "replaced": "Receipt {{original}} is replaced by receipt {{replacement}}.",
+      "print": "Print the new receipt"
+    },
+    "edit": {
+      "title": "Correct receipt {{number}}",
+      "hint": "Enter the payment as it should have been recorded. Changing the amount, student, group or series replaces the receipt; the payment method and note are corrected without a new receipt.",
+      "loadError": "Some lists could not be loaded.",
+      "amount": "Amount received",
+      "amountRequired": "A strictly positive amount is expected.",
+      "group": "Group",
+      "student": "Student",
+      "studentRequired": "Choose the student who paid.",
+      "series": "Target series",
+      "seriesRequired": "Choose the target series.",
+      "method": "Payment method",
+      "noMethod": "Not specified",
+      "notes": "Note",
+      "unchanged": "Nothing has been changed yet.",
+      "next": "Continue"
     }
   }
 }

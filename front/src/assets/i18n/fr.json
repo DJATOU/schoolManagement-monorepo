@@ -932,7 +932,10 @@
       "studentSignature": "Signature de l'étudiant",
       "adminSignature": "Encaissé par",
       "footerNote": "Ce reçu ne couvre que le versement mentionné ci-dessus.",
-      "error": "Paiement enregistré, mais le reçu n'a pas pu être généré."
+      "error": "Paiement enregistré, mais le reçu n'a pas pu être généré.",
+      "cancelledStamp": "ANNULÉ",
+      "cancelledOn": "Reçu annulé le {{date}} : il ne vaut plus justificatif.",
+      "replacedBy": "Remplacé par le reçu {{number}}."
     },
     "encashments": {
       "title": "Versements",
@@ -950,8 +953,7 @@
       "replacedBy": "Remplacé par le reçu {{number}}",
       "reprint": "Réimprimer le reçu",
       "reprintAria": "Réimprimer le reçu {{number}}",
-      "reprintError": "Le reçu n'a pas pu être réimprimé.",
-      "cancelledMeanwhile": "Le versement {{number}} a été annulé entre-temps : son reçu n'est plus valable."
+      "reprintError": "Le reçu n'a pas pu être réimprimé."
     },
     "history": {
       "fields": {
@@ -1508,6 +1510,75 @@
     },
     "ERRORS": {
       "MISSING_CONTEXT": "Ce rattrapage n'est rattaché ni à un étudiant ni à un groupe : impossible de proposer une séance manquée."
+    }
+  },
+  "correction": {
+    "subject": "Reçu {{number}} de {{amount}} DA — {{series}} ({{group}})",
+    "reason": {
+      "DATA_ENTRY_ERROR": "Erreur de saisie",
+      "DOCUMENT_RECEIVED": "Justificatif reçu",
+      "ARRIVAL_DATE_CORRECTED": "Date d'arrivée corrigée",
+      "STUDENT_LEFT": "Départ de l'étudiant",
+      "WRONG_STUDENT": "Encaissement sur le mauvais élève",
+      "WRONG_AMOUNT": "Montant mal saisi",
+      "OTHER": "Autre"
+    },
+    "dialog": {
+      "reason": "Motif",
+      "reasonRequired": "Choisissez le motif de la correction.",
+      "reasonText": "Précision (facultative)",
+      "reasonTextRequired": "Expliquez en quelques mots",
+      "preview": "Voir l'aperçu",
+      "previewTitle": "Ce qui va changer",
+      "confirm": "Confirmer",
+      "back": "Modifier",
+      "stale": "Les données ont changé depuis l'aperçu : voici le nouvel aperçu. Relisez-le avant de confirmer.",
+      "blockingRefund": "Remboursement {{number}} du {{date}} : {{amount}} DA sur « {{series}} »",
+      "error": "La correction n'a pas pu être menée. Réessayez."
+    },
+    "preview": {
+      "amountsUnchanged": "Aucun montant ne change.",
+      "before": "Avant",
+      "after": "Après",
+      "cost": "Coût de la série",
+      "dueSoFar": "Dû à ce jour",
+      "paid": "Versé",
+      "remaining": "Reste à payer",
+      "status": "Statut",
+      "upToDate": "À jour",
+      "late": "En retard",
+      "effects": "Autres effets"
+    },
+    "cancel": {
+      "action": "Annuler",
+      "aria": "Annuler le versement {{number}}",
+      "title": "Annuler le versement",
+      "done": "Le reçu {{number}} est annulé."
+    },
+    "correct": {
+      "action": "Corriger",
+      "aria": "Corriger le versement {{number}}",
+      "title": "Corriger le versement",
+      "detailsDone": "Le reçu {{number}} est corrigé.",
+      "replaced": "Le reçu {{original}} est remplacé par le reçu {{replacement}}.",
+      "print": "Imprimer le nouveau reçu"
+    },
+    "edit": {
+      "title": "Corriger le reçu {{number}}",
+      "hint": "Saisissez le versement tel qu'il aurait dû être enregistré. Un changement de montant, d'élève, de groupe ou de série remplace le reçu ; le mode et la note se corrigent sans nouveau reçu.",
+      "loadError": "Une partie des listes n'a pas pu être chargée.",
+      "amount": "Montant reçu",
+      "amountRequired": "Montant strictement positif attendu.",
+      "group": "Groupe",
+      "student": "Élève",
+      "studentRequired": "Choisissez l'élève qui a versé.",
+      "series": "Série visée",
+      "seriesRequired": "Choisissez la série visée.",
+      "method": "Mode de paiement",
+      "noMethod": "Non précisé",
+      "notes": "Note",
+      "unchanged": "Rien n'est modifié pour l'instant.",
+      "next": "Continuer"
     }
   }
 }

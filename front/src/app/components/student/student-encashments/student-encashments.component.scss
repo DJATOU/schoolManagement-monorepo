@@ -118,11 +118,18 @@
 
 .enc-actions {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
+  gap: 8px;
   margin-top: 6px;
 }
 
-.enc-reprint {
+.enc-cancel:not([disabled]) {
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+
+.enc-action {
   display: inline-flex;
   align-items: center;
   gap: 6px;

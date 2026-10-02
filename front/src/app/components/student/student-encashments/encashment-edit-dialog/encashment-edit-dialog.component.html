@@ -1,0 +1,61 @@
+<h2 mat-dialog-title>{{ 'correction.edit.title' | translate: { number: data.encashment.receiptNumber } }}</h2>
+
+<mat-dialog-content>
+  <p class="ee-hint">{{ 'correction.edit.hint' | translate }}</p>
+  <p class="ee-error" role="alert" *ngIf="loadError">{{ 'correction.edit.loadError' | translate }}</p>
+
+  <form [formGroup]="form" (ngSubmit)="submit()" class="ee-form">
+    <mat-form-field appearance="outline">
+      <mat-label>{{ 'correction.edit.amount' | translate }}</mat-label>
+      <input matInput type="number" min="0" step="any" formControlName="amount" required>
+      <span matTextSuffix>DA</span>
+      <mat-error>{{ 'correction.edit.amountRequired' | translate }}</mat-error>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>{{ 'correction.edit.group' | translate }}</mat-label>
+      <mat-select formControlName="groupId" required>
+        <mat-option *ngFor="let group of groups" [value]="group.id">{{ group.label }}</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>{{ 'correction.edit.student' | translate }}</mat-label>
+      <mat-select formControlName="studentId" required>
+        <mat-option *ngFor="let student of students" [value]="student.id">{{ student.label }}</mat-option>
+      </mat-select>
+      <mat-error>{{ 'correction.edit.studentRequired' | translate }}</mat-error>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>{{ 'correction.edit.series' | translate }}</mat-label>
+      <mat-select formControlName="targetSeriesId" required>
+        <mat-option *ngFor="let s of series" [value]="s.id">{{ s.label }}</mat-option>
+      </mat-select>
+      <mat-error>{{ 'correction.edit.seriesRequired' | translate }}</mat-error>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>{{ 'correction.edit.method' | translate }}</mat-label>
+      <mat-select formControlName="paymentMethod">
+        <mat-option [value]="null">{{ 'correction.edit.noMethod' | translate }}</mat-option>
+        <mat-option *ngFor="let method of paymentMethods" [value]="method.value">{{ method.labelKey | translate }}</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>{{ 'correction.edit.notes' | translate }}</mat-label>
+      <textarea matInput formControlName="notes" rows="2"></textarea>
+    </mat-form-field>
+  </form>
+
+  <p class="ee-unchanged" *ngIf="unchanged">{{ 'correction.edit.unchanged' | translate }}</p>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button type="button" (click)="cancel()">{{ 'common.cancel' | translate }}</button>
+  <button mat-flat-button color="primary" type="button" class="ee-submit" (click)="submit()"
+    [disabled]="form.invalid || unchanged">
+    {{ 'correction.edit.next' | translate }}
+  </button>
+</mat-dialog-actions>

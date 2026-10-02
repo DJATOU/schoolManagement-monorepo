@@ -72,8 +72,18 @@
             {{ 'payment.encashments.replacedBy' | translate: { number: encashment.replacedByReceiptNumber } }}
           </p>
 
-          <div class="enc-actions" *ngIf="canReprint(encashment)">
-            <button mat-stroked-button type="button" class="enc-reprint" (click)="reprint(encashment)"
+          <div class="enc-actions">
+            <ng-container *ngIf="canCorrect(encashment)">
+              <button mat-stroked-button type="button" class="enc-action enc-correct" (click)="correct(encashment)"
+                [attr.aria-label]="'correction.correct.aria' | translate: { number: encashment.receiptNumber }">
+                <mat-icon>edit</mat-icon>{{ 'correction.correct.action' | translate }}
+              </button>
+              <button mat-stroked-button type="button" class="enc-action enc-cancel" (click)="cancel(encashment)"
+                [attr.aria-label]="'correction.cancel.aria' | translate: { number: encashment.receiptNumber }">
+                <mat-icon>block</mat-icon>{{ 'correction.cancel.action' | translate }}
+              </button>
+            </ng-container>
+            <button mat-stroked-button type="button" class="enc-action enc-reprint" (click)="reprint(encashment)"
               [disabled]="reprintingId !== null"
               [attr.aria-label]="'payment.encashments.reprintAria' | translate: { number: encashment.receiptNumber }">
               <mat-icon>print</mat-icon>{{ 'payment.encashments.reprint' | translate }}

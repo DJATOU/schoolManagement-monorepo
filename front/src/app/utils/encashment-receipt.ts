@@ -36,6 +36,11 @@ export function receiptFromEncashment(encashment: Encashment, paymentMethodLabel
     carryOvers: allocations
       .filter(allocation => allocation.carriedOver)
       .map(allocation => ({ seriesName: allocation.seriesName, amount: allocation.amount })),
-    adminUsername: encashment.receivedBy
+    adminUsername: encashment.receivedBy,
+    // Annulé : tampon « ANNULÉ », date, reçu de remplacement (exigence 2.6). Une annulation sans
+    // date n'existe pas côté serveur ; l'heure de la réimpression ne doit pas la remplacer.
+    cancellation: encashment.status === 'CANCELLED' && encashment.cancelledAt
+      ? { cancelledAt: new Date(encashment.cancelledAt), replacedBy: encashment.replacedByReceiptNumber ?? null }
+      : undefined
   };
 }

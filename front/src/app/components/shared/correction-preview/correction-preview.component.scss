@@ -1,0 +1,83 @@
+/*
+  Aperçu d'une correction. Teintes de la fiche élève ; un changement est marqué par une flèche et
+  du gras, la couleur ne fait que le souligner.
+*/
+.cp-unchanged {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #eef2ff;
+  color: #3730a3;
+  font-size: 0.88rem;
+}
+
+.cp-series {
+  margin: 0 0 14px;
+}
+
+.cp-series-title {
+  margin: 0 0 6px;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.cp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.86rem;
+  font-variant-numeric: tabular-nums;
+
+  th,
+  td {
+    padding: 5px 8px;
+    border-bottom: 1px solid #e2e8f0;
+    text-align: right;
+  }
+
+  th[scope='row'] {
+    text-align: left;
+    font-weight: 500;
+    color: #475569;
+  }
+
+  thead th {
+    font-weight: 600;
+    color: #64748b;
+  }
+}
+
+.cp-changed td:last-child {
+  font-weight: 700;
+  color: #1e293b;
+  background: #fefce8;
+}
+
+.cp-arrow {
+  margin-right: 4px;
+  color: #a16207;
+}
+
+.cp-late {
+  color: #b91c1c;
+}
+
+.cp-effects ul {
+  margin: 0;
+  padding-left: 1.2rem;
+  font-size: 0.86rem;
+  color: #334155;
+  line-height: 1.5;
+}
+
+.cp-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
