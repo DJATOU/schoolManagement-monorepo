@@ -257,7 +257,8 @@ controller/
   EncashmentController             GET  /api/encashments/{id}                 (reçu, réimpression)
                                    GET  /api/students/{id}/encashments        (historique, A.8)
 controller/correction/
-  EncashmentCorrectionController   POST /api/encashments/{id}/cancel/{preview|confirm}
+  EncashmentCorrectionController   GET  /api/encashments/correction-reasons   (Motifs proposés, B.5)
+                                   POST /api/encashments/{id}/cancel/{preview|confirm}
                                    POST /api/encashments/{id}/correct/{preview|confirm}
                                         (mode et note seuls : corrigés en place, sans
                                         Remplacement ni nouveau reçu — B.4)

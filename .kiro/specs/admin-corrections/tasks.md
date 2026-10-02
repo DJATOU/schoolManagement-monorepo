@@ -306,7 +306,23 @@ des lignes) ; `StudentHistoryService.allocatePayments`.
   note ; mode et note en place, l'un ou l'autre, rien de changé, mode trop long ; entrées
   incomplètes). Quatorze mutations vérifiées
   _Exigences : 3.1 à 3.6 — D4_
-- [ ] B.5 Points d'entrée `cancel` et `correct`, `preview` et `confirm`
+- [x] B.5 Points d'entrée `cancel` et `correct`, `preview` et `confirm`. Fait
+  (`controller/correction/EncashmentCorrectionController`, contrôleur mince) :
+  - `POST /api/encashments/{id}/cancel/preview|confirm` (`reasonType`, `reasonText`,
+    `previewToken`) et `POST /api/encashments/{id}/correct/preview|confirm` (état voulu complet,
+    Motif, jeton) ; réponse commune `{ preview, previewToken, result }`, `result` nul en Aperçu ;
+  - `GET /api/encashments/correction-reasons` : Motifs proposés, dans l'ordre d'affichage (D10) ;
+  - Motif reçu en texte, insensible à la casse : absent, inconnu (« Motif inconnu : « FOO » »),
+    « Autre » sans texte → 400 en français, plutôt qu'une erreur de lecture JSON ; corps absent
+    traité comme vide ;
+  - sécurité : écritures et Aperçus sous `POST /api/**`, ADMIN seul ; lecture des Motifs sous
+    `GET /api/encashments/**`, ADMIN seul (11.7).
+  Tests : `EncashmentCorrectionEndpointIntegrationTest`, filtres de sécurité actifs (Aperçu sans
+  écriture malgré `open-in-view`, confirmation tracée au nom du compte connecté, Motif lié au
+  jeton, 409 Aperçu périmé et plancher des remboursements, refus de Motif, jeton manquant, 404,
+  déjà annulé, remplacement et reçu à imprimer, mode et note en place, corrections incomplètes ou
+  refusées, 403 VIEWER sur chaque Aperçu et confirmation, 401 anonyme, liste des Motifs). Huit
+  mutations vérifiées (dont la règle de sécurité)
 - [ ] B.6 Propriétés P2 « remplacer équivaut à avoir bien saisi », P3 « indivisibilité »,
   P4 « l'Aperçu ne ment pas »
 - [ ] B.7 `CorrectionPreviewDialog` (composant commun) ; actions « annuler », « corriger »,

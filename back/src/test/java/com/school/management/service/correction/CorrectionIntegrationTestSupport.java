@@ -63,7 +63,7 @@ import java.util.List;
         "spring.jpa.hibernate.ddl-auto=create-drop",
         "spring.jpa.show-sql=false"
 })
-abstract class CorrectionIntegrationTestSupport {
+public abstract class CorrectionIntegrationTestSupport {
 
     protected static final double PRICE = 2000.0;
     protected static final String ADMIN = "admin-test";
@@ -99,7 +99,7 @@ abstract class CorrectionIntegrationTestSupport {
 
     /** Base vidée avant chaque test : {@code @SpringBootTest} n'annule aucune transaction. */
     @BeforeEach
-    void setUpCorrectionData() {
+    protected void setUpCorrectionData() {
         authenticate(ADMIN);
         auditRepository.deleteAll();
         deleteDomainData();
@@ -120,7 +120,7 @@ abstract class CorrectionIntegrationTestSupport {
     }
 
     @AfterEach
-    void clearSecurityContext() {
+    protected void clearSecurityContext() {
         SecurityContextHolder.clearContext();
     }
 
