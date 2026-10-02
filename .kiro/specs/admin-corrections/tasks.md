@@ -384,10 +384,32 @@ des lignes) ; `StudentHistoryService.allocatePayments`.
 
 ## Lot C — Dates d'arrivée et de départ, Feuille_Appel (exigences 5, 6, 7)
 
-- [ ] C.1 V6 (partie inscription) : colonne `date_left`
+- [x] C.1 **V8** (et non V6, déjà prise par le lot A) : colonne `student_groups.date_left`,
+  facultative, et deux contraintes — une fenêtre finit au plus tôt le jour où elle commence
+  (`ck_student_groups_window_ordered`), une inscription est close si et seulement si elle porte
+  une Date_Sortie (`ck_student_groups_closure_dated`). `MigrationSchemaPostgresIntegrationTest`
+  applique V8 et éprouve les deux contraintes
   _D1, D5_
-- [ ] C.2 `EnrolmentWindow` ; `StudentGroupEntity.onCreate` ne pose la date que si elle est
-  absente ; retrait de `@PastOrPresent`, contrôle dans l'année courante
+- [x] C.2 `EnrolmentWindow` (`domain/valueobject`) : jours calendaires lus dans le fuseau de la
+  JVM, arrivée et départ inclus, `describe()` pour les messages ; une colonne `DATE` revenue en
+  `java.sql.Date` est lue sans `toInstant()`. `StudentGroupEntity` :
+  - `dateLeft` ; `onCreate` garde la date fournie, sinon le jour même ; `onCreate` et `onUpdate`
+    ramènent les deux dates à 00:00, quel que soit le chemin d'écriture ;
+  - `window()` donne la Fenêtre_Inscription de la ligne.
+  `StudentGroupService`, sur les deux chemins d'inscription (`addGroups`, `addStudents`) :
+  - `dateAssigned` devient un `LocalDate` (`yyyy-MM-dd`), sans `@PastOrPresent` ; une date future
+    est admise dans l'année du groupe, bornes comprises ; hors de l'année, 400 nommant l'année et
+    ses bornes ; sans date, le jour même, soumis au même contrôle ;
+  - déjà membre = inscription **active** : `addStudents` testait `group.getStudents()`, qui lit
+    les clôtures, et réinscrire un étudiant parti ne faisait rien sans le dire. Le retour crée une
+    nouvelle inscription, refusée (409) si elle recouvre la fenêtre d'un départ du même groupe ;
+  - le retrait (`DELETE`) clôture avec Date_Sortie au jour même, en attendant le départ avec Motif
+    et Aperçu de C.6 ; refusé (409) pour une inscription qui n'a pas commencé.
+  `StudentGroupController` ne rend plus en 500 les refus métier (niveau, année close, bornes) : ils
+  remontent au gestionnaire global avec leur statut. `GroupChangeDetector` date une clôture par sa
+  Date_Sortie et non par `date_update`, qui datait la dernière écriture de la ligne.
+  Tests : `EnrolmentWindowTest`, `StudentGroupEnrolmentEndpointIntegrationTest` (HTTP, dates relues
+  en SQL), détecteur et requêtes de changement de groupe adaptés ; 17 mutations tuées
   _Exigences : 5.1 à 5.4 — D1, D5_
 - [ ] C.3 Feuille_Appel par fenêtre, clôtures comprises ; suppression du repli côté écran
   _Exigences : 6.2, 7.1, 7.2_
@@ -403,7 +425,11 @@ des lignes) ; `StudentHistoryService.allocatePayments`.
 - [ ] C.7 Propriétés P5 « fenêtre respectée », P6 « déplacer la ventilation ne change aucun
   montant »
 - [ ] C.8 Écrans : date d'arrivée à l'inscription ; corriger l'arrivée, enregistrer le départ,
-  rouvrir ; lignes refusées retirables en un clic à la validation
+  rouvrir ; lignes refusées retirables en un clic à la validation. Relevé en C.2 : la fiche élève
+  et la fiche groupe affichent un message générique sur tout refus d'inscription (et la fiche
+  élève lit `alreadyAssociatedGroups` quand le serveur envoie `alreadyAssociatedEntities`) ; elles
+  doivent afficher le `message` du serveur, qui nomme désormais l'année, ses bornes ou le départ
+  en cause
   _Exigences : 5, 6, 7.5_
 - [ ] C.9 Contrôle du fuseau au démarrage et bandeau d'alerte
   _D1_

@@ -40,8 +40,8 @@ import static org.mockito.Mockito.when;
  * alerte permanente que personne ne lirait (exigence 10.4).</p>
  *
  * <p>Une clôture d'inscription est ici reproduite comme en base : {@code active = false} et
- * {@code date_update} horodatée, {@code StudentGroupService.removeStudentFromGroup} désactivant
- * la ligne au lieu de la supprimer.</p>
+ * Date_Sortie posée, {@code StudentGroupService.removeStudentFromGroup} désactivant la ligne au
+ * lieu de la supprimer.</p>
  */
 @ExtendWith(MockitoExtension.class)
 class GroupChangeDetectorTest {
@@ -80,10 +80,14 @@ class GroupChangeDetectorTest {
         return enrolment;
     }
 
-    /** Inscription clôturée : {@code active = false} et {@code date_update} à la clôture. */
+    /**
+     * Inscription clôturée : {@code active = false} et Date_Sortie au jour du départ. La ligne a
+     * été écrite pour la dernière fois à la clôture, comme en base.
+     */
     private static StudentGroupEntity closed(GroupEntity group, String assignedOn, String closedOn) {
         StudentGroupEntity enrolment = open(group, assignedOn);
         enrolment.setActive(false);
+        enrolment.setDateLeft(date(closedOn));
         enrolment.setDateUpdate(LocalDateTime.parse(closedOn + "T09:30:00"));
         return enrolment;
     }
@@ -231,11 +235,27 @@ class GroupChangeDetectorTest {
     // ------------------------------------------------------------------
 
     @Test
-    @DisplayName("Inscription clôturée sans date de mise à jour : clôture non datable, "
-            + "aucun signalement")
+    @DisplayName("Clôture datée par sa Date_Sortie et non par sa dernière écriture : une ligne "
+            + "retouchée en décembre reste un départ de novembre")
+    void closureIsDatedByItsDepartureDay() {
+        StudentGroupEntity leftInNovember = closed(group(MATHS_ID, "Maths 1B"), "2025-09-01", "2025-11-12");
+        leftInNovember.setDateUpdate(LocalDateTime.parse("2025-12-03T10:00:00"));
+        givenEnrolments(leftInNovember, open(group(PHYSIQUE_ID, "Physique 1B"), "2025-11-15"));
+        givenAttended(MATHS_ID, 3);
+        givenAttended(PHYSIQUE_ID, 2);
+
+        assertThat(detector.detect(STUDENT_ID))
+                .extracting(GroupChange::yearMonth)
+                .containsExactly(java.time.YearMonth.of(2025, 11));
+    }
+
+    @Test
+    @DisplayName("Inscription clôturée sans Date_Sortie : clôture non datable, aucun signalement")
     void closureWithoutUpdateDateIsIgnored() {
         StudentGroupEntity undatedClosure = open(group(MATHS_ID, "Maths 1B"), "2025-09-01");
         undatedClosure.setActive(false);
+        // Écrite en novembre, mais sans jour de départ : la dernière écriture ne date rien.
+        undatedClosure.setDateUpdate(LocalDateTime.parse("2025-11-12T09:30:00"));
         givenEnrolments(undatedClosure, open(group(PHYSIQUE_ID, "Physique 1B"), "2025-11-15"));
 
         assertThat(detector.detect(STUDENT_ID)).isEmpty();
@@ -256,7 +276,7 @@ class GroupChangeDetectorTest {
     void enrolmentsWithoutGroupOrDateAreSkipped() {
         StudentGroupEntity withoutGroup = new StudentGroupEntity();
         withoutGroup.setActive(false);
-        withoutGroup.setDateUpdate(LocalDateTime.parse("2025-11-12T09:30:00"));
+        withoutGroup.setDateLeft(date("2025-11-12"));
 
         StudentGroupEntity withoutId = new StudentGroupEntity();
         withoutId.setGroup(new GroupEntity());

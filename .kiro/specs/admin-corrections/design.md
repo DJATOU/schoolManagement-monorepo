@@ -150,6 +150,20 @@ Le changement du résolveur est le premier des deux changements de calcul assum�
 exigences. `removeStudentFromGroup` (clôture sans date) devient la clôture avec Date_Sortie.
 Une inscription inactive porte donc toujours une Date_Sortie : aucune n'est créée sans elle.
 
+Précisions (C.1, C.2) :
+
+- La colonne arrive en **V8** : V6 et V7 sont celles du lot A. V8 porte aussi l'invariant :
+  `date_left >= date_assigned`, et close si et seulement si datée.
+- `EnrolmentWindow` est une valeur (`domain/valueobject`) : `enrolment.window().contains(date)`.
+  L'entité ramène ses deux dates à 00:00 à chaque écriture, pas seulement le service : la
+  comparaison en jours ne dépend d'aucun appelant.
+- Un étudiant qui revient dans un groupe quitté reçoit une **nouvelle** inscription. Rouvrir
+  l'ancienne (6.5) sert à annuler un départ saisi par erreur : sur un vrai retour, elle étendrait
+  la fenêtre sur l'intervalle d'absence, et ses séances le concerneraient. Deux fenêtres d'un même
+  groupe ne se recouvrent jamais (409 à l'inscription).
+- Le départ par `DELETE` est daté du jour même, sans Motif ni Aperçu, jusqu'à C.6. Une inscription
+  dont l'arrivée est future ne peut pas se terminer : il faut corriger l'arrivée.
+
 ### D6 — Déplacement de ventilation, jamais d'argent
 
 Quand une correction de date rend non facturable une Séance ventilée (5.9), ses lignes de
@@ -333,7 +347,8 @@ l'installation chez le client (exigences, hors périmètre).
 - **V7** (A.6) — ces trois colonnes deviennent **`NOT NULL`**. Une ligne de ventilation, un report
   ou une empreinte sans Encaissement devient impossible par construction : l'invariant 1.3 porté
   par le stockage, possible parce qu'aucune ligne ancienne n'est à reprendre.
-- **Colonne `student_groups.date_left`** — avec le lot C.
+- **V8** (C.1) — colonne `student_groups.date_left`, facultative ; contraintes : fenêtre ordonnée
+  (`date_left >= date_assigned`) et inscription close si et seulement si datée.
 
 **Pourquoi deux migrations et non une.** Le code n'écrit ces liens qu'à partir de A.4 et A.5.
 Des colonnes obligatoires dès V6 feraient échouer tout encaissement dans l'intervalle, donc la

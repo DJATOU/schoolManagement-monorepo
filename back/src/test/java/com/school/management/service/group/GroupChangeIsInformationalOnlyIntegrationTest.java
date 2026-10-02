@@ -97,7 +97,7 @@ class GroupChangeIsInformationalOnlyIntegrationTest {
     @Autowired
     private PaymentProcessingService paymentProcessingService;
 
-    /** Mois courant : les deux événements d'inscription sont horodatés par JPA. */
+    /** Mois courant : arrivées du jour même, départ des maths daté d'aujourd'hui. */
     private final YearMonth currentMonth = YearMonth.now();
 
     private GroupEntity maths;
@@ -139,8 +139,10 @@ class GroupChangeIsInformationalOnlyIntegrationTest {
 
         // Nour : inscription en maths clôturée ce mois-ci, inscription en physique ouverte le même
         // mois. C'est exactement le changement de groupe que l'exigence 10.1 décrit.
+        // La clôture est datée, comme en production : une inscription close porte sa Date_Sortie.
         StudentGroupEntity mathsEnrolment = enrol(nour, maths);
         mathsEnrolment.setActive(false);
+        mathsEnrolment.setDateLeft(toDate(today));
         em.flush();
         enrol(nour, physique);
 

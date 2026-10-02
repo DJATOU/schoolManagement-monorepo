@@ -254,13 +254,13 @@ class MigrationSchemaPostgresIntegrationTest {
     // ------------------------------------------------------------------
 
     @Test
-    @DisplayName("V1 à V7 appliquées sur une base vide, et chaque entité correspond à sa table")
+    @DisplayName("V1 à V8 appliquées sur une base vide, et chaque entité correspond à sa table")
     void allMigrationsApplyAndEntitiesValidate() {
         // Le démarrage du contexte en mode validate a déjà vérifié les entités ; reste à s'assurer
         // que toutes les migrations ont réussi, dans l'ordre, sans en sauter aucune.
         List<String> versions = jdbc.queryForList(
                 "SELECT version FROM flyway_schema_history WHERE success ORDER BY installed_rank", String.class);
-        assertThat(versions).containsExactly("1", "2", "3", "4", "5", "6", "7");
+        assertThat(versions).containsExactly("1", "2", "3", "4", "5", "6", "7", "8");
         assertThat(jdbc.queryForObject(
                 "SELECT count(*) FROM flyway_schema_history WHERE NOT success", Integer.class)).isZero();
     }
@@ -570,6 +570,48 @@ class MigrationSchemaPostgresIntegrationTest {
                 Thread.currentThread().interrupt();
                 throw new IllegalStateException(e);
             }
+        }
+    }
+
+    @Nested
+    @DisplayName("Fenêtre d'inscription (V8)")
+    class FenetreInscription {
+
+        private static final java.sql.Timestamp ARRIVAL = java.sql.Timestamp.valueOf("2029-10-01 00:00:00");
+
+        private Map<String, Object> enrolment(boolean active, String dateLeft) {
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("id", jdbc.queryForObject("SELECT nextval('student_groups_seq')", Long.class));
+            row.put("student_id", studentId);
+            row.put("group_id", groupId);
+            row.put("date_assigned", ARRIVAL);
+            row.put("active", active);
+            row.put("date_left", dateLeft == null ? null : java.sql.Timestamp.valueOf(dateLeft + " 00:00:00"));
+            return row;
+        }
+
+        @Test
+        @DisplayName("ouverte sans départ, ou close avec départ (le jour même de l'arrivée compris) : acceptées")
+        void consistentWindowsAreAccepted() {
+            assertThatCode(() -> insert("student_groups", enrolment(true, null))).doesNotThrowAnyException();
+            assertThatCode(() -> insert("student_groups", enrolment(false, "2029-11-30"))).doesNotThrowAnyException();
+            assertThatCode(() -> insert("student_groups", enrolment(false, "2029-10-01"))).doesNotThrowAnyException();
+        }
+
+        @Test
+        @DisplayName("close sans Date_Sortie, ou ouverte avec : refusée")
+        void closureAndDepartureGoTogether() {
+            assertThatThrownBy(() -> insert("student_groups", enrolment(false, null)))
+                    .hasMessageContaining("ck_student_groups_closure_dated");
+            assertThatThrownBy(() -> insert("student_groups", enrolment(true, "2029-11-30")))
+                    .hasMessageContaining("ck_student_groups_closure_dated");
+        }
+
+        @Test
+        @DisplayName("départ la veille de l'arrivée : refusé")
+        void departureBeforeArrivalIsRejected() {
+            assertThatThrownBy(() -> insert("student_groups", enrolment(false, "2029-09-30")))
+                    .hasMessageContaining("ck_student_groups_window_ordered");
         }
     }
 

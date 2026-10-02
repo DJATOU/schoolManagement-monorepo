@@ -99,12 +99,10 @@ public class StudentGroupController {
             Map<String, Object> response = new HashMap<>();
             response.put(ERROR_MESSAGE, e.getMessage());
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
-        } catch (Exception e) {
-            logger.error("Exception: {}", e.getMessage());
-            Map<String, Object> response = new HashMap<>();
-            response.put(ERROR_MESSAGE, "Error during operation: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
+        // Les autres refus (niveau, année close, arrivée hors de l'année, réinscription qui
+        // recouvre un départ) remontent au gestionnaire global avec leur statut : les intercepter
+        // ici les rendait tous en 500, comme une panne.
     }
 
     @DeleteMapping("/{groupId}/students/{studentId}")

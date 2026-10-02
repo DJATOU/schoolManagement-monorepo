@@ -50,10 +50,11 @@ import java.util.Set;
  * <h2>Comment une clôture est reconnue</h2>
  * Une inscription clôturée est une ligne de {@code student_groups} dont {@code active} vaut
  * <strong>faux</strong> : {@code StudentGroupService.removeStudentFromGroup} désactive la ligne
- * au lieu de la supprimer, ce qui préserve l'historique. Il n'existe pas de colonne de date de
- * fin ; la date de clôture est donc {@code date_update}, horodatée par {@code @PreUpdate} au
- * moment de la désactivation. Une ligne dont {@code active} est nul est héritée et considérée
- * <em>active</em>, comme partout ailleurs dans le dépôt.
+ * au lieu de la supprimer, ce qui préserve l'historique. La date de clôture est sa Date_Sortie
+ * ({@code date_left}, V8), jour du départ. Elle remplace {@code date_update}, qui datait la
+ * dernière écriture de la ligne et non le départ : une correction ultérieure aurait déplacé la
+ * clôture au mois de la correction. Une ligne dont {@code active} est nul est héritée et
+ * considérée <em>active</em>, comme partout ailleurs dans le dépôt.
  *
  * <h2>Lecture seule, hors du chemin d'encaissement</h2>
  * Aucune écriture, aucune dépendance depuis {@code PaymentProcessingService} : le détecteur
@@ -134,7 +135,7 @@ public class GroupChangeDetector {
             if (!Boolean.FALSE.equals(enrolment.getActive())) {
                 continue;
             }
-            YearMonth closedIn = monthOf(enrolment.getDateUpdate());
+            YearMonth closedIn = monthOf(enrolment.getDateLeft());
             if (closedIn != null) {
                 closures.add(new Event(group.getId(), group.getName(), closedIn));
             }
@@ -177,10 +178,6 @@ public class GroupChangeDetector {
     private YearMonth monthOf(Date date) {
         return date == null ? null
                 : YearMonth.from(LocalDate.ofInstant(date.toInstant(), ZoneId.systemDefault()));
-    }
-
-    private YearMonth monthOf(LocalDateTime dateTime) {
-        return dateTime == null ? null : YearMonth.from(dateTime);
     }
 
     private Date toDate(LocalDateTime dateTime) {

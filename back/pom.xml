@@ -422,6 +422,10 @@
                                         <!-- B.3 : les règles d'une annulation (plancher des
                                              remboursements, seconde annulation, année close). -->
                                         <include>com.school.management.service.correction.EncashmentCorrectionService*</include>
+                                        <!-- C.2 : la Fenêtre_Inscription décide quelles séances
+                                             concernent un étudiant ; une borne fausse d'un jour
+                                             le fait attendre, noter absent ou facturer à tort. -->
+                                        <include>com.school.management.domain.valueobject.EnrolmentWindow</include>
                                     </includes>
                                     <limits>
                                         <limit>
