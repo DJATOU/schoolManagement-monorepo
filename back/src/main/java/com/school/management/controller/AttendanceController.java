@@ -113,38 +113,28 @@ public class AttendanceController {
         return ResponseEntity.noContent().build();
     }
 
+    /**
+     * Feuille de présence d'une séance, enregistrée à la validation.
+     *
+     * <p>Les refus remontent avec leur statut : absences hors fenêtre en 409 avec chaque ligne
+     * nommée (exigence 7.5), doublon en 409. Ils étaient tous rendus en 500, comme une panne, par
+     * une interception générale qui masquait aussi le motif à l'écran.</p>
+     */
     @PostMapping("/bulk")
     public ResponseEntity<?> submitAttendance(@RequestBody List<AttendanceDTO> attendanceDTOs) {
-        // Log incoming request
-        System.out.println("Received bulk attendance request with " + attendanceDTOs.size() + " items");
-
         if (attendanceDTOs.isEmpty()) {
             return ResponseEntity.badRequest().body("No attendance records provided");
         }
 
-        try {
-            // PHASE 1 REFACTORING: Utilise MappingContext au lieu de
-            // ApplicationContextProvider
-            List<AttendanceEntity> attendanceEntities = attendanceDTOs.stream()
-                    .map(dto -> {
-                        System.out.println(
-                                "Mapping DTO: studentId=" + dto.getStudentId() + ", sessionId=" + dto.getSessionId());
-                        return attendanceMapper.attendanceDTOToAttendance(dto, attendanceService.getMappingContext());
-                    })
-                    .toList();
+        // PHASE 1 REFACTORING: Utilise MappingContext au lieu de ApplicationContextProvider
+        List<AttendanceEntity> attendanceEntities = attendanceDTOs.stream()
+                .map(dto -> attendanceMapper.attendanceDTOToAttendance(dto, attendanceService.getMappingContext()))
+                .toList();
 
-            List<AttendanceEntity> savedAttendances = attendanceService.saveAll(attendanceEntities);
-            List<AttendanceDTO> savedAttendanceDTOs = savedAttendances.stream()
-                    .map(attendanceMapper::attendanceToAttendanceDTO)
-                    .toList();
-
-            return ResponseEntity.ok(savedAttendanceDTOs);
-        } catch (Exception e) {
-            System.err.println("Error in bulk attendance: " + e.getMessage());
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Error saving attendance: " + e.getMessage());
-        }
+        List<AttendanceDTO> savedAttendanceDTOs = attendanceService.saveAll(attendanceEntities).stream()
+                .map(attendanceMapper::attendanceToAttendanceDTO)
+                .toList();
+        return ResponseEntity.ok(savedAttendanceDTOs);
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

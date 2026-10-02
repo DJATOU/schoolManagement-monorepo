@@ -425,8 +425,25 @@ des lignes) ; `StudentHistoryService.allocatePayments`.
   00:30, retour dans le groupe, feuille vide, VIEWER, 404), `RollCallServiceTest` (cas limites),
   Karma de la feuille et du format de jour ; 17 mutations tuées
   _Exigences : 6.2, 7.1, 7.2_
-- [ ] C.4 Refus serveur des absences hors fenêtre, en bloc à la validation, sur tous les points
-  d'entrée
+- [x] C.4 Refus serveur des absences hors fenêtre, en bloc à la validation, sur tous les points
+  d'entrée. `AbsenceWindowGuard` : est une absence toute ligne qui n'est pas une présence
+  (`isPresent` nul compris) ; elle doit tomber dans une fenêtre, active ou close, de l'étudiant au
+  groupe de la séance. Une présence est toujours admise (7.4). Refus 409 `ABSENCE_OUTSIDE_WINDOW`,
+  corps `rejected` : une ligne par absence, motif (`NOT_ENROLLED`, `OUTSIDE_WINDOW`), fenêtres et
+  message (« Absence de Lina Haddad le 07/01/2030 : hors de son inscription au groupe « Math 1ère A »
+  (à partir du 14/01/2030). »). Points d'entrée :
+  - feuille de présence (`POST /api/attendances/bulk`) : toutes les lignes jugées avant toute
+    écriture, refus entier ; l'interception générale qui rendait tout refus en 500 est retirée ;
+  - présence unitaire (`POST /api/attendances`) ;
+  - modification d'une séance pointée (`PATCH /api/sessions/{id}`) : changer son jour ou son groupe
+    change qui elle concerne, ses absences actives sont rejugées ; refus « Modification refusée » ;
+  - `AttendanceService.save`, sans appelant et sans contrôle, retiré.
+  Le rattrapage (`CatchUpService.complete`) n'écrit que des présences.
+  Tests : `AbsenceWindowEndpointIntegrationTest` (refus en bloc et lignes nommées, revalidation sans
+  les lignes, présences admises, jours d'arrivée et de départ, lendemain du départ, étudiant revenu,
+  présence non renseignée, doublon en 409, présence unitaire, séance déplacée de jour ou de groupe),
+  `AbsenceWindowGuardTest` (cas limites) ; 15 mutations tuées. L'écran affiche encore un message
+  générique sur ce refus : le retrait des lignes en un clic est en C.8
   _Exigences : 7.3 à 7.5_
 - [ ] C.5 Résolveur : Séances facturables d'une inscription clôturée par sa fenêtre
   _Changement de calcul assumé — D5_

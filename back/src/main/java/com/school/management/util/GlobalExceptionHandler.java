@@ -3,6 +3,7 @@ package com.school.management.util;
 import com.school.management.service.correction.RefundFloorException;
 import com.school.management.service.correction.StalePreviewException;
 import com.school.management.service.exception.CustomServiceException;
+import com.school.management.service.session.AbsenceOutsideWindowException;
 import com.school.management.shared.exception.ResourceNotFoundException;
 import jakarta.persistence.EntityNotFoundException;
 import org.slf4j.Logger;
@@ -47,6 +48,18 @@ public class GlobalExceptionHandler {
         logger.warn("Correction below refunds: {}", e.getMessage());
         return ResponseEntity.status(HttpStatus.CONFLICT).body(new RefundFloorErrorResponse(
                 HttpStatus.CONFLICT, e.getMessage(), "REFUND_FLOOR", e.getBlockingRefunds()));
+    }
+
+    /**
+     * Absence hors Fenêtre_Inscription : 409 nommant chaque ligne refusée, pour que l'écran les
+     * retire en une fois et revalide (exigence 7.5).
+     */
+    @ExceptionHandler(AbsenceOutsideWindowException.class)
+    public ResponseEntity<RejectedAbsencesErrorResponse> handleAbsenceOutsideWindowException(
+            AbsenceOutsideWindowException e) {
+        logger.warn("Absences outside enrolment window: {}", e.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(new RejectedAbsencesErrorResponse(
+                HttpStatus.CONFLICT, e.getMessage(), "ABSENCE_OUTSIDE_WINDOW", e.getRejected()));
     }
 
     @ExceptionHandler(ResourceNotFoundException.class)

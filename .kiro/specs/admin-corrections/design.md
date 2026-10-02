@@ -164,6 +164,10 @@ Précisions (C.1, C.2) :
 - Le départ par `DELETE` est daté du jour même, sans Motif ni Aperçu, jusqu'à C.6. Une inscription
   dont l'arrivée est future ne peut pas se terminer : il faut corriger l'arrivée.
 
+Précisions (C.4) : `AbsenceWindowGuard` juge toute ligne qui n'est pas une présence, sur la
+feuille de présence, la présence unitaire et la modification d'une séance pointée — déplacer une
+séance d'un jour ou d'un groupe change qui elle concerne. Refus 409 entier, corps `rejected`.
+
 Précisions (C.3) : la Feuille_Appel est `GET /api/sessions/{id}/roll-call`. Elle est désignée par
 la Séance et non par un groupe et une date : le jour d'une Séance se lit dans le fuseau qui a écrit
 les dates d'inscription, que le navigateur ne connaît pas. Elle renvoie aussi les étudiants du

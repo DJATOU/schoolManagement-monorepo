@@ -23,6 +23,12 @@ public interface StudentGroupRepository extends JpaRepository<StudentGroupEntity
 
     Optional<StudentGroupEntity> findByGroupIdAndStudentIdAndActiveTrue(Long groupId, Long studentId);
 
+    /**
+     * Inscriptions de l'étudiant au groupe, <strong>closes comprises</strong> : un étudiant revenu
+     * dans un groupe y a plusieurs fenêtres, et une absence est admise dans chacune d'elles.
+     */
+    List<StudentGroupEntity> findByGroupIdAndStudentId(Long groupId, Long studentId);
+
     List<StudentGroupEntity> findByGroupIdAndActiveTrue(Long groupId);
 
     /** Vrai si l'étudiant est actuellement inscrit (affectation active) dans ce groupe. */

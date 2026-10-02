@@ -274,9 +274,11 @@ class CatchUpRoutingOnBulkAttendancePropertyTest {
                                             GroupRepository groupRepository,
                                             StudentGroupRepository studentGroupRepository,
                                             CatchUpRoutingService catchUpRoutingService) {
+            // Le garde de fenêtre est le vrai : les lignes soumises sont des présences, qu'il admet.
             return new AttendanceService(attendanceRepository, (AttendanceMapper) null,
                     studentRepository, sessionRepository, sessionSeriesRepository, groupRepository,
-                    studentGroupRepository, catchUpRoutingService);
+                    studentGroupRepository, catchUpRoutingService,
+                    new com.school.management.service.session.AbsenceWindowGuard(studentGroupRepository));
         }
     }
 }
