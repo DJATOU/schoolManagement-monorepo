@@ -42,6 +42,7 @@ import { GroupChangeNoticeComponent } from '../../shared/group-change-notice/gro
 import { HasRoleDirective } from '../../../shared/has-role.directive';
 import { StudentEncashmentsComponent } from '../student-encashments/student-encashments.component';
 import { StudentEnrolmentsComponent } from '../student-enrolments/student-enrolments.component';
+import { StudentJournalComponent } from '../student-journal/student-journal.component';
 import { enrolmentRefusalMessage } from '../../../utils/enrolment-refusal';
 
 const errorMessages = {
@@ -67,7 +68,8 @@ const errorMessages = {
     GroupChangeNoticeComponent,
     HasRoleDirective,
     StudentEncashmentsComponent,
-    StudentEnrolmentsComponent
+    StudentEnrolmentsComponent,
+    StudentJournalComponent
   ],
   templateUrl: './student-profile.component.html',
   styleUrls: ['./student-profile.component.scss'],

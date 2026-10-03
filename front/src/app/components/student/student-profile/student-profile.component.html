@@ -197,6 +197,12 @@
   <app-student-encashments *appHasRole="'ADMIN'" [studentId]="student?.id"
     [readOnly]="(readOnly$ | async) ?? false"></app-student-encashments>
 
+  <!--
+    Journal des corrections, imprimable par période (D.5, exigence 12). Réservé à l'ADMIN comme les
+    versements, dont il nomme les reçus ; consultable sur une année close.
+  -->
+  <app-student-journal *appHasRole="'ADMIN'" [studentId]="student?.id"></app-student-journal>
+
   <!-- Parcours par année scolaire -->
   <mat-accordion class="pf-accordion">
     <mat-expansion-panel [expanded]="true">

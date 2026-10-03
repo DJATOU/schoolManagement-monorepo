@@ -661,11 +661,31 @@ des lignes) ; `StudentHistoryService.allocatePayments`.
   période et ses bornes ; année close ; période à l'envers, date mal formée, élève inconnu ; VIEWER,
   anonyme) ; 40 mutations tuées
   _Exigences : 12.1 à 12.3, 12.5 — D8_
-- [ ] D.5 Journal imprimable par période
+- [x] D.5 Journal imprimable par période — avec le panneau de la fiche élève qui le porte (avancé de
+  D.7 : une impression sans écran pour choisir la période ne servait à rien) :
+  - fiche élève, panneau « Journal des corrections » (ADMIN seul, année close comprise) : lu à
+    l'ouverture et relu à chaque ouverture ; période Du / Au, « Afficher », « Toute période » ; une
+    période à l'envers est dite sur place, sans appel ; chaque entrée : catégorie, date et heure de
+    l'école, auteur, phrase du serveur, une ligne par série touchée, « Sans effet sur le dû » pour
+    une justification, Motif et son texte ;
+  - « Imprimer » relit le Journal sur la période saisie puis imprime celui-là : une période tapée
+    mais non affichée ne sort pas sous l'en-tête de la précédente. A4 paysage : logo, « Journal des
+    corrections », élève, « Du 01/01/2030 au 31/01/2030 », nombre d'entrées ; une ligne par entrée
+    (date, catégorie et phrase, effet par série, Motif, auteur), fond alterné ; « Aucune correction
+    sur cette période. » ; « Édité le … », « Page 2 / 5 » ; fichier
+    `journal_Amine_Belkacem_2030-01-01_2030-01-31.pdf` ;
+  - la police embarquée (Roboto) n'a pas de « → » : imprimé « -> », un chevron isolé se lisant
+    « plus grand que » entre deux montants ; espaces typographiques ramenées à une espace ;
+  - impression par iframe masquée, téléchargement en repli (`utils/pdf-print`, `PdfOutputService`).
+  Tests Karma : panneau (lecture à l'ouverture, rendu de chaque champ, période, période à l'envers,
+  vide, refus, impression relue, double clic, échec d'impression, lectures concurrentes, changement
+  d'élève), document (en-tête, périodes, lignes, flèche, justification, tirets, fonds, vide, logo,
+  pied, nom de fichier, impression), service HTTP, impression en iframe et repli, logo, format de
+  l'heure, fiche élève (ADMIN seul) ; 48 mutations tuées
   _Exigences : 12.4_
 - [ ] D.6 Propriété P7 « une Trace par changement effectif »
 - [ ] D.7 `session-modal` : corriger par élève, ajouter un élève (la dévalidation avec motif est
-  livrée en D.3) ; fiche élève, onglet journal
+  livrée en D.3, le Journal de la fiche élève en D.5)
   _Exigences : 8, 10, 12_
 
 ## Transverse, à chaque lot

@@ -1656,5 +1656,44 @@
     "departure": {
       "notEnrolled": "Cet élève n'a plus d'inscription ouverte dans ce groupe : la liste a été rechargée."
     }
+  },
+  "journal": {
+    "title": "Journal des corrections",
+    "count": "{{count}} correction(s)",
+    "from": "Du",
+    "to": "Au",
+    "apply": "Afficher",
+    "reset": "Toute période",
+    "print": "Imprimer",
+    "printAria": "Imprimer le journal des corrections de la période affichée",
+    "empty": "Aucune correction sur cette période.",
+    "loadError": "Le journal n'a pas pu être chargé.",
+    "printError": "Le journal n'a pas pu être imprimé.",
+    "periodInvalid": "La date de fin précède la date de début.",
+    "noEffect": "Sans effet sur le dû",
+    "by": "par {{user}}",
+    "period": {
+      "between": "Du {{from}} au {{to}}",
+      "from": "Depuis le {{from}}",
+      "to": "Jusqu'au {{to}}",
+      "all": "Toute période"
+    },
+    "columns": {
+      "date": "Date",
+      "correction": "Correction",
+      "effect": "Effet sur le dû",
+      "reason": "Motif",
+      "by": "Par"
+    },
+    "category": {
+      "ENCASHMENT": "Versement",
+      "ENROLMENT": "Inscription",
+      "ATTENDANCE": "Présence",
+      "JUSTIFICATION": "Justification",
+      "CATCH_UP": "Rattrapage"
+    },
+    "generatedOn": "Édité le {{date}}",
+    "page": "Page {{current}} / {{total}}",
+    "fileName": "journal"
   }
 }

@@ -1656,5 +1656,44 @@
     "departure": {
       "notEnrolled": "This student no longer has an open enrolment in this group: the list was reloaded."
     }
+  },
+  "journal": {
+    "title": "Correction log",
+    "count": "{{count}} correction(s)",
+    "from": "From",
+    "to": "To",
+    "apply": "Show",
+    "reset": "Any period",
+    "print": "Print",
+    "printAria": "Print the correction log for the period shown",
+    "empty": "No correction in this period.",
+    "loadError": "The correction log could not be loaded.",
+    "printError": "The correction log could not be printed.",
+    "periodInvalid": "The end date is before the start date.",
+    "noEffect": "No effect on the amount due",
+    "by": "by {{user}}",
+    "period": {
+      "between": "From {{from}} to {{to}}",
+      "from": "Since {{from}}",
+      "to": "Until {{to}}",
+      "all": "Any period"
+    },
+    "columns": {
+      "date": "Date",
+      "correction": "Correction",
+      "effect": "Effect on the amount due",
+      "reason": "Reason",
+      "by": "By"
+    },
+    "category": {
+      "ENCASHMENT": "Payment",
+      "ENROLMENT": "Enrolment",
+      "ATTENDANCE": "Attendance",
+      "JUSTIFICATION": "Justification",
+      "CATCH_UP": "Catch-up"
+    },
+    "generatedOn": "Printed on {{date}}",
+    "page": "Page {{current}} / {{total}}",
+    "fileName": "correction_log"
   }
 }

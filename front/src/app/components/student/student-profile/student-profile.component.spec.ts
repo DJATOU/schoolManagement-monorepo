@@ -9,7 +9,10 @@ import { of, throwError } from 'rxjs';
 import { GroupService } from '../../../services/group.service';
 import { StudentEncashmentsComponent } from '../student-encashments/student-encashments.component';
 import { StudentEnrolmentsComponent } from '../student-enrolments/student-enrolments.component';
+import { StudentJournalComponent } from '../student-journal/student-journal.component';
 import { StudentService } from '../services/student.service';
+import { AuthService } from '../../../services/auth.service';
+import { By } from '@angular/platform-browser';
 
 /**
  * Fiche d'un étudiant, ouverte sur l'identifiant porté par l'URL.
@@ -43,6 +46,27 @@ describe('StudentProfileComponent', () => {
 
   it('n\'expose aucune URL de photo avant le chargement de l\'étudiant', () => {
     expect(component.studentPhotoUrl).toBe('');
+  });
+
+  /** Le Journal nomme les reçus : il n'apparaît que pour l'ADMIN, comme les versements (D.5). */
+  it('Journal des corrections : affiché à l\'ADMIN, pour l\'élève de la fiche ; absent sinon', () => {
+    const auth = TestBed.inject(AuthService);
+    const role = spyOn(auth, 'hasRole').and.returnValue(false);
+    component.student = aStudent({ id: 42 });
+    component.loading = false;
+    fixture.detectChanges();
+    expect(fixture.debugElement.query(By.directive(StudentJournalComponent))).toBeNull();
+
+    role.and.returnValue(true);
+    fixture.destroy();
+    fixture = TestBed.createComponent(StudentProfileComponent);
+    component = fixture.componentInstance;
+    component.student = aStudent({ id: 42 });
+    component.loading = false;
+    fixture.detectChanges();
+    const journal = fixture.debugElement.query(By.directive(StudentJournalComponent));
+    expect(journal).not.toBeNull();
+    expect((journal.componentInstance as StudentJournalComponent).studentId).toBe(42);
   });
 
   /**

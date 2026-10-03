@@ -511,6 +511,12 @@ données de la modale, que le calendrier et la liste d'une série relisent à la
 qu'elle soit (bouton, Échap, clic au dehors). `correctionErrorOf` met en commun la lecture d'un refus
 de correction.
 
+Précisions (D.5) : le Journal est un panneau de la fiche élève, ADMIN seul, lu à l'ouverture. Il
+s'imprime en A4 paysage, composé par pdfmake comme les reçus. « Imprimer » relit le Journal sur la
+période saisie avant de l'imprimer. La police embarquée n'a pas de flèche : « → » s'imprime « -> ».
+L'impression passe par une iframe masquée, téléchargement en repli (`utils/pdf-print`,
+`PdfOutputService`) ; les services de reçus gardent pour l'instant leur propre copie de ce code.
+
 ## Error Handling
 
 `CustomServiceException` avec statut explicite ; aucun 500 pour un cas métier. Corps

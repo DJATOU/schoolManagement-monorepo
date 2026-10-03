@@ -1,0 +1,72 @@
+<mat-accordion class="pf-accordion">
+  <mat-expansion-panel (opened)="onOpened()">
+    <mat-expansion-panel-header>
+      <mat-panel-title>
+        <mat-icon>history_edu</mat-icon>
+        {{ 'journal.title' | translate }}<ng-container *ngIf="journal"> ({{ journal.entries.length }})</ng-container>
+      </mat-panel-title>
+    </mat-expansion-panel-header>
+
+    <form class="jr-period" [formGroup]="form" (ngSubmit)="reload()">
+      <mat-form-field appearance="outline" class="jr-day">
+        <mat-label>{{ 'journal.from' | translate }}</mat-label>
+        <input matInput type="date" formControlName="from">
+      </mat-form-field>
+      <mat-form-field appearance="outline" class="jr-day">
+        <mat-label>{{ 'journal.to' | translate }}</mat-label>
+        <input matInput type="date" formControlName="to">
+      </mat-form-field>
+      <div class="jr-actions">
+        <button mat-stroked-button type="submit" class="jr-apply" [disabled]="loading || periodInvalid">
+          <mat-icon>filter_alt</mat-icon>{{ 'journal.apply' | translate }}
+        </button>
+        <button mat-button type="button" class="jr-reset" (click)="resetPeriod()" [disabled]="loading">
+          {{ 'journal.reset' | translate }}
+        </button>
+        <button mat-flat-button color="primary" type="button" class="jr-print" (click)="print()"
+          [disabled]="loading || printing || periodInvalid" [attr.aria-label]="'journal.printAria' | translate">
+          <mat-icon>print</mat-icon>{{ 'journal.print' | translate }}
+        </button>
+      </div>
+    </form>
+    <p class="jr-invalid" role="alert" *ngIf="periodInvalid">{{ 'journal.periodInvalid' | translate }}</p>
+
+    <div class="jr-loading" *ngIf="loading">
+      <mat-spinner diameter="32"></mat-spinner>
+    </div>
+
+    <p class="jr-error" role="alert" *ngIf="!loading && errorMessage">{{ errorMessage }}</p>
+
+    <ng-container *ngIf="!loading && !errorMessage && journal">
+      <div class="pf-empty" *ngIf="journal.entries.length === 0">
+        <mat-icon>history_edu</mat-icon>
+        <span>{{ 'journal.empty' | translate }}</span>
+      </div>
+
+      <ol class="jr-list" *ngIf="journal.entries.length > 0">
+        <li class="jr-item" *ngFor="let entry of journal.entries">
+          <div class="jr-head">
+            <span class="jr-category" [attr.data-category]="entry.category">
+              {{ ('journal.category.' + entry.category) | translate }}
+            </span>
+            <span class="jr-when">{{ instant(entry) }}</span>
+            <span class="jr-by">{{ 'journal.by' | translate: { user: entry.performedBy } }}</span>
+          </div>
+          <p class="jr-description">{{ entry.description }}</p>
+          <p class="jr-effect" *ngFor="let effect of effects(entry)">
+            <mat-icon aria-hidden="true">payments</mat-icon>{{ effect }}
+          </p>
+          <p class="jr-effect jr-effect--none" *ngIf="!entry.amountEffect && entry.category === 'JUSTIFICATION'">
+            <mat-icon aria-hidden="true">info_outline</mat-icon>{{ 'journal.noEffect' | translate }}
+          </p>
+          <p class="jr-reason" *ngIf="entry.reasonType || entry.reasonText">
+            <mat-icon aria-hidden="true">sticky_note_2</mat-icon>
+            <strong *ngIf="entry.reasonType">{{ ('correction.reason.' + entry.reasonType) | translate }}</strong>
+            <ng-container *ngIf="entry.reasonType && entry.reasonText"> — </ng-container>
+            <span *ngIf="entry.reasonText">{{ entry.reasonText }}</span>
+          </p>
+        </li>
+      </ol>
+    </ng-container>
+  </mat-expansion-panel>
+</mat-accordion>
