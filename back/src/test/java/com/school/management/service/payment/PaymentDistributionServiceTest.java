@@ -169,7 +169,8 @@ class PaymentDistributionServiceTest {
     /** Le résolveur est la source des candidates : on lui fait dire ce qui est facturable. */
     private void givenBillable(List<SessionEntity> billable, List<SessionEntity> excluded) {
         when(billableSessionsResolver.resolve(STUDENT_ID, SERIES_ID)).thenReturn(
-                new BillableSessions(billable, excluded, 0, true, date("2025-01-10")));
+                new BillableSessions(billable, excluded, 0, true,
+                        billable.stream().map(SessionEntity::getId).collect(java.util.stream.Collectors.toSet())));
     }
 
     private static List<Long> sessionIds(List<PaymentDetailEntity> details) {

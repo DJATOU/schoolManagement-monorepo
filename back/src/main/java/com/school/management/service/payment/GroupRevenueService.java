@@ -93,10 +93,15 @@ public class GroupRevenueService {
         Map<Long, BigDecimal> refundedBySeries = readRefundsBySeries(groupId);
         Map<Long, List<SessionRevenueDTO>> sessionsBySeries = readSessionsBySeries(groupId);
 
-        List<Long> memberIds = studentGroupRepository.findByGroupIdAndActiveTrue(groupId).stream()
+        // Tous les étudiants passés par le groupe, départs compris, chacun une fois : un étudiant
+        // parti doit encore les séances de sa fenêtre (C.5), et son versement reste encaissé. Les
+        // seules inscriptions actives faisaient disparaître du relevé son dû comme son trop-perçu.
+        // Une série hors de sa fenêtre et non suivie lui coûte zéro : il n'y pèse rien.
+        List<Long> memberIds = studentGroupRepository.findByGroupId(groupId).stream()
                 .map(StudentGroupEntity::getStudent)
                 .filter(Objects::nonNull)
                 .map(student -> student.getId())
+                .distinct()
                 .toList();
 
         List<SeriesRevenueDTO> seriesRevenues = new ArrayList<>();

@@ -143,7 +143,8 @@ student_groups  + date_left DATE-like TIMESTAMP (00:00), nullable
 |---|---|---|
 | Feuille_Appel | inscriptions actives, `dateAssigned <= séance` | inscriptions dont la fenêtre contient la séance, actives ou clôturées (6.2) |
 | Écriture d'une absence | aucun contrôle | refus hors fenêtre (7.3) |
-| `BillableSessionsResolverImpl` | inscription **active** seulement | inscription dont la fenêtre recoupe la Série ; facturable = dans la fenêtre, ou suivie |
+| `BillableSessionsResolverImpl` | inscription **active** seulement | toutes les inscriptions au groupe, closes comprises ; facturable = dans une fenêtre, ou suivie |
+| `GroupRevenueService` (relevé de groupe) | inscrits actifs | tous les étudiants passés par le groupe |
 | Rattrapage (`CatchUpBillingQualifierImpl`, routage) | inscriptions actives | inchangé à l'étape 1 |
 
 Le changement du résolveur est le premier des deux changements de calcul assumés dans les
@@ -163,6 +164,12 @@ Précisions (C.1, C.2) :
   groupe ne se recouvrent jamais (409 à l'inscription).
 - Le départ par `DELETE` est daté du jour même, sans Motif ni Aperçu, jusqu'à C.6. Une inscription
   dont l'arrivée est future ne peut pas se terminer : il faut corriger l'arrivée.
+
+Précisions (C.5) : le résolveur lit toutes les inscriptions de l'étudiant au groupe et rend les
+séances que contient une fenêtre (`withinEnrolmentSessionIds`), dont l'historique tire son motif.
+« Membre de la série » (`enrolled`) garde l'inscription active comme critère suffisant — une série
+entière antérieure à l'arrivée reste affichée, séances écartées — et y ajoute une fenêtre close qui
+touche la série. Le relevé de groupe compte tous les étudiants passés par le groupe.
 
 Précisions (C.4) : `AbsenceWindowGuard` juge toute ligne qui n'est pas une présence, sur la
 feuille de présence, la présence unitaire et la modification d'une séance pointée — déplacer une

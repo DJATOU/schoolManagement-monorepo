@@ -115,16 +115,31 @@ class BillableSessionsResolverTest {
 
     /** Inscription active au groupe, avec ou sans date d'affectation. */
     private void givenEnrolment(Date dateAssigned) {
-        StudentGroupEntity enrolment = new StudentGroupEntity();
-        enrolment.setGroup(group(GROUP_ID));
-        enrolment.setDateAssigned(dateAssigned);
-        when(studentGroupRepository.findByGroupIdAndStudentIdAndActiveTrue(GROUP_ID, STUDENT_ID))
-                .thenReturn(Optional.of(enrolment));
+        givenEnrolments(open(dateAssigned));
+    }
+
+    private void givenEnrolments(StudentGroupEntity... enrolments) {
+        when(studentGroupRepository.findByGroupIdAndStudentId(GROUP_ID, STUDENT_ID))
+                .thenReturn(List.of(enrolments));
     }
 
     private void givenNoEnrolment() {
-        when(studentGroupRepository.findByGroupIdAndStudentIdAndActiveTrue(GROUP_ID, STUDENT_ID))
-                .thenReturn(Optional.empty());
+        when(studentGroupRepository.findByGroupIdAndStudentId(GROUP_ID, STUDENT_ID)).thenReturn(List.of());
+    }
+
+    private static StudentGroupEntity open(Date dateAssigned) {
+        StudentGroupEntity enrolment = new StudentGroupEntity();
+        enrolment.setDateAssigned(dateAssigned);
+        enrolment.setActive(true);
+        return enrolment;
+    }
+
+    /** Inscription close : désactivée, avec sa Date_Sortie, jour du départ inclus. */
+    private static StudentGroupEntity closed(Date dateAssigned, Date dateLeft) {
+        StudentGroupEntity enrolment = open(dateAssigned);
+        enrolment.setActive(false);
+        enrolment.setDateLeft(dateLeft);
+        return enrolment;
     }
 
     private void givenSessions(SessionEntity... sessions) {
@@ -173,7 +188,8 @@ class BillableSessionsResolverTest {
         assertThat(result.excludedCount()).isZero();
         assertThat(result.attendedCount()).isZero();
         assertThat(result.enrolled()).isTrue();
-        assertThat(result.enrollmentDate()).isEqualTo(ENROLMENT_DATE);
+        assertThat(result.isWithinEnrolment(1L)).isTrue();
+        assertThat(result.isWithinEnrolment(2L)).isTrue();
     }
 
     @Test
@@ -239,7 +255,7 @@ class BillableSessionsResolverTest {
         assertThat(result.excluded()).extracting(SessionEntity::getId).containsExactly(2L);
         assertThat(result.attendedCount()).isEqualTo(1);
         assertThat(result.enrolled()).isFalse();
-        assertThat(result.enrollmentDate()).isNull();
+        assertThat(result.withinEnrolmentSessionIds()).isEmpty();
     }
 
     @Test
@@ -255,7 +271,7 @@ class BillableSessionsResolverTest {
 
         // L'inscription existe, mais sans date aucune séance n'est retenue à ce titre.
         assertThat(result.enrolled()).isTrue();
-        assertThat(result.enrollmentDate()).isNull();
+        assertThat(result.withinEnrolmentSessionIds()).isEmpty();
         assertThat(result.billable()).extracting(SessionEntity::getId).containsExactly(1L);
         assertThat(result.excluded()).extracting(SessionEntity::getId).containsExactly(2L);
     }
@@ -272,7 +288,7 @@ class BillableSessionsResolverTest {
         assertThat(result.billable()).isEmpty();
         assertThat(result.excluded()).extracting(SessionEntity::getId).containsExactly(1L);
         verify(studentGroupRepository, never())
-                .findByGroupIdAndStudentIdAndActiveTrue(GROUP_ID, STUDENT_ID);
+                .findByGroupIdAndStudentId(GROUP_ID, STUDENT_ID);
     }
 
     @Test
@@ -284,8 +300,127 @@ class BillableSessionsResolverTest {
         BillableSessions result = resolver.resolve(STUDENT_ID, SERIES_ID);
 
         assertThat(result.enrolled()).isFalse();
-        assertThat(result.enrollmentDate()).isNull();
+        assertThat(result.withinEnrolmentSessionIds()).isEmpty();
         assertThat(result.excludedCount()).isEqualTo(1);
+    }
+
+    // ------------------------------------------------------------------
+    // Spec admin-corrections, C.5 : la Fenêtre_Inscription borne ce qui est dû
+    // ------------------------------------------------------------------
+
+    /** Série « Janvier » : quatre lundis à 10:00. */
+    private SessionEntity[] january() {
+        return new SessionEntity[] {
+                session(1L, at("2025-01-06", 10)), session(2L, at("2025-01-13", 10)),
+                session(3L, at("2025-01-20", 10)), session(4L, at("2025-01-27", 10)) };
+    }
+
+    private static Date at(String isoDate, int hour) {
+        return Date.from(LocalDate.parse(isoDate).atTime(hour, 0).atZone(ZoneId.systemDefault()).toInstant());
+    }
+
+    @Test
+    @DisplayName("Parti le 20/01 : ses séances jusqu'au départ inclus restent dues, même non validées ; "
+            + "celle du 27/01 non")
+    void closedEnrolmentBillsItsWindow() {
+        givenSeries();
+        givenEnrolments(closed(date("2024-09-02"), date("2025-01-20")));
+        givenSessions(january());
+
+        BillableSessions result = resolver.resolve(STUDENT_ID, SERIES_ID);
+
+        // Avant : l'inscription close n'était plus lue, et rien n'était dû sans fiche de présence.
+        assertThat(result.billable()).extracting(SessionEntity::getId).containsExactly(1L, 2L, 3L);
+        assertThat(result.excluded()).extracting(SessionEntity::getId).containsExactly(4L);
+        assertThat(result.enrolled()).isTrue();
+        assertThat(result.withinEnrolmentSessionIds()).containsExactlyInAnyOrder(1L, 2L, 3L);
+    }
+
+    @Test
+    @DisplayName("Venu après son départ : la séance est due, consommée, mais hors fenêtre")
+    void attendanceAfterDepartureIsBilledOutsideTheWindow() {
+        SessionEntity[] sessions = january();
+        givenSeries();
+        givenEnrolments(closed(date("2024-09-02"), date("2025-01-20")));
+        givenSessions(sessions);
+        givenAttendances(attendance(sessions[3], true));
+
+        BillableSessions result = resolver.resolve(STUDENT_ID, SERIES_ID);
+
+        assertThat(result.billable()).extracting(SessionEntity::getId).containsExactly(1L, 2L, 3L, 4L);
+        assertThat(result.isWithinEnrolment(4L)).isFalse();
+        assertThat(result.attendedCount()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("Série postérieure au départ : il n'en est plus membre, seules ses séances suivies comptent")
+    void seriesAfterDepartureIsNotHis() {
+        SessionEntity[] sessions = january();
+        givenSeries();
+        givenEnrolments(closed(date("2024-09-02"), date("2024-12-20")));
+        givenSessions(sessions);
+        givenAttendances(attendance(sessions[0], true));
+
+        BillableSessions result = resolver.resolve(STUDENT_ID, SERIES_ID);
+
+        assertThat(result.enrolled()).isFalse();
+        assertThat(result.billable()).extracting(SessionEntity::getId).containsExactly(1L);
+        assertThat(result.withinEnrolmentSessionIds()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Parti le 10/01 et revenu le 20/01 : ses deux périodes comptent, pas l'intervalle")
+    void returnedStudentHasTwoWindows() {
+        givenSeries();
+        givenEnrolments(closed(date("2024-09-02"), date("2025-01-10")), open(date("2025-01-20")));
+        givenSessions(january());
+
+        BillableSessions result = resolver.resolve(STUDENT_ID, SERIES_ID);
+
+        assertThat(result.billable()).extracting(SessionEntity::getId).containsExactly(1L, 3L, 4L);
+        assertThat(result.excluded()).extracting(SessionEntity::getId).containsExactly(2L);
+        assertThat(result.enrolled()).isTrue();
+    }
+
+    @Test
+    @DisplayName("Inscrit le 13/01 à 17:45 : la séance du 13/01 à 10:00 le concerne déjà (exigence 5.4)")
+    void arrivalDayCountsWhateverTheHour() {
+        givenSeries();
+        givenEnrolment(at("2025-01-13", 17));
+        givenSessions(january());
+
+        BillableSessions result = resolver.resolve(STUDENT_ID, SERIES_ID);
+
+        assertThat(result.billable()).extracting(SessionEntity::getId).containsExactly(2L, 3L, 4L);
+        assertThat(result.excluded()).extracting(SessionEntity::getId).containsExactly(1L);
+    }
+
+    @Test
+    @DisplayName("Inscription active arrivée après toute la série : membre, toutes les séances écartées, "
+            + "comme avant ; ligne héritée dont active est nul, idem")
+    void activeEnrolmentStaysMemberOfEarlierSeries() {
+        StudentGroupEntity legacy = open(date("2025-02-03"));
+        legacy.setActive(null);
+        givenSeries();
+        givenEnrolments(legacy);
+        givenSessions(january());
+
+        BillableSessions result = resolver.resolve(STUDENT_ID, SERIES_ID);
+
+        assertThat(result.enrolled()).isTrue();
+        assertThat(result.billable()).isEmpty();
+        assertThat(result.excludedCount()).isEqualTo(4);
+    }
+
+    @Test
+    @DisplayName("Ensembles nuls dans le résultat : lus comme vides")
+    void nullSetsAreEmpty() {
+        BillableSessions result = new BillableSessions(List.of(), List.of(), 0, false, null, null);
+
+        assertThat(result.withinEnrolmentSessionIds()).isEmpty();
+        assertThat(result.compensatedAwaySessionIds()).isEmpty();
+        assertThat(new BillableSessions(List.of(), List.of(), 0, false, java.util.Set.of(7L))
+                .isWithinEnrolment(7L)).isTrue();
     }
 
     // ------------------------------------------------------------------

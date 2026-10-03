@@ -327,15 +327,18 @@ public class StudentHistoryService {
      * les deux reviendrait à signaler comme surprenante une facturation qui n'a rien de
      * surprenant.</p>
      *
-     * <p>Un étudiant sans inscription n'a pas de date d'inscription : toutes ses séances
-     * facturables sont des séances suivies (exigence 1.4), donc du rattrapage pur — le motif
-     * {@code ATTENDED_BEFORE_ENROLMENT} les décrit exactement.</p>
+     * <p>Un étudiant sans inscription n'a pas de fenêtre : toutes ses séances facturables sont des
+     * séances suivies (exigence 1.4), donc du rattrapage pur — le motif
+     * {@code ATTENDED_BEFORE_ENROLMENT} les décrit exactement. Il décrit de même une séance suivie
+     * après le départ : hors fenêtre, facturée parce que consommée.</p>
+     *
+     * <p>Le motif vient du résolveur, qui sait quelles séances sa fenêtre contient : le recalculer
+     * ici depuis une date d'inscription unique ignorerait le départ, et un retour dans le groupe.</p>
      */
     private Map<Long, BillingInclusionReason> resolveInclusionReasons(BillableSessions billable) {
         Map<Long, BillingInclusionReason> reasons = new HashMap<>();
-        Date enrollmentDate = billable.enrollmentDate();
         for (SessionEntity session : billable.billable()) {
-            reasons.put(session.getId(), isOnOrAfterEnrolment(session, enrollmentDate)
+            reasons.put(session.getId(), billable.isWithinEnrolment(session.getId())
                     ? BillingInclusionReason.AFTER_ENROLMENT
                     : BillingInclusionReason.ATTENDED_BEFORE_ENROLMENT);
         }
@@ -343,19 +346,6 @@ public class StudentHistoryService {
             reasons.put(session.getId(), BillingInclusionReason.EXCLUDED);
         }
         return reasons;
-    }
-
-    /**
-     * Séance postérieure ou égale à la date d'inscription. Même test que le résolveur partagé :
-     * il ne s'agit pas de rejouer la règle du prorata — le verdict facturable/écarté vient du
-     * résolveur — mais de départager les deux motifs d'inclusion.
-     */
-    private boolean isOnOrAfterEnrolment(SessionEntity session, Date enrollmentDate) {
-        if (enrollmentDate == null) {
-            return false;
-        }
-        Date sessionDate = session.getSessionTimeStart();
-        return sessionDate != null && !sessionDate.before(enrollmentDate);
     }
 
     /**

@@ -18,22 +18,23 @@ package com.school.management.dto.session;
 public enum BillingInclusionReason {
 
     /**
-     * Séance postérieure ou égale à la date d'inscription : facturable à ce seul titre
-     * (exigence 1.1), que l'étudiant y ait assisté ou non.
+     * Séance d'une Fenêtre_Inscription de l'étudiant, de son arrivée à son départ inclus :
+     * facturable à ce seul titre (exigence 1.1), que l'étudiant y ait assisté ou non. Le nom
+     * date d'avant la date de sortie ; la valeur est gardée, l'écran la lit.
      */
     AFTER_ENROLMENT,
 
     /**
-     * Séance antérieure à la date d'inscription, facturée parce que l'étudiant y a assisté
-     * (exigence 1.2). C'est le cas à étiqueter « rattrapage » dans l'historique : sans cette
-     * mention, sa facturation paraît arbitraire (exigence 11.5). Couvre également l'étudiant
-     * sans inscription active, dont seules les séances suivies sont facturables (exigence 1.4).
+     * Séance hors de toute fenêtre, facturée parce que l'étudiant y a assisté (exigence 1.2) :
+     * avant son arrivée, après son départ, ou sans inscription au groupe (exigence 1.4). C'est le
+     * cas à étiqueter « rattrapage » dans l'historique : sans cette mention, sa facturation paraît
+     * arbitraire (exigence 11.5).
      */
     ATTENDED_BEFORE_ENROLMENT,
 
     /**
-     * Séance écartée : antérieure à l'inscription et non suivie. Elle reste visible dans
-     * l'historique, non présente et non facturée — ce n'est pas une dette (exigences 11.3, 11.4).
+     * Séance écartée : hors de toute fenêtre et non suivie. Elle reste visible dans l'historique,
+     * non présente et non facturée — ce n'est pas une dette (exigences 11.3, 11.4).
      */
     EXCLUDED
 }

@@ -20,10 +20,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
@@ -84,7 +81,7 @@ class PaymentCostResolverTest {
     private void givenBillable(int billableCount, int attendedCount, int excludedCount) {
         when(billableSessionsResolver.resolve(STUDENT_ID, SERIES_ID)).thenReturn(
                 new BillableSessions(sessions(1L, billableCount), sessions(100L, excludedCount),
-                        attendedCount, true, date("2025-01-01")));
+                        attendedCount, true, null));
     }
 
     private void givenBillable(int billableCount, int attendedCount) {
@@ -100,10 +97,6 @@ class PaymentCostResolverTest {
             list.add(session);
         }
         return List.copyOf(list);
-    }
-
-    private static Date date(String isoDate) {
-        return Date.from(LocalDate.parse(isoDate).atStartOfDay(ZoneId.systemDefault()).toInstant());
     }
 
     @BeforeEach

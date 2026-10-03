@@ -445,7 +445,25 @@ des lignes) ; `StudentHistoryService.allocatePayments`.
   `AbsenceWindowGuardTest` (cas limites) ; 15 mutations tuées. L'écran affiche encore un message
   générique sur ce refus : le retrait des lignes en un clic est en C.8
   _Exigences : 7.3 à 7.5_
-- [ ] C.5 Résolveur : Séances facturables d'une inscription clôturée par sa fenêtre
+- [x] C.5 Résolveur : Séances facturables d'une inscription clôturée par sa fenêtre.
+  `BillableSessionsResolverImpl` lit toutes les inscriptions de l'étudiant au groupe, closes
+  comprises (`findByGroupIdAndStudentId`) : facturable = séance qu'une fenêtre contient, ou séance
+  suivie. Exemple : parti le 14/01, rien de validé, la série de janvier lui coûte toujours
+  2 × 2 000 DA ; avant, 0 séance due et 4 000 DA annoncés en trop-perçu. Étudiant revenu : ses deux
+  fenêtres comptent, pas l'intervalle. `BillableSessions.enrollmentDate` devient
+  `withinEnrolmentSessionIds` : le motif d'historique (`AFTER_ENROLMENT` = dans une fenêtre,
+  `ATTENDED_BEFORE_ENROLMENT` = suivie hors fenêtre, avant l'arrivée ou après le départ) vient du
+  résolveur au lieu d'être recalculé depuis une date unique. `enrolled` = inscription active (une
+  série entière antérieure à l'arrivée reste affichée, comme avant) ou fenêtre close touchant la
+  série. Inchangé pour un étudiant inscrit sans départ. Relevé de groupe (`GroupRevenueService`) :
+  tous les étudiants passés par le groupe, une fois chacun, et non plus les seuls inscrits actifs —
+  le dû et le trop-perçu d'un étudiant parti disparaissaient du relevé. Relevé, non corrigé : la
+  liste des groupes payables (`StudentPayableGroupsService`) ne propose un groupe quitté que s'il
+  porte une présence de l'étudiant.
+  Tests : `BillableSessionsResolverTest` (fenêtre close, venu après le départ, série postérieure,
+  étudiant revenu, jour d'arrivée quelle que soit l'heure, ligne héritée), `DepartedStudentBilling
+  IntegrationTest` (devis et relevé de groupe sur H2), `GroupRevenueBalanceTest` ; 10 mutations
+  tuées
   _Changement de calcul assumé — D5_
 - [ ] C.6 `EnrolmentCorrectionService` : arrivée reculée (absences, présences ordinaires) et
   avancée (Séances validées sans Présence), départ, correction de départ, réouverture ;

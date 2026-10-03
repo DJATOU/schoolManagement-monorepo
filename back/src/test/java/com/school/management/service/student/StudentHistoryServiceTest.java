@@ -178,12 +178,16 @@ class StudentHistoryServiceTest {
 
             List<SessionEntity> billable = new ArrayList<>();
             List<SessionEntity> excluded = new ArrayList<>();
+            java.util.Set<Long> withinEnrolment = new java.util.HashSet<>();
             int attendedCount = 0;
             for (SessionEntity session : chronologicalSessions(series)) {
                 AttendanceEntity attendance = activeAttendance(session, studentId);
                 boolean onOrAfterEnrolment = enrollmentDate != null
                         && session.getSessionTimeStart() != null
                         && !session.getSessionTimeStart().before(enrollmentDate);
+                if (onOrAfterEnrolment) {
+                    withinEnrolment.add(session.getId());
+                }
                 if (attendance != null || onOrAfterEnrolment) {
                     billable.add(session);
                     if (attendance != null && Boolean.TRUE.equals(attendance.getIsPresent())) {
@@ -194,7 +198,7 @@ class StudentHistoryServiceTest {
                 }
             }
             return new BillableSessions(List.copyOf(billable), List.copyOf(excluded),
-                    attendedCount, enrolment.isPresent(), enrollmentDate);
+                    attendedCount, enrolment.isPresent(), withinEnrolment);
         });
     }
 
