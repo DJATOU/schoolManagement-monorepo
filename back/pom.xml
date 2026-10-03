@@ -442,6 +442,10 @@
                                         <include>com.school.management.service.correction.EnrolmentCorrectionService*</include>
                                         <include>com.school.management.service.correction.VentilationMover*</include>
                                         <include>com.school.management.service.EnrolmentDates</include>
+                                        <!-- C.9 : le fuseau de l'école décide du jour d'une séance
+                                             et de l'heure d'un reçu ; un conteneur laissé en UTC
+                                             décalait tout d'une heure. -->
+                                        <include>com.school.management.config.ApplicationTimeZone</include>
                                     </includes>
                                     <limits>
                                         <limit>

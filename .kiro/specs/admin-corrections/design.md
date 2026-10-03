@@ -19,16 +19,23 @@ Cible : installation sur site, en Docker, poste de l'école, fuseau `Africa/Algi
 
 ### D1 — Date calendaire, fuseau de la JVM
 
-Les colonnes sont des `TIMESTAMP` sans fuseau : elles portent l'heure murale de la JVM, fixée par
-`TZ` dans le conteneur (`Africa/Algiers`, corrigé depuis `Europe/Paris` sur `main`). Date_Inscription
+Les colonnes sont des `TIMESTAMP` sans fuseau : elles portent l'heure murale de la JVM. Date_Inscription
 et Date_Sortie sont stockées à 00:00 du jour ; une comparaison d'instants avec une Séance devient
 une comparaison de jours sans modifier le résolveur. La Date_Sortie est **incluse** : la
 comparaison se fait contre le lendemain 00:00 exclu.
 
-Au démarrage, le fuseau effectif est journalisé. S'il diffère de `app.expected-timezone`, le
-Système démarre quand même et affiche à l'Administrateur un bandeau rouge persistant. Une
-application qui ne démarre pas sur le poste du client est pire qu'une heure décalée : il ne sait
-pas lire les journaux Docker.
+**Fuseau de la JVM — révisé en C.9.** Il venait de `TZ` dans le conteneur, réglé sur UTC par défaut :
+un oubli imprimait un versement de 10:00 à 09:00 et datait de la veille ce qui se passe entre minuit
+et une heure à Alger. Le plan était de comparer ce fuseau à `app.expected-timezone` et d'afficher un
+bandeau rouge. Décision retenue avec le propriétaire produit : **l'application fixe elle-même son
+fuseau** au démarrage, `app.timezone` (variable `APP_TIMEZONE`, `Africa/Algiers` par défaut), avant la
+création de tout composant (`ApplicationTimeZone`, inscrit par `main`). Le risque disparaît au lieu
+d'être signalé, et aucun écran n'en dépend. Une installation dans un autre pays change cette seule
+valeur. Le fuseau appliqué, l'heure locale et le fuseau du système sont journalisés. Une valeur
+inconnue empêche le démarrage en la nommant : elle ne peut venir que d'une saisie à l'installation,
+où l'échec se voit tout de suite, alors qu'un repli sur Alger fausserait sans bruit toutes les heures
+d'une école située ailleurs. Hors périmètre : la monnaie (« DA »), écrite en dur ; à rendre
+réglable si une installation hors d'Algérie se présente.
 
 ### D2 — L'Encaissement, entité de premier rang
 
@@ -466,7 +473,7 @@ L'installation initiale part d'une base vide. La procédure ci-dessous sert aux 
 
 1. sauvegarde (`pg_dump` depuis le conteneur, fichier daté sur le poste et sur clé USB) ;
 2. `docker compose pull` / `build`, puis `up` ;
-3. vérification du fuseau et des migrations dans le bandeau d'état ;
+3. vérification du fuseau (ligne « Fuseau de l'école » du journal) et des migrations ;
 4. retour arrière documenté : restauration de la sauvegarde et image précédente.
 
 Un script `mise-a-jour.ps1` enchaîne ces étapes sur le Mini PC Windows.

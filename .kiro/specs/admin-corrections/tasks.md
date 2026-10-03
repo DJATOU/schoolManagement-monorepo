@@ -546,7 +546,23 @@ des lignes) ; `StudentHistoryService.allocatePayments`.
   feuille de présence (lignes refusées), services et utilitaires de jour ; mutations tuées côté
   serveur et côté écran
   _Exigences : 5, 6, 7.5_
-- [ ] C.9 Contrôle du fuseau au démarrage et bandeau d'alerte
+- [x] C.9 Fuseau de l'école fixé par l'application au démarrage — révisé avec le propriétaire produit :
+  le bandeau d'alerte prévu signalait le risque, le réglage le supprime (D1 mis à jour).
+  `ApplicationTimeZone`, inscrit par `main`, juste après l'initialisation des journaux et avant tout
+  composant (la source de données transmet le fuseau de la JVM à PostgreSQL) :
+  - `app.timezone` (variable `APP_TIMEZONE`, ajoutée à `docker-compose.yml` et `.env.example`),
+    `Africa/Algiers` sans réglage ou réglage vide, appliqué même si le conteneur est en UTC. Exemple
+    évité : un versement de 10:00 imprimé à 09:00, une séance de 00:30 datée de la veille ;
+  - une ligne au journal : « Fuseau de l'école : Africa/Algiers (UTC+01:00), heure locale … ;
+    fuseau du système : UTC (non utilisé par l'application) » ;
+  - valeur inconnue (« Africa/Alger ») : démarrage refusé en la nommant, exemples à l'appui ;
+  - autre pays : la seule valeur `APP_TIMEZONE` change. Hors périmètre, relevé : la monnaie « DA »
+    est écrite en dur dans les écrans, reçus et messages.
+  `TZ` reste dans le conteneur : il ne règle plus que l'heure en tête des lignes du journal.
+  Tests : `ApplicationTimeZoneTest` (JVM partie d'UTC : défaut, vide, autre pays, valeur inconnue
+  sans effet, variable `APP_TIMEZONE` lue, séance de 00:30 du jour même, ligne du journal, ordre),
+  `SchoolManagementApplicationStartupTest` ; démarrage réel vérifié, conteneur simulé en UTC
+  (`TZ=UTC`) : valeur inconnue refusée, défaut appliqué avant « Starting » ; 10 mutations tuées
   _D1_
 
 ## Lot D — Présences, rattrapages, dévalidation, Journal (exigences 8, 9, 10, 12)
