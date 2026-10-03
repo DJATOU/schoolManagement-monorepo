@@ -490,8 +490,21 @@ des lignes) ; `StudentHistoryService.allocatePayments`.
   ventilation déplacée, reliquat et trop-perçu, refus, Aperçu périmé, VIEWER), cas limites
   (`EnrolmentCorrectionEdgeCasesIntegrationTest`, `VentilationMoverTest`)
   _Exigences : 5.5 à 5.9, 6.1, 6.3 à 6.5 — D6_
-- [ ] C.7 Propriétés P5 « fenêtre respectée », P6 « déplacer la ventilation ne change aucun
-  montant »
+- [x] C.7 Propriétés P5 « fenêtre respectée », P6 « déplacer la ventilation ne change aucun
+  montant ». `EnrolmentWindowPropertiesTest` (jqwik, H2, oracles relus en SQL et comparés en jours) :
+  - **P5** : trois étudiants aux fenêtres tirées (ouvertes, closes, retours), puis 3 à 12 opérations
+    parmi feuille de présence, présence unitaire, correction d'arrivée, de départ, réouverture,
+    séance déplacée. Après chaque opération : aucune absence active hors d'une fenêtre de son
+    étudiant, et la Feuille_Appel de chaque séance est exactement l'ensemble des étudiants dont une
+    fenêtre contient son jour, départs compris ; une opération refusée ne change rien (présences,
+    inscriptions, séances, ventilation, Traces) ;
+  - **P6** : versements, puis une correction qui réduit la période (arrivée repoussée, départ
+    avancé). Encaissements, Imputations, reports, cumuls et versé de chaque série inchangés ; la
+    ventilation d'une Imputation ne grossit jamais, ne reste que sur des séances facturables, ne
+    dépasse jamais le prix net d'une séance, et ne perd d'argent que si chaque séance facturable de
+    la série est déjà couverte.
+  Couverture vérifiée par jqwik (feuilles acceptées et refusées, corrections acceptées et refusées,
+  déplacements avec et sans reliquat) ; 8 mutations du code tuées par les seules propriétés
 - [ ] C.8 Écrans : date d'arrivée à l'inscription ; corriger l'arrivée, enregistrer le départ,
   rouvrir ; lignes refusées retirables en un clic à la validation. Relevé en C.2 : la fiche élève
   et la fiche groupe affichent un message générique sur tout refus d'inscription (et la fiche
