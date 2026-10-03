@@ -467,14 +467,15 @@ class AttendanceCorrectionEndpointIntegrationTest extends CorrectionIntegrationT
         }
 
         @Test
-        @DisplayName("présence de rattrapage : 409, renvoyée vers sa correction dédiée")
-        void catchUpPresenceHasItsOwnCorrection() throws Exception {
+        @DisplayName("présence de rattrapage : ne passe pas à absent, elle se retire")
+        void catchUpPresenceIsNeverAnAbsence() throws Exception {
             Long catchUp = attendanceRepository.save(AttendanceEntity.builder().student(student).session(jan7)
                     .sessionSeries(s1).group(group).isPresent(true).isCatchUp(true).build()).getId();
 
-            remove(catchUp, "preview", "DATA_ENTRY_ERROR", null)
+            change(catchUp, "preview", false, null, "DATA_ENTRY_ERROR", null)
                     .andExpect(status().isConflict())
-                    .andExpect(jsonPath("$.message").value(containsString("Présence de rattrapage du 07/01/2030")));
+                    .andExpect(jsonPath("$.message").value("Présence de rattrapage du 07/01/2030 : elle ne passe pas à "
+                            + "absent. Si l'élève n'est pas venu, retirez-la : la séance manquée redevient à rattraper."));
         }
 
         @Test

@@ -34,6 +34,12 @@ public enum CorrectionEffectType {
 
     /** Une présence ou une absence est enregistrée dans la même opération que la correction. */
     ATTENDANCE_RECORDED,
+    /** Une présence de rattrapage saisie à tort est retirée (exigence 9.1). */
+    CATCH_UP_REMOVED,
+    /** La séance manquée qu'un rattrapage compensait redevient à rattraper (exigence 9.2). */
+    CATCH_UP_REOPENED,
+    /** La demande de rattrapage qui avait produit la présence retirée passe à « annulée » (D9). */
+    CATCH_UP_REQUEST_CANCELLED,
     /** Une présence passe à absent ou l'inverse, justification comprise (exigences 8.1 à 8.3). */
     ATTENDANCE_CHANGED,
 

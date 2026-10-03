@@ -287,6 +287,14 @@ L'absence d'origine redevient alors éligible, et son droit au rattrapage n'a ja
 Les deux montants concernés — Série d'accueil et Série d'origine — figurent dans l'Aperçu : un
 rattrapage compensatoire comptait la Séance manquée comme suivie dans sa Série d'origine.
 
+Précisions (D.2) : le retrait passe par le même point d'entrée que celui d'une ligne ordinaire, le
+serveur reconnaissant le rattrapage. La demande annulée est celle qui a produit la présence : même
+séance d'accueil, même séance manquée (si la présence en désigne une), statut non annulé ; une
+demande `COMPLETED` passe directement à `CANCELLED`, ce que l'annulation ordinaire d'une demande
+refuse. La séance d'accueil n'a pas à être validée. Seule la série d'accueil peut perdre une séance
+facturable, donc sa ventilation ; à l'origine, la séance manquée reste facturable et seul le dû à
+ce jour baisse.
+
 Précisions (D.1) — corriger une présence :
 
 - **Trois corrections**, une ligne d'une Séance validée à la fois : présent ↔ absent (justification

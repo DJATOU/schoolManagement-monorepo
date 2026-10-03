@@ -591,8 +591,25 @@ des lignes) ; `StudentHistoryService.allocatePayments`.
   Trace relues en SQL, justification, ajout après départ, ventilation déplacée, chaque refus, Aperçu
   périmé, rattrapage lié, VIEWER) ; mutations tuées
   _Exigences : 8.1 à 8.6_
-- [ ] D.2 Retrait d'une présence de rattrapage, réouverture du droit, demande passée à
-  `CANCELLED`
+- [x] D.2 Retrait d'une présence de rattrapage, réouverture du droit, demande passée à
+  `CANCELLED`. Même point d'entrée que le retrait d'une ligne (`POST /api/attendances/{id}/remove/…`) :
+  le serveur reconnaît le rattrapage. Dans la même opération :
+  - présence de rattrapage désactivée ; demande qui l'a produite (même séance d'accueil, même séance
+    manquée, non annulée) passée à `CANCELLED`, raison « Présence de rattrapage retirée par correction
+    (Motif : texte) » ; l'absence d'origine redevient éligible à une demande (9.2) ;
+  - Trace `CATCH_UP_REMOVED` gardant la séance manquée, la décision « déjà payée », l'état de
+    facturation et les demandes avant et après (9.3) ;
+  - portée : groupe d'accueil et groupe de la séance manquée, tous deux dans l'Aperçu. Exemple :
+    « Rattrapage de Amine Belkacem du 09/01/2030 (Math 1ère B) retiré : séance manquée du 07/01/2030
+    (Math 1ère A), déjà payée : oui » ; janvier (A), dû à ce jour 2 000 → 0 DA. Facturé sur place :
+    la série d'accueil perd la séance, le versé reste, annoncé comme trop-perçu.
+  Pas de séance validée exigée : un rattrapage enregistré par sa demande existe avant la validation,
+  et la feuille ne sait pas le retirer. Refus : séance d'accueil supprimée, année close à l'accueil
+  ou à l'origine. Une présence de rattrapage ne passe jamais à absent (409, « retirez-la »).
+  Tests : `CatchUpRemovalEndpointIntegrationTest` (Aperçu sur les deux groupes, confirmation, demande
+  annulée, absence de nouveau rattrapable puis corrigeable, Motif « Autre », facturé sur place et
+  trop-perçu, décisions écrites en clair, seules les demandes productrices annulées, refus) ;
+  mutations tuées
   _Exigences : 9.1 à 9.3 — D9_
 - [ ] D.3 Dévalidation avec Motif et Aperçu ; validation et dévalidation refusées sur année close
   _Exigences : 10.1, 10.2_
