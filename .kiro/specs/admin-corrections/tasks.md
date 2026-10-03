@@ -567,8 +567,29 @@ des lignes) ; `StudentHistoryService.allocatePayments`.
 
 ## Lot D — Présences, rattrapages, dévalidation, Journal (exigences 8, 9, 10, 12)
 
-- [ ] D.1 `AttendanceCorrectionService` : présent ↔ absent avec justification, ajout, retrait
-  par désactivation
+- [x] D.1 `AttendanceCorrectionService` : présent ↔ absent avec justification, ajout, retrait
+  par désactivation. Une ligne d'une Séance validée à la fois, par le `CorrectionRunner` :
+  - présent → absent : justification fixée dans la même action (8.2) ; absent → présent :
+    justification effacée, valeurs avant et après dans la Trace (8.3). Exemple : « Séance du
+    07/01/2030 (Math 1ère A) : Amine Belkacem absent (justifié) → présent », dû à ce jour de janvier
+    0 → 2 000 DA ;
+  - ajout d'une ligne manquante, pour un inscrit du groupe (inscription active ou close : une
+    présence après le départ est facturée comme séance consommée) ; un non-inscrit est renvoyé vers
+    la demande de rattrapage ; ligne déjà présente : 409 ;
+  - retrait par désactivation, la ligne reste en base (8.4) ; une présence consommée retirée rend sa
+    séance non facturable et sa ventilation passe sur une autre séance de la série.
+  Refus : absence sur une Séance_Non_Concernée (409 `ABSENCE_OUTSIDE_WINDOW`, ligne nommée, 8.5) ;
+  année close (8.6) ; séance non validée ou supprimée ; ligne retirée ; présence de rattrapage
+  (correction dédiée, D.2) ; séance rattrapée ou dont une demande de rattrapage est en cours, qui ne
+  peut devenir suivie ni perdre sa ligne ; même état ; présence « justifiée » ; Motif hors de
+  [Erreur de saisie, Justificatif reçu, Autre]. Points d'entrée `POST /api/attendances/{id}/correct|
+  remove/{preview|confirm}`, `POST /api/sessions/{id}/attendances/add/{preview|confirm}`,
+  `GET /api/attendances/correction-reasons`.
+  `SeriesSettlement` extrait de `EnrolmentCorrectionService` et partagé : ventilation déplacée,
+  statut stocké recalculé, trop-perçu annoncé — mêmes effets, mêmes mots.
+  Tests : `AttendanceCorrectionEndpointIntegrationTest` (34 : Aperçu sans écriture, confirmation et
+  Trace relues en SQL, justification, ajout après départ, ventilation déplacée, chaque refus, Aperçu
+  périmé, rattrapage lié, VIEWER) ; mutations tuées
   _Exigences : 8.1 à 8.6_
 - [ ] D.2 Retrait d'une présence de rattrapage, réouverture du droit, demande passée à
   `CANCELLED`

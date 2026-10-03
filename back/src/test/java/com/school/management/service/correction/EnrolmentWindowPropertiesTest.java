@@ -763,7 +763,8 @@ class EnrolmentWindowPropertiesTest {
             EncashmentService.class, ReceiptNumberService.class, PaymentProcessingService.class,
             EncashmentQueryService.class, RefundService.class, RefundNumberService.class,
             CorrectionAuditService.class, CorrectionRunner.class, EnrolmentCorrectionService.class,
-            VentilationMover.class, AbsenceWindowGuard.class, RollCallService.class, CatchUpRoutingService.class })
+            VentilationMover.class, SeriesSettlement.class, AbsenceWindowGuard.class, RollCallService.class,
+            CatchUpRoutingService.class })
     static class WindowTestContext {
 
         @Bean

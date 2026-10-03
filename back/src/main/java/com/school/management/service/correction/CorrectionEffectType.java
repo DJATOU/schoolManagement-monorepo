@@ -34,6 +34,8 @@ public enum CorrectionEffectType {
 
     /** Une présence ou une absence est enregistrée dans la même opération que la correction. */
     ATTENDANCE_RECORDED,
+    /** Une présence passe à absent ou l'inverse, justification comprise (exigences 8.1 à 8.3). */
+    ATTENDANCE_CHANGED,
 
     /**
      * Le versé d'une Série dépasse son coût après la correction : le trop-perçu est annoncé, ni

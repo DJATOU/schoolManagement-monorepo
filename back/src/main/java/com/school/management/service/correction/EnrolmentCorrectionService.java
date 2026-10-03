@@ -11,27 +11,20 @@ import com.school.management.persistance.SessionSeriesEntity;
 import com.school.management.persistance.StudentEntity;
 import com.school.management.persistance.StudentGroupEntity;
 import com.school.management.repository.AttendanceRepository;
-import com.school.management.repository.PaymentRepository;
 import com.school.management.repository.SessionRepository;
 import com.school.management.repository.SessionSeriesRepository;
 import com.school.management.repository.StudentGroupRepository;
 import com.school.management.service.EnrolmentDates;
 import com.school.management.service.ReadOnlyYearGuard;
 import com.school.management.service.exception.CustomServiceException;
-import com.school.management.service.payment.BillableSessionsResolver;
-import com.school.management.service.payment.EncashmentService;
-import com.school.management.service.payment.PaymentCostResolver;
 import com.school.management.service.session.RollCallService;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -92,11 +85,7 @@ public class EnrolmentCorrectionService {
     private final SessionSeriesRepository seriesRepository;
     private final SessionRepository sessionRepository;
     private final AttendanceRepository attendanceRepository;
-    private final PaymentRepository paymentRepository;
-    private final BillableSessionsResolver billableSessionsResolver;
-    private final PaymentCostResolver costResolver;
-    private final EncashmentService encashmentService;
-    private final VentilationMover ventilationMover;
+    private final SeriesSettlement settlement;
     private final ReadOnlyYearGuard readOnlyYearGuard;
 
     public EnrolmentCorrectionService(CorrectionRunner runner,
@@ -104,22 +93,14 @@ public class EnrolmentCorrectionService {
                                       SessionSeriesRepository seriesRepository,
                                       SessionRepository sessionRepository,
                                       AttendanceRepository attendanceRepository,
-                                      PaymentRepository paymentRepository,
-                                      BillableSessionsResolver billableSessionsResolver,
-                                      PaymentCostResolver costResolver,
-                                      EncashmentService encashmentService,
-                                      VentilationMover ventilationMover,
+                                      SeriesSettlement settlement,
                                       ReadOnlyYearGuard readOnlyYearGuard) {
         this.runner = runner;
         this.studentGroupRepository = studentGroupRepository;
         this.seriesRepository = seriesRepository;
         this.sessionRepository = sessionRepository;
         this.attendanceRepository = attendanceRepository;
-        this.paymentRepository = paymentRepository;
-        this.billableSessionsResolver = billableSessionsResolver;
-        this.costResolver = costResolver;
-        this.encashmentService = encashmentService;
-        this.ventilationMover = ventilationMover;
+        this.settlement = settlement;
         this.readOnlyYearGuard = readOnlyYearGuard;
     }
 
@@ -236,8 +217,7 @@ public class EnrolmentCorrectionService {
                     .sorted(Comparator.comparing(SessionSeriesEntity::getId))
                     .toList();
             List<EnrolmentWindow> windowsBefore = windowsOf(student, group);
-            Map<Long, Set<Long>> billableBefore = billable(student, seriesList);
-            Map<Long, BigDecimal> excessBefore = excess(student, seriesList);
+            SeriesSettlement.Before before = settlement.capture(student.getId(), seriesList);
 
             enrolment.setDateAssigned(EnrolmentWindow.startOfDay(target.arrival()));
             enrolment.setDateLeft(EnrolmentWindow.startOfDay(target.departure()));
@@ -264,25 +244,8 @@ public class EnrolmentCorrectionService {
             applyToSessions(student, group, windowsBefore, windowsAfter, effects, audits);
             attendanceRepository.flush();
 
-            Set<SeriesKey> touched = new HashSet<>();
-            for (SessionSeriesEntity series : seriesList) {
-                Set<Long> lost = new HashSet<>(billableBefore.get(series.getId()));
-                lost.removeAll(billableIds(student, series));
-                if (!lost.isEmpty()) {
-                    VentilationMover.Move move = ventilationMover.move(student.getId(), series, lost);
-                    effects.addAll(move.effects());
-                    if (move.moved()) {
-                        touched.add(new SeriesKey(student.getId(), series.getId()));
-                    }
-                }
-                paymentRepository.findByStudentIdAndGroupIdAndSessionSeriesId(student.getId(), group.getId(),
-                        series.getId()).ifPresent(payment -> {
-                            // Le coût a pu changer : le statut stocké de la ligne de paiement suit.
-                            encashmentService.refreshSeriesCumul(payment);
-                            touched.add(new SeriesKey(student.getId(), series.getId()));
-                        });
-                announceExcess(student, series, excessBefore.get(series.getId()), effects);
-            }
+            // Ventilation déplacée, statut des lignes de paiement, trop-perçu annoncé (5.9, D6).
+            Set<SeriesKey> touched = settlement.settle(before, effects);
 
             return new CorrectionExecution<>(new EnrolmentCorrection(enrolmentId, student.getId(), group.getId(),
                     target.arrival(), target.departure(), target.departure() == null),
@@ -516,41 +479,6 @@ public class EnrolmentCorrectionService {
         return windows.stream().anyMatch(window -> window.contains(session.getSessionTimeStart()));
     }
 
-    private Map<Long, Set<Long>> billable(StudentEntity student, List<SessionSeriesEntity> seriesList) {
-        Map<Long, Set<Long>> billable = new HashMap<>();
-        seriesList.forEach(series -> billable.put(series.getId(), billableIds(student, series)));
-        return billable;
-    }
-
-    private Set<Long> billableIds(StudentEntity student, SessionSeriesEntity series) {
-        return billableSessionsResolver.resolve(student.getId(), series.getId()).billable().stream()
-                .map(SessionEntity::getId)
-                .collect(Collectors.toSet());
-    }
-
-    /** Excédent du versé sur le coût, par série ; zéro sans excédent. */
-    private Map<Long, BigDecimal> excess(StudentEntity student, List<SessionSeriesEntity> seriesList) {
-        Map<Long, BigDecimal> excess = new HashMap<>();
-        seriesList.forEach(series -> excess.put(series.getId(), excessOf(student, series)));
-        return excess;
-    }
-
-    private BigDecimal excessOf(StudentEntity student, SessionSeriesEntity series) {
-        PaymentCostResolver.PaymentStatusResult status = costResolver.resolve(student.getId(), series.getId());
-        return money(status.amountPaid().subtract(status.monthTotalCost()).max(BigDecimal.ZERO));
-    }
-
-    /** Trop-perçu apparu ou accru par la correction : annoncé, jamais traité par elle (5.9). */
-    private void announceExcess(StudentEntity student, SessionSeriesEntity series, BigDecimal before,
-                                List<CorrectionEffect> effects) {
-        BigDecimal after = excessOf(student, series);
-        if (after.compareTo(before) > 0) {
-            effects.add(new CorrectionEffect(CorrectionEffectType.EXCESS_LEFT, "Trop-perçu de "
-                    + AmountEffectWriter.money(after) + " DA sur « " + series.getName() + " » : ni reporté ni "
-                    + "remboursé par cette correction"));
-        }
-    }
-
     // ------------------------------------------------------------------
     // Rédaction
     // ------------------------------------------------------------------
@@ -581,7 +509,4 @@ public class EnrolmentCorrectionService {
                 .collect(Collectors.joining(" "));
     }
 
-    private static BigDecimal money(BigDecimal value) {
-        return value.setScale(2, RoundingMode.HALF_UP);
-    }
 }

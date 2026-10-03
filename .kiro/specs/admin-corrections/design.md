@@ -287,6 +287,25 @@ L'absence d'origine redevient alors éligible, et son droit au rattrapage n'a ja
 Les deux montants concernés — Série d'accueil et Série d'origine — figurent dans l'Aperçu : un
 rattrapage compensatoire comptait la Séance manquée comme suivie dans sa Série d'origine.
 
+Précisions (D.1) — corriger une présence :
+
+- **Trois corrections**, une ligne d'une Séance validée à la fois : présent ↔ absent (justification
+  fixée dans la même action, effacée et tracée au passage à présent), ajout d'une ligne manquante,
+  retrait par désactivation. Retrait distinct du changement : `POST /api/attendances/{id}/remove/…`.
+- **Ajout réservé aux inscrits du groupe**, inscription active ou close : une présence après le
+  départ est une séance consommée, facturée par la série du groupe. Un non-inscrit relève d'un
+  rattrapage, et de sa demande : le classement « à préciser / facturé sur place » n'est pas refait ici.
+- **Séance rattrapée ou en voie de l'être** (présence de rattrapage active qui la désigne, ou demande
+  en attente ou planifiée) : elle ne peut devenir suivie ni perdre sa ligne. Le rattrapage
+  compenserait une séance qui n'est plus manquée ; il se retire ou s'annule d'abord. Une absence
+  ajoutée reste admise.
+- **Justification** : la correction écrit `is_justified` et sa propre Trace (`correction_audit`), pas
+  `attendance_justification_audit`, réservé à « Justifier » une absence existante. Le Journal (D.4)
+  lit les deux sources.
+- **Suites sur l'argent** : `SeriesSettlement`, partagé avec les corrections de dates — ventilation
+  d'une séance devenue non facturable déplacée, statut stocké des lignes recalculé, trop-perçu
+  annoncé.
+
 ### D10 — Motif
 
 `CorrectionReasonType` : `DATA_ENTRY_ERROR`, `DOCUMENT_RECEIVED`, `ARRIVAL_DATE_CORRECTED`,
@@ -309,7 +328,9 @@ controller/correction/
                                    POST /api/enrolments/{id}/arrival/{preview|confirm}
                                    POST /api/enrolments/{id}/departure/{preview|confirm}
                                    POST /api/enrolments/{id}/reopen/{preview|confirm}
-  AttendanceCorrectionController   POST /api/attendances/{id}/correct/{preview|confirm}
+  AttendanceCorrectionController   GET  /api/attendances/correction-reasons     (Motifs proposés)
+                                   POST /api/attendances/{id}/correct/{preview|confirm}
+                                   POST /api/attendances/{id}/remove/{preview|confirm}
                                    POST /api/sessions/{id}/attendances/add/{preview|confirm}
                                    POST /api/sessions/{id}/unvalidate/{preview|confirm}
   CorrectionJournalController      GET  /api/students/{id}/journal?from&to

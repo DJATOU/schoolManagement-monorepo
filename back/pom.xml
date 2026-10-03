@@ -446,6 +446,11 @@
                                              et de l'heure d'un reçu ; un conteneur laissé en UTC
                                              décalait tout d'une heure. -->
                                         <include>com.school.management.config.ApplicationTimeZone</include>
+                                        <!-- D.1 : corriger une présence change ce qui est dû ;
+                                             la suite d'une correction (ventilation, statut,
+                                             trop-perçu) est partagée avec celles des dates. -->
+                                        <include>com.school.management.service.correction.AttendanceCorrectionService*</include>
+                                        <include>com.school.management.service.correction.SeriesSettlement*</include>
                                     </includes>
                                     <limits>
                                         <limit>
