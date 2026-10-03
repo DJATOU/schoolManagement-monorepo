@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -67,6 +68,11 @@ public class AttendanceCorrectionService {
     public static final List<CorrectionReasonType> REASONS = List.of(
             CorrectionReasonType.DATA_ENTRY_ERROR,
             CorrectionReasonType.DOCUMENT_RECEIVED,
+            CorrectionReasonType.OTHER);
+
+    /** Motifs d'une dévalidation : une séance validée par erreur. */
+    public static final List<CorrectionReasonType> UNVALIDATION_REASONS = List.of(
+            CorrectionReasonType.DATA_ENTRY_ERROR,
             CorrectionReasonType.OTHER);
 
     /** Demandes de rattrapage en cours : la séance manquée attend d'être rattrapée. */
@@ -133,18 +139,32 @@ public class AttendanceCorrectionService {
                 justifiedAfter(target, justified), reason), mode, previewToken);
     }
 
-    /** Retire une présence ou une absence, par désactivation (exigences 8.1, 8.4). */
+    /**
+     * Retire une présence ou une absence, par désactivation (exigences 8.1, 8.4) ; une présence de
+     * rattrapage, en rouvrant le droit de rattraper la séance qu'elle compensait (exigence 9).
+     */
     public CorrectionOutcome<AttendanceCorrection> remove(Long attendanceId, CorrectionReason reason,
                                                           CorrectionMode mode, String previewToken) {
         requireReason(reason);
         return runner.run(new RemoveCommand(attendanceId, reason), mode, previewToken);
     }
 
+    /** Dévalide une Séance validée par erreur : ses lignes désactivées, listées par la Trace (exigence 10). */
+    public CorrectionOutcome<SessionUnvalidation> unvalidate(Long sessionId, CorrectionReason reason,
+                                                             CorrectionMode mode, String previewToken) {
+        requireReason(reason, UNVALIDATION_REASONS, "une dévalidation de séance");
+        return runner.run(new UnvalidateCommand(sessionId, reason), mode, previewToken);
+    }
+
     private static void requireReason(CorrectionReason reason) {
+        requireReason(reason, REASONS, "une correction de présence");
+    }
+
+    private static void requireReason(CorrectionReason reason, List<CorrectionReasonType> allowed, String what) {
         Objects.requireNonNull(reason, "reason");
-        if (!REASONS.contains(reason.type())) {
-            throw new CustomServiceException("Motif « " + reason.type() + " » sans rapport avec une correction de "
-                    + "présence.", HttpStatus.BAD_REQUEST);
+        if (!allowed.contains(reason.type())) {
+            throw new CustomServiceException("Motif « " + reason.type() + " » sans rapport avec " + what + ".",
+                    HttpStatus.BAD_REQUEST);
         }
     }
 
@@ -168,24 +188,13 @@ public class AttendanceCorrectionService {
     // Commandes
     // ------------------------------------------------------------------
 
-    /** Ce que les trois corrections partagent : la portée, et la Trace. */
-    private abstract class AttendanceCommand implements CorrectionCommand<AttendanceCorrection> {
+    /** Ce que les corrections de présence partagent : la Trace, et le retrait d'une ligne. */
+    private abstract class AttendanceCommand<T> implements CorrectionCommand<T> {
 
         protected final CorrectionReason reason;
 
         AttendanceCommand(CorrectionReason reason) {
             this.reason = reason;
-        }
-
-        /** L'étudiant et la séance corrigés, relus dans la transaction de la correction. */
-        abstract StudentEntity student();
-
-        abstract SessionEntity session();
-
-        /** Toutes les séries du groupe de la séance, vues par l'étudiant : le coût de chacune peut changer. */
-        @Override
-        public CorrectionScope scope() {
-            return CorrectionScope.empty().group(student().getId(), groupOf(session()).getId());
         }
 
         SeriesSettlement.Before capture(StudentEntity student, GroupEntity group) {
@@ -208,10 +217,101 @@ public class AttendanceCorrectionService {
                     .reason(reason)
                     .build();
         }
+
+        /** Désactive une ligne ordinaire (8.4) ; son effet et sa Trace. */
+        void retireLine(AttendanceEntity mark, GroupEntity group, List<CorrectionEffect> effects,
+                        List<AuditDraft> audits) {
+            StudentEntity student = mark.getStudent();
+            SessionEntity session = mark.getSession();
+            boolean present = Boolean.TRUE.equals(mark.getIsPresent());
+            boolean justified = Boolean.TRUE.equals(mark.getIsJustified());
+            mark.setActive(false);
+            attendanceRepository.saveAndFlush(mark);
+
+            String removed = where(session, group) + " : " + line(present, justified) + " de " + fullName(student)
+                    + " retirée";
+            effects.add(new CorrectionEffect(present ? CorrectionEffectType.PRESENCE_REMOVED
+                    : CorrectionEffectType.ABSENCE_REMOVED, removed));
+            audits.add(trace(CorrectionAction.ATTENDANCE_REMOVED, mark, student, group, session,
+                    values(present, justified, true), values(present, justified, false), removed));
+        }
+
+        /**
+         * Retire une présence de rattrapage saisie à tort (exigences 9.1 à 9.3, D9) ; ses effets et sa
+         * Trace.
+         *
+         * <p>Deux verrous empêchaient de rattraper de nouveau la séance manquée : la présence de
+         * rattrapage active qui la désigne, et la demande de rattrapage non annulée qui porte son
+         * absence. Les deux sautent ensemble : la présence est désactivée, la demande qui l'a produite
+         * passe à {@code CANCELLED}. Le droit au rattrapage de l'absence, lui, n'a jamais été touché.</p>
+         */
+        void retireCatchUp(AttendanceEntity mark, List<CorrectionEffect> effects, List<AuditDraft> audits) {
+            StudentEntity student = mark.getStudent();
+            SessionEntity host = mark.getSession();
+            GroupEntity hostGroup = groupOf(host);
+            SessionEntity missed = mark.getMissedSession();
+            GroupEntity originGroup = missed == null ? null : groupOf(missed);
+            if (missed != null) {
+                // La séance manquée cesse de compter comme suivie : son année doit être ouverte aussi.
+                readOnlyYearGuard.assertSessionMutable(missed);
+            }
+            List<CatchUpRequestEntity> requests = catchUpRequestRepository.findByStudentId(student.getId()).stream()
+                    .filter(request -> request.getStatus() != CatchUpStatus.CANCELLED)
+                    .filter(request -> isSession(request.getCatchUpSession(), host))
+                    .filter(request -> missed == null || isSession(request.getOriginalSession(), missed))
+                    .sorted(Comparator.comparing(CatchUpRequestEntity::getId))
+                    .toList();
+
+            Map<String, Object> oldValue = catchUpValues(mark, true, requests);
+            mark.setActive(false);
+            attendanceRepository.saveAndFlush(mark);
+            for (CatchUpRequestEntity request : requests) {
+                request.setStatus(CatchUpStatus.CANCELLED);
+                request.setCancellationReason("Présence de rattrapage retirée par correction (" + reason.type()
+                        + (reason.text() == null ? "" : " : " + reason.text()) + ")");
+                catchUpRequestRepository.save(request);
+            }
+            Map<String, Object> newValue = catchUpValues(mark, false, requests);
+
+            String removed = "Rattrapage de " + fullName(student) + " du " + day(host) + " (" + hostGroup.getName()
+                    + ") retiré : " + (missed == null ? withoutMissedSession(mark)
+                            : "séance manquée du " + day(missed) + " (" + originGroup.getName() + "), déjà payée : "
+                                    + alreadyPaid(mark.getMissedSessionAlreadyPaid()));
+            effects.add(new CorrectionEffect(CorrectionEffectType.CATCH_UP_REMOVED, removed));
+            if (missed != null) {
+                effects.add(new CorrectionEffect(CorrectionEffectType.CATCH_UP_REOPENED, where(missed, originGroup)
+                        + " : de nouveau à rattraper pour " + fullName(student)));
+            }
+            for (int i = 0; i < requests.size(); i++) {
+                effects.add(new CorrectionEffect(CorrectionEffectType.CATCH_UP_REQUEST_CANCELLED,
+                        "Demande de rattrapage sur la séance du " + day(host) + " annulée"));
+            }
+            audits.add(trace(CorrectionAction.CATCH_UP_REMOVED, mark, student, hostGroup, host, oldValue, newValue,
+                    removed));
+        }
+    }
+
+    /** Une correction qui porte sur une ligne : présent ↔ absent, ajout, retrait. */
+    private abstract class LineCommand extends AttendanceCommand<AttendanceCorrection> {
+
+        LineCommand(CorrectionReason reason) {
+            super(reason);
+        }
+
+        /** L'étudiant et la séance corrigés, relus dans la transaction de la correction. */
+        abstract StudentEntity student();
+
+        abstract SessionEntity session();
+
+        /** Toutes les séries du groupe de la séance, vues par l'étudiant : le coût de chacune peut changer. */
+        @Override
+        public CorrectionScope scope() {
+            return CorrectionScope.empty().group(student().getId(), groupOf(session()).getId());
+        }
     }
 
     /** Présent ↔ absent. */
-    private final class ChangeCommand extends AttendanceCommand {
+    private final class ChangeCommand extends LineCommand {
 
         private final Long attendanceId;
         private final boolean present;
@@ -279,7 +379,7 @@ public class AttendanceCorrectionService {
     }
 
     /** Présence ou absence manquante. */
-    private final class AddCommand extends AttendanceCommand {
+    private final class AddCommand extends LineCommand {
 
         private final Long sessionId;
         private final Long studentId;
@@ -360,7 +460,7 @@ public class AttendanceCorrectionService {
     }
 
     /** Ligne retirée, par désactivation. */
-    private final class RemoveCommand extends AttendanceCommand {
+    private final class RemoveCommand extends LineCommand {
 
         private final Long attendanceId;
 
@@ -416,87 +516,171 @@ public class AttendanceCorrectionService {
             assertNotCaughtUp(student, session);
             SeriesSettlement.Before before = capture(student, group);
 
-            mark.setActive(false);
-            attendanceRepository.saveAndFlush(mark);
-
-            String removed = where(session, group) + " : " + line(present, justified) + " de " + fullName(student)
-                    + " retirée";
             List<CorrectionEffect> effects = new ArrayList<>();
-            effects.add(new CorrectionEffect(present ? CorrectionEffectType.PRESENCE_REMOVED
-                    : CorrectionEffectType.ABSENCE_REMOVED, removed));
-            List<AuditDraft> audits = List.of(trace(CorrectionAction.ATTENDANCE_REMOVED, mark, student, group, session,
-                    values(present, justified, true), values(present, justified, false), removed));
+            List<AuditDraft> audits = new ArrayList<>();
+            retireLine(mark, group, effects, audits);
             Set<SeriesKey> touched = settlement.settle(before, effects);
             return new CorrectionExecution<>(new AttendanceCorrection(mark.getId(), student.getId(), session.getId(),
                     present, justified, false), effects, touched, audits);
         }
 
         /**
-         * Retire une présence de rattrapage saisie à tort (exigences 9.1 à 9.3, D9).
-         *
-         * <p>Deux verrous empêchaient de rattraper de nouveau la séance manquée : la présence de
-         * rattrapage active qui la désigne, et la demande de rattrapage non annulée qui porte son
-         * absence. Les deux sautent ensemble : la présence est désactivée, la demande qui l'a produite
-         * passe à {@code CANCELLED}. Le droit au rattrapage de l'absence, lui, n'a jamais été touché.</p>
-         *
-         * <p>La séance n'a pas à être validée : un rattrapage enregistré par sa demande existe avant
-         * la validation, et la feuille de présence ne sait pas le retirer.</p>
+         * Retire une présence de rattrapage (exigence 9). La séance n'a pas à être validée : un
+         * rattrapage enregistré par sa demande existe avant la validation, et la feuille de présence
+         * ne sait pas le retirer.
          */
         private CorrectionExecution<AttendanceCorrection> removeCatchUp(AttendanceEntity mark) {
             StudentEntity student = mark.getStudent();
             SessionEntity host = mark.getSession();
-            GroupEntity hostGroup = groupOf(host);
-            SessionEntity missed = mark.getMissedSession();
-            GroupEntity originGroup = missed == null ? null : groupOf(missed);
             assertOpen(host);
-            if (missed != null) {
-                // La séance manquée cesse de compter comme suivie : son année doit être ouverte aussi.
-                readOnlyYearGuard.assertSessionMutable(missed);
-            }
-            List<CatchUpRequestEntity> requests = catchUpRequestRepository.findByStudentId(student.getId()).stream()
-                    .filter(request -> request.getStatus() != CatchUpStatus.CANCELLED)
-                    .filter(request -> isSession(request.getCatchUpSession(), host))
-                    .filter(request -> missed == null || isSession(request.getOriginalSession(), missed))
-                    .sorted(Comparator.comparing(CatchUpRequestEntity::getId))
-                    .toList();
-
             // Seule la série d'accueil peut perdre une séance facturable, donc sa ventilation. À
             // l'origine, la séance manquée reste facturable (sa place était réservée) : seul le dû à
             // ce jour baisse, et l'Aperçu le montre par la portée.
-            SeriesSettlement.Before before = settlement.capture(student.getId(),
-                    seriesRepository.findByGroupId(hostGroup.getId()));
+            SeriesSettlement.Before before = capture(student, groupOf(host));
 
-            Map<String, Object> oldValue = catchUpValues(mark, true, requests);
-            mark.setActive(false);
-            attendanceRepository.saveAndFlush(mark);
-            for (CatchUpRequestEntity request : requests) {
-                request.setStatus(CatchUpStatus.CANCELLED);
-                request.setCancellationReason("Présence de rattrapage retirée par correction (" + reason.type()
-                        + (reason.text() == null ? "" : " : " + reason.text()) + ")");
-                catchUpRequestRepository.save(request);
-            }
-            Map<String, Object> newValue = catchUpValues(mark, false, requests);
-
-            String removed = "Rattrapage de " + fullName(student) + " du " + day(host) + " (" + hostGroup.getName()
-                    + ") retiré : " + (missed == null ? withoutMissedSession(mark)
-                            : "séance manquée du " + day(missed) + " (" + originGroup.getName() + "), déjà payée : "
-                                    + alreadyPaid(mark.getMissedSessionAlreadyPaid()));
             List<CorrectionEffect> effects = new ArrayList<>();
-            effects.add(new CorrectionEffect(CorrectionEffectType.CATCH_UP_REMOVED, removed));
-            if (missed != null) {
-                effects.add(new CorrectionEffect(CorrectionEffectType.CATCH_UP_REOPENED, where(missed, originGroup)
-                        + " : de nouveau à rattraper pour " + fullName(student)));
-            }
-            for (int i = 0; i < requests.size(); i++) {
-                effects.add(new CorrectionEffect(CorrectionEffectType.CATCH_UP_REQUEST_CANCELLED,
-                        "Demande de rattrapage sur la séance du " + day(host) + " annulée"));
-            }
-            List<AuditDraft> audits = List.of(trace(CorrectionAction.CATCH_UP_REMOVED, mark, student, hostGroup, host,
-                    oldValue, newValue, removed));
+            List<AuditDraft> audits = new ArrayList<>();
+            retireCatchUp(mark, effects, audits);
             Set<SeriesKey> touched = settlement.settle(before, effects);
             return new CorrectionExecution<>(new AttendanceCorrection(mark.getId(), student.getId(), host.getId(),
                     true, false, false), effects, touched, audits);
         }
+    }
+
+    /**
+     * Dévalider une Séance validée par erreur (exigence 10.1) : toutes ses lignes actives sont
+     * désactivées — présences, absences, rattrapages —, et la séance redevient à valider.
+     *
+     * <p>Une Trace pour la séance, qui liste les lignes désactivées ; une par ligne, pour le Journal de
+     * chaque étudiant. Un rattrapage accueilli par la séance est retiré comme en D.2 : sa demande
+     * annulée, la séance qu'il compensait de nouveau à rattraper. Une absence rattrapée ailleurs, ou dont
+     * une demande de rattrapage est en cours, bloque la dévalidation, comme son retrait seul.</p>
+     */
+    private final class UnvalidateCommand extends AttendanceCommand<SessionUnvalidation> {
+
+        private final Long sessionId;
+
+        private UnvalidateCommand(Long sessionId, CorrectionReason reason) {
+            super(reason);
+            this.sessionId = Objects.requireNonNull(sessionId, "sessionId");
+        }
+
+        @Override
+        public String fingerprint() {
+            return EncashmentCorrectionService.canonical("SESSION_UNVALIDATE", sessionId, reason.type(), reason.text());
+        }
+
+        /** Les séries du groupe pour chaque étudiant de la feuille ; celles d'origine de chaque rattrapage. */
+        @Override
+        public CorrectionScope scope() {
+            SessionEntity session = loadSession(sessionId);
+            GroupEntity group = groupOf(session);
+            CorrectionScope scope = CorrectionScope.empty();
+            for (AttendanceEntity mark : linesOf(session)) {
+                if (mark.getStudent() == null) {
+                    continue;
+                }
+                scope = scope.group(mark.getStudent().getId(), group.getId());
+                if (Boolean.TRUE.equals(mark.getIsCatchUp()) && mark.getMissedSession() != null) {
+                    scope = scope.group(mark.getStudent().getId(), groupOf(mark.getMissedSession()).getId());
+                }
+            }
+            return scope;
+        }
+
+        @Override
+        public CorrectionExecution<SessionUnvalidation> execute() {
+            SessionEntity session = loadSession(sessionId);
+            GroupEntity group = groupOf(session);
+            assertOpen(session);
+            if (!Boolean.TRUE.equals(session.getIsFinished())) {
+                throw new CustomServiceException("La séance du " + day(session) + " n'est pas validée : rien à "
+                        + "dévalider.", HttpStatus.CONFLICT);
+            }
+            List<AttendanceEntity> lines = linesOf(session);
+            Map<Long, SeriesSettlement.Before> before = new LinkedHashMap<>();
+            for (AttendanceEntity mark : lines) {
+                StudentEntity student = mark.getStudent();
+                if (student == null) {
+                    continue;
+                }
+                if (!Boolean.TRUE.equals(mark.getIsCatchUp())) {
+                    assertNotCaughtUp(student, session);
+                }
+                before.computeIfAbsent(student.getId(), id -> capture(student, group));
+            }
+
+            List<Map<String, Object>> listed = lines.stream().map(AttendanceCorrectionService::lineValues).toList();
+            List<CorrectionEffect> effects = new ArrayList<>();
+            List<AuditDraft> audits = new ArrayList<>();
+            for (AttendanceEntity mark : lines) {
+                if (mark.getStudent() == null) {
+                    // Ligne sans étudiant, héritée : désactivée avec la feuille, listée par la Trace de la séance.
+                    mark.setActive(false);
+                    attendanceRepository.saveAndFlush(mark);
+                } else if (Boolean.TRUE.equals(mark.getIsCatchUp())) {
+                    retireCatchUp(mark, effects, audits);
+                } else {
+                    retireLine(mark, group, effects, audits);
+                }
+            }
+            session.setIsFinished(false);
+            sessionRepository.saveAndFlush(session);
+
+            String summary = where(session, group) + " dévalidée" + (lines.isEmpty() ? ", sans ligne de présence"
+                    : lines.size() == 1 ? " : 1 ligne retirée" : " : " + lines.size() + " lignes retirées");
+            effects.add(0, new CorrectionEffect(CorrectionEffectType.SESSION_UNVALIDATED, summary));
+            Map<String, Object> oldValue = new LinkedHashMap<>();
+            oldValue.put("finished", true);
+            oldValue.put("attendances", listed);
+            Map<String, Object> newValue = new LinkedHashMap<>();
+            newValue.put("finished", false);
+            newValue.put("deactivated", lines.stream().map(AttendanceEntity::getId).toList());
+            audits.add(0, AuditDraft.builder()
+                    .domain(CorrectionDomain.SESSION)
+                    .action(CorrectionAction.SESSION_UNVALIDATED)
+                    .entityId(session.getId())
+                    .groupId(group.getId())
+                    .sessionId(session.getId())
+                    .seriesId(session.getSessionSeries() == null ? null : session.getSessionSeries().getId())
+                    .oldValue(oldValue)
+                    .newValue(newValue)
+                    .summary(summary)
+                    .reason(reason)
+                    .build());
+
+            Set<SeriesKey> touched = new TreeSet<>();
+            before.values().forEach(one -> touched.addAll(settlement.settle(one, effects)));
+            return new CorrectionExecution<>(new SessionUnvalidation(session.getId(), lines.size()), effects,
+                    touched, audits);
+        }
+    }
+
+    /** Lignes actives d'une séance, dans un ordre stable : nom, prénom, puis identifiant. */
+    private List<AttendanceEntity> linesOf(SessionEntity session) {
+        return attendanceRepository.findBySessionIdAndActiveTrue(session.getId()).stream()
+                .sorted(Comparator.comparing((AttendanceEntity mark) -> mark.getStudent() == null ? ""
+                                : fullName(mark.getStudent()))
+                        .thenComparing(AttendanceEntity::getId))
+                .toList();
+    }
+
+    private SessionEntity loadSession(Long sessionId) {
+        return sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new CustomServiceException("Séance introuvable : " + sessionId,
+                        HttpStatus.NOT_FOUND));
+    }
+
+    /** Une ligne dans la Trace d'une dévalidation : qui, et ce qu'elle disait. */
+    private static Map<String, Object> lineValues(AttendanceEntity mark) {
+        Map<String, Object> values = new LinkedHashMap<>();
+        values.put("id", mark.getId());
+        values.put("studentId", mark.getStudent() == null ? null : mark.getStudent().getId());
+        values.put("student", mark.getStudent() == null ? null : fullName(mark.getStudent()));
+        values.put("present", Boolean.TRUE.equals(mark.getIsPresent()));
+        values.put("justified", Boolean.TRUE.equals(mark.getIsJustified()));
+        values.put("catchUp", Boolean.TRUE.equals(mark.getIsCatchUp()));
+        return values;
     }
 
     /**

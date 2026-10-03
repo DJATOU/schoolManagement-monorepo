@@ -378,20 +378,19 @@ public class SessionService {
         return onlyActive(sessionRepository.findAll(spec));
     }
 
+    /** Valide une séance ; refusé sur une année close (exigence 10.2). */
     @Transactional
     public SessionEntity markSessionAsFinished(Long sessionId) {
         SessionEntity session = sessionRepository.findById(Objects.requireNonNull(sessionId))
                 .orElseThrow(() -> new CustomServiceException(SESSION_NOT_FOUND_MESSAGE + sessionId));
+        readOnlyYearGuard.assertSessionMutable(session);
         session.setIsFinished(true);
         return sessionRepository.save(session);
     }
 
-    public SessionEntity markSessionAsUnfinished(Long sessionId) {
-        SessionEntity session = sessionRepository.findById(Objects.requireNonNull(sessionId))
-                .orElseThrow(() -> new CustomServiceException(SESSION_NOT_FOUND_MESSAGE + sessionId));
-        session.setIsFinished(false);
-        return sessionRepository.save(session);
-    }
+    // markSessionAsUnfinished(Long) retiré (D.3) : il dévalidait sans Motif, sans Aperçu ni Trace, et
+    // laissait les présences actives. La dévalidation passe par AttendanceCorrectionService.unvalidate
+    // (exigence 10.1).
 
     public List<SessionEntity> getSessionsBySeriesId(Long sessionSeriesId) {
         return onlyActive(sessionRepository.findBySessionSeriesId(sessionSeriesId));

@@ -75,8 +75,14 @@ public class AttendanceController {
     //
     // PATCH /{id} générique retiré également : il projetait une Map arbitraire du client sur
     // l'entité (ModelMapper), donc n'importe quel champ d'une présence était écrasable. La
-    // désactivation passe par PATCH /deactivate/{sessionId}, et la justification par le point
-    // d'entrée dédié ci-dessous, dont le corps est fermé à deux champs.
+    // justification passe par le point d'entrée dédié ci-dessous, dont le corps est fermé à deux
+    // champs ; toute autre correction d'une présence, par AttendanceCorrectionController (Motif,
+    // Aperçu, Trace).
+    //
+    // Retirés en D.3, parce qu'ils effaçaient ou désactivaient des présences sans Motif, sans Aperçu
+    // ni Trace : DELETE /{id} et DELETE /session/{sessionId}, suppressions définitives (exigence 8.4),
+    // et PATCH /deactivate/{sessionId}, moitié d'une dévalidation qui passe désormais par
+    // POST /api/sessions/{id}/unvalidate/… (exigence 10.1).
 
     /**
      * Modifie la justification d'une absence (exigences 4.1, 4.2).
@@ -105,12 +111,6 @@ public class AttendanceController {
     @GetMapping("/{id}/justification-audit")
     public ResponseEntity<List<JustificationAuditDTO>> justificationAudit(@PathVariable Long id) {
         return ResponseEntity.ok(attendanceJustificationService.auditTrail(id));
-    }
-
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteAttendance(@PathVariable Long id) {
-        attendanceService.deleteAttendance(id);
-        return ResponseEntity.noContent().build();
     }
 
     /**
@@ -147,17 +147,4 @@ public class AttendanceController {
         List<AttendanceDTO> attendances = attendanceService.getAttendanceBySessionId(sessionId);
         return ResponseEntity.ok(attendances);
     }
-
-    @DeleteMapping("/session/{sessionId}")
-    public ResponseEntity<Void> deleteAttendanceBySessionId(@PathVariable Long sessionId) {
-        attendanceService.deleteBySessionId(sessionId);
-        return ResponseEntity.noContent().build();
-    }
-
-    @PatchMapping("/deactivate/{sessionId}")
-    public ResponseEntity<Void> deactivateAttendanceBySessionId(@PathVariable Long sessionId) {
-        attendanceService.deactivateBySessionId(sessionId);
-        return ResponseEntity.noContent().build();
-    }
-
 }

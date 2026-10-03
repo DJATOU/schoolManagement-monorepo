@@ -30,7 +30,15 @@ import { SchoolYearContextService } from '../../../services/school-year-context.
 import { AuthService } from '../../../services/auth.service';
 import { NotConcernedStudent, RollCall } from '../../../models/session/roll-call';
 import { AttendanceSubmissionError, RejectedAbsence } from '../../../models/Attendance/rejected-absence';
-import { formatCalendarDay } from '../../../utils/calendar-day';
+import { calendarDayOf, formatCalendarDay } from '../../../utils/calendar-day';
+import { CorrectionReason, CorrectionReasonType } from '../../../models/correction/correction';
+import { SessionUnvalidation } from '../../../models/session/session-unvalidation';
+import { CorrectionStep } from '../../../services/encashment.service';
+import {
+  CorrectionDialogComponent,
+  CorrectionDialogData,
+  CorrectionDialogResult
+} from '../../shared/correction-dialog/correction-dialog.component';
 
 @Component({
   selector: 'app-session-modal',
@@ -378,50 +386,64 @@ onValidateSession(): void {
     this.sessionData.students.forEach((student) => student.isPresent = isChecked);
   }
 
+  /**
+   * Dévalide une séance validée par erreur (spec admin-corrections, D.3 ; exigence 10.1).
+   *
+   * <p>Le dialogue commun aux corrections : Motif, Aperçu, confirmation. L'Aperçu nomme chaque
+   * ligne retirée et ce qui change sur le dû de chaque élève, par exemple « Séance du 07/01/2030
+   * (Math 1ère A) dévalidée : 2 lignes retirées », janvier d'Amine 2 000 → 0 DA dû à ce jour. Le
+   * serveur fait tout en une opération : séance de nouveau à valider, lignes désactivées, Trace.</p>
+   *
+   * <p>La modale reste ouverte, la feuille rechargée depuis le serveur : on dévalide pour refaire
+   * la feuille, et les lignes désactivées ne doivent pas y rester cochées.</p>
+   */
   onUnvalidateSession(): void {
-    // Demande de confirmation avant dévalidation (action destructive).
-    this.dialog.open(ConfirmationDialogComponent, {
-      data: {
-        title: this.translate.instant('CONFIRMATION_DIALOG.UNVALIDATE_SESSION.TITLE'),
-        message: this.translate.instant('CONFIRMATION_DIALOG.UNVALIDATE_SESSION.MESSAGE'),
-        confirmText: this.translate.instant('CONFIRMATION_DIALOG.UNVALIDATE_SESSION.CONFIRM'),
-        cancelText: this.translate.instant('CONFIRMATION_DIALOG.UNVALIDATE_SESSION.CANCEL'),
-        confirmColor: 'warn'
-      }
-    }).afterClosed().subscribe((confirmed: boolean) => {
-      if (!confirmed) {
-        console.log('Unvalidation canceled.');
-        return;
-      }
-
-      this.sessionService.markSessionAsUnfinished(this.sessionData.id).subscribe({
-          next: () => {
-              this.attendanceService.deactivateAttendanceBySessionId(this.sessionData.id).subscribe({
-                  next: () => {
-                      console.log('Session unvalidated and attendance deactivated successfully');
-                      this.isFinished = false;
-
-                      // Mettre à jour uniquement le champ `isPresent` pour refléter la dévalidation
-                      this.sessionData.students.forEach(student => {
-                          student.isPresent = false;
-                      });
-
-                      // Log pour vérifier les données des étudiants après mise à jour
-                      console.log('Updated student data after unvalidation:', this.sessionData.students);
-                  },
-                  error: (error) => {
-                      console.error('Failed to deactivate attendance:', error);
-                      alert('Failed to deactivate attendance: ' + error.message);
-                  }
-              });
-          },
-          error: (error) => {
-              console.error('Failed to unvalidate session:', error);
-              alert('Failed to unvalidate session: ' + error.message);
-          }
-      });
+    this.sessionService.getUnvalidationReasons().subscribe({
+      next: reasons => this.openUnvalidation(reasons),
+      error: (error: unknown) => this.showErrorMessage(error instanceof Error && error.message
+        ? error.message : this.translate.instant('SESSION_MODAL.UNVALIDATE_ERROR'))
     });
-}
+  }
+
+  private openUnvalidation(reasons: CorrectionReasonType[]): void {
+    const data: CorrectionDialogData<SessionUnvalidation> = {
+      titleKey: 'SESSION_MODAL.UNVALIDATE_TITLE',
+      subject: this.translate.instant('SESSION_MODAL.UNVALIDATE_SUBJECT', {
+        day: formatCalendarDay(calendarDayOf(new Date(this.sessionData.sessionTimeStart))),
+        group: this.sessionData.groupName ?? ''
+      }),
+      reasons,
+      run: (step: CorrectionStep, reason: CorrectionReason, token?: string) =>
+        this.sessionService.unvalidate(this.sessionData.id, step, reason, token)
+    };
+    this.dialog.open<CorrectionDialogComponent<SessionUnvalidation>, CorrectionDialogData<SessionUnvalidation>,
+      CorrectionDialogResult<SessionUnvalidation>>(CorrectionDialogComponent, { data, width: '660px', maxWidth: '95vw' })
+      .afterClosed().subscribe(outcome => {
+        if (outcome?.kind === 'confirmed') {
+          void this.afterUnvalidation(outcome.result);
+        }
+      });
+  }
+
+  /**
+   * La séance est de nouveau à valider. L'état est aussi porté par les données reçues : l'écran qui a
+   * ouvert la modale le relit à la fermeture, quelle qu'elle soit (bouton, Échap, clic au dehors).
+   */
+  private async afterUnvalidation(result: SessionUnvalidation): Promise<void> {
+    this.isFinished = false;
+    this.sessionData.isFinished = false;
+    this.rejectedAbsences = [];
+    this.rollCall = null;
+    this.rollCallError = false;
+    this.sessionData.students = [];
+    this.snackBar.open(
+      this.translate.instant('SESSION_MODAL.UNVALIDATE_SUCCESS', { count: result.removedLines }),
+      this.translate.instant('common.close'),
+      { duration: 4000, panelClass: ['snack-bar-success'] }
+    );
+    await this.loadStudentsData();
+    this.loadAttendanceData();
+  }
 
 
 /**

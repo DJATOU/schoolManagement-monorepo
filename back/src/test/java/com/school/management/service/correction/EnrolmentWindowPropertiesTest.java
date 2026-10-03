@@ -798,9 +798,10 @@ class EnrolmentWindowPropertiesTest {
         AttendanceService attendanceService(AttendanceRepository attendances, StudentRepository students,
                                             SessionRepository sessions, SessionSeriesRepository series,
                                             GroupRepository groups, StudentGroupRepository enrolments,
-                                            CatchUpRoutingService routing, AbsenceWindowGuard guard) {
+                                            CatchUpRoutingService routing, AbsenceWindowGuard guard,
+                                            ReadOnlyYearGuard yearGuard) {
             return new AttendanceService(attendances, (AttendanceMapper) null, students, sessions, series, groups,
-                    enrolments, routing, guard);
+                    enrolments, routing, guard, yearGuard);
         }
 
         /** Seul le déplacement d'une séance est exercé : le reste du service est simulé. */

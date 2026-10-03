@@ -7,6 +7,7 @@ import com.school.management.service.correction.AttendanceCorrection;
 import com.school.management.service.correction.AttendanceCorrectionService;
 import com.school.management.service.correction.CorrectionMode;
 import com.school.management.service.correction.CorrectionReason;
+import com.school.management.service.correction.SessionUnvalidation;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -63,6 +64,24 @@ public class AttendanceCorrectionController {
         return ResponseEntity.ok(remove(id, request, CorrectionMode.CONFIRM));
     }
 
+    /** Motifs proposés pour dévalider une séance, dans l'ordre d'affichage. */
+    @GetMapping("/api/sessions/unvalidation-reasons")
+    public ResponseEntity<List<CorrectionReasonType>> unvalidationReasons() {
+        return ResponseEntity.ok(List.copyOf(AttendanceCorrectionService.UNVALIDATION_REASONS));
+    }
+
+    @PostMapping("/api/sessions/{id}/unvalidate/preview")
+    public ResponseEntity<CorrectionResponse<SessionUnvalidation>> previewUnvalidate(
+            @PathVariable Long id, @RequestBody(required = false) AttendanceCorrectionRequest request) {
+        return ResponseEntity.ok(unvalidate(id, request, CorrectionMode.PREVIEW));
+    }
+
+    @PostMapping("/api/sessions/{id}/unvalidate/confirm")
+    public ResponseEntity<CorrectionResponse<SessionUnvalidation>> confirmUnvalidate(
+            @PathVariable Long id, @RequestBody(required = false) AttendanceCorrectionRequest request) {
+        return ResponseEntity.ok(unvalidate(id, request, CorrectionMode.CONFIRM));
+    }
+
     @PostMapping("/api/sessions/{id}/attendances/add/preview")
     public ResponseEntity<CorrectionResponse<AttendanceCorrection>> previewAdd(
             @PathVariable Long id, @RequestBody(required = false) AttendanceCorrectionRequest request) {
@@ -95,6 +114,12 @@ public class AttendanceCorrectionController {
         AttendanceCorrectionRequest body = AttendanceCorrectionRequest.orEmpty(request);
         return CorrectionResponse.of(corrections.add(sessionId, body.studentId(), body.present(), body.justified(),
                 reason(body), mode, body.previewToken()));
+    }
+
+    private CorrectionResponse<SessionUnvalidation> unvalidate(Long sessionId, AttendanceCorrectionRequest request,
+                                                               CorrectionMode mode) {
+        AttendanceCorrectionRequest body = AttendanceCorrectionRequest.orEmpty(request);
+        return CorrectionResponse.of(corrections.unvalidate(sessionId, reason(body), mode, body.previewToken()));
     }
 
     private static CorrectionReason reason(AttendanceCorrectionRequest body) {

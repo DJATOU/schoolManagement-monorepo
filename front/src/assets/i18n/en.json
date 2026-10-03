@@ -304,12 +304,6 @@
     "CANCEL": "Cancel",
     "YES": "Yes",
     "NO": "No",
-    "UNVALIDATE_SESSION": {
-      "TITLE": "Unvalidate session",
-      "MESSAGE": "Do you really want to unvalidate this session? The recorded attendances will be deactivated.",
-      "CONFIRM": "Yes, unvalidate",
-      "CANCEL": "Cancel"
-    },
     "DISABLE_STUDENT": {
       "TITLE": "Deactivate a student",
       "MESSAGE": "Do you really want to deactivate this student? They will be hidden from current lists but their history will be kept.",
@@ -372,6 +366,10 @@
     "EDIT": "Edit session",
     "VALIDATE": "Validate session",
     "UNVALIDATE": "Unvalidate session",
+    "UNVALIDATE_TITLE": "Unvalidate the session",
+    "UNVALIDATE_SUBJECT": "Session of {{day}} ({{group}}): all its attendance lines will be removed, and it will need validating again.",
+    "UNVALIDATE_SUCCESS": "Session unvalidated ({{count}} attendance line(s) removed): it needs validating again.",
+    "UNVALIDATE_ERROR": "Unvalidation reasons could not be loaded.",
     "PRINT": "Print attendance",
     "DELETE": "Delete",
     "DELETE_TITLE": "Delete session",

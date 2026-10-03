@@ -36,6 +36,8 @@ public enum CorrectionEffectType {
     ATTENDANCE_RECORDED,
     /** Une présence de rattrapage saisie à tort est retirée (exigence 9.1). */
     CATCH_UP_REMOVED,
+    /** Une Séance validée par erreur redevient à valider, ses lignes désactivées (exigence 10.1). */
+    SESSION_UNVALIDATED,
     /** La séance manquée qu'un rattrapage compensait redevient à rattraper (exigence 9.2). */
     CATCH_UP_REOPENED,
     /** La demande de rattrapage qui avait produit la présence retirée passe à « annulée » (D9). */

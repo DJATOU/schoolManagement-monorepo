@@ -341,10 +341,12 @@ handleEventClick(clickInfo: EventClickArg) {
           clickInfo.event.remove();
           return;
         }
-        if (result && result.isFinished) {
-          clickInfo.event.setProp('classNames', ['is-finished']);
-          clickInfo.event.setExtendedProp('isFinished', true);
-        }
+        // L'état se relit sur les données partagées avec la modale : une dévalidation la laisse
+        // ouverte (la feuille est à refaire), et elle peut ensuite se fermer sans résultat (Échap,
+        // clic au dehors). Lire le seul résultat laissait la séance affichée validée.
+        const finished = result?.isFinished ?? !!sessionData.isFinished;
+        clickInfo.event.setProp('classNames', finished ? ['is-finished'] : []);
+        clickInfo.event.setExtendedProp('isFinished', finished);
       });
     },
     error: (error) => {

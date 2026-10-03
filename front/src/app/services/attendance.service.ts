@@ -72,13 +72,9 @@ export class AttendanceService {
         Array.isArray(body.rejected) ? body.rejected : []);
     }
 
-    deleteAttendanceBySessionId(sessionId: number): Observable<void> {
-      return this.http.delete<void>(`${this.apiUrl}/session/${sessionId}`);
-    }
-
-    deactivateAttendanceBySessionId(sessionId: number): Observable<void> {
-      return this.http.patch<void>(`${this.apiUrl}/deactivate/${sessionId}`, { active: false });
-  }
+    // deleteAttendanceBySessionId et deactivateAttendanceBySessionId retirés (D.3) : leurs adresses
+    // n'existent plus côté serveur. Une feuille se désactive par la dévalidation de sa séance
+    // (SessionService.unvalidate), avec Motif, Aperçu et Trace.
 
 
   getAttendanceByStudentAndSeries(studentId: number, sessionSeriesId : number): Observable<Attendance[]> {

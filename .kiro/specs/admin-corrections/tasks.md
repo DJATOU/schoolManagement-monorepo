@@ -611,7 +611,34 @@ des lignes) ; `StudentHistoryService.allocatePayments`.
   trop-perçu, décisions écrites en clair, seules les demandes productrices annulées, refus) ;
   mutations tuées
   _Exigences : 9.1 à 9.3 — D9_
-- [ ] D.3 Dévalidation avec Motif et Aperçu ; validation et dévalidation refusées sur année close
+- [x] D.3 Dévalidation avec Motif et Aperçu ; validation et dévalidation refusées sur année close.
+  Une opération, `POST /api/sessions/{id}/unvalidate/{preview|confirm}` (Motifs : Erreur de saisie,
+  Autre ; `GET /api/sessions/unvalidation-reasons`) :
+  - toutes les lignes actives désactivées, la séance de nouveau à valider. Exemple : « Séance du
+    07/01/2030 (Math 1ère A) dévalidée : 2 lignes retirées », janvier d'Amine, dû à ce jour 2 000 →
+    0 DA ; « 1 ligne retirée », « sans ligne de présence » ;
+  - chaque ligne suit sa correction : ordinaire comme un retrait (D.1, ventilation déplacée si la
+    séance n'est plus facturable), rattrapage accueilli comme en D.2 (demande annulée, séance
+    d'origine de nouveau à rattraper, groupe d'origine dans l'Aperçu), ligne héritée sans étudiant
+    désactivée avec la feuille ;
+  - une Trace de la séance, en tête, listant chaque ligne telle qu'elle était et les identifiants
+    désactivés (10.1) ; une Trace par ligne, pour le Journal de chaque élève. Lignes rangées par nom.
+  Refus : séance non validée, supprimée, inconnue ; absence rattrapée ailleurs ou dont une demande
+  est en cours (409, le rattrapage d'abord) ; Motif hors liste ; Aperçu périmé ou Motif changé.
+  Année close (10.2) : dévalidation, feuille, présence isolée et validation de la séance refusées
+  (409) avant écriture ; une ligne sans séance, dont l'année ne se résout pas, est refusée (400) au
+  lieu de finir en erreur serveur.
+  Retirés, faute de Motif et de Trace : `PATCH /api/sessions/{id}/unfinish`, `PATCH /api/attendances/
+  deactivate/{id}`, `DELETE /api/attendances/{id}` et `…/session/{id}` (suppressions définitives).
+  Écran : « Dévalider la séance » ouvre le dialogue commun ; confirmée, la modale reste ouverte et
+  recharge la feuille du serveur. Le calendrier et la liste d'une série relisent l'état de la séance à
+  la fermeture de la modale, quelle qu'elle soit : la séance restait affichée validée.
+  Tests : `SessionUnvalidationEndpointIntegrationTest` (Aperçu sans écriture, confirmation et
+  Traces relues en SQL, ventilation déplacée, ligne sans étudiant, séance hors série, rattrapage
+  compensatoire et facturé sur place, refus, Aperçu périmé, Motif changé, VIEWER, anciens raccourcis
+  absents, année close, ligne sans séance) ; Karma : dialogue ouvert et appels, rechargement de la
+  feuille, abandon, refus, `SessionService`, calendrier, liste de la série ; 31 mutations serveur et
+  20 mutations écran tuées
   _Exigences : 10.1, 10.2_
 - [ ] D.4 `CorrectionJournalService` : quatre sources, entrées en français, effet sur le dû ;
   adaptateurs des trois audits existants
@@ -619,8 +646,8 @@ des lignes) ; `StudentHistoryService.allocatePayments`.
 - [ ] D.5 Journal imprimable par période
   _Exigences : 12.4_
 - [ ] D.6 Propriété P7 « une Trace par changement effectif »
-- [ ] D.7 `session-modal` : corriger par élève, ajouter un élève, dévalider avec motif ; fiche élève,
-  onglet journal
+- [ ] D.7 `session-modal` : corriger par élève, ajouter un élève (la dévalidation avec motif est
+  livrée en D.3) ; fiche élève, onglet journal
   _Exigences : 8, 10, 12_
 
 ## Transverse, à chaque lot

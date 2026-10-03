@@ -314,6 +314,24 @@ Précisions (D.1) — corriger une présence :
   d'une séance devenue non facturable déplacée, statut stocké des lignes recalculé, trop-perçu
   annoncé.
 
+Précisions (D.3) — dévalider une séance :
+
+- **Une opération**, `POST /api/sessions/{id}/unvalidate/{preview|confirm}`, Motifs « Erreur de
+  saisie » et « Autre » : toutes les lignes actives désactivées, la séance de nouveau à valider.
+  Elle remplace deux appels sans Motif ni Trace (`PATCH …/unfinish`, puis `PATCH /api/attendances/
+  deactivate/{id}`), dont le second pouvait échouer après le premier. Les suppressions définitives
+  `DELETE /api/attendances/{id}` et `…/session/{id}` disparaissent avec eux (8.4).
+- **Chaque ligne suit sa correction** : une ligne ordinaire comme un retrait (D.1), un rattrapage
+  accueilli comme en D.2 — demande annulée, séance d'origine de nouveau à rattraper, groupe
+  d'origine dans l'Aperçu. Une absence rattrapée ailleurs, ou dont une demande est en cours, bloque
+  tout (409) : le rattrapage se retire d'abord. Une ligne héritée sans étudiant est désactivée avec
+  la feuille.
+- **Traces** : une pour la séance, en tête, qui liste chaque ligne telle qu'elle était (élève,
+  présent, justifié, rattrapage) et les identifiants désactivés ; une par ligne, pour le Journal de
+  chaque élève. Lignes rangées par nom, pour un Aperçu et un jeton stables.
+- **Année close (10.2)** : dévalider, enregistrer une feuille ou une présence isolée, valider une
+  séance — tous refusés (409) avant écriture.
+
 ### D10 — Motif
 
 `CorrectionReasonType` : `DATA_ENTRY_ERROR`, `DOCUMENT_RECEIVED`, `ARRIVAL_DATE_CORRECTED`,
@@ -461,6 +479,13 @@ Précisions (C.8) :
   avant 1 h du matin à Alger.
 - **Feuille refusée (7.5).** La validation garde les lignes du 409 `ABSENCE_OUTSIDE_WINDOW` ;
   « Retirer ces lignes » les ôte de la feuille, la validation se refait.
+
+Précisions (D.3) : « Dévalider la séance » ouvre le dialogue commun (Motifs lus sur
+`GET /api/sessions/unvalidation-reasons`). Confirmée, la modale reste ouverte et recharge la feuille
+du serveur, cochée par défaut : on dévalide pour refaire la feuille. L'état est aussi écrit sur les
+données de la modale, que le calendrier et la liste d'une série relisent à la fermeture, quelle
+qu'elle soit (bouton, Échap, clic au dehors). `correctionErrorOf` met en commun la lecture d'un refus
+de correction.
 
 ## Error Handling
 

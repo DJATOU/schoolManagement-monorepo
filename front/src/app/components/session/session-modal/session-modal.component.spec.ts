@@ -2,16 +2,22 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpRequest } from '@angular/common/http';
 import { HttpTestingController } from '@angular/common/http/testing';
 import { By } from '@angular/platform-browser';
+import { MatDialog, MatDialogConfig, MatDialogRef } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTabGroup } from '@angular/material/tabs';
 import { TranslateService } from '@ngx-translate/core';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, of, throwError } from 'rxjs';
 
 import { SessionModalComponent } from './session-modal.component';
 import { createDialogRefSpy, DialogRefSpy, matDialogProviders, setupComponentTestBed } from '../../../../testing/setup';
 import { aSession, aStudent } from '../../../../testing/fixtures';
+import { API_BASE_URL } from '../../../api-base-url';
+import { RejectedAbsence } from '../../../models/Attendance/rejected-absence';
 import { RollCall, RollCallStudent } from '../../../models/session/roll-call';
+import { SessionUnvalidation } from '../../../models/session/session-unvalidation';
+import { SessionService } from '../../../services/SessionService';
 import { Student } from '../../student/domain/student';
+import { CorrectionDialogComponent, CorrectionDialogData } from '../../shared/correction-dialog/correction-dialog.component';
 
 /**
  * Fiche détaillée d'une séance, ouverte depuis le calendrier.
@@ -269,6 +275,133 @@ describe('SessionModalComponent — feuille d\'appel', () => {
 
       expect(fixture.componentInstance.rejectedAbsences).toEqual([]);
       expect(snackBar).toHaveBeenCalledWith('Séance d\'une année close : lecture seule.', 'OK', jasmine.any(Object));
+    });
+  });
+
+  /**
+   * Dévalider une séance validée par erreur (D.3 ; exigence 10.1) : Motif, Aperçu et confirmation
+   * par le dialogue commun aux corrections, en un appel serveur. Le défaut corrigé : deux appels sans
+   * Motif ni Trace (« séance non terminée », puis « présences désactivées »), puis toute la feuille
+   * décochée à l'écran, comme si chacun avait été absent.
+   */
+  describe('dévalidation (D.3)', () => {
+    const reasonsUrl = `${API_BASE_URL}/api/sessions/unvalidation-reasons`;
+    let captured: CorrectionDialogData<SessionUnvalidation> | null;
+    let dialogOpen: jasmine.Spy;
+    let snackBar: jasmine.Spy;
+
+    /** Séance du 07/09/2026 (« Maths 1B ») validée, feuille d'Amine fournie par l'appelant. */
+    async function validatedSession(outcome: unknown): Promise<ComponentFixture<SessionModalComponent>> {
+      const amine = aStudent({ isPresent: true } as Partial<Student>);
+      await setupComponentTestBed(SessionModalComponent, {
+        providers: matDialogProviders({ ...aSession({ isFinished: true }), students: [amine] }, createDialogRefSpy())
+      });
+      const translate = TestBed.inject(TranslateService);
+      translate.setTranslation('fr', {
+        SESSION_MODAL: {
+          UNVALIDATE_SUBJECT: 'Séance du {{day}} ({{group}})',
+          UNVALIDATE_SUCCESS: 'Dévalidée : {{count}} ligne(s)',
+          UNVALIDATE_ERROR: 'Motifs non chargés'
+        }
+      });
+      translate.use('fr');
+      http = TestBed.inject(HttpTestingController);
+      const fixture = TestBed.createComponent(SessionModalComponent);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      http.match(req => req.url.includes('/api/attendances/session/')).forEach(req => req.flush([]));
+      captured = null;
+      dialogOpen = spyOn(fixture.debugElement.injector.get(MatDialog), 'open').and.callFake(
+        ((_component: unknown, config?: MatDialogConfig<CorrectionDialogData<SessionUnvalidation>>) => {
+          captured = config?.data ?? null;
+          return { afterClosed: () => of(outcome) } as MatDialogRef<unknown>;
+        }) as never);
+      snackBar = spyOn(TestBed.inject(MatSnackBar), 'open');
+      return fixture;
+    }
+
+    it('ouvre le dialogue des corrections avec les Motifs du serveur, la séance nommée', async () => {
+      const fixture = await validatedSession(undefined);
+
+      fixture.componentInstance.onUnvalidateSession();
+      http.expectOne(reasonsUrl).flush(['DATA_ENTRY_ERROR', 'OTHER']);
+
+      expect(dialogOpen).toHaveBeenCalledOnceWith(CorrectionDialogComponent, jasmine.any(Object));
+      expect(captured!.titleKey).toBe('SESSION_MODAL.UNVALIDATE_TITLE');
+      expect(captured!.subject).toBe('Séance du 07/09/2026 (Maths 1B)');
+      expect(captured!.reasons).toEqual(['DATA_ENTRY_ERROR', 'OTHER']);
+    });
+
+    it('l\'Aperçu et la confirmation passent par la seule adresse de dévalidation, Motif et jeton joints', async () => {
+      const fixture = await validatedSession(undefined);
+      fixture.componentInstance.onUnvalidateSession();
+      http.expectOne(reasonsUrl).flush(['DATA_ENTRY_ERROR', 'OTHER']);
+
+      captured!.run('preview', { type: 'DATA_ENTRY_ERROR' }).subscribe();
+      const preview = http.expectOne(`${API_BASE_URL}/api/sessions/100/unvalidate/preview`);
+      expect(preview.request.method).toBe('POST');
+      expect(preview.request.body).toEqual({ reasonType: 'DATA_ENTRY_ERROR', reasonText: null, previewToken: null });
+      preview.flush({});
+      captured!.run('confirm', { type: 'OTHER', text: 'Mauvaise séance' }, 'jeton').subscribe();
+      expect(http.expectOne(`${API_BASE_URL}/api/sessions/100/unvalidate/confirm`).request.body)
+        .toEqual({ reasonType: 'OTHER', reasonText: 'Mauvaise séance', previewToken: 'jeton' });
+    });
+
+    it('confirmée : la séance est à valider, la feuille rechargée du serveur, cochée par défaut', async () => {
+      const fixture = await validatedSession({ kind: 'confirmed', result: { sessionId: 100, removedLines: 2 } });
+      const component = fixture.componentInstance;
+      component.rejectedAbsences = [{ studentId: 9 } as RejectedAbsence];
+
+      component.onUnvalidateSession();
+      http.expectOne(reasonsUrl).flush(['DATA_ENTRY_ERROR', 'OTHER']);
+
+      expect(component.isFinished).toBeFalse();
+      expect(component.sessionData.isFinished).withContext('relu par l\'écran appelant à la fermeture').toBeFalse();
+      expect(component.rejectedAbsences).toEqual([]);
+      expect(snackBar).toHaveBeenCalledWith('Dévalidée : 2 ligne(s)', jasmine.any(String), jasmine.any(Object));
+      http.expectOne(rollCallUrl).flush(aRollCall({ students: [aRollCallStudent(), aRollCallStudent({ id: 2,
+        firstName: 'Lina', lastName: 'Haddad' })] }));
+      // La feuille rechargée, la lecture des présences part après quelques microtâches.
+      await new Promise(resolve => setTimeout(resolve));
+      http.expectOne(req => req.url.endsWith('/api/attendances/session/100')).flush([]);
+
+      expect((component.sessionData.students as Student[]).map(s => s.lastName)).toEqual(['Belkacem', 'Haddad']);
+      expect(component.sessionData.students.map(s => s.isPresent)).toEqual([true, true]);
+      expect(http.match(req => /unfinish|deactivate/.test(req.url)).length)
+        .withContext('les anciens raccourcis ne sont plus appelés').toBe(0);
+    });
+
+    it('abandonnée : rien ne change, rien n\'est rechargé', async () => {
+      const fixture = await validatedSession(undefined);
+      const component = fixture.componentInstance;
+
+      component.onUnvalidateSession();
+      http.expectOne(reasonsUrl).flush(['DATA_ENTRY_ERROR', 'OTHER']);
+
+      expect(component.isFinished).toBeTrue();
+      expect(component.sessionData.isFinished).toBeTrue();
+      expect((component.sessionData.students as Student[]).map(s => s.lastName)).toEqual(['Belkacem']);
+      expect(http.match(rollCallUrl).length).toBe(0);
+      expect(snackBar).not.toHaveBeenCalled();
+    });
+
+    it('Motifs illisibles : le dit, sans ouvrir le dialogue', async () => {
+      const fixture = await validatedSession(undefined);
+
+      fixture.componentInstance.onUnvalidateSession();
+      http.expectOne(reasonsUrl).flush(null, { status: 503, statusText: 'Unavailable' });
+
+      expect(dialogOpen).not.toHaveBeenCalled();
+      expect(snackBar).toHaveBeenCalledWith('La dévalidation de la séance n\'a pas pu aboutir', 'OK', jasmine.any(Object));
+    });
+
+    it('erreur sans message : le texte de l\'écran', async () => {
+      const fixture = await validatedSession(undefined);
+      spyOn(TestBed.inject(SessionService), 'getUnvalidationReasons').and.returnValue(throwError(() => new Error('')));
+
+      fixture.componentInstance.onUnvalidateSession();
+
+      expect(snackBar).toHaveBeenCalledWith('Motifs non chargés', 'OK', jasmine.any(Object));
     });
   });
 

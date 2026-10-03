@@ -304,12 +304,6 @@
     "CANCEL": "Annuler",
     "YES": "Oui",
     "NO": "Non",
-    "UNVALIDATE_SESSION": {
-      "TITLE": "Dévalider la session",
-      "MESSAGE": "Voulez-vous vraiment dévalider cette session ? Les présences enregistrées seront désactivées.",
-      "CONFIRM": "Oui, dévalider",
-      "CANCEL": "Annuler"
-    },
     "DISABLE_STUDENT": {
       "TITLE": "Désactivation d'un étudiant",
       "MESSAGE": "Voulez-vous vraiment désactiver cet étudiant ? Il sera masqué des listes courantes mais son historique sera conservé.",
@@ -372,6 +366,10 @@
     "EDIT": "Modifier la séance",
     "VALIDATE": "Valider la séance",
     "UNVALIDATE": "Dévalider la séance",
+    "UNVALIDATE_TITLE": "Dévalider la séance",
+    "UNVALIDATE_SUBJECT": "Séance du {{day}} ({{group}}) : toutes ses lignes de présence seront retirées, et elle sera de nouveau à valider.",
+    "UNVALIDATE_SUCCESS": "Séance dévalidée ({{count}} ligne(s) de présence retirée(s)) : elle est de nouveau à valider.",
+    "UNVALIDATE_ERROR": "Les motifs de dévalidation n'ont pas pu être chargés.",
     "PRINT": "Imprimer la présence",
     "DELETE": "Supprimer",
     "DELETE_TITLE": "Supprimer la séance",

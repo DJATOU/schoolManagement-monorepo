@@ -1,10 +1,14 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { catchError, Observable, throwError } from 'rxjs';
 import { API_BASE_URL } from '../api-base-url';
+import { CorrectionReason, CorrectionReasonType, CorrectionResponse } from '../models/correction/correction';
+import { correctionErrorOf } from '../models/correction/correction-error';
 import { Session } from '../models/session/session';
 import { RecurringSessionRequest, RecurringSessionResult } from '../models/session/recurring-session';
 import { RollCall } from '../models/session/roll-call';
+import { SessionUnvalidation } from '../models/session/session-unvalidation';
+import { CorrectionStep } from './encashment.service';
 
 @Injectable({
   providedIn: 'root'
@@ -74,8 +78,37 @@ export class SessionService {
     return this.http.patch<Session>(`${this.apiUrl}/${sessionId}/finish`, {});
   }
 
-  markSessionAsUnfinished(sessionId: number): Observable<Session> {
-    return this.http.patch<Session>(`${this.apiUrl}/${sessionId}/unfinish`, {});
+  /** Motifs proposés pour dévalider une séance, dans l'ordre d'affichage. */
+  getUnvalidationReasons(): Observable<CorrectionReasonType[]> {
+    return this.http.get<CorrectionReasonType[]>(`${this.apiUrl}/unvalidation-reasons`).pipe(
+      catchError((error: HttpErrorResponse) => this.correctionError(error))
+    );
+  }
+
+  /**
+   * Dévalide une séance validée par erreur : Aperçu, puis confirmation de cet Aperçu (spec
+   * admin-corrections, D.3 ; exigence 10.1). Confirmée, la séance est de nouveau à valider et ses
+   * lignes de présence sont désactivées, dans la même opération serveur.
+   *
+   * <p>Remplace l'ancien enchaînement « séance non terminée » puis « présences désactivées » : deux
+   * appels sans Motif ni Trace, dont le second pouvait échouer après le premier.</p>
+   */
+  unvalidate(sessionId: number, step: CorrectionStep, reason: CorrectionReason,
+             previewToken?: string): Observable<CorrectionResponse<SessionUnvalidation>> {
+    return this.http.post<CorrectionResponse<SessionUnvalidation>>(`${this.apiUrl}/${sessionId}/unvalidate/${step}`, {
+      reasonType: reason.type,
+      reasonText: reason.text ?? null,
+      previewToken: previewToken ?? null
+    }).pipe(catchError((error: HttpErrorResponse) => this.correctionError(error)));
+  }
+
+  /** Un refus garde son motif et, pour un Aperçu périmé, le nouvel Aperçu. */
+  private correctionError(error: HttpErrorResponse): Observable<never> {
+    console.error('Session Service Error:', error);
+    return throwError(() => correctionErrorOf(error, {
+      notFound: 'Séance introuvable',
+      fallback: 'La dévalidation de la séance n\'a pas pu aboutir'
+    }));
   }
 
   /**
