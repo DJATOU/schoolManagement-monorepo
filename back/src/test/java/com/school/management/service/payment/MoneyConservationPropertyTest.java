@@ -295,7 +295,11 @@ class MoneyConservationPropertyTest {
                 && jdbc.queryForObject("SELECT COUNT(*) FROM payment_carry_over WHERE active = FALSE", Long.class) > 0);
         Statistics.label("refus").coverage(c -> c.check(true).percentage(p -> p >= 20));
         Statistics.label("report").coverage(c -> c.check(true).percentage(p -> p >= 20));
-        Statistics.label("annulation").coverage(c -> c.check(true).percentage(p -> p >= 20));
+        // 10 % et non 20 % : depuis l'ajout des remplacements (B.6), une annulation effective est
+        // visitée dans 18 à 29 % des scénarios relevés. Un seuil à 20 % échouait au hasard, et jqwik
+        // rejoue ensuite la graine fautive à chaque lancement. 10 % reste à plus de 3 écarts-types
+        // sous la moyenne, et garantit une dizaine d'annulations par lancement.
+        Statistics.label("annulation").coverage(c -> c.check(true).percentage(p -> p >= 10));
         Statistics.label("annulation d'un versement reporté").coverage(c -> c.check(true).percentage(p -> p >= 3));
         Statistics.label("remplacement").collect(replacements > 0);
         Statistics.label("remplacement").coverage(c -> c.check(true).percentage(p -> p >= 10));
