@@ -40,7 +40,7 @@ import static org.mockito.Mockito.when;
  * alerte permanente que personne ne lirait (exigence 10.4).</p>
  *
  * <p>Une clôture d'inscription est ici reproduite comme en base : {@code active = false} et
- * Date_Sortie posée, {@code StudentGroupService.removeStudentFromGroup} désactivant la ligne au
+ * Date_Sortie posée, {@code EnrolmentCorrectionService.setDeparture} désactivant la ligne au
  * lieu de la supprimer.</p>
  */
 @ExtendWith(MockitoExtension.class)

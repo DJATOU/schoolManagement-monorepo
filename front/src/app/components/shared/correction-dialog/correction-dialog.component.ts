@@ -12,7 +12,9 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { Observable, Subscription } from 'rxjs';
 
 import {
+  AttendanceMarks,
   BlockingRefund,
+  CorrectionEffect,
   CorrectionPreview,
   CorrectionReason,
   CorrectionReasonType,
@@ -26,12 +28,22 @@ import { CorrectionPreviewComponent } from '../correction-preview/correction-pre
 export const MAX_REASON_TEXT_LENGTH = 500;
 
 /**
+ * Effets sur lesquels l'administratrice peut noter l'élève présent ou absent : une séance validée
+ * qui entre dans la période sans présence, ou la présence qu'elle vient d'y noter (exigence 5.7).
+ */
+const MARKABLE_EFFECTS = ['SESSION_BECAME_BILLABLE', 'ATTENDANCE_RECORDED'];
+
+/** Ce qui est noté sur une séance désignée : rien (facturable, place réservée), présent, absent. */
+export type MarkChoice = 'none' | 'present' | 'absent';
+
+/**
  * Ce que le dialogue a besoin de savoir d'une correction.
  *
  * @param titleKey  clé du titre (« Annuler le versement »)
  * @param subject   ce qui est corrigé, déjà rédigé (« Reçu RECU-2030-0001 de 3 000,00 DA »)
  * @param reasons   Motifs proposés, dans l'ordre d'affichage
- * @param run       exécute la correction : Aperçu, ou confirmation avec le jeton de l'Aperçu lu
+ * @param run       exécute la correction : Aperçu, ou confirmation avec le jeton de l'Aperçu lu ;
+ *                  `marks` porte les présences notées depuis l'Aperçu, vide sinon
  * @param allowBack vrai pour proposer « Modifier », qui ferme le dialogue en demandant de revenir
  *                  à la saisie
  */
@@ -39,7 +51,8 @@ export interface CorrectionDialogData<T> {
   titleKey: string;
   subject: string;
   reasons: CorrectionReasonType[];
-  run: (step: CorrectionStep, reason: CorrectionReason, previewToken?: string) => Observable<CorrectionResponse<T>>;
+  run: (step: CorrectionStep, reason: CorrectionReason, previewToken?: string,
+        marks?: AttendanceMarks) => Observable<CorrectionResponse<T>>;
   allowBack?: boolean;
 }
 
@@ -61,6 +74,9 @@ export type CorrectionDialogResult<T> = { kind: 'confirmed'; result: T } | { kin
  *       un avertissement ; l'administratrice confirme de nouveau, en connaissance de cause.</li>
  *   <li>Un refus (plancher des remboursements, année close…) s'affiche tel que le serveur le
  *       rédige, remboursements en cause nommés.</li>
+ *   <li>Une séance que l'Aperçu désigne (validée, sans présence, entrée dans la période) peut être
+ *       notée présent ou absent sur place. Le jeton couvre ces choix : en changer redemande
+ *       l'Aperçu, et la confirmation porte exactement les choix lus.</li>
  * </ul>
  */
 @Component({
@@ -93,6 +109,8 @@ export class CorrectionDialogComponent<T> implements OnDestroy {
   errorMessage = '';
   blockingRefunds: BlockingRefund[] = [];
   busy = false;
+  /** Présences notées depuis l'Aperçu, par séance ; une séance absente d'ici reste sans présence. */
+  marks: AttendanceMarks = {};
 
   private readonly subscription: Subscription;
 
@@ -127,13 +145,47 @@ export class CorrectionDialogComponent<T> implements OnDestroy {
     return `correction.reason.${type}`;
   }
 
+  /** L'effet désigne une séance où noter l'élève présent ou absent. */
+  markable(effect: CorrectionEffect): boolean {
+    return effect.sessionId != null && MARKABLE_EFFECTS.includes(effect.type);
+  }
+
+  /** L'Aperçu affiché désigne au moins une séance à noter. */
+  get hasMarkable(): boolean {
+    return (this.preview?.effects ?? []).some(effect => this.markable(effect));
+  }
+
+  markOf(sessionId: number): MarkChoice {
+    const mark = this.marks[sessionId];
+    return mark === undefined ? 'none' : (mark ? 'present' : 'absent');
+  }
+
+  /**
+   * Note une séance, puis redemande l'Aperçu : le jeton lu ne vaut plus, les montants et la liste
+   * des effets changent avec la présence notée.
+   */
+  setMark(sessionId: number, choice: MarkChoice): void {
+    if (this.busy || choice === this.markOf(sessionId)) {
+      return;
+    }
+    const marks = { ...this.marks };
+    if (choice === 'none') {
+      delete marks[sessionId];
+    } else {
+      marks[sessionId] = choice === 'present';
+    }
+    this.marks = marks;
+    this.resetPreview();
+    this.requestPreview();
+  }
+
   requestPreview(): void {
     if (!this.reasonComplete || this.busy) {
       this.form.markAllAsTouched();
       return;
     }
     this.begin();
-    this.data.run('preview', this.reason()).subscribe({
+    this.data.run('preview', this.reason(), undefined, { ...this.marks }).subscribe({
       next: response => {
         this.busy = false;
         this.preview = response.preview;
@@ -148,7 +200,7 @@ export class CorrectionDialogComponent<T> implements OnDestroy {
       return;
     }
     this.begin();
-    this.data.run('confirm', this.reason(), this.previewToken).subscribe({
+    this.data.run('confirm', this.reason(), this.previewToken, { ...this.marks }).subscribe({
       next: response => {
         this.busy = false;
         this.dialogRef.close({ kind: 'confirmed', result: response.result as T });
@@ -195,6 +247,9 @@ export class CorrectionDialogComponent<T> implements OnDestroy {
     this.preview = null;
     this.previewToken = null;
     this.staleNotice = false;
+    // Sans Aperçu, les séances notées ne sont plus affichées : les garder les enverrait sans
+    // qu'on les voie. Le prochain Aperçu les redésigne, à noter de nouveau.
+    this.marks = {};
     if (err instanceof CorrectionError) {
       this.errorMessage = err.message;
       this.blockingRefunds = err.blockingRefunds;

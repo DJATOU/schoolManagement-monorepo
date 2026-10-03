@@ -57,7 +57,7 @@ public class CorrectionRunner {
     private static final Logger LOGGER = LoggerFactory.getLogger(CorrectionRunner.class);
 
     /** Version du format canonique : la changer invalide les jetons en circulation, en le disant. */
-    private static final String CANONICAL_VERSION = "correction-preview-v1";
+    private static final String CANONICAL_VERSION = "correction-preview-v2";
 
     private final TransactionTemplate transactions;
     private final PaymentCostResolver costResolver;
@@ -244,7 +244,10 @@ public class CorrectionRunner {
                     .append(change.before().canonical()).append('|').append(change.after().canonical()).append('\n');
         }
         for (CorrectionEffect effect : preview.effects()) {
-            canonical.append("E|").append(effect.type()).append('|');
+            // La séance désignée compte : deux séances du même jour et de la même série ont la même
+            // description, et une présence notée sur l'une ne vaut pas pour l'autre.
+            canonical.append("E|").append(effect.type()).append('|')
+                    .append(effect.sessionId() == null ? "-" : effect.sessionId()).append('|');
             field(canonical, effect.description()).append('\n');
         }
         return Sha256.hex(canonical.toString());

@@ -1,6 +1,7 @@
 package com.school.management.service;
 
 import com.school.management.domain.valueobject.EnrolmentWindow;
+import com.school.management.dto.EnrolmentDTO;
 import com.school.management.dto.GroupDTO;
 import com.school.management.dto.StudentGroupDTO;
 import com.school.management.mapper.GroupMapper;
@@ -21,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 
@@ -211,35 +213,41 @@ public class StudentGroupService {
         }
     }
 
-    @Transactional
-    public void removeStudentFromGroup(Long groupId, Long studentId) {
-        StudentGroupEntity studentGroup = studentGroupRepository
-                .findByGroupIdAndStudentIdAndActiveTrue(groupId, studentId)
-                .orElseThrow(() -> new EntityNotFoundException(
-                        "StudentGroup not found for groupId " + groupId + " and studentId " + studentId));
+    // Le retrait d'un étudiant (« removeStudentFromGroup ») a été retiré en C.8 : il clôturait
+    // l'inscription au jour même, sans Motif ni Aperçu. Un départ se date, se motive et s'aperçoit
+    // (exigence 6.1) : EnrolmentCorrectionService.setDeparture.
 
-        // Un groupe d'une année passée conserve ses étudiants : on ne peut plus en retirer
-        // (Exigence 9.2). Sinon la composition historique aurait pu être vidée après coup,
-        // faussant les présences et les soldes déjà enregistrés.
-        readOnlyYearGuard.assertGroupMutable(studentGroup.getGroup());
+    /**
+     * Inscriptions d'un étudiant, ouvertes et closes, avec leur Fenêtre_Inscription (spec
+     * admin-corrections, exigences 5 et 6) : ce que la fiche élève affiche et corrige.
+     *
+     * <p>Les inscriptions closes sont listées : un étudiant parti reste débiteur des séances de sa
+     * fenêtre, et son départ peut être corrigé ou annulé. Un étudiant revenu dans un groupe y a deux
+     * inscriptions, listées chacune avec sa période. Ordre : groupe, puis arrivée.</p>
+     *
+     * @param studentId    identifiant de l'étudiant
+     * @param schoolYearId année scolaire à filtrer, ou {@code null} pour toutes les années
+     */
+    @Transactional(readOnly = true)
+    public List<EnrolmentDTO> getEnrolmentsOfStudent(Long studentId, Long schoolYearId) {
+        return studentGroupRepository.findByStudentId(studentId).stream()
+                .filter(enrolment -> enrolment.getGroup() != null)
+                .filter(enrolment -> matchesSchoolYear(enrolment.getGroup(), schoolYearId))
+                .map(StudentGroupService::toEnrolment)
+                .sorted(Comparator.comparing(EnrolmentDTO::groupName, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER))
+                        .thenComparing(EnrolmentDTO::arrival, Comparator.nullsFirst(Comparator.naturalOrder()))
+                        .thenComparing(EnrolmentDTO::id))
+                .toList();
+    }
 
-        // Une clôture est datée (D5) : l'étudiant reste concerné par les séances de sa fenêtre,
-        // jour du départ compris, même validées plus tard (exigence 6.2). Le départ est le jour
-        // même ; l'enregistrer à une autre date, avec Motif et Aperçu, relève de la correction.
-        LocalDate today = LocalDate.now();
-        LocalDate arrival = studentGroup.window().arrival();
-        if (arrival != null && today.isBefore(arrival)) {
-            throw new CustomServiceException(
-                    "L'inscription de " + fullName(studentGroup.getStudent()) + " au groupe « "
-                            + studentGroup.getGroup().getName() + " » commence le "
-                            + EnrolmentWindow.format(arrival)
-                            + " : elle ne peut pas se terminer avant d'avoir commencé. "
-                            + "Corrigez la date d'arrivée.",
-                    HttpStatus.CONFLICT);
-        }
-        studentGroup.setActive(false);
-        studentGroup.setDateLeft(EnrolmentWindow.startOfDay(today));
-        studentGroupRepository.save(studentGroup);
+    private static EnrolmentDTO toEnrolment(StudentGroupEntity enrolment) {
+        GroupEntity group = enrolment.getGroup();
+        EnrolmentWindow window = enrolment.window();
+        return new EnrolmentDTO(enrolment.getId(),
+                enrolment.getStudent() == null ? null : enrolment.getStudent().getId(),
+                group.getId(), group.getName(),
+                group.getSchoolYear() == null ? null : group.getSchoolYear().getId(),
+                window.arrival(), window.departure(), Boolean.TRUE.equals(enrolment.getActive()));
     }
 
     /**

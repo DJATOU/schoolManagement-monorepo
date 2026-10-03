@@ -100,20 +100,6 @@ class StudentGroupReadOnlyYearTest {
         verify(studentGroupRepository, never()).save(any(StudentGroupEntity.class));
     }
 
-    @Test
-    void removeStudentFromGroup_pastYearGroup_isRejected() {
-        StudentGroupEntity enrollment = StudentGroupEntity.builder()
-                .student(student)
-                .group(pastYearGroup)
-                .build();
-        enrollment.setActive(true);
-        when(studentGroupRepository.findByGroupIdAndStudentIdAndActiveTrue(GROUP_ID, STUDENT_ID))
-                .thenReturn(Optional.of(enrollment));
-
-        assertThatThrownBy(() -> service.removeStudentFromGroup(GROUP_ID, STUDENT_ID))
-                .isInstanceOf(ReadOnlySchoolYearException.class);
-
-        // L'affectation reste active : l'historique de composition est préservé.
-        verify(studentGroupRepository, never()).save(any(StudentGroupEntity.class));
-    }
+    // Le départ d'un groupe d'une année close est refusé par EnrolmentCorrectionService, seul
+    // chemin de clôture depuis C.8 : voir EnrolmentCorrectionEndpointIntegrationTest.
 }

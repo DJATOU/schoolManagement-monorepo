@@ -14,11 +14,29 @@ import { TranslateModule } from '@ngx-translate/core';
 import { StudentService } from '../../student/services/student.service';
 import { Student } from '../../student/domain/student';
 import { AdminOnlyDirective } from '../../../shared/admin-only.directive';
+import { calendarDayOf, isCalendarDay } from '../../../utils/calendar-day';
 
 /** Un groupe de la liste : une lettre initiale et les étudiants correspondants. */
 interface LetterGroup {
   letter: string;
   students: Student[];
+}
+
+/**
+ * @param yearStart premier jour de l'année scolaire du groupe (`yyyy-MM-dd`), borne du calendrier
+ * @param yearEnd   dernier jour de cette année
+ */
+export interface AddStudentsDialogData {
+  levelId: number;
+  existingStudentIds: number[];
+  yearStart?: string | null;
+  yearEnd?: string | null;
+}
+
+/** Élèves choisis et date d'arrivée commune (`yyyy-MM-dd`). */
+export interface AddStudentsSelection {
+  studentIds: number[];
+  arrival: string;
 }
 
 /**
@@ -58,15 +76,26 @@ export class AddStudentsDialogComponent implements OnInit, AfterViewInit {
   searchTerm = '';
   loading = true;
 
+  /**
+   * Date d'arrivée commune aux élèves ajoutés (`yyyy-MM-dd`, exigence 5.1), proposée au jour même.
+   * Le serveur refuse une date hors de l'année du groupe, en nommant ses bornes.
+   */
+  arrival = calendarDayOf();
+
   /** Conteneur défilant de la liste (cible des sauts par lettre). */
   @ViewChild('listContainer') listContainer?: ElementRef<HTMLElement>;
   @ViewChild('searchInput') searchInput?: ElementRef<HTMLInputElement>;
 
   constructor(
-    public dialogRef: MatDialogRef<AddStudentsDialogComponent>,
-    @Inject(MAT_DIALOG_DATA) public data: { levelId: number; existingStudentIds: number[] },
+    public dialogRef: MatDialogRef<AddStudentsDialogComponent, AddStudentsSelection | null>,
+    @Inject(MAT_DIALOG_DATA) public data: AddStudentsDialogData,
     private studentService: StudentService
   ) {}
+
+  /** La date saisie existe au calendrier. */
+  get arrivalValid(): boolean {
+    return isCalendarDay(this.arrival);
+  }
 
   ngOnInit(): void {
     this.loadStudents();
@@ -212,7 +241,7 @@ export class AddStudentsDialogComponent implements OnInit, AfterViewInit {
   }
 
   onConfirm(): void {
-    if (this.selectedIds.size === 0) return;
-    this.dialogRef.close(Array.from(this.selectedIds));
+    if (this.selectedIds.size === 0 || !this.arrivalValid) return;
+    this.dialogRef.close({ studentIds: Array.from(this.selectedIds), arrival: this.arrival });
   }
 }

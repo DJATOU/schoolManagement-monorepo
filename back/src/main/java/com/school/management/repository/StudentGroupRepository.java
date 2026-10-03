@@ -40,8 +40,8 @@ public interface StudentGroupRepository extends JpaRepository<StudentGroupEntity
      * Toutes les inscriptions de l'étudiant, <strong>clôturées comprises</strong>.
      *
      * <p>Une inscription clôturée est une ligne dont {@code active} vaut faux
-     * ({@code StudentGroupService.removeStudentFromGroup} ne supprime pas la ligne, il la
-     * désactive). Les variantes {@code ...AndActiveTrue} sont donc aveugles aux clôtures, alors
+     * ({@code EnrolmentCorrectionService.setDeparture} ne supprime pas la ligne, il la
+     * désactive et la date). Les variantes {@code ...AndActiveTrue} sont donc aveugles aux clôtures, alors
      * que le signalement de changement de groupe (exigence 10.1) a précisément besoin de
      * celles-ci : sans cette requête, un départ de groupe serait indétectable.</p>
      *

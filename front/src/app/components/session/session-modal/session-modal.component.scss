@@ -307,7 +307,8 @@
 
 /* Feuille vide ou non chargée : le texte porte le sens, l'icône ne fait que l'appuyer. */
 .roll-call-empty,
-.roll-call-error {
+.roll-call-error,
+.rejected-absences {
   display: flex;
   gap: 8px;
   align-items: flex-start;
@@ -339,10 +340,31 @@
   color: #334155;
 }
 
-.roll-call-error {
+.roll-call-error,
+.rejected-absences {
   border: 1px solid #fca5a5;
   background: #fef2f2;
   color: #991b1b;
+}
+
+/* Absences refusées : titre, lignes nommées, puis l'action qui les retire. */
+.rejected-absences {
+  .rejected-title {
+    font-weight: 600;
+  }
+
+  .rejected-hint {
+    margin: 6px 0;
+    color: #7f1d1d;
+  }
+
+  .remove-rejected-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #991b1b;
+    border-color: #fca5a5;
+  }
 }
 
 /* Facturée sur place : information neutre, pas une alerte. Aucune décision n'est attendue. */

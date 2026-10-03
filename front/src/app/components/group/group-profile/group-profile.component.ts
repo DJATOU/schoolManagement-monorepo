@@ -7,7 +7,11 @@ import { SessionSeries } from '../../../models/sessionSerie/sessionSerie';
 import { SeriesService } from '../../../services/series.service';
 import { RenameSeriesDialogComponent } from '../../serie/rename-series-dialog/rename-series-dialog.component';
 import { GroupService } from '../../../services/group.service';
-import { AddStudentsDialogComponent } from '../add-students-dialog/add-students-dialog.component';
+import {
+  AddStudentsDialogComponent,
+  AddStudentsDialogData,
+  AddStudentsSelection
+} from '../add-students-dialog/add-students-dialog.component';
 import { MatCardModule } from '@angular/material/card';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatButtonModule } from '@angular/material/button';
@@ -31,6 +35,11 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { BehaviorSubject, Observable, combineLatest } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { SchoolYearContextService } from '../../../services/school-year-context.service';
+import { EnrolmentService } from '../../../services/enrolment.service';
+import { EnrolmentCorrectionFlow } from '../../shared/enrolment-correction/enrolment-correction-flow';
+import { enrolmentRefusalMessage } from '../../../utils/enrolment-refusal';
+import { ApiError } from '../../../models/response';
+import { SchoolYear } from '../../../models/schoolYear/school-year';
 import { AuthService } from '../../../services/auth.service';
 import { SecureImageDirective } from '../../../shared/secure-image.directive';
 import { HasRoleDirective } from '../../../shared/has-role.directive';
@@ -152,6 +161,8 @@ export class GroupProfileComponent implements OnInit {
     private authService: AuthService,
     private revenueService: RevenueService,
     private seriesService: SeriesService,
+    private enrolmentService: EnrolmentService,
+    private enrolmentFlow: EnrolmentCorrectionFlow,
   ) {
     this.readOnly$ = combineLatest([
       this.schoolYearContext.readOnly$,
@@ -568,22 +579,26 @@ export class GroupProfileComponent implements OnInit {
           .map(student => student.id)
           .filter((id): id is number => id !== undefined && id !== null);
 
-        const dialogRef = this.dialog.open(AddStudentsDialogComponent, {
-          width: '500px',
-          maxWidth: '95vw',
-          data: { levelId, existingStudentIds }
-        });
+        const year = this.groupYear();
+        const dialogRef = this.dialog.open<AddStudentsDialogComponent, AddStudentsDialogData, AddStudentsSelection | null>(
+          AddStudentsDialogComponent, {
+            width: '500px',
+            maxWidth: '95vw',
+            data: { levelId, existingStudentIds, yearStart: year?.startDate ?? null, yearEnd: year?.endDate ?? null }
+          });
 
-        dialogRef.afterClosed().subscribe((selectedIds: number[] | null) => {
-          if (selectedIds && selectedIds.length > 0) {
-            this.groupService.addStudentsToGroup(this.group!.id!, selectedIds).subscribe({
+        dialogRef.afterClosed().subscribe(selection => {
+          if (selection && selection.studentIds.length > 0) {
+            const count = selection.studentIds.length;
+            this.groupService.addStudentsToGroup(this.group!.id!, selection.studentIds, selection.arrival).subscribe({
               next: () => {
                 this.loadStudents(this.group!.id!); // Recharger la liste après ajout
-                this.showSuccessMessage(`${selectedIds.length} étudiant(s) ajouté(s) au groupe.`);
+                this.showSuccessMessage(`${count} étudiant(s) ajouté(s) au groupe.`);
               },
-              error: (error) => {
+              error: (error: ApiError) => {
                 console.error('Error adding students to group:', error);
-                this.showErrorMessage("Erreur lors de l'ajout des étudiants au groupe.");
+                // Le serveur nomme la cause : année et bornes, départ recouvert, niveau.
+                this.showErrorMessage(enrolmentRefusalMessage(error, this.translate));
               }
             });
           }
@@ -723,45 +738,49 @@ export class GroupProfileComponent implements OnInit {
     this.router.navigate(['/group', this.group.id, 'series', serie.id]);
   }
 
-  removeStudentFromGroup(student: Student): void {
-    this.dialog.open(ConfirmationDialogComponent, {
-      data: {
-        title: this.translate.instant('CONFIRMATION_DIALOG.REMOVE_STUDENT_FROM_GROUP.TITLE'),
-        message: this.translate.instant('CONFIRMATION_DIALOG.REMOVE_STUDENT_FROM_GROUP.MESSAGE'),
-        confirmText: this.translate.instant('CONFIRMATION_DIALOG.REMOVE_STUDENT_FROM_GROUP.CONFIRM'),
-        cancelText: this.translate.instant('CONFIRMATION_DIALOG.REMOVE_STUDENT_FROM_GROUP.CANCEL'),
-        confirmColor: 'warn'
-      }
-    }).afterClosed().subscribe((result: boolean) => {
-      if (result) {
-        if (this.group && this.group.id !== undefined) {
-          const groupId = this.group.id;
-          console.log("rrrrrr", student.id);
-          this.studentService.removeStudentFromGroup(groupId, student.id).subscribe({
-            next: () => {
-              this.snackBar.open('Étudiant retiré du groupe avec succès', 'Fermer', {
-                duration: 3000,
-                panelClass: ['success-snackbar']
-              });
-              this.loadStudents(groupId); // Recharger les étudiants après suppression
-            },
-            error: () => {
-              this.snackBar.open('Erreur lors du retrait de l\'étudiant du groupe', 'Fermer', {
-                duration: 3000,
-                panelClass: ['error-snackbar']
-              });
-            }
-          });
-        } else {
-          this.snackBar.open('Le groupe ou l\'ID du groupe est indéfini', 'Fermer', {
-            duration: 3000,
-            panelClass: ['error-snackbar']
-          });
+  /**
+   * Enregistrer le départ d'un élève du groupe : date proposée au jour même, Motif, Aperçu (spec
+   * admin-corrections, C.8 ; exigence 6.1). Remplace le retrait sans date ni motif, qui clôturait
+   * l'inscription au jour même sans rien montrer de ce qu'elle changeait.
+   *
+   * <p>L'inscription ouverte de l'élève dans ce groupe est relue au serveur : c'est elle que le
+   * départ ferme.</p>
+   */
+  recordDeparture(student: Student): void {
+    const groupId = this.group?.id;
+    if (groupId === undefined || student.id === undefined || student.id === null) {
+      return;
+    }
+    this.enrolmentService.getStudentEnrolments(student.id, this.group?.schoolYearId ?? null).subscribe({
+      next: enrolments => {
+        const enrolment = enrolments.find(candidate => candidate.groupId === groupId && candidate.active);
+        if (!enrolment) {
+          this.showErrorMessage(this.translate.instant('enrolment.departure.notEnrolled'));
+          this.loadStudents(groupId);
+          return;
         }
-      } else {
-        console.log('Suppression annulée');
-      }
+        const name = `${student.firstName ?? ''} ${student.lastName ?? ''}`.trim();
+        this.enrolmentFlow.correct('DEPARTURE', enrolment, name).subscribe({
+          next: result => {
+            if (result) {
+              this.showSuccessMessage(this.translate.instant('enrolment.correction.DEPARTURE.done',
+                { group: enrolment.groupName }));
+              this.loadStudents(groupId);
+              this.loadRevenue(groupId);
+            }
+          },
+          error: (err: Error) => this.showErrorMessage(err.message)
+        });
+      },
+      error: (err: Error) => this.showErrorMessage(err.message)
     });
+  }
+
+  /** Année scolaire du groupe, pour borner le calendrier de la date d'arrivée. */
+  private groupYear(): SchoolYear | null {
+    const yearId = this.group?.schoolYearId;
+    const candidates = [this.schoolYearContext.getSelectedSchoolYear(), this.schoolYearContext.getCurrentSchoolYear()];
+    return candidates.find(year => year?.id != null && year.id === yearId) ?? null;
   }
 
   showSuccessMessage(message: string): void {

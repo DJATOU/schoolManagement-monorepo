@@ -48,9 +48,28 @@
 
   <section *ngIf="preview" aria-live="polite">
     <h3 class="cd-preview-title">{{ 'correction.dialog.previewTitle' | translate }}</h3>
-    <app-correction-preview [preview]="preview"></app-correction-preview>
+    <p class="cd-mark-hint" *ngIf="hasMarkable">
+      <mat-icon aria-hidden="true">how_to_reg</mat-icon>
+      {{ 'correction.dialog.mark.hint' | translate }}
+    </p>
+    <app-correction-preview [preview]="preview" [effectAction]="markTemplate"></app-correction-preview>
   </section>
 </mat-dialog-content>
+
+<!-- Choix proposé à côté d'une séance que l'Aperçu désigne (exigence 5.7). -->
+<ng-template #markTemplate let-effect>
+  <div class="cd-mark" *ngIf="markable(effect)">
+    <mat-form-field appearance="outline" subscriptSizing="dynamic" class="cd-mark-field">
+      <mat-label>{{ 'correction.dialog.mark.label' | translate }}</mat-label>
+      <mat-select [value]="markOf(effect.sessionId)" [disabled]="busy"
+        (selectionChange)="setMark(effect.sessionId, $event.value)">
+        <mat-option value="none">{{ 'correction.dialog.mark.none' | translate }}</mat-option>
+        <mat-option value="present">{{ 'correction.dialog.mark.present' | translate }}</mat-option>
+        <mat-option value="absent">{{ 'correction.dialog.mark.absent' | translate }}</mat-option>
+      </mat-select>
+    </mat-form-field>
+  </div>
+</ng-template>
 
 <mat-dialog-actions align="end">
   <button mat-button type="button" (click)="cancel()">{{ 'common.cancel' | translate }}</button>

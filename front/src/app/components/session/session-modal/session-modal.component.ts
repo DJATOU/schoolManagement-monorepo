@@ -29,6 +29,7 @@ import { map } from 'rxjs/operators';
 import { SchoolYearContextService } from '../../../services/school-year-context.service';
 import { AuthService } from '../../../services/auth.service';
 import { NotConcernedStudent, RollCall } from '../../../models/session/roll-call';
+import { AttendanceSubmissionError, RejectedAbsence } from '../../../models/Attendance/rejected-absence';
 import { formatCalendarDay } from '../../../utils/calendar-day';
 
 @Component({
@@ -126,6 +127,12 @@ export class SessionModalComponent implements OnInit {
 
   /** La feuille n'a pas pu être chargée : une liste vide ne doit pas passer pour une feuille vide. */
   rollCallError = false;
+
+  /**
+   * Absences refusées par la dernière validation : élèves que la séance ne concerne pas (arrivés
+   * après, partis avant, ou sans inscription au groupe). Vide tant que rien n'est refusé.
+   */
+  rejectedAbsences: RejectedAbsence[] = [];
 
   private async loadStudentsData(): Promise<void> {
     // On ne charge les étudiants que si la liste est vide
@@ -294,6 +301,7 @@ onValidateSession(): void {
       next: (response) => {
           console.log('Attendance submitted successfully', response);
 
+          this.rejectedAbsences = [];
           this.isFinished = true;
           this.loadAttendanceData();
 
@@ -315,12 +323,31 @@ onValidateSession(): void {
             this.markSessionAsFinished();
           });
       },
-      error: (error) => {
+      error: (error: unknown) => {
           console.error('Failed to submit attendance', error);
-          this.showErrorMessage(this.translate.instant('SESSION_MODAL.VALIDATE_ERROR'));
+          if (error instanceof AttendanceSubmissionError && error.outsideWindow) {
+            // Refus entier : chaque ligne en cause est nommée, à retirer en une action (7.5).
+            this.rejectedAbsences = error.rejected;
+            return;
+          }
+          this.showErrorMessage(error instanceof AttendanceSubmissionError
+            ? error.message : this.translate.instant('SESSION_MODAL.VALIDATE_ERROR'));
       }
   });
 }
+
+  /**
+   * Retire de la feuille les absences refusées, en une action, avant de revalider (exigence 7.5).
+   *
+   * <p>Seules les lignes nommées par le serveur partent : un élève non concerné par la séance n'a
+   * pas à y être noté absent. La validation reste à refaire, la feuille sous les yeux.</p>
+   */
+  removeRejectedLines(): void {
+    const rejected = new Set(this.rejectedAbsences.map(line => line.studentId));
+    this.sessionData.students = this.sessionData.students
+      .filter(student => !rejected.has(student.id as number)) as typeof this.sessionData.students;
+    this.rejectedAbsences = [];
+  }
 
   private showErrorMessage(message: string): void {
     this.snackBar.open(message, 'OK', {

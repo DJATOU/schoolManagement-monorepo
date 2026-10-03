@@ -37,7 +37,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * daterait les clôtures au mauvais mois sans qu'aucun test simulé ne s'en aperçoive.</p>
  *
  * <p>La clôture est donc produite ici comme en production : ligne gérée désactivée et datée, puis
- * {@code flush}, ce que fait {@code StudentGroupService.removeStudentFromGroup}.</p>
+ * {@code flush}, ce que fait {@code EnrolmentCorrectionService.setDeparture}.</p>
  */
 @DataJpaTest
 @TestPropertySource(properties = {
@@ -83,7 +83,7 @@ class GroupChangeQueriesIntegrationTest {
     }
 
     /**
-     * Clôture d'inscription, par le même chemin que {@code removeStudentFromGroup}. La date est
+     * Clôture d'inscription, par le même chemin que {@code EnrolmentCorrectionService.setDeparture}. La date est
      * posée avec une heure : le stockage doit la ramener au jour.
      */
     private StudentGroupEntity close(StudentGroupEntity enrolment, LocalDate leftOn) {

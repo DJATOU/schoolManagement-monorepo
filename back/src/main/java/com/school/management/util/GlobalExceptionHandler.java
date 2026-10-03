@@ -6,6 +6,7 @@ import com.school.management.service.exception.CustomServiceException;
 import com.school.management.service.session.AbsenceOutsideWindowException;
 import com.school.management.shared.exception.ResourceNotFoundException;
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -14,6 +15,7 @@ import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.validation.ObjectError;
 import java.util.stream.Collectors;
 
@@ -112,6 +114,22 @@ public class GlobalExceptionHandler {
                 "METHOD_NOT_ALLOWED");
         logger.warn("Method not supported: {}", e.getMessage());
         return new ResponseEntity<>(error, HttpStatus.METHOD_NOT_ALLOWED);
+    }
+
+    /**
+     * Adresse sans point d'entrée (par exemple un point d'entrée retiré, appelé par un écran resté
+     * ouvert sur l'ancienne version) : 404, et non une 500 qui ferait croire à une panne.
+     *
+     * <p>{@code @EnableWebMvc} (WebConfig) écarte les ressources statiques par défaut : une adresse
+     * inconnue lève {@link NoHandlerFoundException}, quelle que soit sa méthode.</p>
+     */
+    @ExceptionHandler(NoHandlerFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleNoEndpoint(HttpServletRequest request) {
+        String endpoint = request.getMethod() + " " + request.getRequestURI();
+        ApiErrorResponse error = new ApiErrorResponse(HttpStatus.NOT_FOUND, "Adresse inconnue : " + endpoint,
+                "NOT_FOUND");
+        logger.warn("No endpoint: {}", endpoint);
+        return new ResponseEntity<>(error, HttpStatus.NOT_FOUND);
     }
 
     @ExceptionHandler(Exception.class)

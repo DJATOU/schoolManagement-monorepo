@@ -1,0 +1,93 @@
+/*
+  Inscriptions de l'élève. Le panneau reprend l'accordéon de la fiche (pf-accordion, global) ; les
+  lignes reprennent celles des versements, sans nouvelle variable de couleur.
+*/
+.en-loading {
+  display: flex;
+  justify-content: center;
+  padding: 24px;
+}
+
+.en-error {
+  margin: 8px 4px;
+  color: #b91c1c;
+}
+
+.en-list {
+  list-style: none;
+  margin: 0;
+  padding: 6px 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.en-item {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 10px 14px;
+  background: #fff;
+}
+
+.en-item--closed {
+  background: #f8fafc;
+}
+
+.en-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.en-group {
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.en-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 9px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: #dcfce7;
+  color: #166534;
+}
+
+.en-status--closed {
+  background: #e2e8f0;
+  color: #334155;
+}
+
+.en-period {
+  margin: 4px 0 0;
+  font-size: 0.85rem;
+  color: #475569;
+  font-variant-numeric: tabular-nums;
+}
+
+.en-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.en-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  border-radius: 9px;
+  font-size: 12.5px;
+  font-weight: 600;
+
+  mat-icon {
+    font-size: 17px;
+    width: 17px;
+    height: 17px;
+  }
+}

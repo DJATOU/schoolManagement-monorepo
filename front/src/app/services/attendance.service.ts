@@ -7,6 +7,7 @@ import {
   JustificationAudit,
   JustificationUpdateResult
 } from '../models/Attendance/justification';
+import { AttendanceSubmissionError } from '../models/Attendance/rejected-absence';
 
 
 @Injectable({
@@ -34,15 +35,41 @@ export class AttendanceService {
     
     
    
+    /**
+     * Valide une feuille de présence. Un refus garde ce que le serveur y joint : pour des absences
+     * hors période (409 `ABSENCE_OUTSIDE_WINDOW`), chaque ligne refusée, que l'écran retire avant
+     * de revalider (exigence 7.5). Tout autre 409 était lu comme un doublon : il l'est encore
+     * quand le serveur ne dit rien de plus.
+     */
     submitAttendance(attendances: Attendance[]): Observable<Attendance[]> {
       return this.http.post<Attendance[]>(`${this.apiUrl}/bulk`, attendances).pipe(
-        catchError(error => {
-          if (error.status === 409) {
-            return throwError(() => new Error('Attendance already exists for one or more students in the same session.'));
-          }
-          return throwError(() => error);
-        })
+        catchError((error: HttpErrorResponse) => throwError(() => this.submissionError(error)))
       );
+    }
+
+    private submissionError(error: HttpErrorResponse): AttendanceSubmissionError {
+      const body = error.error ?? {};
+      const serverMessage = typeof body.message === 'string' && body.message.trim().length > 0 ? body.message : null;
+      let message: string;
+      switch (error.status) {
+        case 409:
+          message = serverMessage ?? 'Une présence existe déjà pour un ou plusieurs étudiants de cette séance.';
+          break;
+        case 400:
+        case 404:
+          message = serverMessage ?? 'Feuille de présence refusée.';
+          break;
+        case 403:
+          message = 'Action réservée aux administrateurs';
+          break;
+        case 0:
+          message = 'Serveur injoignable';
+          break;
+        default:
+          message = 'La feuille de présence n\'a pas pu être enregistrée.';
+      }
+      return new AttendanceSubmissionError(message, error.status, body.errorCode ?? null,
+        Array.isArray(body.rejected) ? body.rejected : []);
     }
 
     deleteAttendanceBySessionId(sessionId: number): Observable<void> {

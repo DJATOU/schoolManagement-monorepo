@@ -49,7 +49,7 @@ import java.util.Set;
  *
  * <h2>Comment une clôture est reconnue</h2>
  * Une inscription clôturée est une ligne de {@code student_groups} dont {@code active} vaut
- * <strong>faux</strong> : {@code StudentGroupService.removeStudentFromGroup} désactive la ligne
+ * <strong>faux</strong> : {@code EnrolmentCorrectionService.setDeparture} désactive la ligne
  * au lieu de la supprimer, ce qui préserve l'historique. La date de clôture est sa Date_Sortie
  * ({@code date_left}, V8), jour du départ. Elle remplace {@code date_update}, qui datait la
  * dernière écriture de la ligne et non le départ : une correction ultérieure aurait déplacé la

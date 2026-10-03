@@ -391,7 +391,10 @@
     "ROLL_CALL_EMPTY_NOT_CONCERNED": "Aucun étudiant n'est inscrit au groupe le {{day}}. La séance ne concerne pas :",
     "WINDOW_FROM": "inscrit à partir du {{from}}",
     "WINDOW_FROM_TO": "inscrit du {{from}} au {{to}}",
-    "WINDOW_UNDATED": "inscription sans date d'arrivée"
+    "WINDOW_UNDATED": "inscription sans date d'arrivée",
+    "REJECTED_TITLE": "Validation refusée : {{count}} absence(s) hors de la période des élèves.",
+    "REJECTED_HINT": "Ces élèves ne sont pas concernés par la séance : ils n'ont pas à y être notés absents. Retirez ces lignes, puis validez de nouveau.",
+    "REMOVE_REJECTED": "Retirer ces {{count}} ligne(s)"
   },
   "STUDENT_FORM": {
     "TITLE": "Inscription d'un étudiant",
@@ -1542,7 +1545,14 @@
       "back": "Modifier",
       "stale": "Les données ont changé depuis l'aperçu : voici le nouvel aperçu. Relisez-le avant de confirmer.",
       "blockingRefund": "Remboursement {{number}} du {{date}} : {{amount}} DA sur « {{series}} »",
-      "error": "La correction n'a pas pu être menée. Réessayez."
+      "error": "La correction n'a pas pu être menée. Réessayez.",
+      "mark": {
+        "label": "Présence de l'élève",
+        "none": "Sans présence (facturée)",
+        "present": "Présent",
+        "absent": "Absent",
+        "hint": "Des séances déjà validées entrent dans la période sans présence de l'élève. Laissées ainsi, elles sont facturées : sa place était réservée. Vous pouvez le noter présent ou absent : l'aperçu se met à jour."
+      }
     },
     "preview": {
       "amountsUnchanged": "Aucun montant ne change.",
@@ -1587,6 +1597,66 @@
       "notes": "Note",
       "unchanged": "Rien n'est modifié pour l'instant.",
       "next": "Continuer"
+    }
+  },
+  "enrolment": {
+    "list": {
+      "title": "Inscriptions : arrivées et départs",
+      "empty": "Aucune inscription pour cette année.",
+      "loadError": "Les inscriptions n'ont pas pu être chargées.",
+      "open": "En cours",
+      "closed": "Terminée",
+      "arrival": "Arrivée : {{date}}",
+      "departure": "Départ : {{date}}",
+      "correctArrival": "Corriger l'arrivée",
+      "recordDeparture": "Enregistrer le départ",
+      "correctDeparture": "Corriger le départ",
+      "reopen": "Rouvrir",
+      "arrivalAria": "Corriger la date d'arrivée dans « {{group}} »",
+      "departureAria": "Enregistrer le départ de « {{group}} »",
+      "correctDepartureAria": "Corriger la date de départ de « {{group}} »",
+      "reopenAria": "Rouvrir l'inscription à « {{group}} »"
+    },
+    "period": {
+      "open": "à partir du {{arrival}}",
+      "closed": "du {{arrival}} au {{departure}}"
+    },
+    "correction": {
+      "subject": "{{student}} — « {{group}} », {{period}}",
+      "dateRequired": "Saisissez une date valide.",
+      "unchanged": "C'est déjà la date enregistrée : rien à corriger.",
+      "next": "Voir l'aperçu",
+      "ARRIVAL": {
+        "title": "Corriger la date d'arrivée",
+        "date": "Nouvelle date d'arrivée",
+        "done": "Arrivée dans « {{group}} » corrigée."
+      },
+      "DEPARTURE": {
+        "title": "Enregistrer le départ",
+        "correctTitle": "Corriger la date de départ",
+        "date": "Date de départ",
+        "dateHint": "Dernier jour où l'élève est attendu : les séances de ce jour le concernent encore.",
+        "removePresencesAfter": "Retirer aussi ses présences après cette date",
+        "removePresencesHint": "Sinon, elles restent et sont facturées comme séances suivies. Ses absences après le départ sont toujours retirées.",
+        "done": "Départ de « {{group}} » enregistré."
+      },
+      "REOPEN": {
+        "title": "Rouvrir l'inscription",
+        "done": "Inscription à « {{group}} » rouverte."
+      }
+    },
+    "add": {
+      "groupsTitle": "Inscrire à des groupes",
+      "addGroups": "Inscrire",
+      "selectGroups": "Groupes",
+      "arrival": "Date d'arrivée",
+      "arrivalHint": "Premier jour où l'élève est attendu ; aujourd'hui par défaut.",
+      "alreadyEnrolled": "Déjà inscrit : {{names}}. Aucune inscription enregistrée.",
+      "unreachable": "Serveur injoignable",
+      "error": "L'inscription n'a pas pu être enregistrée."
+    },
+    "departure": {
+      "notEnrolled": "Cet élève n'a plus d'inscription ouverte dans ce groupe : la liste a été rechargée."
     }
   }
 }

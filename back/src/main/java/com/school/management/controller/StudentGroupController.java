@@ -1,5 +1,6 @@
 package com.school.management.controller;
 
+import com.school.management.dto.EnrolmentDTO;
 import com.school.management.dto.GroupDTO;
 import com.school.management.dto.StudentGroupDTO;
 import com.school.management.service.StudentGroupService;
@@ -69,6 +70,19 @@ public class StudentGroupController {
         return ResponseEntity.ok(groups);
     }
 
+    /**
+     * Inscriptions d'un étudiant, ouvertes et closes, avec arrivée et départ : ce que la fiche élève
+     * affiche et permet de corriger (spec admin-corrections, exigences 5 et 6).
+     *
+     * @param studentId    identifiant de l'étudiant
+     * @param schoolYearId année scolaire à filtrer (optionnel)
+     */
+    @GetMapping("/{studentId}/enrolments")
+    public ResponseEntity<List<EnrolmentDTO>> getEnrolmentsOfStudent(@PathVariable Long studentId,
+            @RequestParam(required = false) Long schoolYearId) {
+        return ResponseEntity.ok(studentGroupService.getEnrolmentsOfStudent(studentId, schoolYearId));
+    }
+
     private ResponseEntity<Map<String, Object>> handleGroupAssociation(Runnable associationTask) {
         try {
             associationTask.run();
@@ -92,13 +106,7 @@ public class StudentGroupController {
         // ici les rendait tous en 500, comme une panne.
     }
 
-    @DeleteMapping("/{groupId}/students/{studentId}")
-    public ResponseEntity<Map<String, Object>> removeStudentFromGroup(@PathVariable Long groupId, @PathVariable Long studentId) {
-        logger.info("Received request to remove student {} from group {}", studentId, groupId);
-        studentGroupService.removeStudentFromGroup(groupId, studentId);
-        Map<String, Object> response = new HashMap<>();
-        response.put("message", "Student removed from group successfully");
-        return ResponseEntity.ok(response);
-    }
-
+    // « DELETE /{groupId}/students/{studentId} » a été retiré (C.8) : il clôturait l'inscription au
+    // jour même, sans Motif ni Aperçu. Un départ passe par POST /api/enrolments/{id}/departure/…
+    // (exigence 6.1).
 }

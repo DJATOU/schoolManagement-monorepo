@@ -39,6 +39,13 @@
 <section class="cp-effects" *ngIf="preview.effects.length > 0">
   <h3 class="cp-series-title">{{ 'correction.preview.effects' | translate }}</h3>
   <ul>
-    <li *ngFor="let effect of preview.effects">{{ effect.description }}</li>
+    <li *ngFor="let effect of preview.effects">
+      <span class="cp-effect-text">{{ effect.description }}</span>
+      <!-- Ce que l'hôte propose sur cet effet (noter une séance présent ou absent) : l'Aperçu
+           l'affiche à côté de l'effet, sans rien en décider lui-même. -->
+      <ng-container *ngIf="effectAction">
+        <ng-container *ngTemplateOutlet="effectAction; context: { $implicit: effect }"></ng-container>
+      </ng-container>
+    </li>
   </ul>
 </section>

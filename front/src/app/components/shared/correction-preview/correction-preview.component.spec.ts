@@ -1,3 +1,4 @@
+import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { CorrectionPreviewComponent } from './correction-preview.component';
@@ -86,4 +87,35 @@ describe('CorrectionPreviewComponent', () => {
 
     expect(element.querySelector('.cp-series-title')?.textContent?.trim()).toBe('Janvier — Amine Belkacem');
   });
+
+  it('rend le gabarit de l\'hôte à côté de chaque effet, l\'effet en contexte', () => {
+    const host = TestBed.createComponent(PreviewHostComponent);
+    host.componentInstance.preview = {
+      ...cancellation,
+      effects: [
+        { type: 'SESSION_BECAME_BILLABLE', description: 'Séance du 07/01/2030 validée sans présence', sessionId: 41 },
+        { type: 'ABSENCE_REMOVED', description: 'Absence du 14/01/2030 retirée' }
+      ]
+    };
+    host.detectChanges();
+
+    const items = Array.from((host.nativeElement as HTMLElement).querySelectorAll('.cp-effects li'));
+    expect(items.map(li => li.querySelector('.host-action')?.textContent?.trim()))
+      .toEqual(['SESSION_BECAME_BILLABLE-41', 'ABSENCE_REMOVED-aucune']);
+    expect(items[0].querySelector('.cp-effect-text')?.textContent).toContain('Séance du 07/01/2030');
+  });
 });
+
+/** Hôte qui confie un gabarit à l'Aperçu, comme le dialogue de correction. */
+@Component({
+  standalone: true,
+  imports: [CorrectionPreviewComponent],
+  template: `
+    <ng-template #action let-effect>
+      <span class="host-action">{{ effect.type }}-{{ effect.sessionId ?? 'aucune' }}</span>
+    </ng-template>
+    <app-correction-preview [preview]="preview" [effectAction]="action"></app-correction-preview>`
+})
+class PreviewHostComponent {
+  preview!: CorrectionPreview;
+}

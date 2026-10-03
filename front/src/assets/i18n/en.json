@@ -391,7 +391,10 @@
     "ROLL_CALL_EMPTY_NOT_CONCERNED": "No student is enrolled in the group on {{day}}. This session does not concern:",
     "WINDOW_FROM": "enrolled from {{from}}",
     "WINDOW_FROM_TO": "enrolled from {{from}} to {{to}}",
-    "WINDOW_UNDATED": "enrolment without an arrival date"
+    "WINDOW_UNDATED": "enrolment without an arrival date",
+    "REJECTED_TITLE": "Validation refused: {{count}} absence(s) outside the students' period.",
+    "REJECTED_HINT": "These students are not concerned by the session: they must not be marked absent. Remove these lines, then validate again.",
+    "REMOVE_REJECTED": "Remove these {{count}} line(s)"
   },
   "STUDENT_FORM": {
     "TITLE": "Student registration",
@@ -1542,7 +1545,14 @@
       "back": "Edit",
       "stale": "The data changed since the preview: here is the new preview. Read it again before confirming.",
       "blockingRefund": "Refund {{number}} of {{date}}: {{amount}} DA on \"{{series}}\"",
-      "error": "The correction could not be completed. Try again."
+      "error": "The correction could not be completed. Try again.",
+      "mark": {
+        "label": "Student's attendance",
+        "none": "No attendance (billed)",
+        "present": "Present",
+        "absent": "Absent",
+        "hint": "Sessions already validated enter the period without attendance for the student. Left as is, they are billed: the place was reserved. You can mark the student present or absent: the preview updates."
+      }
     },
     "preview": {
       "amountsUnchanged": "No amount changes.",
@@ -1587,6 +1597,66 @@
       "notes": "Note",
       "unchanged": "Nothing has been changed yet.",
       "next": "Continue"
+    }
+  },
+  "enrolment": {
+    "list": {
+      "title": "Enrolments: arrivals and departures",
+      "empty": "No enrolment for this year.",
+      "loadError": "Enrolments could not be loaded.",
+      "open": "Ongoing",
+      "closed": "Ended",
+      "arrival": "Arrival: {{date}}",
+      "departure": "Departure: {{date}}",
+      "correctArrival": "Correct arrival",
+      "recordDeparture": "Record departure",
+      "correctDeparture": "Correct departure",
+      "reopen": "Reopen",
+      "arrivalAria": "Correct the arrival date in \"{{group}}\"",
+      "departureAria": "Record the departure from \"{{group}}\"",
+      "correctDepartureAria": "Correct the departure date from \"{{group}}\"",
+      "reopenAria": "Reopen the enrolment in \"{{group}}\""
+    },
+    "period": {
+      "open": "from {{arrival}}",
+      "closed": "from {{arrival}} to {{departure}}"
+    },
+    "correction": {
+      "subject": "{{student}} — \"{{group}}\", {{period}}",
+      "dateRequired": "Enter a valid date.",
+      "unchanged": "This is already the recorded date: nothing to correct.",
+      "next": "See preview",
+      "ARRIVAL": {
+        "title": "Correct the arrival date",
+        "date": "New arrival date",
+        "done": "Arrival in \"{{group}}\" corrected."
+      },
+      "DEPARTURE": {
+        "title": "Record the departure",
+        "correctTitle": "Correct the departure date",
+        "date": "Departure date",
+        "dateHint": "Last day the student is expected: sessions on that day still concern them.",
+        "removePresencesAfter": "Also remove their attendances after this date",
+        "removePresencesHint": "Otherwise they stay and are billed as attended sessions. Absences after the departure are always removed.",
+        "done": "Departure from \"{{group}}\" recorded."
+      },
+      "REOPEN": {
+        "title": "Reopen the enrolment",
+        "done": "Enrolment in \"{{group}}\" reopened."
+      }
+    },
+    "add": {
+      "groupsTitle": "Enrol in groups",
+      "addGroups": "Enrol",
+      "selectGroups": "Groups",
+      "arrival": "Arrival date",
+      "arrivalHint": "First day the student is expected; today by default.",
+      "alreadyEnrolled": "Already enrolled: {{names}}. No enrolment recorded.",
+      "unreachable": "Server unreachable",
+      "error": "The enrolment could not be recorded."
+    },
+    "departure": {
+      "notEnrolled": "This student no longer has an open enrolment in this group: the list was reloaded."
     }
   }
 }

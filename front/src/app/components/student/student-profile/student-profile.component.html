@@ -151,6 +151,14 @@
   </mat-accordion>
 
   <!--
+    Inscriptions, arrivées et départs (C.8, exigences 5 et 6) : closes comprises, un élève parti
+    restant dû pour les séances de sa période. Corrections réservées à l'ADMIN, année ouverte.
+  -->
+  <app-student-enrolments [studentId]="student?.id" [schoolYearId]="selectedSchoolYearId"
+    [studentName]="studentFullName" [canCorrect]="!((writeDisabled$ | async) ?? true)"
+    (corrected)="onEnrolmentCorrected()"></app-student-enrolments>
+
+  <!--
     Réductions : le taux appliqué à l'étudiant doit être lisible sur sa fiche. Sans cette
     information, un administrateur encaissait le plein tarif et créait un trop-perçu sans
     comprendre pourquoi le montant était refusé.

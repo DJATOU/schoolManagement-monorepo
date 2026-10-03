@@ -395,9 +395,10 @@ public class EnrolmentCorrectionService {
             for (SessionEntity session : entering.values()) {
                 Boolean present = decisions.get(session.getId());
                 if (present == null) {
+                    // La séance est désignée : l'écran propose d'y noter l'étudiant présent ou absent.
                     effects.add(new CorrectionEffect(CorrectionEffectType.SESSION_BECAME_BILLABLE,
                             "Séance du " + day(session) + " (« " + seriesName(session) + " ») validée sans présence de "
-                                    + fullName(student) + " : facturable, sa place était réservée"));
+                                    + fullName(student) + " : facturable, sa place était réservée", session.getId()));
                 } else {
                     record(student, group, session, present, effects, audits);
                 }
@@ -444,7 +445,8 @@ public class EnrolmentCorrectionService {
                     .build());
             String recorded = (present ? "Présence" : "Absence") + " de " + fullName(student) + " le " + day(session)
                     + " (« " + seriesName(session) + " ») enregistrée";
-            effects.add(new CorrectionEffect(CorrectionEffectType.ATTENDANCE_RECORDED, recorded));
+            // Toujours désignée : l'administratrice peut revenir sur ce qu'elle vient de noter.
+            effects.add(new CorrectionEffect(CorrectionEffectType.ATTENDANCE_RECORDED, recorded, session.getId()));
             audits.add(attendanceTrace(CorrectionAction.ATTENDANCE_ADDED, mark, student, group, session,
                     null, Map.of("present", present, "active", true), recorded));
         }

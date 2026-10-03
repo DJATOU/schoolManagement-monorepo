@@ -162,8 +162,8 @@ Précisions (C.1, C.2) :
   l'ancienne (6.5) sert à annuler un départ saisi par erreur : sur un vrai retour, elle étendrait
   la fenêtre sur l'intervalle d'absence, et ses séances le concerneraient. Deux fenêtres d'un même
   groupe ne se recouvrent jamais (409 à l'inscription).
-- Le départ par `DELETE` est daté du jour même, sans Motif ni Aperçu, jusqu'à C.6. Une inscription
-  dont l'arrivée est future ne peut pas se terminer : il faut corriger l'arrivée.
+- Le départ par `DELETE` était daté du jour même, sans Motif ni Aperçu, en attendant C.6 ; il est
+  retiré en C.8, le départ passant par la correction avec Motif et Aperçu.
 
 Précisions (C.6) : arrivée, départ et réouverture sont une seule correction de la fenêtre,
 `POST /api/enrolments/{id}/arrival|departure|reopen/{preview|confirm}` ; ses conséquences se
@@ -407,6 +407,24 @@ la correction (Motif, Aperçu, confirmation, reprise sur un Aperçu périmé) sa
 qu'une fonction `run(step, motif, jeton)`. Corriger un Encaissement enchaîne deux dialogues — la
 saisie de l'état voulu, puis l'Aperçu, avec « Modifier » pour revenir à la saisie ; annuler ouvre
 directement l'Aperçu.
+
+Précisions (C.8) :
+
+- **Séances à noter depuis l'Aperçu (5.7).** Un effet peut désigner une séance
+  (`CorrectionEffect.sessionId`) : séance validée entrée dans la période sans présence, ou présence
+  notée à sa place. Le dialogue y propose « Sans présence (facturée) / Présent / Absent » ;
+  `run(step, motif, jeton, présences)` porte les choix. Le jeton les couvre : en changer redemande
+  l'Aperçu. L'Aperçu ne décide rien : il rend, à côté de chaque effet, le gabarit que lui confie
+  l'hôte (`effectAction`).
+- **Inscriptions.** La fiche élève liste les inscriptions de l'année, closes comprises
+  (`GET /api/student-groups/{id}/enrolments`). Arrivée, départ, réouverture passent par
+  `EnrolmentCorrectionFlow` : saisie de la date, puis le dialogue commun. La fiche groupe
+  « enregistre le départ » par le même chemin ; le retrait sec (`DELETE`) n'existe plus.
+- **Jours.** Toute date d'inscription est un jour `yyyy-MM-dd`, saisi par un champ `date` natif et
+  envoyé tel quel ; `calendarDayOf` donne le jour local, jamais `toISOString()`, qui donne la veille
+  avant 1 h du matin à Alger.
+- **Feuille refusée (7.5).** La validation garde les lignes du 409 `ABSENCE_OUTSIDE_WINDOW` ;
+  « Retirer ces lignes » les ôte de la feuille, la validation se refait.
 
 ## Error Handling
 

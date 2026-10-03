@@ -27,6 +27,7 @@ import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -218,47 +219,110 @@ class StudentGroupEnrolmentEndpointIntegrationTest extends CorrectionIntegration
     // Départ
     // ------------------------------------------------------------------
 
+    @Test
+    @DisplayName("le retrait sans date ni motif n'existe plus : refusé, l'inscription reste ouverte (6.1)")
+    void removalWithoutReasonIsGone() throws Exception {
+        // Un départ se date, se motive et s'aperçoit : POST /api/enrolments/{id}/departure/…
+        mockMvc.perform(delete("/api/student-groups/" + group.getId() + "/students/" + student.getId())
+                        .with(user("directrice").roles("ADMIN")))
+                // 404 et non 500 : un écran resté sur l'ancienne version ne doit pas croire à une panne.
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Adresse inconnue : DELETE /api/student-groups/"
+                        + group.getId() + "/students/" + student.getId()));
+
+        assertThat(count("SELECT COUNT(*) FROM student_groups WHERE active = TRUE AND date_left IS NULL "
+                + "AND group_id = " + group.getId())).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("lecture d'une adresse inconnue : 404 nommant l'adresse, et non 500")
+    void unknownReadIsNotFound() throws Exception {
+        mockMvc.perform(get("/api/student-groups/" + student.getId() + "/inconnu")
+                        .with(user("directrice").roles("ADMIN")))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Adresse inconnue : GET /api/student-groups/"
+                        + student.getId() + "/inconnu"));
+    }
+
+    // ------------------------------------------------------------------
+    // Lecture des inscriptions
+    // ------------------------------------------------------------------
+
     @Nested
-    @DisplayName("Départ")
-    class Depart {
+    @DisplayName("GET /api/student-groups/{studentId}/enrolments")
+    class Lecture {
 
-        @Test
-        @DisplayName("clôture datée du jour même, à 00:00 (D5)")
-        void closureIsDatedToday() throws Exception {
-            removeFrom(group).andExpect(status().isOk());
-
-            assertThat(count("SELECT COUNT(*) FROM student_groups WHERE active = TRUE AND group_id = "
-                    + group.getId())).isZero();
-            Timestamp left = jdbc.queryForObject("SELECT date_left FROM student_groups WHERE group_id = ?",
-                    Timestamp.class, group.getId());
-            assertThat(left.toLocalDateTime()).isEqualTo(LocalDate.now().atStartOfDay());
+        /**
+         * Amine en Math du 01/09 au 30/11, revenu le 06/01. La période close est enregistrée après
+         * l'ouverte : l'ordre des identifiants contredit celui des arrivées, que la lecture suit.
+         */
+        @BeforeEach
+        void amineLeftMathAndCameBack() {
+            jdbc.update("UPDATE student_groups SET date_assigned = ? WHERE group_id = ?",
+                    Timestamp.valueOf(LocalDate.of(2030, 1, 6).atStartOfDay()), group.getId());
+            StudentGroupEntity past = studentGroupRepository.save(StudentGroupEntity.builder().student(student)
+                    .group(group).dateAssigned(at(LocalDate.of(2029, 9, 1), 0, 0)).build());
+            jdbc.update("UPDATE student_groups SET active = FALSE, date_left = ? WHERE id = ?",
+                    Timestamp.valueOf(LocalDate.of(2029, 11, 30).atStartOfDay()), past.getId());
         }
 
         @Test
-        @DisplayName("inscription qui n'a pas commencé : 409, elle reste ouverte")
-        void notStartedEnrolmentCannotEnd() throws Exception {
-            LocalDate arrival = LocalDate.now().plusDays(5);
-            jdbc.update("UPDATE student_groups SET date_assigned = ? WHERE group_id = ?",
-                    Timestamp.valueOf(arrival.atStartOfDay()), group.getId());
+        @DisplayName("inscriptions ouvertes et closes, dates en jours, par groupe puis par arrivée")
+        void listsOpenAndClosedEnrolments() throws Exception {
+            addGroups(physique, "\"2029-10-15\"").andExpect(status().isOk());
 
-            removeFrom(group)
-                    .andExpect(status().isConflict())
-                    .andExpect(jsonPath("$.message").value(allOf(
-                            containsString("commence le " + arrival.format(java.time.format.DateTimeFormatter
-                                    .ofPattern("dd/MM/yyyy"))),
-                            containsString("Corrigez la date d'arrivée"))));
-
-            assertThat(count("SELECT COUNT(*) FROM student_groups WHERE active = TRUE AND date_left IS NULL "
-                    + "AND group_id = " + group.getId())).isEqualTo(1);
+            read(student.getId(), year.getId())
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.length()").value(3))
+                    .andExpect(jsonPath("$[0].groupName").value("Math 1ère A"))
+                    .andExpect(jsonPath("$[0].groupId").value(group.getId()))
+                    .andExpect(jsonPath("$[0].studentId").value(student.getId()))
+                    .andExpect(jsonPath("$[0].schoolYearId").value(year.getId()))
+                    .andExpect(jsonPath("$[0].arrival").value("2029-09-01"))
+                    .andExpect(jsonPath("$[0].departure").value("2029-11-30"))
+                    .andExpect(jsonPath("$[0].active").value(false))
+                    .andExpect(jsonPath("$[1].groupName").value("Math 1ère A"))
+                    .andExpect(jsonPath("$[1].arrival").value("2030-01-06"))
+                    .andExpect(jsonPath("$[1].departure").value(org.hamcrest.Matchers.nullValue()))
+                    .andExpect(jsonPath("$[1].active").value(true))
+                    .andExpect(jsonPath("$[2].groupName").value("Physique 1ère A"))
+                    .andExpect(jsonPath("$[2].arrival").value("2029-10-15"));
         }
 
         @Test
-        @DisplayName("départ le jour de l'arrivée : accepté, fenêtre d'un jour")
-        void departureOnArrivalDay() throws Exception {
-            jdbc.update("UPDATE student_groups SET date_assigned = ? WHERE group_id = ?",
-                    Timestamp.valueOf(LocalDate.now().atStartOfDay()), group.getId());
+        @DisplayName("filtrées sur l'année demandée ; toutes les années sans filtre")
+        void filteredBySchoolYear() throws Exception {
+            SchoolYearEntity past = schoolYearRepository.save(SchoolYearEntity.builder()
+                    .label("2028-2029").startDate(date(2028, 9, 1)).endDate(date(2029, 6, 30))
+                    .isCurrent(false).build());
+            GroupEntity old = newGroup("Math 1ère A 2028", past);
+            studentGroupRepository.save(StudentGroupEntity.builder().student(student).group(old)
+                    .dateAssigned(at(LocalDate.of(2028, 9, 15), 0, 0)).build());
 
-            removeFrom(group).andExpect(status().isOk());
+            read(student.getId(), year.getId()).andExpect(jsonPath("$.length()").value(2))
+                    .andExpect(jsonPath("$[*].groupName").value(org.hamcrest.Matchers.everyItem(
+                            org.hamcrest.Matchers.is("Math 1ère A"))));
+            read(student.getId(), past.getId()).andExpect(jsonPath("$.length()").value(1))
+                    .andExpect(jsonPath("$[0].groupName").value("Math 1ère A 2028"));
+            read(student.getId(), null).andExpect(jsonPath("$.length()").value(3));
+        }
+
+        @Test
+        @DisplayName("lisible par le rôle VIEWER ; étudiant sans inscription : liste vide")
+        void readableByViewer() throws Exception {
+            mockMvc.perform(get("/api/student-groups/" + student.getId() + "/enrolments")
+                            .with(user("secretaire").roles("VIEWER")))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.length()").value(2));
+            read(999_999L, null).andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(0));
+        }
+
+        private ResultActions read(Long studentId, Long schoolYearId) throws Exception {
+            MockHttpServletRequestBuilder request = get("/api/student-groups/" + studentId + "/enrolments");
+            if (schoolYearId != null) {
+                request = request.param("schoolYearId", schoolYearId.toString());
+            }
+            return mockMvc.perform(request.with(user("directrice").roles("ADMIN")));
         }
     }
 
@@ -287,11 +351,6 @@ class StudentGroupEnrolmentEndpointIntegrationTest extends CorrectionIntegration
         String date = dateJson == null ? "" : ",\"dateAssigned\":" + dateJson;
         return send(post("/api/student-groups/" + target.getId() + "/addStudents"),
                 "{\"studentIds\":[" + student.getId() + "]" + date + "}");
-    }
-
-    private ResultActions removeFrom(GroupEntity target) throws Exception {
-        return mockMvc.perform(delete("/api/student-groups/" + target.getId() + "/students/" + student.getId())
-                .with(user("directrice").roles("ADMIN")));
     }
 
     private ResultActions send(MockHttpServletRequestBuilder request, String json) throws Exception {

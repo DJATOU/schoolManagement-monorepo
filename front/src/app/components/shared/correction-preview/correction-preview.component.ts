@@ -1,8 +1,13 @@
 import { CommonModule } from '@angular/common';
-import { Component, Input } from '@angular/core';
+import { Component, Input, TemplateRef } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { TranslateModule } from '@ngx-translate/core';
-import { AmountSnapshot, CorrectionPreview, SeriesAmountChange } from '../../../models/correction/correction';
+import {
+  AmountSnapshot,
+  CorrectionEffect,
+  CorrectionPreview,
+  SeriesAmountChange
+} from '../../../models/correction/correction';
 
 /** Une ligne du tableau : un montant d'une Série, avant et après. */
 interface AmountRow {
@@ -32,6 +37,12 @@ interface AmountRow {
 })
 export class CorrectionPreviewComponent {
   @Input({ required: true }) preview!: CorrectionPreview;
+
+  /**
+   * Gabarit rendu à côté de chaque effet, l'effet en contexte : l'hôte y place ce qu'il propose
+   * (noter présent ou absent une séance désignée par l'effet). L'Aperçu n'en sait rien d'autre.
+   */
+  @Input() effectAction: TemplateRef<{ $implicit: CorrectionEffect }> | null = null;
 
   readonly currencySuffix = 'DA';
 

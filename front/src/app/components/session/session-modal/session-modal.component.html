@@ -146,6 +146,24 @@
             </div>
           </div>
 
+          <!-- Validation refusée : chaque absence hors période nommée, retirable en une action,
+               puis la validation se refait (exigence 7.5). -->
+          <div *ngIf="rejectedAbsences.length > 0" class="rejected-absences" role="alert">
+            <mat-icon aria-hidden="true">block</mat-icon>
+            <div>
+              <p class="rejected-title">{{ 'SESSION_MODAL.REJECTED_TITLE' | translate: { count: rejectedAbsences.length } }}</p>
+              <ul>
+                <li *ngFor="let line of rejectedAbsences">{{ line.message }}</li>
+              </ul>
+              <p class="rejected-hint">{{ 'SESSION_MODAL.REJECTED_HINT' | translate }}</p>
+              <button mat-stroked-button type="button" class="remove-rejected-btn" (click)="removeRejectedLines()"
+                      [disabled]="(writeDisabled$ | async) ?? false">
+                <mat-icon>playlist_remove</mat-icon>
+                {{ 'SESSION_MODAL.REMOVE_REJECTED' | translate: { count: rejectedAbsences.length } }}
+              </button>
+            </div>
+          </div>
+
           <p *ngIf="rollCallError" class="roll-call-error" role="alert">
             <mat-icon aria-hidden="true">error_outline</mat-icon>
             {{ 'SESSION_MODAL.ROLL_CALL_ERROR' | translate }}

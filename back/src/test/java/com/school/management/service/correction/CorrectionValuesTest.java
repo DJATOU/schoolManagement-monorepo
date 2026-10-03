@@ -157,9 +157,24 @@ class CorrectionValuesTest {
         // « a » suivi de l'effet « b » ne doit pas valoir la commande « a\nE|… » sans effet.
         String split = CorrectionRunner.fingerprint(command("a"), withEffect);
         String merged = CorrectionRunner.fingerprint(
-                command("a\nE|ALLOCATION_CREATED|1:b"), CorrectionPreview.of(List.of(), List.of()));
+                command("a\nE|ALLOCATION_CREATED|-|1:b"), CorrectionPreview.of(List.of(), List.of()));
 
         assertThat(split).isNotEqualTo(merged);
+    }
+
+    @Test
+    @DisplayName("la séance désignée par un effet entre dans l'empreinte : même description, autre séance")
+    void fingerprintCoversTheDesignatedSession() {
+        String description = "Séance du 07/01/2030 (« Janvier ») validée sans présence de Amine Belkacem";
+        String first = CorrectionRunner.fingerprint(command("a"), CorrectionPreview.of(List.of(),
+                List.of(new CorrectionEffect(CorrectionEffectType.SESSION_BECAME_BILLABLE, description, 11L))));
+        String second = CorrectionRunner.fingerprint(command("a"), CorrectionPreview.of(List.of(),
+                List.of(new CorrectionEffect(CorrectionEffectType.SESSION_BECAME_BILLABLE, description, 12L))));
+        String none = CorrectionRunner.fingerprint(command("a"), CorrectionPreview.of(List.of(),
+                List.of(new CorrectionEffect(CorrectionEffectType.SESSION_BECAME_BILLABLE, description))));
+
+        assertThat(first).isNotEqualTo(second).isNotEqualTo(none);
+        assertThat(new CorrectionEffect(CorrectionEffectType.ABSENCE_REMOVED, "Absence retirée").sessionId()).isNull();
     }
 
     private static CorrectionCommand<Void> command(String fingerprint) {

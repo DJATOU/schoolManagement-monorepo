@@ -505,12 +505,46 @@ des lignes) ; `StudentHistoryService.allocatePayments`.
     la série est déjà couverte.
   Couverture vérifiée par jqwik (feuilles acceptées et refusées, corrections acceptées et refusées,
   déplacements avec et sans reliquat) ; 8 mutations du code tuées par les seules propriétés
-- [ ] C.8 Écrans : date d'arrivée à l'inscription ; corriger l'arrivée, enregistrer le départ,
-  rouvrir ; lignes refusées retirables en un clic à la validation. Relevé en C.2 : la fiche élève
-  et la fiche groupe affichent un message générique sur tout refus d'inscription (et la fiche
-  élève lit `alreadyAssociatedGroups` quand le serveur envoie `alreadyAssociatedEntities`) ; elles
-  doivent afficher le `message` du serveur, qui nomme désormais l'année, ses bornes ou le départ
-  en cause
+- [x] C.8 Écrans : date d'arrivée à l'inscription ; corriger l'arrivée, enregistrer le départ,
+  rouvrir ; lignes refusées retirables en un clic à la validation.
+  Serveur :
+  - `GET /api/student-groups/{studentId}/enrolments?schoolYearId=` (`EnrolmentDTO`) : inscriptions
+    ouvertes et closes, arrivée et départ en jours, par groupe puis par arrivée — un étudiant revenu
+    y a deux lignes. Lisible par VIEWER ;
+  - `CorrectionEffect.sessionId` : posé sur `SESSION_BECAME_BILLABLE` et `ATTENDANCE_RECORDED`, la
+    séance où l'écran propose « présent / absent » (5.7). Il entre dans l'empreinte de l'Aperçu
+    (format `correction-preview-v2`) : deux séances du même jour et de la même série ont la même
+    description ;
+  - retiré : `DELETE /api/student-groups/{groupId}/students/{studentId}` et
+    `StudentGroupService.removeStudentFromGroup`, qui clôturaient au jour même sans Motif ni Aperçu
+    (6.1). Une adresse sans point d'entrée répond 404 « Adresse inconnue : DELETE /api/… » : le
+    gestionnaire global la rendait en 500, comme une panne.
+  Écrans :
+  - inscription (fiche élève, fiche groupe) : date d'arrivée, proposée au jour même, bornée à
+    l'année au calendrier ; saisie et envoyée en `yyyy-MM-dd`, sans passer par `Date` ;
+  - refus d'inscription : le `message` du serveur tel quel (année et bornes, départ recouvert,
+    niveau), les groupes déjà suivis lus dans `alreadyAssociatedEntities` (`enrolmentRefusalMessage`) ;
+  - fiche élève, panneau « Inscriptions : arrivées et départs » : chaque inscription de l'année,
+    close comprise, avec « corriger l'arrivée », « enregistrer le départ » (ouverte), « corriger le
+    départ » et « rouvrir » (close) ; ADMIN et année ouverte seulement. Une correction confirmée
+    relit les groupes et les versements ;
+  - fiche groupe : « retirer » devient « enregistrer le départ », par le même enchaînement ;
+  - enchaînement commun (`EnrolmentCorrectionFlow`) : date (départ proposé au jour même, case
+    « retirer aussi ses présences après cette date »), puis le dialogue de correction commun, d'où
+    « Modifier » ramène à la date saisie ; la réouverture va droit à l'Aperçu ;
+  - dialogue de correction : à côté d'une séance que l'Aperçu désigne, « Sans présence (facturée) /
+    Présent / Absent » ; un choix redemande l'Aperçu, la confirmation porte les choix lus, un refus
+    les efface. L'Aperçu reste présentationnel : il rend le gabarit que l'hôte lui confie ;
+  - validation d'une séance : sur 409 `ABSENCE_OUTSIDE_WINDOW`, chaque ligne refusée nommée et
+    « Retirer ces lignes » ; la validation se refait, la feuille sous les yeux. Les autres refus
+    s'affichent tels que le serveur les rédige (tout 409 était lu « présence déjà saisie »).
+  Tests : `StudentGroupEnrolmentEndpointIntegrationTest` (lecture, filtre d'année, ordre contraire
+  aux identifiants, VIEWER, `DELETE` en 404, adresse inconnue), séance désignée et empreinte
+  (`EnrolmentCorrectionEndpointIntegrationTest`, `CorrectionValuesTest`) ; Karma : dialogue
+  (choix, Aperçu redemandé, confirmation, refus), Aperçu (gabarit de l'hôte), saisie de date,
+  enchaînement, panneau d'inscriptions, dialogues d'inscription, fiche élève, fiche groupe,
+  feuille de présence (lignes refusées), services et utilitaires de jour ; mutations tuées côté
+  serveur et côté écran
   _Exigences : 5, 6, 7.5_
 - [ ] C.9 Contrôle du fuseau au démarrage et bandeau d'alerte
   _D1_

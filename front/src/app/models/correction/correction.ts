@@ -43,7 +43,15 @@ export interface SeriesAmountChange {
 export interface CorrectionEffect {
   type: string;
   description: string;
+  /**
+   * Séance sur laquelle l'administratrice peut agir depuis l'Aperçu : une séance validée qui entre
+   * dans la période sans présence, ou la présence notée à sa place (exigence 5.7). Absente sinon.
+   */
+  sessionId?: number | null;
 }
+
+/** Présent (`true`) ou absent (`false`) noté sur des séances désignées par l'Aperçu, par identifiant. */
+export type AttendanceMarks = Record<number, boolean>;
 
 /** Ce qu'une correction change, mesuré en l'exécutant. Contrat serveur : `CorrectionPreview`. */
 export interface CorrectionPreview {

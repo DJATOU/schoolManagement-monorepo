@@ -109,7 +109,7 @@
         </mat-form-field>
 
         <app-student-list [students]="pagedStudents" [showDeleteButton]="!((writeDisabled$ | async) ?? false)"
-          (deleteStudent)="removeStudentFromGroup($event)"></app-student-list>
+          (deleteStudent)="recordDeparture($event)"></app-student-list>
 
         <div class="no-student-match" *ngIf="filteredStudents.length === 0 && students.length > 0">
           <mat-icon>person_off</mat-icon>

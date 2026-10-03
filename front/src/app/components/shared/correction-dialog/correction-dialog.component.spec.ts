@@ -3,7 +3,13 @@ import { Observable, of, throwError } from 'rxjs';
 
 import { CorrectionDialogComponent, CorrectionDialogData } from './correction-dialog.component';
 import { createDialogRefSpy, DialogRefSpy, matDialogProviders, setupComponentTestBed } from '../../../../testing/setup';
-import { CorrectionPreview, CorrectionReason, CorrectionResponse } from '../../../models/correction/correction';
+import {
+  AttendanceMarks,
+  CorrectionEffect,
+  CorrectionPreview,
+  CorrectionReason,
+  CorrectionResponse
+} from '../../../models/correction/correction';
 import { CorrectionError } from '../../../models/correction/correction-error';
 import { CorrectionStep } from '../../../services/encashment.service';
 
@@ -15,7 +21,7 @@ describe('CorrectionDialogComponent', () => {
   let fixture: ComponentFixture<CorrectionDialogComponent<string>>;
   let component: CorrectionDialogComponent<string>;
   let dialogRef: DialogRefSpy;
-  let run: jasmine.Spy<(step: CorrectionStep, reason: CorrectionReason, token?: string) =>
+  let run: jasmine.Spy<(step: CorrectionStep, reason: CorrectionReason, token?: string, marks?: AttendanceMarks) =>
     Observable<CorrectionResponse<string>>>;
 
   const preview = (paidAfter: number): CorrectionPreview => ({
@@ -76,7 +82,8 @@ describe('CorrectionDialogComponent', () => {
     component.requestPreview();
     fixture.detectChanges();
 
-    expect(run).toHaveBeenCalledWith('preview', { type: 'WRONG_AMOUNT', text: '20 000 au lieu de 2 000' });
+    expect(run).toHaveBeenCalledWith('preview', { type: 'WRONG_AMOUNT', text: '20 000 au lieu de 2 000' },
+      undefined, {});
     expect(text()).toContain('Reçu RECU-2030-0001 de 3 000,00 DA annulé');
     expect(button('.cd-confirm-button')).not.toBeNull();
     expect(button('.cd-preview-button')).toBeNull();
@@ -91,7 +98,7 @@ describe('CorrectionDialogComponent', () => {
 
     component.confirm();
 
-    expect(run.calls.mostRecent().args).toEqual(['confirm', { type: 'WRONG_AMOUNT', text: null }, 'jeton-1']);
+    expect(run.calls.mostRecent().args).toEqual(['confirm', { type: 'WRONG_AMOUNT', text: null }, 'jeton-1', {}]);
     expect(dialogRef.close).toHaveBeenCalledWith({ kind: 'confirmed', result: 'annulé' });
   });
 
@@ -148,6 +155,120 @@ describe('CorrectionDialogComponent', () => {
 
     expect(component.errorMessage).toBe('correction.dialog.error');
     expect(component.preview).toBeNull();
+  });
+
+  describe('séances à noter depuis l\'Aperçu (exigence 5.7)', () => {
+    const billable: CorrectionEffect = {
+      type: 'SESSION_BECAME_BILLABLE', sessionId: 41,
+      description: 'Séance du 07/01/2030 (« Janvier ») validée sans présence de Amine Belkacem : facturable'
+    };
+    const recorded = (present: boolean): CorrectionEffect => ({
+      type: 'ATTENDANCE_RECORDED', sessionId: 41,
+      description: `${present ? 'Présence' : 'Absence'} de Amine Belkacem le 07/01/2030 (« Janvier ») enregistrée`
+    });
+    const withEffects = (...effects: CorrectionEffect[]): CorrectionResponse<string> =>
+      ({ preview: { ...preview(0), effects }, previewToken: `jeton-${effects.length}-${effects[0].type}`, result: null });
+    const markFields = (): NodeListOf<HTMLElement> =>
+      (fixture.nativeElement as HTMLElement).querySelectorAll('.cd-mark');
+
+    it('propose un choix à côté de la séance désignée, et seulement là', () => {
+      run.and.returnValue(of(withEffects(
+        { type: 'ENROLMENT_WINDOW_CHANGED', description: 'Arrivée corrigée', sessionId: null },
+        { type: 'PRESENCE_KEPT', description: 'Présence maintenue', sessionId: 41 },
+        billable)));
+      choose('DATA_ENTRY_ERROR');
+
+      component.requestPreview();
+      fixture.detectChanges();
+
+      expect(component.hasMarkable).toBeTrue();
+      expect(markFields().length).toBe(1);
+      expect(text()).toContain('correction.dialog.mark.hint');
+      expect(component.markOf(41)).toBe('none');
+    });
+
+    it('sans séance désignée : aucun choix, aucune consigne', () => {
+      run.and.returnValue(of({ preview: preview(0), previewToken: 'jeton-1', result: null }));
+      choose('DATA_ENTRY_ERROR');
+
+      component.requestPreview();
+      fixture.detectChanges();
+
+      expect(component.hasMarkable).toBeFalse();
+      expect(markFields().length).toBe(0);
+      expect(text()).not.toContain('correction.dialog.mark.hint');
+    });
+
+    it('noter « absent » redemande l\'Aperçu avec ce choix ; la confirmation porte exactement les choix lus', () => {
+      run.and.returnValues(
+        of(withEffects(billable)),
+        of(withEffects(recorded(false))),
+        of({ ...withEffects(recorded(false)), result: 'corrigé' }));
+      choose('DATA_ENTRY_ERROR');
+      component.requestPreview();
+
+      component.setMark(41, 'absent');
+
+      expect(run.calls.mostRecent().args).toEqual(['preview', { type: 'DATA_ENTRY_ERROR', text: null }, undefined,
+        { 41: false }]);
+      expect(component.previewToken).toBe('jeton-1-ATTENDANCE_RECORDED');
+      expect(component.markOf(41)).toBe('absent');
+
+      component.confirm();
+
+      expect(run.calls.mostRecent().args).toEqual(['confirm', { type: 'DATA_ENTRY_ERROR', text: null },
+        'jeton-1-ATTENDANCE_RECORDED', { 41: false }]);
+      expect(dialogRef.close).toHaveBeenCalledWith({ kind: 'confirmed', result: 'corrigé' });
+    });
+
+    it('revenir à « sans présence » retire la séance des choix envoyés', () => {
+      run.and.returnValues(of(withEffects(billable)), of(withEffects(recorded(true))), of(withEffects(billable)));
+      choose('DATA_ENTRY_ERROR');
+      component.requestPreview();
+      component.setMark(41, 'present');
+      expect(run.calls.mostRecent().args[3]).toEqual({ 41: true });
+
+      component.setMark(41, 'none');
+
+      expect(run.calls.mostRecent().args[3]).toEqual({});
+      expect(component.markOf(41)).toBe('none');
+      expect(run).toHaveBeenCalledTimes(3);
+    });
+
+    it('le même choix ne redemande rien ; occupé, aucun choix n\'est pris', () => {
+      run.and.returnValue(of(withEffects(billable)));
+      choose('DATA_ENTRY_ERROR');
+      component.requestPreview();
+
+      component.setMark(41, 'none');
+      expect(run).toHaveBeenCalledTimes(1);
+
+      component.busy = true;
+      component.setMark(41, 'present');
+      expect(run).toHaveBeenCalledTimes(1);
+      expect(component.markOf(41)).toBe('none');
+    });
+
+    it('un refus efface les choix : sans Aperçu, ils ne seraient plus visibles', () => {
+      run.and.returnValues(
+        of(withEffects(billable)),
+        throwError(() => new CorrectionError('Séance(s) [41] : rien à y noter dans cette correction.', 400)));
+      choose('DATA_ENTRY_ERROR');
+      component.requestPreview();
+
+      component.setMark(41, 'present');
+
+      expect(component.errorMessage).toContain('rien à y noter');
+      expect(component.marks).toEqual({});
+    });
+
+    it('le choix affiché suit la valeur notée', () => {
+      component.marks = { 41: true, 42: false };
+
+      expect(component.markOf(41)).toBe('present');
+      expect(component.markOf(42)).toBe('absent');
+      expect(component.markOf(43)).toBe('none');
+    });
   });
 
   it('« Modifier » demande le retour à la saisie ; « Annuler » ferme sans rien', () => {

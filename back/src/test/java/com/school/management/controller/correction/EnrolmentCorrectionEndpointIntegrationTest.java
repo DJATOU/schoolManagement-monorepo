@@ -93,9 +93,12 @@ class EnrolmentCorrectionEndpointIntegrationTest extends CorrectionIntegrationTe
                     .andExpect(jsonPath("$.preview.effects[0].type").value("ENROLMENT_WINDOW_CHANGED"))
                     .andExpect(jsonPath("$.preview.effects[0].description").value(
                             "Arrivée de Amine Belkacem dans « Math 1ère A » : 01/09/2029 → 10/01/2030"))
+                    .andExpect(jsonPath("$.preview.effects[0].sessionId").value(nullValue()))
                     .andExpect(jsonPath("$.preview.effects[1].type").value("ABSENCE_REMOVED"))
                     .andExpect(jsonPath("$.preview.effects[1].description").value(
                             "Absence de Amine Belkacem le 07/01/2030 (« Janvier ») retirée : hors de la nouvelle période"))
+                    // Rien à noter sur une absence retirée : l'écran n'y propose aucun choix.
+                    .andExpect(jsonPath("$.preview.effects[1].sessionId").value(nullValue()))
                     .andExpect(jsonPath("$.preview.series[0].seriesName").value("Janvier"))
                     .andExpect(jsonPath("$.preview.series[0].before.cost").value(4000.0))
                     .andExpect(jsonPath("$.preview.series[0].after.cost").value(2000.0));
@@ -198,6 +201,8 @@ class EnrolmentCorrectionEndpointIntegrationTest extends CorrectionIntegrationTe
                     .andExpect(jsonPath("$.preview.effects[1].description").value(
                             "Séance du 07/01/2030 (« Janvier ») validée sans présence de Amine Belkacem : "
                                     + "facturable, sa place était réservée"))
+                    // La séance est désignée : l'écran y propose « présent » ou « absent » (5.7).
+                    .andExpect(jsonPath("$.preview.effects[1].sessionId").value(jan7.getId()))
                     .andExpect(jsonPath("$.preview.series[0].after.cost").value(4000.0)));
 
             arrival("confirm", "\"2030-01-05\"", null, "DATA_ENTRY_ERROR", token).andExpect(status().isOk());
@@ -211,7 +216,9 @@ class EnrolmentCorrectionEndpointIntegrationTest extends CorrectionIntegrationTe
             String token = token(arrival("preview", "\"2030-01-05\"", marks, "DATA_ENTRY_ERROR", null)
                     .andExpect(jsonPath("$.preview.effects[1].type").value("ATTENDANCE_RECORDED"))
                     .andExpect(jsonPath("$.preview.effects[1].description").value(
-                            "Absence de Amine Belkacem le 07/01/2030 (« Janvier ») enregistrée")));
+                            "Absence de Amine Belkacem le 07/01/2030 (« Janvier ») enregistrée"))
+                    // Toujours désignée : l'administratrice peut revenir sur ce qu'elle a noté.
+                    .andExpect(jsonPath("$.preview.effects[1].sessionId").value(jan7.getId())));
 
             arrival("confirm", "\"2030-01-05\"", marks, "DATA_ENTRY_ERROR", token).andExpect(status().isOk());
 

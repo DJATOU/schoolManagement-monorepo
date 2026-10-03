@@ -4,9 +4,12 @@ import { StudentProfileComponent } from './student-profile.component';
 import { activatedRouteProviders, setupComponentTestBed } from '../../../../testing/setup';
 import { aGroup, aStudent } from '../../../../testing/fixtures';
 import { MatDialog, MatDialogRef } from '@angular/material/dialog';
-import { of } from 'rxjs';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { of, throwError } from 'rxjs';
 import { GroupService } from '../../../services/group.service';
 import { StudentEncashmentsComponent } from '../student-encashments/student-encashments.component';
+import { StudentEnrolmentsComponent } from '../student-enrolments/student-enrolments.component';
+import { StudentService } from '../services/student.service';
 
 /**
  * Fiche d'un étudiant, ouverte sur l'identifiant porté par l'URL.
@@ -72,6 +75,69 @@ describe('StudentProfileComponent', () => {
       closeDialogWith(undefined);
 
       expect(panel.reload).not.toHaveBeenCalled();
+    });
+  });
+
+  /** Inscription à des groupes, à une date d'arrivée réelle, et refus dits tels quels (C.8). */
+  describe('inscription à des groupes', () => {
+    let studentService: StudentService;
+    let snackBar: jasmine.Spy;
+
+    beforeEach(() => {
+      component.student = aStudent({ id: 42 });
+      studentService = fixture.debugElement.injector.get(StudentService);
+      // Le composant importe SharedModule, qui fournit sa propre instance : on la prend chez lui.
+      snackBar = spyOn(fixture.debugElement.injector.get(MatSnackBar), 'open');
+      component.allGroups = [aGroup({ id: 5, name: 'Math 1ère A' })];
+    });
+
+    it('transmet les groupes et la date d\'arrivée choisis ; les inscriptions sont relues', () => {
+      const add = spyOn(studentService, 'addGroupsToStudent').and.returnValue(of({ message: 'ok' }));
+      const enrolments = jasmine.createSpyObj<StudentEnrolmentsComponent>('StudentEnrolmentsComponent', ['reload']);
+      component.enrolmentsPanel = enrolments;
+      component.groupForm.patchValue({ groupIds: [5], arrival: '2029-10-15' });
+
+      component.onSubmitGroups();
+
+      expect(add).toHaveBeenCalledWith(42, [5], '2029-10-15');
+      expect(enrolments.reload).toHaveBeenCalled();
+      expect(component.studentGroups.map(group => group.id)).toEqual([5]);
+      expect(component.groupForm.value).toEqual({ groupIds: [], arrival: null });
+    });
+
+    it('un refus affiche le message du serveur, qui nomme l\'année et ses bornes', () => {
+      const message = 'La date d\'arrivée du 01/07/2030 est hors de l\'année scolaire 2029-2030 (du 01/09/2029 au 30/06/2030).';
+      spyOn(studentService, 'addGroupsToStudent').and.returnValue(throwError(() => ({ status: 400, error: { message } })));
+      component.groupForm.patchValue({ groupIds: [5], arrival: '2030-07-01' });
+
+      component.onSubmitGroups();
+
+      expect(snackBar).toHaveBeenCalledWith(message, 'Close', jasmine.any(Object));
+    });
+
+    it('le dialogue rend groupes et date ; l\'inscription part avec eux', () => {
+      component.studentLevelId = 3;
+      component.allGroups = [aGroup({ id: 5, name: 'Math 1ère A', levelId: 3 })];
+      const add = spyOn(studentService, 'addGroupsToStudent').and.returnValue(of({ message: 'ok' }));
+      const open = spyOn(fixture.debugElement.injector.get(MatDialog), 'open')
+        .and.returnValue({ afterClosed: () => of({ groupIds: [5], arrival: '2029-11-04' }) } as MatDialogRef<unknown>);
+
+      component.openGroupDialog();
+
+      expect(open).toHaveBeenCalled();
+      expect(add).toHaveBeenCalledWith(42, [5], '2029-11-04');
+    });
+
+    it('une correction d\'inscription relit les groupes suivis et les versements', () => {
+      const groups = spyOn(studentService, 'getGroupsForStudent').and.returnValue(of([]));
+      const encashments = jasmine.createSpyObj<StudentEncashmentsComponent>('StudentEncashmentsComponent', ['reload']);
+      component.encashmentsPanel = encashments;
+
+      component.onEnrolmentCorrected();
+
+      expect(groups).toHaveBeenCalledWith(42, component.selectedSchoolYearId ?? undefined);
+      expect(encashments.reload).toHaveBeenCalled();
+      expect(component.studentFullName).toBe(`${component.student!.firstName} ${component.student!.lastName}`);
     });
   });
 });

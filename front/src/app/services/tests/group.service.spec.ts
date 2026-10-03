@@ -72,4 +72,16 @@ describe('GroupService - filtrage par année scolaire', () => {
     expect(req.request.params.has('schoolYearId')).toBeFalse();
     req.flush(mockGroups);
   });
+
+  it('addStudentsToGroup transmet la date d\'arrivée, et l\'omet sans date (le jour même côté serveur)', () => {
+    service.addStudentsToGroup(5, [1, 2], '2029-11-04').subscribe();
+    service.addStudentsToGroup(5, [3]).subscribe();
+
+    const [dated, undated] = httpMock.match(`${API_BASE_URL}/api/student-groups/5/addStudents`);
+    expect(dated.request.method).toBe('POST');
+    expect(dated.request.body).toEqual({ studentIds: [1, 2], dateAssigned: '2029-11-04' });
+    expect(undated.request.body).toEqual({ studentIds: [3] });
+    dated.flush({ message: 'ok' });
+    undated.flush({ message: 'ok' });
+  });
 });

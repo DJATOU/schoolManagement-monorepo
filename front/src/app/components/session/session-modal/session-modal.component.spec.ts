@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpRequest } from '@angular/common/http';
 import { HttpTestingController } from '@angular/common/http/testing';
 import { By } from '@angular/platform-browser';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTabGroup } from '@angular/material/tabs';
 import { TranslateService } from '@ngx-translate/core';
 import { firstValueFrom } from 'rxjs';
@@ -205,6 +206,70 @@ describe('SessionModalComponent — feuille d\'appel', () => {
     expect(tab.querySelector('.roll-call-error')?.textContent).toContain('Feuille non chargée');
     expect(tab.querySelector('.roll-call-empty')).toBeNull();
     expect(text(fixture)).not.toContain('Aucun inscrit');
+  });
+
+  describe('absences refusées à la validation (C.8 ; exigence 7.5)', () => {
+    const bulk = (req: HttpRequest<unknown>) => req.url.endsWith('/api/attendances/bulk') && req.method === 'POST';
+    const lina = {
+      studentId: 2, firstName: 'Lina', lastName: 'Haddad', sessionId: 100, sessionDay: '2030-01-14',
+      reason: 'OUTSIDE_WINDOW', windows: [{ arrival: '2030-01-21', departure: null }],
+      message: 'Absence de Lina Haddad le 14/01/2030 : hors de son inscription au groupe « Maths 1B » (à partir du 21/01/2030).'
+    };
+
+    /** Feuille d'Amine (présent) et de Lina (absente), validée une première fois. */
+    async function validated(): Promise<ComponentFixture<SessionModalComponent>> {
+      const fixture = await open();
+      await answer(fixture, aRollCall({ students: [aRollCallStudent(), aRollCallStudent({ id: 2, firstName: 'Lina',
+        lastName: 'Haddad' })] }));
+      fixture.componentInstance.sessionData.students[1].isPresent = false;
+      fixture.componentInstance.onValidateSession();
+      return fixture;
+    }
+
+    it('nomme chaque ligne refusée, sans valider la séance', async () => {
+      const fixture = await validated();
+      http.expectOne(bulk).flush({ message: 'Validation refusée', errorCode: 'ABSENCE_OUTSIDE_WINDOW', rejected: [lina] },
+        { status: 409, statusText: 'Conflict' });
+
+      const tab = await attendancesTab(fixture);
+      expect(fixture.componentInstance.rejectedAbsences.length).toBe(1);
+      expect(fixture.componentInstance.isFinished).toBeFalsy();
+      expect(Array.from(tab.querySelectorAll('.rejected-absences li')).map(li => li.textContent?.trim()))
+        .toEqual([lina.message]);
+      expect(tab.querySelector('.remove-rejected-btn')).not.toBeNull();
+    });
+
+    it('« Retirer ces lignes » retire exactement elles ; la revalidation part sans elles', async () => {
+      const fixture = await validated();
+      http.expectOne(bulk).flush({ message: 'Validation refusée', errorCode: 'ABSENCE_OUTSIDE_WINDOW', rejected: [lina] },
+        { status: 409, statusText: 'Conflict' });
+      const tab = await attendancesTab(fixture);
+
+      // Sans rôle administrateur (le cas de ce test), le bouton est désactivé comme la validation.
+      expect(tab.querySelector<HTMLButtonElement>('.remove-rejected-btn')!.disabled).toBeTrue();
+      fixture.componentInstance.removeRejectedLines();
+      fixture.detectChanges();
+
+      expect((fixture.componentInstance.sessionData.students as Student[]).map(s => s.lastName)).toEqual(['Belkacem']);
+      expect(fixture.componentInstance.rejectedAbsences).toEqual([]);
+      expect((fixture.nativeElement as HTMLElement).querySelector('.rejected-absences')).toBeNull();
+
+      fixture.componentInstance.onValidateSession();
+      const again = http.expectOne(bulk);
+      expect((again.request.body as { studentId: number }[]).map(line => line.studentId)).toEqual([1]);
+      again.flush([]);
+      expect(fixture.componentInstance.rejectedAbsences).toEqual([]);
+    });
+
+    it('un autre refus s\'affiche tel que le serveur le rédige, sans liste de lignes', async () => {
+      const fixture = await validated();
+      const snackBar = spyOn(TestBed.inject(MatSnackBar), 'open');
+      http.expectOne(bulk).flush({ message: 'Séance d\'une année close : lecture seule.', errorCode: 'CONFLICT' },
+        { status: 409, statusText: 'Conflict' });
+
+      expect(fixture.componentInstance.rejectedAbsences).toEqual([]);
+      expect(snackBar).toHaveBeenCalledWith('Séance d\'une année close : lecture seule.', 'OK', jasmine.any(Object));
+    });
   });
 
   it('étudiants déjà fournis par l\'appelant : la feuille n\'est pas redemandée', async () => {
