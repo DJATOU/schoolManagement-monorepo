@@ -144,6 +144,12 @@ public interface AttendanceRepository extends JpaRepository<AttendanceEntity, Lo
     List<AttendanceEntity> findByStudentIdAndActiveTrue(Long studentId);
 
     /**
+     * Toutes les présences d'un élève, retirées comprises : une trace de justification ou de
+     * rattrapage survit à la désactivation de sa présence, et le Journal doit encore la nommer.
+     */
+    List<AttendanceEntity> findByStudentId(Long studentId);
+
+    /**
      * Liste les absences actives d'un étudiant (fiches {@code isPresent = false}),
      * triées par date de séance décroissante. Utilisé par le workflow de rattrapage
      * pour proposer les séances manquées éligibles à une demande de rattrapage.

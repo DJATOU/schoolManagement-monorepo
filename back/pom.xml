@@ -451,6 +451,9 @@
                                              trop-perçu) est partagée avec celles des dates. -->
                                         <include>com.school.management.service.correction.AttendanceCorrectionService*</include>
                                         <include>com.school.management.service.correction.SeriesSettlement*</include>
+                                        <!-- D.4 : le Journal est ce qu'on montre à un parent qui
+                                             conteste ; chaque source doit être lue en clair. -->
+                                        <include>com.school.management.service.correction.*Journal*</include>
                                     </includes>
                                     <limits>
                                         <limit>

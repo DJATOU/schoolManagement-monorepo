@@ -272,6 +272,30 @@ correction_audit
   techniques (`PaymentDetail{id=…, amountPaid=…}`), l'adaptateur relit la ligne et la Séance ; si
   elles ont disparu, il affiche le montant extrait et « séance supprimée ».
 
+Précisions (D.4) — le Journal :
+
+- **Trois sources lues, pas quatre.** `payment_detail_audit` n'a plus d'écrivain depuis A.6, qui a
+  retiré la correction d'une ligne de ventilation à l'unité, et l'installation part d'une base vide :
+  la table restera vide. Un adaptateur serait du code mort. Une ventilation déplacée l'est par une
+  correction, dont la Trace dit l'effet.
+- **`correction_audit`** : phrase et effet sur le dû repris tels qu'écrits avec la correction. La
+  Trace d'une séance dévalidée n'a pas d'élève et n'y figure pas ; chaque ligne retirée a la sienne.
+- **`attendance_justification_audit`** : « Séance du 14/01/2030 (Math 1ère A) : absence non
+  justifiée → justifiée », commentaire en guise de Motif, aucun effet sur le dû (la justification est
+  documentaire). L'élève, le jour et le groupe se lisent sur la présence, jamais effacée.
+- **`catch_up_billing_audit`** : « Rattrapage du 09/01/2030 (Math 1ère B) : séance manquée aucune →
+  07/01/2030 (Math 1ère A) », « … : déjà payée non tranché → oui » ; une séance manquée qui n'existe
+  plus est dite « supprimée ». L'effet sur le dû n'a pas été mesuré à l'écriture : vide, plutôt que
+  reconstitué après coup.
+- **Ordre** : le plus récent d'abord ; à horodatage égal, la dernière écrite. **Période** : bornes
+  incluses, à la journée, chacune facultative. **Accès** : ADMIN seul, comme les versements d'un
+  élève, dont le Journal nomme les reçus ; ouvert sur une année close (12.5).
+- `GET /api/students/{id}/journal?from=yyyy-MM-dd&to=yyyy-MM-dd` → `{studentId, studentName, from,
+  to, entries: [{performedAt, category, description, amountEffect, reasonType, reasonText,
+  performedBy}]}`, `category` ∈ ENCASHMENT, ENROLMENT, ATTENDANCE, JUSTIFICATION, CATCH_UP.
+- Un paramètre de requête mal formé (« 2030-13-40 ») rend désormais 400 en le nommant, partout : le
+  gestionnaire générique en faisait une 500.
+
 ### D9 — Retrait d'une présence de rattrapage
 
 Deux verrous empêchent aujourd'hui de rattraper de nouveau une Séance manquée :

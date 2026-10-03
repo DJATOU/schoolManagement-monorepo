@@ -640,8 +640,26 @@ des lignes) ; `StudentHistoryService.allocatePayments`.
   feuille, abandon, refus, `SessionService`, calendrier, liste de la série ; 31 mutations serveur et
   20 mutations écran tuées
   _Exigences : 10.1, 10.2_
-- [ ] D.4 `CorrectionJournalService` : quatre sources, entrées en français, effet sur le dû ;
-  adaptateurs des trois audits existants
+- [x] D.4 `CorrectionJournalService` : entrées en français, effet sur le dû, du plus récent au plus
+  ancien. `GET /api/students/{id}/journal?from&to` (bornes incluses, facultatives ; ADMIN seul, le
+  Journal nomme les reçus ; ouvert sur une année close). Une source par table, révisé : trois et non
+  quatre —
+  - `correction_audit` : phrase et effet écrits avec la correction (« Reçu RECU-2030-0001 de
+    2 000,00 DA annulé (Janvier, Math 1ère A) », « Janvier (Math 1ère A) : versé 2 000,00 → 0,00 DA,
+    … ») ; la Trace d'une séance dévalidée n'a pas d'élève, chaque ligne retirée a la sienne ;
+  - `attendance_justification_audit` : « Séance du 07/01/2030 (Math 1ère A) : absence non justifiée
+    → justifiée », commentaire en guise de Motif, aucun effet sur le dû ;
+  - `catch_up_billing_audit` : « Rattrapage du 09/01/2030 (Math 1ère B) : séance manquée aucune →
+    07/01/2030 (Math 1ère A) », « … : déjà payée non tranché → oui », séance disparue « supprimée » ;
+  - `payment_detail_audit` non lue : plus d'écrivain depuis A.6, base neuve à l'installation, la
+    table restera vide.
+  À horodatage égal, la dernière écrite d'abord. Un paramètre mal formé rend 400 en le nommant
+  (« Paramètre « from » invalide : 2030-13-40 »), partout : c'était une 500.
+  Tests : `CorrectionJournalEndpointIntegrationTest` (justification, correction de présence et
+  versement annulé écrits par leurs vrais services ; décisions de rattrapage ; valeurs jamais
+  renseignées ; catégories ; autre élève ; Journal vide ; même horodatage dans chaque source ;
+  période et ses bornes ; année close ; période à l'envers, date mal formée, élève inconnu ; VIEWER,
+  anonyme) ; 40 mutations tuées
   _Exigences : 12.1 à 12.3, 12.5 — D8_
 - [ ] D.5 Journal imprimable par période
   _Exigences : 12.4_

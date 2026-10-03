@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -48,4 +49,7 @@ public interface AttendanceJustificationAuditRepository
     @Query("SELECT COALESCE(MAX(a.sequenceRank), 0) FROM AttendanceJustificationAuditEntity a "
             + "WHERE a.attendanceId = :attendanceId")
     long findMaxSequenceRank(@Param("attendanceId") Long attendanceId);
+
+    /** Modifications portant sur ces présences, pour le Journal d'un élève (exigence 12.1). */
+    List<AttendanceJustificationAuditEntity> findByAttendanceIdIn(Collection<Long> attendanceIds);
 }

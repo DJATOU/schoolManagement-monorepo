@@ -15,6 +15,7 @@ import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.validation.ObjectError;
 import java.util.stream.Collectors;
@@ -92,6 +93,19 @@ public class GlobalExceptionHandler {
         ApiErrorResponse error = new ApiErrorResponse(HttpStatus.BAD_REQUEST, e.getMessage(), "BAD_REQUEST");
         logger.warn("Invalid request: {}", e.getMessage());
         return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
+    }
+
+    /**
+     * Paramètre de chemin ou de requête d'un type inattendu — « 2030-13-40 » pour une date,
+     * « abc » pour un identifiant : 400, le paramètre nommé. Le gestionnaire générique en faisait
+     * une 500, comme une panne serveur.
+     */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiErrorResponse> handleArgumentTypeMismatch(MethodArgumentTypeMismatchException e) {
+        String message = "Paramètre « " + e.getName() + " » invalide : " + e.getValue();
+        logger.warn("Invalid request parameter: {}", message);
+        return new ResponseEntity<>(new ApiErrorResponse(HttpStatus.BAD_REQUEST, message, "BAD_REQUEST"),
+                HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

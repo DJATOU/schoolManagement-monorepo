@@ -99,6 +99,8 @@ public class SecurityConfig {
                         // Reçus et historique des versements d'un élève (spec admin-corrections).
                         .requestMatchers(HttpMethod.GET, "/api/encashments/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/students/*/encashments").hasRole("ADMIN")
+                        // Journal d'un élève : il nomme ses reçus et leurs montants (exigence 12).
+                        .requestMatchers(HttpMethod.GET, "/api/students/*/journal").hasRole("ADMIN")
                         // Lecture : les deux rôles
                         .requestMatchers(HttpMethod.GET, "/api/**").hasAnyRole("ADMIN", "VIEWER")
                         // Écriture : ADMIN uniquement

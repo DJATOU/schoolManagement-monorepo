@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -34,4 +35,7 @@ public interface CatchUpBillingAuditRepository extends JpaRepository<CatchUpBill
     @Query("SELECT COALESCE(MAX(a.sequenceRank), 0) + 1 FROM CatchUpBillingAuditEntity a "
             + "WHERE a.attendanceId = :attendanceId")
     long nextSequenceRank(@Param("attendanceId") Long attendanceId);
+
+    /** Décisions portant sur ces présences, pour le Journal d'un élève (exigence 12.1). */
+    List<CatchUpBillingAuditEntity> findByAttendanceIdIn(Collection<Long> attendanceIds);
 }
