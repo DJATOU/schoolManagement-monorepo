@@ -465,9 +465,30 @@ des lignes) ; `StudentHistoryService.allocatePayments`.
   IntegrationTest` (devis et relevé de groupe sur H2), `GroupRevenueBalanceTest` ; 10 mutations
   tuées
   _Changement de calcul assumé — D5_
-- [ ] C.6 `EnrolmentCorrectionService` : arrivée reculée (absences, présences ordinaires) et
+- [x] C.6 `EnrolmentCorrectionService` : arrivée reculée (absences, présences ordinaires) et
   avancée (Séances validées sans Présence), départ, correction de départ, réouverture ;
-  `VentilationMover`
+  `VentilationMover`. Les trois corrections passent par le `CorrectionRunner` et un seul code, qui
+  compare la période avant et après :
+  - séance qui sort de la période : absence retirée (P5) ; présence ordinaire maintenue, facturée
+    comme séance consommée, sauf départ avec `removePresencesAfter` (6.3) ; rattrapage intact (6.4) ;
+  - séance validée qui y entre sans présence : listée, facturable, ou notée présent / absent dans
+    la même opération (`attendances`, 5.7) ; toute autre séance notée est refusée (400) ;
+  - ventilation d'une séance devenue non facturable : `VentilationMover` retire ses lignes et les
+    ventile de nouveau par `PaymentDistributionService.place`, même série, même Encaissement ;
+    reliquat dit non ventilé ; trop-perçu de la série annoncé, ni reporté ni remboursé (5.9) ;
+  - statut stocké des lignes de paiement du groupe recalculé, le coût ayant pu changer.
+  Refus : même date, hors de l'année (400) ; arrivée après le départ, départ avant l'arrivée,
+  chevauchement d'une autre inscription au groupe, réouverture d'une inscription ouverte (409) ;
+  année close (409) ; Motif hors de la sous-liste (400). Un départ futur dans l'année est admis :
+  l'inscription est close à l'enregistrement, l'étudiant attendu jusqu'à ce jour inclus. Liste
+  changée depuis l'Aperçu : 409 avec la liste à jour (5.8). Une Trace pour la correction, une par
+  présence retirée ou ajoutée. Points d'entrée `POST /api/enrolments/{id}/arrival|departure|reopen/
+  preview|confirm`, `GET /api/enrolments/correction-reasons` (Motifs par correction).
+  `CorrectionReason.parse` est partagé avec les Encaissements, `EnrolmentDates` avec l'inscription.
+  Tests : `EnrolmentCorrectionEndpointIntegrationTest` (Aperçu sans écriture, confirmation, absence
+  retirée, présence maintenue ou retirée, rattrapage intact, séance validée listée ou notée,
+  ventilation déplacée, reliquat et trop-perçu, refus, Aperçu périmé, VIEWER), cas limites
+  (`EnrolmentCorrectionEdgeCasesIntegrationTest`, `VentilationMoverTest`)
   _Exigences : 5.5 à 5.9, 6.1, 6.3 à 6.5 — D6_
 - [ ] C.7 Propriétés P5 « fenêtre respectée », P6 « déplacer la ventilation ne change aucun
   montant »

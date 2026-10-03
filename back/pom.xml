@@ -435,6 +435,13 @@
                                              pas ; le garde la refuse sur chaque point d'entrée. -->
                                         <include>com.school.management.service.session.AbsenceWindowGuard</include>
                                         <include>com.school.management.service.session.AbsenceOutsideWindowException</include>
+                                        <!-- C.6 : corriger les dates d'une inscription change ce
+                                             qui est dû, retire des absences et déplace de la
+                                             ventilation ; une règle d'arrivée non testée ici se
+                                             retrouve dans le relevé d'une famille. -->
+                                        <include>com.school.management.service.correction.EnrolmentCorrectionService*</include>
+                                        <include>com.school.management.service.correction.VentilationMover*</include>
+                                        <include>com.school.management.service.EnrolmentDates</include>
                                     </includes>
                                     <limits>
                                         <limit>

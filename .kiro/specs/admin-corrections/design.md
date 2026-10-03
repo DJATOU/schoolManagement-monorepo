@@ -165,6 +165,12 @@ Précisions (C.1, C.2) :
 - Le départ par `DELETE` est daté du jour même, sans Motif ni Aperçu, jusqu'à C.6. Une inscription
   dont l'arrivée est future ne peut pas se terminer : il faut corriger l'arrivée.
 
+Précisions (C.6) : arrivée, départ et réouverture sont une seule correction de la fenêtre,
+`POST /api/enrolments/{id}/arrival|departure|reopen/{preview|confirm}` ; ses conséquences se
+lisent en comparant la période avant et après, séance par séance. La confirmation explicite du
+maintien des présences hors période (5.6) est celle de l'Aperçu, qui les liste : le jeton change si
+la liste change. Un départ futur dans l'année est admis, l'étudiant reste attendu jusqu'à ce jour.
+
 Précisions (C.5) : le résolveur lit toutes les inscriptions de l'étudiant au groupe et rend les
 séances que contient une fenêtre (`withinEnrolmentSessionIds`), dont l'historique tire son motif.
 « Membre de la série » (`enrolled`) garde l'inscription active comme critère suffisant — une série
@@ -292,8 +298,10 @@ controller/correction/
                                    POST /api/encashments/{id}/correct/{preview|confirm}
                                         (mode et note seuls : corrigés en place, sans
                                         Remplacement ni nouveau reçu — B.4)
-  EnrolmentCorrectionController    POST /api/enrolments/{id}/arrival/{preview|confirm}
+  EnrolmentCorrectionController    GET  /api/enrolments/correction-reasons     (Motifs par correction)
+                                   POST /api/enrolments/{id}/arrival/{preview|confirm}
                                    POST /api/enrolments/{id}/departure/{preview|confirm}
+                                   POST /api/enrolments/{id}/reopen/{preview|confirm}
   AttendanceCorrectionController   POST /api/attendances/{id}/correct/{preview|confirm}
                                    POST /api/sessions/{id}/attendances/add/{preview|confirm}
                                    POST /api/sessions/{id}/unvalidate/{preview|confirm}

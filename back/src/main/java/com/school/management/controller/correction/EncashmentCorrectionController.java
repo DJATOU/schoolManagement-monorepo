@@ -10,8 +10,6 @@ import com.school.management.service.correction.CorrectionReason;
 import com.school.management.service.correction.EncashmentChanges;
 import com.school.management.service.correction.EncashmentCorrection;
 import com.school.management.service.correction.EncashmentCorrectionService;
-import com.school.management.service.exception.CustomServiceException;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -21,7 +19,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
-import java.util.Locale;
 
 /**
  * Annuler et corriger un Encaissement, en Aperçu puis en confirmation (spec admin-corrections,
@@ -96,13 +93,6 @@ public class EncashmentCorrectionController {
 
     /** Motif de la requête ; un type absent ou inconnu est une erreur de saisie, en français. */
     private static CorrectionReason reason(String type, String text) {
-        if (type == null || type.isBlank()) {
-            return new CorrectionReason(null, text);
-        }
-        try {
-            return new CorrectionReason(CorrectionReasonType.valueOf(type.strip().toUpperCase(Locale.ROOT)), text);
-        } catch (IllegalArgumentException unknown) {
-            throw new CustomServiceException("Motif inconnu : « " + type + " ».", HttpStatus.BAD_REQUEST);
-        }
+        return CorrectionReason.parse(type, text);
     }
 }

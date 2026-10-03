@@ -95,11 +95,39 @@ public class PaymentDistributionService {
     @Transactional
     public List<PaymentDetailEntity> distribute(EncashmentAllocationEntity allocation) {
         Objects.requireNonNull(allocation, "allocation");
+        return place(allocation, money(allocation.getAmount())).lines();
+    }
+
+    /**
+     * Lignes créées par une ventilation, et ce qu'aucune séance n'a pu recevoir.
+     *
+     * @param lines    lignes créées, dans l'ordre des séances
+     * @param unplaced reliquat non ventilé, échelle 2, jamais négatif
+     */
+    public record Placement(List<PaymentDetailEntity> lines, BigDecimal unplaced) {
+    }
+
+    /**
+     * Ventile une part d'une Imputation sur les séances facturables de sa série, par la même règle
+     * que {@link #distribute} : ordre chronologique, plafond au prix net de chaque séance.
+     *
+     * <p>Sert au déplacement de ventilation (spec admin-corrections, D6) : quand une séance cesse
+     * d'être facturable, ses lignes sont retirées et leur montant ventilé de nouveau, sans quitter
+     * ni la série ni l'Encaissement. Une seule définition de la ventilation, donc aucune ligne
+     * déplacée qu'un versement ordinaire n'aurait pas placée là.</p>
+     *
+     * @param allocation Imputation dont la part est ventilée
+     * @param amount     montant à ventiler, au plus le montant de l'Imputation
+     * @return les lignes créées et le reliquat
+     */
+    @Transactional
+    public Placement place(EncashmentAllocationEntity allocation, BigDecimal amount) {
+        Objects.requireNonNull(allocation, "allocation");
         PaymentEntity payment = Objects.requireNonNull(allocation.getPayment(), "allocation.payment");
         Long studentId = payment.getStudent().getId();
         Long seriesId = allocation.getSeries().getId();
         Date receivedAt = allocation.getEncashment().getReceivedAt();
-        BigDecimal remaining = money(allocation.getAmount());
+        BigDecimal remaining = money(Objects.requireNonNull(amount, "amount"));
 
         LOGGER.info("Ventilation de l'imputation {} : {} DA sur la série {}", allocation.getId(),
                 remaining.toPlainString(), seriesId);
@@ -129,7 +157,7 @@ public class PaymentDistributionService {
         if (sessions.isEmpty()) {
             LOGGER.warn("Aucune séance facturable pour l'étudiant {} sur la série {} : imputation {} non ventilée",
                     studentId, seriesId, allocation.getId());
-            return created;
+            return new Placement(created, remaining);
         }
 
         BigDecimal netPrice = money(paymentQuoteService.netPricePerSession(studentId, seriesId));
@@ -137,7 +165,7 @@ public class PaymentDistributionService {
             // Étudiant exempté : aucune séance ne lui doit rien, il n'y a rien à ventiler.
             LOGGER.warn("Prix net nul pour l'étudiant {} sur la série {} : imputation {} non ventilée",
                     studentId, seriesId, allocation.getId());
-            return created;
+            return new Placement(created, remaining);
         }
 
         for (SessionEntity session : sessions) {
@@ -171,7 +199,7 @@ public class PaymentDistributionService {
                     allocation.getId(), remaining.toPlainString(), seriesId, netPrice.toPlainString());
         }
 
-        return created;
+        return new Placement(created, remaining);
     }
 
     /** Séances couvertes par une présence de rattrapage. */

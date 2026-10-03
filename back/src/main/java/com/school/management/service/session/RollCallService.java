@@ -89,7 +89,7 @@ public class RollCallService {
     }
 
     /** Groupe de la Séance : le sien, sinon celui de sa Série. */
-    static GroupEntity groupOf(SessionEntity session) {
+    public static GroupEntity groupOf(SessionEntity session) {
         if (session.getGroup() != null) {
             return session.getGroup();
         }

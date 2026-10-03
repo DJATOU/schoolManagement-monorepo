@@ -5,7 +5,6 @@ import com.school.management.dto.GroupDTO;
 import com.school.management.dto.StudentGroupDTO;
 import com.school.management.mapper.GroupMapper;
 import com.school.management.persistance.GroupEntity;
-import com.school.management.persistance.SchoolYearEntity;
 import com.school.management.persistance.StudentEntity;
 import com.school.management.persistance.StudentGroupEntity;
 import com.school.management.repository.GroupRepository;
@@ -139,7 +138,8 @@ public class StudentGroupService {
      * scolaire du groupe, et après toute inscription passée de l'étudiant au même groupe.
      */
     private void enrol(StudentEntity student, GroupEntity group, LocalDate arrival, StudentGroupDTO studentGroupDto) {
-        assertWithinSchoolYear(group, arrival);
+        // Arrivée dans l'année scolaire du groupe, bornes comprises (exigences 5.2, 5.3).
+        EnrolmentDates.assertWithinSchoolYear(group, arrival, "La date d'arrivée");
         assertAfterPastEnrolments(student, group, arrival);
         studentGroupRepository.save(StudentGroupEntity.builder()
                 .student(student)
@@ -148,27 +148,6 @@ public class StudentGroupService {
                 .createdBy(studentGroupDto.getAssignedBy())
                 .description(studentGroupDto.getDescription())
                 .build());
-    }
-
-    /**
-     * L'arrivée tombe dans l'année scolaire du groupe, bornes comprises (exigences 5.2, 5.3).
-     *
-     * <p>Une date future est admise : une famille inscrit en avance. Une date hors de l'année
-     * désignerait des séances d'une autre année, que ce groupe n'a pas. Le garde d'année
-     * courante est passé avant : l'année du groupe existe et est l'année courante.</p>
-     */
-    private void assertWithinSchoolYear(GroupEntity group, LocalDate arrival) {
-        SchoolYearEntity year = group.getSchoolYear();
-        LocalDate start = EnrolmentWindow.dayOf(year.getStartDate());
-        LocalDate end = EnrolmentWindow.dayOf(year.getEndDate());
-        if (arrival.isBefore(start) || arrival.isAfter(end)) {
-            throw new CustomServiceException(
-                    "La date d'arrivée du " + EnrolmentWindow.format(arrival)
-                            + " est hors de l'année scolaire " + year.getLabel()
-                            + " du groupe « " + group.getName() + " », qui va du "
-                            + EnrolmentWindow.format(start) + " au " + EnrolmentWindow.format(end) + ".",
-                    HttpStatus.BAD_REQUEST);
-        }
     }
 
     /**

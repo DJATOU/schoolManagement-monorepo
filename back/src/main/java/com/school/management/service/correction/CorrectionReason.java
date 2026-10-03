@@ -40,4 +40,21 @@ public record CorrectionReason(CorrectionReasonType type, String text) {
     public static CorrectionReason of(CorrectionReasonType type) {
         return new CorrectionReason(type, null);
     }
+
+    /**
+     * Motif tel qu'une requête le transmet : type en texte, casse indifférente. Un type absent est
+     * refusé par le constructeur ; un type inconnu est une erreur de saisie, dite en français.
+     *
+     * @throws CustomServiceException 400
+     */
+    public static CorrectionReason parse(String type, String text) {
+        if (type == null || type.isBlank()) {
+            return new CorrectionReason(null, text);
+        }
+        try {
+            return new CorrectionReason(CorrectionReasonType.valueOf(type.strip().toUpperCase(java.util.Locale.ROOT)), text);
+        } catch (IllegalArgumentException unknown) {
+            throw new CustomServiceException("Motif inconnu : « " + type + " ».", HttpStatus.BAD_REQUEST);
+        }
+    }
 }
