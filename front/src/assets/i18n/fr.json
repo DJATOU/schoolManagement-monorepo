@@ -1459,7 +1459,10 @@
       "savedAmount": "{{amount}} DA rendus au bénéficiaire.",
       "printReceipt": "Imprimer le reçu",
       "downloadReceipt": "Télécharger le reçu",
-      "receiptFailed": "Le remboursement est enregistré, mais son reçu n'a pas pu être produit. Il reste imprimable depuis l'historique."
+      "receiptFailed": "Le remboursement est enregistré, mais son reçu n'a pas pu être produit. Il reste imprimable depuis l'historique.",
+      "amountPlaceholder": "Ex. : 2000",
+      "reasonNote": "Le motif figure sur le reçu de remboursement remis à la famille.",
+      "back": "Modifier"
     },
     "receipt": {
       "title": "Reçu de remboursement",

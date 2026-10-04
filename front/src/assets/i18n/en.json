@@ -1459,7 +1459,10 @@
       "savedAmount": "{{amount}} DA returned to the beneficiary.",
       "printReceipt": "Print receipt",
       "downloadReceipt": "Download receipt",
-      "receiptFailed": "The refund is recorded, but its receipt could not be produced. It remains printable from the history."
+      "receiptFailed": "The refund is recorded, but its receipt could not be produced. It remains printable from the history.",
+      "amountPlaceholder": "e.g. 2000",
+      "reasonNote": "The reason is printed on the refund receipt given to the family.",
+      "back": "Edit"
     },
     "receipt": {
       "title": "Refund receipt",

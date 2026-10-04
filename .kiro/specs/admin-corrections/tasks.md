@@ -729,11 +729,28 @@ des lignes) ; `StudentHistoryService.allocatePayments`.
 
 ## Transverse, à chaque lot
 
-- [ ] T.1 Tests HTTP de bout en bout du lot : statuts, corps, absence d'écriture après refus,
-  403 VIEWER sur chaque `preview` et `confirm`
-- [ ] T.2 Tests Karma des composants du lot
-- [ ] T.3 Clés i18n FR et EN, parité vérifiée
-- [ ] T.4 `npm run build` et `./mvnw test` verts
+- [x] T.1 Tests HTTP de bout en bout du lot : statuts, corps, absence d'écriture après refus,
+  403 VIEWER sur chaque `preview` et `confirm`. Faits correction par correction (un test
+  d'intégration MockMvc par point d'entrée), complétés d'une passe sur les routes réelles :
+  `WriteRoutesAuthorizationIntegrationTest` relit les routes dans Spring MVC plutôt que de les
+  lister — une route ajoutée demain est contrôlée sans qu'on y pense. Les 18 Aperçus et
+  confirmations, nommés pour qu'un renommage ne sorte pas du contrôle sans bruit : VIEWER 403,
+  anonyme 401 ; toute écriture sous `/api`, connexion exceptée : VIEWER 403 ; lectures financières
+  (reçus, versements, Journal, recettes) : VIEWER 403 ; aucun refus n'écrit. 5 mutations de la
+  configuration de sécurité tuées
+- [x] T.2 Tests Karma des composants du lot. Chaque composant et service touché a sa spec ;
+  `enrolment-contracts.spec.ts` couvre les trois services modifiés qui n'en avaient pas (date
+  d'arrivée jointe seulement si donnée, clé de soumission en en-tête). Les modèles sont des types
+- [x] T.3 Clés i18n FR et EN, parité vérifiée (`i18n-parity.spec.ts`). Relevé des clés utilisées
+  dans le code : trois manquaient dans les deux fichiers, donc invisibles au contrôle de parité, et
+  s'affichaient brutes dans le dialogue de remboursement (`refund.dialog.amountPlaceholder`,
+  `reasonNote`, `back`) — ajoutées. Les clés des écrans de correction, composées comprises, sont
+  désormais énumérées dans la spec de parité
+- [x] T.4 `npm run build` (production) et `./mvnw test` verts : 592 tests Karma, build de production
+  sans erreur ; backend 1232 tests, couverture JaCoCo exigée atteinte. Restent deux avertissements
+  de budget (seuils d'avertissement, pas d'erreur), non traités ici : paquet initial 5,59 Mo pour
+  5 Mo — tous les écrans sont chargés d'emblée, sans découpage par route —, feuille de style du
+  calendrier 14,5 ko pour 10 ko
 - [ ] T.5 Déploiement sur une base neuve avec `docker compose up` : migrations et fuseau
   vérifiés, parcours du lot
 
