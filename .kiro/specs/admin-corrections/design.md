@@ -511,6 +511,12 @@ données de la modale, que le calendrier et la liste d'une série relisent à la
 qu'elle soit (bouton, Échap, clic au dehors). `correctionErrorOf` met en commun la lecture d'un refus
 de correction.
 
+Précisions (D.7) : sur une Séance validée, `session-modal` garde chaque ligne en lecture et lui donne
+un menu « Corriger » ; l'identifiant de la ligne est retenu au chargement des présences. Ajouter un
+élève passe par le même dialogue de sélection, puis par le choix de l'état de sa ligne
+(`AttendanceStateDialogComponent`), puis par la correction. Après confirmation, la feuille est relue
+du serveur, comme après une dévalidation.
+
 Précisions (D.5) : le Journal est un panneau de la fiche élève, ADMIN seul, lu à l'ouverture. Il
 s'imprime en A4 paysage, composé par pdfmake comme les reçus. « Imprimer » relit le Journal sur la
 période saisie avant de l'imprimer. La police embarquée n'a pas de flèche : « → » s'imprime « -> ».

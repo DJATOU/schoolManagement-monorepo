@@ -77,8 +77,10 @@
           <mat-card-title>
             {{ 'SESSION_MODAL.STUDENTS' | translate }} ({{ sessionData.students.length }})
           </mat-card-title>
-          <button mat-icon-button (click)="openAddStudentDialog()" [disabled]="isFinished || ((writeDisabled$ | async) ?? false)"
-                  [matTooltip]="'SESSION_MODAL.ADD_STUDENT' | translate">
+          <!-- Séance validée : l'ajout reste possible, comme une correction (motif, aperçu). -->
+          <button mat-icon-button class="add-student-btn" (click)="openAddStudentDialog()"
+                  [disabled]="(writeDisabled$ | async) ?? false"
+                  [matTooltip]="(isFinished ? 'SESSION_MODAL.CORRECTION.ADD_STUDENT' : 'SESSION_MODAL.ADD_STUDENT') | translate">
             <mat-icon>add</mat-icon>
           </button>
         </mat-card-header>
@@ -94,12 +96,14 @@
           -->
           <div class="students-scroll">
             <div *ngFor="let student of sessionData.students" class="student-list-item">
-              <mat-checkbox
+              <!-- Séance validée sans ligne pour cet élève : rien n'est coché, il n'y a rien à cocher. -->
+              <mat-checkbox *ngIf="lineKind(student) !== 'missing'; else noLine"
                 [(ngModel)]="student.isPresent"
                 class="student-checkbox"
                 [disabled]="isFinished || ((writeDisabled$ | async) ?? false)"
                 (change)="onPresentChange(student)">
               </mat-checkbox>
+              <ng-template #noLine><span class="student-checkbox no-line-mark" aria-hidden="true">—</span></ng-template>
 
               <a class="student-name-link" (click)="openStudent(student.id)"
                  [matTooltip]="'SESSION_MODAL.OPEN_NEW_TAB' | translate">
@@ -126,6 +130,10 @@
                       [matTooltip]="'SESSION_MODAL.CATCH_UP_HOST_BILLED_HINT' | translate">
                   {{ 'SESSION_MODAL.CATCH_UP_HOST_BILLED' | translate }}
                 </span>
+                <span *ngIf="lineKind(student) === 'missing'" class="no-line-label"
+                      [matTooltip]="'SESSION_MODAL.CORRECTION.NO_LINE_HINT' | translate">
+                  {{ 'SESSION_MODAL.CORRECTION.NO_LINE' | translate }}
+                </span>
                 <mat-icon class="open-icon">open_in_new</mat-icon>
               </a>
 
@@ -143,6 +151,53 @@
                 (change)="onJustifiedChange(student)">
                 {{ 'SESSION_MODAL.JUSTIFIED' | translate }}
               </mat-checkbox>
+
+              <!-- Séance validée : chaque ligne se corrige seule, avec motif et aperçu (D.7). -->
+              <ng-container *ngIf="lineKind(student) as kind">
+                <button mat-icon-button type="button" class="correct-line-btn" [matMenuTriggerFor]="lineMenu"
+                        *ngIf="!((writeDisabled$ | async) ?? true)"
+                        [attr.aria-label]="'SESSION_MODAL.CORRECTION.MENU_ARIA' | translate: { student: student.firstName + ' ' + student.lastName }"
+                        [matTooltip]="'SESSION_MODAL.CORRECTION.MENU' | translate">
+                  <mat-icon>edit_note</mat-icon>
+                </button>
+                <mat-menu #lineMenu="matMenu">
+                  <ng-container [ngSwitch]="kind">
+                    <ng-container *ngSwitchCase="'present'">
+                      <button mat-menu-item class="note-absent" (click)="changeLine(student, states[1].state)">
+                        {{ 'SESSION_MODAL.CORRECTION.NOTE_ABSENT' | translate }}
+                      </button>
+                      <button mat-menu-item class="note-justified" (click)="changeLine(student, states[2].state)">
+                        {{ 'SESSION_MODAL.CORRECTION.NOTE_JUSTIFIED' | translate }}
+                      </button>
+                      <button mat-menu-item class="remove-line" (click)="removeLine(student)">
+                        {{ 'SESSION_MODAL.CORRECTION.REMOVE' | translate }}
+                      </button>
+                    </ng-container>
+                    <ng-container *ngSwitchCase="'absent'">
+                      <button mat-menu-item class="note-present" (click)="changeLine(student, states[0].state)">
+                        {{ 'SESSION_MODAL.CORRECTION.NOTE_PRESENT' | translate }}
+                      </button>
+                      <button mat-menu-item class="edit-justification" (click)="editJustification(student)">
+                        {{ 'SESSION_MODAL.CORRECTION.JUSTIFICATION' | translate }}
+                      </button>
+                      <button mat-menu-item class="remove-line" (click)="removeLine(student)">
+                        {{ 'SESSION_MODAL.CORRECTION.REMOVE' | translate }}
+                      </button>
+                    </ng-container>
+                    <ng-container *ngSwitchCase="'catchUp'">
+                      <button mat-menu-item class="remove-catch-up" (click)="removeLine(student)">
+                        {{ 'SESSION_MODAL.CORRECTION.REMOVE_CATCH_UP' | translate }}
+                      </button>
+                    </ng-container>
+                    <ng-container *ngSwitchCase="'missing'">
+                      <button mat-menu-item *ngFor="let option of states" [ngClass]="'add-' + option.key.toLowerCase()"
+                              (click)="addLine(student, option.state)">
+                        {{ ('SESSION_MODAL.CORRECTION.ADD.' + option.key) | translate }}
+                      </button>
+                    </ng-container>
+                  </ng-container>
+                </mat-menu>
+              </ng-container>
             </div>
           </div>
 

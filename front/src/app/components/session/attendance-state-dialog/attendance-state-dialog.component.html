@@ -1,0 +1,18 @@
+<h2 mat-dialog-title>{{ 'SESSION_MODAL.CORRECTION.STATE_TITLE' | translate: { student: data.studentName } }}</h2>
+
+<mat-dialog-content>
+  <p class="as-session">{{ data.session }}</p>
+  <mat-radio-group class="as-options" [(ngModel)]="choice" [attr.aria-label]="'SESSION_MODAL.CORRECTION.STATE_LABEL' | translate">
+    <mat-radio-button *ngFor="let option of options" [value]="option" class="as-option">
+      {{ ('SESSION_MODAL.CORRECTION.STATE.' + option.key) | translate }}
+    </mat-radio-button>
+  </mat-radio-group>
+  <p class="as-hint">{{ 'SESSION_MODAL.CORRECTION.STATE_HINT' | translate }}</p>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button type="button" class="as-cancel" (click)="cancel()">{{ 'common.cancel' | translate }}</button>
+  <button mat-flat-button color="primary" type="button" class="as-confirm" (click)="confirm()">
+    {{ 'SESSION_MODAL.CORRECTION.STATE_NEXT' | translate }}
+  </button>
+</mat-dialog-actions>

@@ -37,6 +37,11 @@ export interface Student {
      * séances de sa fenêtre, et l'écran doit dire pourquoi il y figure.
      */
     enrolmentDeparture?: string | null;
+    /**
+     * Ligne de présence de l'élève sur la séance affichée, si elle existe : c'est elle qu'une
+     * correction vise, sur une séance validée.
+     */
+    attendanceId?: number;
     /** Statut d'inscription : ACTIVE (par défaut) ou INACTIVE (étudiant désactivé/parti). */
     status?: 'ACTIVE' | 'INACTIVE' | string;
     active?: boolean;

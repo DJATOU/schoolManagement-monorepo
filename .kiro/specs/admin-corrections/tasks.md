@@ -705,9 +705,27 @@ des lignes) ; `StudentHistoryService.allocatePayments`.
   correction qui ne rend aucune Trace — est équivalente ici : aucune correction réelle n'en rend
   zéro, chacune refuse elle-même le « sans changement » ; `CorrectionRunnerIntegrationTest` la tue
   _Exigences : 11.3 à 11.5_
-- [ ] D.7 `session-modal` : corriger par élève, ajouter un élève (la dévalidation avec motif est
-  livrée en D.3, le Journal de la fiche élève en D.5)
-  _Exigences : 8, 10, 12_
+- [x] D.7 `session-modal` : corriger par élève, ajouter un élève (la dévalidation avec motif est
+  livrée en D.3, le Journal de la fiche élève en D.5). Sur une séance validée, la feuille ne se
+  ressoumet plus : chaque ligne a son menu « Corriger » (ADMIN, année ouverte), et chaque geste passe
+  par le dialogue commun (Motif, Aperçu, confirmation), puis la feuille est relue du serveur :
+  - présence : « Noter absent », « Noter absent (justifié) », « Retirer la ligne » ;
+  - absence : « Noter présent », « Modifier la justification… » (dialogue existant, avec sa piste
+    d'audit, sans effet sur le dû), « Retirer la ligne » ;
+  - rattrapage : « Retirer le rattrapage », y compris sur une séance non validée, où sa demande l'a
+    enregistré avant la feuille ;
+  - élève attendu sans ligne : « Aucune ligne » à la place de la case à cocher, et « Ajouter :
+    présent / absent / absent (justifié) » ;
+  - « Ajouter un élève » reste ouvert sur une séance validée : choix de l'élève, de l'état de sa ligne
+    (présent proposé d'abord), puis la correction. Un élève d'un autre groupe est refusé par l'Aperçu,
+    qui renvoie vers la demande de rattrapage.
+  Sujet de chaque correction rédigé : « Séance du 07/01/2030 (Math 1ère A) — Amine Belkacem : présent
+  → absent (justifié) », « … : absent → ligne retirée », « … : ajout, présent ». Motifs lus une fois.
+  Tests Karma : `AttendanceService` (adresses, corps, refus, Aperçu périmé), dialogue d'état, fiche de
+  séance (ce que chaque ligne permet, menus et leurs entrées, lecteur sans bouton, séance non
+  validée, chaque correction et son appel, confirmation puis relecture, Motifs en cache, Motifs
+  illisibles, justification, ajout d'un élève de bout en bout, ajout abandonné) ; 40 mutations tuées
+  _Exigences : 8, 9, 10, 12_
 
 ## Transverse, à chaque lot
 

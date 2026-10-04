@@ -24,8 +24,21 @@ import { SessionAttendancePdfService, SessionAttendanceStudentRow } from '../../
 import { ConfirmationDialogComponent } from '../../shared/confirmation-dialog/confirmation-dialog.component';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { Observable, combineLatest, firstValueFrom, forkJoin } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { Observable, combineLatest, firstValueFrom, forkJoin, of } from 'rxjs';
+import { map, tap } from 'rxjs/operators';
+import { MatMenuModule } from '@angular/material/menu';
+import { AttendanceCorrection, AttendanceState } from '../../../models/Attendance/attendance-correction';
+import { JustificationUpdateResult } from '../../../models/Attendance/justification';
+import { CorrectionResponse } from '../../../models/correction/correction';
+import {
+  JustificationEditDialogComponent,
+  JustificationEditDialogData
+} from '../../attendance/justification-edit-dialog/justification-edit-dialog.component';
+import {
+  ATTENDANCE_STATES,
+  AttendanceStateDialogComponent,
+  AttendanceStateDialogData
+} from '../attendance-state-dialog/attendance-state-dialog.component';
 import { SchoolYearContextService } from '../../../services/school-year-context.service';
 import { AuthService } from '../../../services/auth.service';
 import { NotConcernedStudent, RollCall } from '../../../models/session/roll-call';
@@ -55,12 +68,16 @@ import {
     MatCardModule,
     MatTabsModule,
     MatIcon,
+    MatMenuModule,
     MatTooltipModule,
     TranslateModule
   ]
 })
 export class SessionModalComponent implements OnInit {
   isFinished = false;
+
+  /** Les trois états d'une ligne, pour les menus « Ajouter » et « Noter ». */
+  readonly states = ATTENDANCE_STATES;
 
   /**
    * Vue en lecture seule (Read_Only_History) lorsque l'année scolaire
@@ -239,6 +256,7 @@ private loadAttendanceData(): void {
 
                 if (existingStudent) {
                     // Mettre à jour les informations de l'étudiant existant
+                    existingStudent.attendanceId = attendance.id;
                     existingStudent.isPresent = attendance.isPresent;
                     existingStudent.isJustified = attendance.isJustified ?? false;
                     existingStudent.isCatchUp = attendance.isCatchUp ?? existingStudent.isCatchUp;
@@ -252,6 +270,7 @@ private loadAttendanceData(): void {
                     this.studentService.getStudentById(attendance.studentId).subscribe((student: Student) => {
                         this.sessionData.students.push({
                             ...student,
+                            attendanceId: attendance.id,
                             isPresent: attendance.isPresent,
                             isJustified: attendance.isJustified ?? false,
                             isCatchUp: attendance.isCatchUp ?? false,
@@ -432,17 +451,190 @@ onValidateSession(): void {
   private async afterUnvalidation(result: SessionUnvalidation): Promise<void> {
     this.isFinished = false;
     this.sessionData.isFinished = false;
-    this.rejectedAbsences = [];
-    this.rollCall = null;
-    this.rollCallError = false;
-    this.sessionData.students = [];
     this.snackBar.open(
       this.translate.instant('SESSION_MODAL.UNVALIDATE_SUCCESS', { count: result.removedLines }),
       this.translate.instant('common.close'),
       { duration: 4000, panelClass: ['snack-bar-success'] }
     );
+    await this.reloadSheet();
+  }
+
+  /** La feuille relue du serveur : lignes retirées, ajoutées ou changées, telles qu'elles sont désormais. */
+  private async reloadSheet(): Promise<void> {
+    this.rejectedAbsences = [];
+    this.rollCall = null;
+    this.rollCallError = false;
+    this.sessionData.students = [];
     await this.loadStudentsData();
     this.loadAttendanceData();
+  }
+
+  // ------------------------------------------------------------------
+  // Corriger une séance validée, élève par élève (D.7 ; exigences 8 et 9)
+  // ------------------------------------------------------------------
+
+  /** Motifs d'une correction de présence, lus au premier besoin. */
+  private correctionReasons: CorrectionReasonType[] | null = null;
+
+  /**
+   * Ce que la ligne d'un élève permet de corriger : un rattrapage se retire ; une présence ou une
+   * absence se change ou se retire ; un élève attendu sans ligne s'ajoute. Un rattrapage se retire
+   * même si la séance n'est pas validée : sa demande l'a enregistré avant la feuille.
+   */
+  lineKind(student: Student): 'catchUp' | 'present' | 'absent' | 'missing' | null {
+    if (student.attendanceId === undefined || student.attendanceId === null) {
+      return this.isFinished ? 'missing' : null;
+    }
+    if (student.isCatchUp) {
+      return 'catchUp';
+    }
+    if (!this.isFinished) {
+      return null;
+    }
+    return student.isPresent ? 'present' : 'absent';
+  }
+
+  /** Présent ↔ absent, justifié ou non : la justification se fixe dans la même correction (8.2). */
+  changeLine(student: Student, state: AttendanceState): void {
+    const attendanceId = student.attendanceId;
+    if (attendanceId === undefined) {
+      return;
+    }
+    this.openCorrection('SESSION_MODAL.CORRECTION.TITLE_CHANGE',
+      this.subject(student, `${this.stateLabel(this.currentState(student))} → ${this.stateLabel(state)}`),
+      (step, reason, token) => this.attendanceService.correctAttendance(attendanceId, step, state, reason, token));
+  }
+
+  /** Retirer une ligne saisie à tort, ou un rattrapage : la séance qu'il compensait redevient à rattraper. */
+  removeLine(student: Student): void {
+    const attendanceId = student.attendanceId;
+    if (attendanceId === undefined) {
+      return;
+    }
+    const catchUp = this.lineKind(student) === 'catchUp';
+    this.openCorrection(catchUp ? 'SESSION_MODAL.CORRECTION.TITLE_CATCH_UP' : 'SESSION_MODAL.CORRECTION.TITLE_REMOVE',
+      this.subject(student, this.translate.instant(catchUp ? 'SESSION_MODAL.CORRECTION.CATCH_UP_REMOVED'
+        : 'SESSION_MODAL.CORRECTION.LINE_REMOVED', { state: this.stateLabel(this.currentState(student)) })),
+      (step, reason, token) => this.attendanceService.removeAttendance(attendanceId, step, reason, token));
+  }
+
+  /** Ajouter la ligne d'un élève attendu ; un élève d'ailleurs est refusé par le serveur, qui dit pourquoi. */
+  addLine(student: Student, state: AttendanceState): void {
+    const studentId = student.id;
+    if (studentId === undefined || studentId === null) {
+      return;
+    }
+    this.openCorrection('SESSION_MODAL.CORRECTION.TITLE_ADD',
+      this.subject(student, this.translate.instant('SESSION_MODAL.CORRECTION.LINE_ADDED',
+        { state: this.stateLabel(state) })),
+      (step, reason, token) => this.attendanceService.addAttendance(this.sessionData.id, studentId, step, state,
+        reason, token));
+  }
+
+  /** La justification d'une absence a son propre dialogue, avec sa piste d'audit ; aucun effet sur le dû. */
+  editJustification(student: Student): void {
+    const attendanceId = student.attendanceId;
+    if (attendanceId === undefined) {
+      return;
+    }
+    this.dialog.open<JustificationEditDialogComponent, JustificationEditDialogData, JustificationUpdateResult>(
+      JustificationEditDialogComponent, {
+        width: '520px',
+        maxWidth: '95vw',
+        data: {
+          attendanceId,
+          justified: student.isJustified ?? null,
+          sessionName: this.sessionData.groupName,
+          sessionDate: this.sessionData.sessionTimeStart
+        }
+      }).afterClosed().subscribe(result => {
+        if (result) {
+          void this.reloadSheet();
+        }
+      });
+  }
+
+  /**
+   * Sur une séance validée, ajouter un élève : son choix, l'état de sa ligne, puis la correction. Un
+   * élève d'un autre groupe relève d'une demande de rattrapage : l'Aperçu le refuse en le disant.
+   */
+  private addStudentToValidatedSession(existingStudentIds: (number | undefined)[], levelId: number,
+                                       groupMemberIds: number[]): void {
+    this.dialog.open(AddStudentDialogComponent, {
+      width: '520px',
+      maxWidth: '95vw',
+      maxHeight: '90vh',
+      autoFocus: false,
+      data: { groupId: this.sessionData.groupId, levelId, existingStudentIds, groupMemberIds }
+    }).afterClosed().subscribe((selected: Student | null) => {
+      if (!selected) {
+        return;
+      }
+      this.dialog.open<AttendanceStateDialogComponent, AttendanceStateDialogData, AttendanceState>(
+        AttendanceStateDialogComponent, {
+          width: '440px',
+          maxWidth: '95vw',
+          data: { studentName: this.studentName(selected), session: this.sessionLabel() }
+        }).afterClosed().subscribe(state => {
+          if (state) {
+            this.addLine(selected, state);
+          }
+        });
+    });
+  }
+
+  private openCorrection(titleKey: string, subject: string,
+                         run: (step: CorrectionStep, reason: CorrectionReason, token?: string)
+                           => Observable<CorrectionResponse<AttendanceCorrection>>): void {
+    this.loadCorrectionReasons().subscribe({
+      next: reasons => {
+        const data: CorrectionDialogData<AttendanceCorrection> = { titleKey, subject, reasons, run };
+        this.dialog.open<CorrectionDialogComponent<AttendanceCorrection>, CorrectionDialogData<AttendanceCorrection>,
+          CorrectionDialogResult<AttendanceCorrection>>(CorrectionDialogComponent,
+          { data, width: '660px', maxWidth: '95vw' })
+          .afterClosed().subscribe(outcome => {
+            if (outcome?.kind === 'confirmed') {
+              this.snackBar.open(this.translate.instant('SESSION_MODAL.CORRECTION.DONE'),
+                this.translate.instant('common.close'), { duration: 4000, panelClass: ['snack-bar-success'] });
+              void this.reloadSheet();
+            }
+          });
+      },
+      error: (error: unknown) => this.showErrorMessage(error instanceof Error && error.message
+        ? error.message : this.translate.instant('SESSION_MODAL.CORRECTION.REASONS_ERROR'))
+    });
+  }
+
+  private loadCorrectionReasons(): Observable<CorrectionReasonType[]> {
+    return this.correctionReasons
+      ? of(this.correctionReasons)
+      : this.attendanceService.getCorrectionReasons().pipe(tap(reasons => this.correctionReasons = reasons));
+  }
+
+  private currentState(student: Student): AttendanceState {
+    return { present: !!student.isPresent, justified: !student.isPresent && !!student.isJustified };
+  }
+
+  private stateLabel(state: AttendanceState): string {
+    const key = state.present ? 'PRESENT' : state.justified ? 'JUSTIFIED' : 'ABSENT';
+    return this.translate.instant('SESSION_MODAL.CORRECTION.STATE_INLINE.' + key);
+  }
+
+  /** « Séance du 07/01/2030 (Math 1ère A) — Amine Belkacem : présent → absent ». */
+  private subject(student: Student, change: string): string {
+    return this.translate.instant('SESSION_MODAL.CORRECTION.SUBJECT',
+      { session: this.sessionLabel(), student: this.studentName(student), change });
+  }
+
+  private sessionLabel(): string {
+    return this.translate.instant('SESSION_MODAL.SESSION_LABEL', {
+      day: formatCalendarDay(calendarDayOf(new Date(this.sessionData.sessionTimeStart))),
+      group: this.sessionData.groupName ?? ''
+    });
+  }
+
+  private studentName(student: Student): string {
+    return `${student.firstName ?? ''} ${student.lastName ?? ''}`.trim();
   }
 
 
@@ -509,6 +701,12 @@ openAddStudentDialog(): void {
       const groupMemberIds = (groupStudents || [])
         .map(student => student.id)
         .filter((id): id is number => id !== undefined);
+
+      // Séance validée : la feuille ne se ressoumet plus, l'ajout est une correction (D.7).
+      if (this.isFinished) {
+        this.addStudentToValidatedSession(existingStudentIds, levelId, groupMemberIds);
+        return;
+      }
 
       const dialogRef = this.dialog.open(AddStudentDialogComponent, {
         width: '520px',
