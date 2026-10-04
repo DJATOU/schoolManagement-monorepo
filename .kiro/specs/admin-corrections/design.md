@@ -545,7 +545,11 @@ Sur H2 réel, jqwik, vérifiées par mutation comme `JustificationNeutralityProp
   sur la Feuille_Appel. (6.2, 7.1, 7.3)
 - **P6 — Déplacer la ventilation ne change aucun montant.** (5.9, D6)
 - **P7 — Une Trace par changement effectif**, aucune sur refus ou sans changement, rangs
-  strictement croissants. (11.3 à 11.5)
+  strictement croissants. (11.3 à 11.5) Précision (D.6) : « changement effectif » s'entend par
+  objet — versement, inscription, présence, séance — dont l'état relu en SQL a changé, ou présence
+  créée ; chacun a exactement une Trace. Un remplacement n'a la sienne que s'il change d'élève. Ce
+  qui suit (ventilation, statut, demande de rattrapage annulée) est dit par la Trace de la
+  correction.
 
 Plus des tests HTTP de bout en bout (statuts, corps, absence d'écriture après refus, 403 VIEWER sur
 chaque `preview` et `confirm`), et des tests Karma des composants d'Aperçu et de correction.

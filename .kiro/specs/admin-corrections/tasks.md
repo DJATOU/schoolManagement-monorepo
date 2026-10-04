@@ -683,7 +683,28 @@ des lignes) ; `StudentHistoryService.allocatePayments`.
   pied, nom de fichier, impression), service HTTP, impression en iframe et repli, logo, format de
   l'heure, fiche élève (ADMIN seul) ; 48 mutations tuées
   _Exigences : 12.4_
-- [ ] D.6 Propriété P7 « une Trace par changement effectif »
+- [x] D.6 Propriété P7 « une Trace par changement effectif ». `CorrectionTracePropertyTest` (jqwik,
+  H2, 200 essais de 3 à 10 tentatives) : séances validées ou non, lignes de présence, départ
+  éventuel, rattrapage facturé sur place, versements tirés ; puis chacune des neuf corrections
+  (annuler, corriger un versement, arrivée, départ, réouverture, changer, ajouter, retirer une
+  présence, dévalider), en Aperçu, confirmée, au jeton périmé ou sans jeton, Motif juste ou sans
+  rapport, par l'un ou l'autre de deux administrateurs. Oracles relus en SQL :
+  - refus ou Aperçu : aucune Trace, et rien d'autre n'a bougé, ventilation et compteur de reçus
+    compris ;
+  - confirmée : au moins une Trace, et exactement une par versement, inscription, présence ou
+    séance dont l'état a changé, présence créée comprise ; un versement de remplacement n'a la
+    sienne que s'il change d'élève ; aucune Trace ne nomme un objet resté tel quel ;
+  - chaque Trace : auteur de la tentative, son Motif et son texte, une phrase, avant ≠ après, rang
+    au-delà de toute Trace antérieure.
+  Ce qui suit un changement sans en être un objet (ventilation, statut, demande de rattrapage
+  annulée) est dit par la Trace de la correction. Couverture exigée : chaque correction confirmée,
+  refus sans changement, versement corrigé sans changement, jeton périmé, sans jeton, présence notée
+  par une correction de dates. 22 mutations sur 23 tuées (Traces jamais écrites, en double, Aperçu
+  validé, jeton ignoré, auteur, Motif, phrase, domaine, objet, Trace manquante de chaque correction,
+  Trace en trop d'un remplacement, correction sans changement tracée). La 23ᵉ — le runner accepte une
+  correction qui ne rend aucune Trace — est équivalente ici : aucune correction réelle n'en rend
+  zéro, chacune refuse elle-même le « sans changement » ; `CorrectionRunnerIntegrationTest` la tue
+  _Exigences : 11.3 à 11.5_
 - [ ] D.7 `session-modal` : corriger par élève, ajouter un élève (la dévalidation avec motif est
   livrée en D.3, le Journal de la fiche élève en D.5)
   _Exigences : 8, 10, 12_
