@@ -40,11 +40,12 @@ public class TeacherPayoutController {
         this.slipService = slipService;
     }
 
-    /** Séries à payer, en cours, ou à régulariser. */
+    /** Séries à payer, en cours, ou à régulariser ; avec {@code includePaid}, aussi les séries payées. */
     @GetMapping("/teacher-payouts/payable")
     public ResponseEntity<List<PayableSeriesDTO>> payable(@RequestParam(required = false) Long teacherId,
-                                                          @RequestParam(required = false) Long groupId) {
-        return ResponseEntity.ok(payoutService.payable(teacherId, groupId));
+                                                          @RequestParam(required = false) Long groupId,
+                                                          @RequestParam(defaultValue = "false") boolean includePaid) {
+        return ResponseEntity.ok(payoutService.payable(teacherId, groupId, includePaid));
     }
 
     /** Paies versées selon les filtres, bornes de date incluses, avec leurs totaux. */

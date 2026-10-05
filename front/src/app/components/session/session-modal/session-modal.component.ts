@@ -1,4 +1,5 @@
 import { Component, Inject, OnInit } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
 import { MatDialogRef, MAT_DIALOG_DATA, MatDialog } from '@angular/material/dialog';
 import { Router } from '@angular/router';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -112,6 +113,27 @@ export class SessionModalComponent implements OnInit {
       this.schoolYearContext.readOnly$,
       this.authService.currentUser$,
     ]).pipe(map(([readOnly]) => readOnly || !this.authService.hasRole('ADMIN')));
+  }
+
+  /**
+   * Vrai si la séance n'a pas encore commencé : elle ne se valide qu'à partir de son heure de début.
+   *
+   * <p>Le serveur refuse de toute façon (409) ; le bouton désactivé et la phrase qui l'explique
+   * évitent de remplir une feuille de présence pour rien. Une séance sans heure n'est pas bornée.</p>
+   */
+  get notStarted(): boolean {
+    const start = this.sessionData?.sessionTimeStart;
+    return !!start && new Date(start).getTime() > Date.now();
+  }
+
+  /** Jour et heure de début, pour la phrase « validation possible à partir du … à … ». */
+  get startParams(): { day: string; time: string } {
+    const start = new Date(this.sessionData.sessionTimeStart);
+    const pad = (value: number): string => String(value).padStart(2, '0');
+    return {
+      day: formatCalendarDay(calendarDayOf(start)),
+      time: `${pad(start.getHours())}:${pad(start.getMinutes())}`
+    };
   }
 
   /** Ouvre une route de l'application dans un nouvel onglet du navigateur. */
@@ -393,9 +415,14 @@ onValidateSession(): void {
         this.isFinished = true;
         this.dialogRef.close({ isFinished: true });
       },
-      error: (error) => {
+      error: (error: unknown) => {
         console.error('Failed to mark session as finished', error);
-        alert(error.message);
+        // Un refus du serveur (séance pas encore commencée, année close…) est dit tel qu'il le
+        // rédige : le message technique de HttpErrorResponse, montré auparavant dans une alerte, ne
+        // disait rien à l'administrateur. Une autre erreur n'est qu'un défaut de l'écran, journalisé.
+        if (error instanceof HttpErrorResponse) {
+          this.showErrorMessage(error.error?.message || this.translate.instant('SESSION_MODAL.VALIDATE_ERROR'));
+        }
       }
     });
   }

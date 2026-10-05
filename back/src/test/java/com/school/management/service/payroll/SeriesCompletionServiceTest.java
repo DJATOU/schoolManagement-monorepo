@@ -84,4 +84,33 @@ class SeriesCompletionServiceTest {
         assertThat(service.of(List.<Long>of())).isEmpty();
         verifyNoInteractions(sessionRepository);
     }
+
+    // ------------------------------------------------------------------
+    // Séances prévues pas encore créées
+    // ------------------------------------------------------------------
+
+    @Test
+    @DisplayName("séances manquantes : prévues moins rattachées, jamais négatif ; nombre prévu inconnu : aucune")
+    void missingSessions() {
+        when(sessionRepository.countAttachedBySeries(anyCollection())).thenReturn(new ArrayList<>(List.of(
+                new Object[]{10L, 2L},    // 3 prévues, 2 créées : 1 manque
+                new Object[]{11L, 4L},    // 3 prévues, 4 rattachées : rien ne manque
+                new Object[]{13L, 1L})));  // prévu inconnu
+        Map<Long, Integer> planned = new java.util.HashMap<>();
+        planned.put(10L, 3);
+        planned.put(11L, 3);
+        planned.put(12L, 2);              // aucune séance créée : les 2 manquent
+        planned.put(13L, null);
+
+        Map<Long, Long> missing = service.missing(planned);
+
+        assertThat(missing).containsExactlyInAnyOrderEntriesOf(Map.of(10L, 1L, 11L, 0L, 12L, 2L, 13L, 0L));
+    }
+
+    @Test
+    @DisplayName("séances manquantes, aucune série demandée : aucune requête")
+    void missingWithoutSeries() {
+        assertThat(service.missing(Map.of())).isEmpty();
+        verifyNoInteractions(sessionRepository);
+    }
 }

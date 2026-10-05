@@ -375,6 +375,89 @@ class TeacherPayoutServiceIntegrationTest {
     }
 
     // ------------------------------------------------------------------
+    // Séances prévues et séries payées (retours de tests)
+    // ------------------------------------------------------------------
+
+    private SessionSeriesEntity plannedSeries(GroupEntity owner, String name, int planned) {
+        return em.persist(SessionSeriesEntity.builder().name(name).group(owner).totalSessions(planned)
+                .serieTimeStart(new Date()).build());
+    }
+
+    @Test
+    @DisplayName("séances prévues : 2 créées et validées sur 3 prévues, payable, une séance signalée manquante")
+    void plannedSessionsAreReportedWithoutBlockingPayment() {
+        GroupEntity english = group("Anglais 1 AS", nadia, null);
+        SessionSeriesEntity series = plannedSeries(english, "11-2026-001", 3);
+        sessions(english, series, 2, 2);
+        pay(ali, series, "6000");
+
+        PayableSeriesDTO row = onlyRow(english.getId());
+
+        // Série_Terminée porte sur les séances actives (design D5, D9) : la séance prévue qui n'est
+        // pas encore créée est une information, pas une condition de paie.
+        assertThat(row.state()).isEqualTo(PayableState.PAYABLE);
+        assertThat(row.validatedSessions()).isEqualTo(2);
+        assertThat(row.activeSessions()).isEqualTo(2);
+        assertThat(row.plannedSessions()).isEqualTo(3);
+        assertThat(row.missingSessions()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("séance annulée : elle a occupé sa place, la série n'est pas incomplète ; nombre prévu inconnu : rien")
+    void cancelledSessionIsNotMissing() {
+        GroupEntity english = group("Anglais 1 AS", nadia, null);
+        SessionSeriesEntity series = plannedSeries(english, "11-2026-001", 3);
+        sessions(english, series, 3, 3);
+        em.flush();
+        em.getEntityManager().createQuery("SELECT s FROM SessionEntity s WHERE s.sessionSeries = :series "
+                        + "ORDER BY s.id DESC", SessionEntity.class)
+                .setParameter("series", series).setMaxResults(1).getSingleResult().setActive(false);
+
+        PayableSeriesDTO row = onlyRow(english.getId());
+        assertThat(row.activeSessions()).isEqualTo(2);
+        assertThat(row.plannedSessions()).isEqualTo(3);
+        assertThat(row.missingSessions()).isZero();
+
+        // Le socle ne renseigne pas le nombre prévu : ni nombre prévu, ni séance manquante.
+        PayableSeriesDTO october = onlyRow(group.getId());
+        assertThat(october.plannedSessions()).isZero();
+        assertThat(october.missingSessions()).isZero();
+    }
+
+    @Test
+    @DisplayName("« Afficher les séries payées » : payée et à jour listée PAID, sans écart ; masquée par défaut")
+    void paidSeriesOnRequest() {
+        PayoutDTO initial = payOctober();
+
+        assertThat(payouts.payable(null, group.getId())).isEmpty();
+        PayableSeriesDTO row = payouts.payable(null, group.getId(), true).get(0);
+        assertThat(row.state()).isEqualTo(PayableState.PAID);
+        assertThat(row.initialPayoutNumber()).isEqualTo(initial.payoutNumber());
+        assertThat(row.teacherName()).isEqualTo("Nadia Aït Ahmed");
+        assertMoney(row.teacherPaid(), "43200");
+        assertThat(row.gap()).isEqualByComparingTo("0");
+
+        // De l'argent arrivé depuis : à régulariser, avec ou sans la case.
+        pay(ali, october, "3000");
+        assertThat(payouts.payable(null, group.getId(), true)).extracting(PayableSeriesDTO::state)
+                .containsExactly(PayableState.TO_REGULARIZE);
+    }
+
+    @Test
+    @DisplayName("séries payées d'une année passée : pas sans filtre de groupe, même demandées ; avec le groupe, oui")
+    void paidSeriesOfPastYearsStayOutWithoutGroupFilter() {
+        SchoolYearEntity past = year("2029-2030", false);
+        year("2030-2031", true);
+        group.setSchoolYear(past);
+        payOctober();
+
+        assertThat(payouts.payable(null, null, true)).extracting(PayableSeriesDTO::seriesName)
+                .doesNotContain("Octobre");
+        assertThat(payouts.payable(null, group.getId(), true)).extracting(PayableSeriesDTO::state)
+                .containsExactly(PayableState.PAID);
+    }
+
+    // ------------------------------------------------------------------
     // Aperçu et paie initiale (exigences 3 et 4)
     // ------------------------------------------------------------------
 

@@ -31,7 +31,7 @@ export function payableSeries(overrides: Partial<PayableSeries> = {}): PayableSe
   return {
     seriesId: 12, seriesName: 'Octobre', groupId: 3, groupName: 'Maths 4 AM A', teacherId: 5,
     teacherName: 'Nadia Aït Ahmed', state: 'PAYABLE', activeSessions: 8, validatedSessions: 8,
-    collectedGross: 74000, refunded: 2000, collectedNet: 72000, initialPayoutNumber: null, teacherPercent: null,
+    plannedSessions: 8, missingSessions: 0, collectedGross: 74000, refunded: 2000, collectedNet: 72000, initialPayoutNumber: null, teacherPercent: null,
     teacherPaid: null, gap: null,
     ...overrides
   };

@@ -14,6 +14,14 @@
     </ng-container>
   </p>
 
+  <!-- Série terminée mais incomplète : la paie reste possible (design D9), l'administrateur le sait. -->
+  <div class="pd-incomplete" role="note" *ngIf="paying && data.series.missingSessions > 0">
+    <mat-icon aria-hidden="true">warning_amber</mat-icon>
+    <p>{{ 'teacherPayroll.dialog.incomplete' | translate: {
+          count: data.series.missingSessions, planned: data.series.plannedSessions
+        } }}</p>
+  </div>
+
   <form [formGroup]="form" class="pd-form" (ngSubmit)="requestPreview()">
     <mat-form-field appearance="outline" class="pd-field" *ngIf="paying">
       <mat-label>{{ 'teacherPayroll.dialog.rate' | translate }}</mat-label>

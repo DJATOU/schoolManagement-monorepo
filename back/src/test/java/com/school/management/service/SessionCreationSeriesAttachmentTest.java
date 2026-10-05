@@ -75,7 +75,8 @@ class SessionCreationSeriesAttachmentTest {
                 mock(AttendanceService.class),
                 guard,
                 rollover,
-                mock(com.school.management.service.payroll.PaidSeriesGuard.class));
+                mock(com.school.management.service.payroll.PaidSeriesGuard.class),
+                mock(SessionStartGuard.class));
 
         when(namingService.buildName(any(), any())).thenReturn("Groupe physique - 08-2026-002");
         when(sessionRepository.save(any(SessionEntity.class))).thenAnswer(inv -> inv.getArgument(0));

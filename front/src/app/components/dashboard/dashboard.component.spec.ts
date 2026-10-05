@@ -68,26 +68,29 @@ describe('DashboardComponent', () => {
 
     expect(component.kpis.length).toBe(6);
     expect(component.kpis.map(k => k.value))
-      .toEqual([120, 9, 14, 18, 3, 5]);
+      .toEqual([120, 9, 4, 18, 3, 5]);
   });
 
-  it('précise sous la carte Groupes combien ont des élèves, sans toucher au total', () => {
+  it('la carte Groupes compte les groupes qui ont des élèves, et rappelle le total créé', () => {
     // Le total compte aussi les groupes créés sans élèves (16 groupes dont 1 seul avec des
-    // inscrits sur la base de démonstration) : sans la précision, la carte se lisait comme
-    // 16 classes qui tournent.
+    // inscrits sur la base de démonstration) : affiché en grand, il se lisait comme 16 classes
+    // qui tournent.
     const translate = TestBed.inject(TranslateService);
-    translate.setTranslation('fr', { dashboard: { kpi: { groupsActive: 'dont {{count}} avec des élèves' } } }, true);
+    translate.setTranslation('fr', {
+      dashboard: { kpi: { activeGroups: 'Groupes en activité', groupsTotal: 'sur {{count}} créés' } }
+    }, true);
     translate.use('fr');
 
     flushStats();
 
     const groups = component.kpis[2];
-    expect(groups.value).toBe(14);
-    expect(groups.detail).toBe('dont 4 avec des élèves');
+    expect(groups.value).toBe(4);
+    expect(groups.label).toBe('Groupes en activité');
+    expect(groups.detail).toBe('sur 14 créés');
 
     const details = Array.from(fixture.nativeElement.querySelectorAll('.kpi-detail') as NodeListOf<HTMLElement>)
       .map(el => el.textContent?.trim());
-    expect(details).toEqual(['dont 4 avec des élèves']);
+    expect(details).toEqual(['sur 14 créés']);
   });
 
   it('pct() et maleRate() ne divisent jamais par zéro', () => {

@@ -751,3 +751,78 @@ describe('SessionModalComponent — feuille d\'appel', () => {
     expect(fixture.componentInstance.rollCall).toBeNull();
   });
 });
+
+/**
+ * Une séance ne se valide qu'à partir de son heure de début : trois séances avaient été validées,
+ * feuille comprise, avant d'avoir eu lieu. Le serveur refuse (409) ; l'écran désactive le bouton et
+ * dit pourquoi. Les heures sont relatives à l'heure réelle : aucune horloge simulée.
+ */
+describe('SessionModalComponent — séance pas encore commencée', () => {
+  const HOUR = 3_600_000;
+
+  async function openStartingIn(offsetMs: number, isFinished = false): Promise<ComponentFixture<SessionModalComponent>> {
+    const start = new Date(Date.now() + offsetMs);
+    await setupComponentTestBed(SessionModalComponent, {
+      providers: matDialogProviders({ ...aSession({ sessionTimeStart: start, isFinished }), students: [aStudent()] },
+        createDialogRefSpy())
+    });
+    spyOn(TestBed.inject(AuthService), 'hasRole').and.returnValue(true);
+    const translate = TestBed.inject(TranslateService);
+    translate.setTranslation('fr', {
+      SESSION_MODAL: { NOT_STARTED_HINT: 'Validation possible à partir du {{day}} à {{time}}' }
+    }, true);
+    translate.use('fr');
+    const fixture = TestBed.createComponent(SessionModalComponent);
+    fixture.componentInstance.isFinished = isFinished;
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  const hint = (fixture: ComponentFixture<SessionModalComponent>) =>
+    (fixture.nativeElement as HTMLElement).querySelector('.not-started-hint');
+  const validateButton = (fixture: ComponentFixture<SessionModalComponent>) =>
+    (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('.validate-session-btn')!;
+
+  it('séance dans une heure : validation désactivée, et la raison dite avec le jour et l\'heure', async () => {
+    const fixture = await openStartingIn(HOUR);
+    const start = new Date(fixture.componentInstance.sessionData.sessionTimeStart);
+    const pad = (value: number) => String(value).padStart(2, '0');
+    const day = `${pad(start.getDate())}/${pad(start.getMonth() + 1)}/${start.getFullYear()}`;
+
+    expect(fixture.componentInstance.notStarted).toBeTrue();
+    expect(validateButton(fixture).disabled).toBeTrue();
+    expect(hint(fixture)?.textContent?.trim())
+      .toBe(`schedule Validation possible à partir du ${day} à ${pad(start.getHours())}:${pad(start.getMinutes())}`);
+  });
+
+  it('séance commencée depuis une minute : aucune phrase, la validation est ouverte à l\'administrateur', async () => {
+    const fixture = await openStartingIn(-60_000);
+
+    expect(fixture.componentInstance.notStarted).toBeFalse();
+    expect(hint(fixture)).toBeNull();
+    expect(validateButton(fixture).disabled).toBeFalse();
+  });
+
+  it('séance déjà validée : la phrase ne s\'affiche pas', async () => {
+    const fixture = await openStartingIn(HOUR, true);
+
+    expect(hint(fixture)).toBeNull();
+  });
+
+  it('validation refusée par le serveur : son message, dans le bandeau d\'erreur, la modale reste ouverte', async () => {
+    const fixture = await openStartingIn(-60_000);
+    const http = TestBed.inject(HttpTestingController);
+    const snackBar = spyOn(TestBed.inject(MatSnackBar), 'open');
+    const refusal = 'La séance du 12/10/2026 à 18:00 n\'a pas encore eu lieu : elle ne peut être validée qu\'à partir '
+      + 'de son heure de début.';
+
+    fixture.componentInstance['markSessionAsFinished']();
+    http.expectOne(req => req.url.endsWith('/api/sessions/100/finish') && req.method === 'PATCH')
+      .flush({ status: 'CONFLICT', message: refusal, errorCode: 'CONFLICT' }, { status: 409, statusText: 'Conflict' });
+
+    expect(snackBar).toHaveBeenCalledWith(refusal, 'OK', jasmine.any(Object));
+    expect(fixture.componentInstance.dialogRef.close).not.toHaveBeenCalled();
+  });
+});

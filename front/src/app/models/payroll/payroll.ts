@@ -26,9 +26,9 @@ export interface TeacherPayRateRequest {
 
 /**
  * État d'une série dans « À payer » : à payer, en cours (séances à valider), sans enseignant, sans
- * encaissé, ou payée mais à régulariser.
+ * encaissé, payée mais à régulariser, ou payée et à jour (listée seulement sur demande).
  */
-export type PayableState = 'PAYABLE' | 'NOT_FINISHED' | 'NO_TEACHER' | 'NOTHING_COLLECTED' | 'TO_REGULARIZE';
+export type PayableState = 'PAYABLE' | 'NOT_FINISHED' | 'NO_TEACHER' | 'NOTHING_COLLECTED' | 'TO_REGULARIZE' | 'PAID';
 
 /** Une ligne de « À payer ». Contrat serveur : `PayableSeriesDTO`. */
 export interface PayableSeries {
@@ -41,6 +41,10 @@ export interface PayableSeries {
   state: PayableState;
   activeSessions: number;
   validatedSessions: number;
+  /** Séances prévues pour la série ; 0 si le nombre n'est pas renseigné. */
+  plannedSessions: number;
+  /** Séances prévues pas encore créées : une information, pas une condition de paie. */
+  missingSessions: number;
   collectedGross: number;
   refunded: number;
   collectedNet: number;

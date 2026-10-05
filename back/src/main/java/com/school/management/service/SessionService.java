@@ -56,6 +56,8 @@ public class SessionService {
     private final SeriesRolloverService seriesRolloverService;
     // Une série payée à l'enseignant ne perd ni ne regagne de séance sans que sa paie soit annulée
     private final PaidSeriesGuard paidSeriesGuard;
+    // Une séance ne se valide pas avant d'avoir commencé
+    private final SessionStartGuard sessionStartGuard;
 
     // MappingContext pour SessionMapper
     private MappingContext mappingContext;
@@ -72,7 +74,8 @@ public class SessionService {
             AttendanceService attendanceService, // ← AJOUTÉ
             ReadOnlyYearGuard readOnlyYearGuard,
             SeriesRolloverService seriesRolloverService,
-            PaidSeriesGuard paidSeriesGuard) {
+            PaidSeriesGuard paidSeriesGuard,
+            SessionStartGuard sessionStartGuard) {
         this.sessionRepository = sessionRepository;
         this.groupRepository = groupRepository;
         this.sessionMapper = sessionMapper;
@@ -84,6 +87,7 @@ public class SessionService {
         this.readOnlyYearGuard = readOnlyYearGuard;
         this.seriesRolloverService = seriesRolloverService;
         this.paidSeriesGuard = paidSeriesGuard;
+        this.sessionStartGuard = sessionStartGuard;
     }
 
     /**
@@ -165,6 +169,10 @@ public class SessionService {
         // Refuse la création d'une séance rattachée à une année passée (Exigence 9.2).
         // Appelé avant de détacher la série, le garde pouvant la remonter pour résoudre l'année.
         readOnlyYearGuard.assertSessionMutable(session);
+        // Créer une séance déjà validée revient à la valider : pas avant son heure de début.
+        if (Boolean.TRUE.equals(session.getIsFinished())) {
+            sessionStartGuard.assertStarted(session);
+        }
 
         GroupEntity group = session.getGroup();
         if (group == null) {
@@ -209,6 +217,10 @@ public class SessionService {
         // séance entière : seule une transition effective est refusée, pas un titre corrigé.
         if (finishedBefore && !Boolean.TRUE.equals(session.getIsFinished())) {
             paidSeriesGuard.assertNoActivePayout(seriesBefore, "dévalider une de ses séances");
+        }
+        // Valider par ce chemin : pas avant l'heure de début, telle que modifiée par ce même patch.
+        if (!finishedBefore && Boolean.TRUE.equals(session.getIsFinished())) {
+            sessionStartGuard.assertStarted(session);
         }
         if (groupChanged(groupBefore, session.getGroup())) {
             paidSeriesGuard.assertNoActivePayout(seriesBefore, "déplacer une de ses séances vers un autre groupe");
@@ -403,6 +415,9 @@ public class SessionService {
         SessionEntity session = sessionRepository.findById(Objects.requireNonNull(sessionId))
                 .orElseThrow(() -> new CustomServiceException(SESSION_NOT_FOUND_MESSAGE + sessionId));
         readOnlyYearGuard.assertSessionMutable(session);
+        if (!Boolean.TRUE.equals(session.getIsFinished())) {
+            sessionStartGuard.assertStarted(session);
+        }
         session.setIsFinished(true);
         return sessionRepository.save(session);
     }

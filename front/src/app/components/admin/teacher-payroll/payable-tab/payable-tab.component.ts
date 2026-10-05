@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
@@ -38,6 +39,7 @@ import { PayoutDialogComponent, PayoutDialogData } from '../payout-dialog/payout
     CommonModule,
     ReactiveFormsModule,
     MatButtonModule,
+    MatCheckboxModule,
     MatDialogModule,
     MatFormFieldModule,
     MatIconModule,
@@ -76,7 +78,8 @@ export class PayableTabComponent implements OnInit {
     private snackBar: MatSnackBar,
     private translate: TranslateService
   ) {
-    this.filterForm = fb.group({ teacherId: [null], groupId: [null] });
+    // includePaid : une série payée et à jour quittait l'onglet ; sur demande, elle y reste visible.
+    this.filterForm = fb.group({ teacherId: [null], groupId: [null], includePaid: [false] });
   }
 
   ngOnInit(): void {
@@ -87,10 +90,10 @@ export class PayableTabComponent implements OnInit {
   }
 
   load(): void {
-    const { teacherId, groupId } = this.filterForm.value;
+    const { teacherId, groupId, includePaid } = this.filterForm.value;
     this.isLoading = true;
     this.errorMessage = '';
-    this.payoutService.getPayable(teacherId, groupId)
+    this.payoutService.getPayable(teacherId, groupId, !!includePaid)
       .pipe(finalize(() => this.isLoading = false))
       .subscribe({
         next: rows => this.rows = rows,
@@ -108,6 +111,14 @@ export class PayableTabComponent implements OnInit {
 
   remaining(row: PayableSeries): number {
     return row.activeSessions - row.validatedSessions;
+  }
+
+  /**
+   * Le nombre prévu ne se montre que s'il dit autre chose que le nombre de séances actives : « 0 / 2
+   * (3 prévues) ». Inconnu (0), ou égal, il n'apporterait rien.
+   */
+  showPlanned(row: PayableSeries): boolean {
+    return row.plannedSessions > 0 && row.plannedSessions !== row.activeSessions;
   }
 
   /** Un écart négatif est une retenue : de l'argent a été rendu depuis la paie. */

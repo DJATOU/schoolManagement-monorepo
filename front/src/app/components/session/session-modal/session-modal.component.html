@@ -248,11 +248,19 @@
   </mat-tab-group>
 </mat-dialog-content>
 
+<!-- Une séance ne se valide qu'à partir de son heure de début : le bouton est désactivé, et la
+     raison dite (une infobulle ne s'affiche pas sur un bouton désactivé). -->
+<p class="not-started-hint" role="status" *ngIf="!isFinished && notStarted">
+  <mat-icon aria-hidden="true">schedule</mat-icon>
+  {{ 'SESSION_MODAL.NOT_STARTED_HINT' | translate: startParams }}
+</p>
+
 <mat-dialog-actions>
   <button mat-button (click)="onEditSession()" color="accent" [disabled]="isFinished || ((writeDisabled$ | async) ?? false)">
     {{ 'SESSION_MODAL.EDIT' | translate }}
   </button>
-  <button mat-button (click)="onValidateSession()" color="primary" [disabled]="isFinished || ((writeDisabled$ | async) ?? false)">
+  <button mat-button class="validate-session-btn" (click)="onValidateSession()" color="primary"
+          [disabled]="isFinished || notStarted || ((writeDisabled$ | async) ?? false)">
     {{ 'SESSION_MODAL.VALIDATE' | translate }}
   </button>
   <button mat-button (click)="onUnvalidateSession()" color="accent" *ngIf="isFinished" [disabled]="(writeDisabled$ | async) ?? false">

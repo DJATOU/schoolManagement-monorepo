@@ -87,27 +87,38 @@ class TeacherPayoutControllerTest {
     @Test
     @DisplayName("séries à payer, 200 : filtres transmis, état et montants sous les noms attendus")
     void payable() throws Exception {
-        when(payoutService.payable(5L, 3L)).thenReturn(List.of(new PayableSeriesDTO(12L, "Octobre", 3L,
-                "Maths 4 AM A", 5L, "Nadia Aït Ahmed", PayableState.PAYABLE, 8, 8, money("74000.00"),
+        when(payoutService.payable(5L, 3L, false)).thenReturn(List.of(new PayableSeriesDTO(12L, "Octobre", 3L,
+                "Maths 4 AM A", 5L, "Nadia Aït Ahmed", PayableState.PAYABLE, 7, 7, 8, 1, money("74000.00"),
                 money("2000.00"), money("72000.00"), null, null, null, null)));
 
         mockMvc.perform(get("/api/teacher-payouts/payable").param("teacherId", "5").param("groupId", "3"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].seriesId").value(12))
                 .andExpect(jsonPath("$[0].state").value("PAYABLE"))
-                .andExpect(jsonPath("$[0].activeSessions").value(8))
-                .andExpect(jsonPath("$[0].validatedSessions").value(8))
+                .andExpect(jsonPath("$[0].activeSessions").value(7))
+                .andExpect(jsonPath("$[0].validatedSessions").value(7))
+                .andExpect(jsonPath("$[0].plannedSessions").value(8))
+                .andExpect(jsonPath("$[0].missingSessions").value(1))
                 .andExpect(jsonPath("$[0].collectedNet").value(72000.00))
                 .andExpect(jsonPath("$[0].teacherName").value("Nadia Aït Ahmed"));
     }
 
     @Test
-    @DisplayName("séries à payer sans filtre : null transmis")
+    @DisplayName("séries à payer sans filtre : null transmis, séries payées non demandées")
     void payableWithoutFilters() throws Exception {
-        when(payoutService.payable(null, null)).thenReturn(List.of());
+        when(payoutService.payable(null, null, false)).thenReturn(List.of());
 
         mockMvc.perform(get("/api/teacher-payouts/payable")).andExpect(status().isOk());
-        verify(payoutService).payable(null, null);
+        verify(payoutService).payable(null, null, false);
+    }
+
+    @Test
+    @DisplayName("« Afficher les séries payées » : includePaid transmis")
+    void payableIncludingPaid() throws Exception {
+        when(payoutService.payable(null, null, true)).thenReturn(List.of());
+
+        mockMvc.perform(get("/api/teacher-payouts/payable").param("includePaid", "true")).andExpect(status().isOk());
+        verify(payoutService).payable(null, null, true);
     }
 
     @Test
