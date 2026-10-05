@@ -16,6 +16,7 @@ import org.springframework.test.context.TestPropertySource;
 
 import java.math.BigDecimal;
 import java.util.Date;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -330,6 +331,139 @@ class RepositoryQueriesIntegrationTest {
                     student.getId(), series.getId());
 
             assertThat(sum).isEqualByComparingTo(new BigDecimal("40.00"));
+        }
+    }
+
+    // ==================================================================
+    // RefundRepository.findActiveForStudent — remboursements listés dans l'historique
+    // ==================================================================
+    @Nested
+    @DisplayName("RefundRepository.findActiveForStudent")
+    class FindActiveForStudent {
+
+        private RefundEntity persistRefundOn(StudentEntity student, PaymentEntity payment,
+                                             String amount, Date date) {
+            RefundEntity refund = persistRefund(student, payment, new BigDecimal(amount));
+            refund.setRefundDate(date);
+            return refund;
+        }
+
+        @Test
+        @DisplayName("du plus ancien au plus récent, toutes séries confondues, avec série et groupe")
+        void chronologicalAcrossSeries() {
+            StudentEntity student = persistStudent("Lina");
+            GroupEntity group = persistGroup("G-list");
+            SessionSeriesEntity october = persistSeries(group, 8);
+            SessionSeriesEntity november = persistSeries(group, 8);
+            PaymentEntity octoberPayment = persistPayment(student, october, 2400.0, "COMPLETED");
+            octoberPayment.setGroup(group);
+            PaymentEntity novemberPayment = persistPayment(student, november, 2400.0, "COMPLETED");
+            novemberPayment.setGroup(group);
+            RefundEntity late = persistRefundOn(student, octoberPayment, "300.00", new Date(3_000_000_000L));
+            RefundEntity early = persistRefundOn(student, novemberPayment, "100.00", new Date(1_000_000_000L));
+            em.flush();
+            em.clear();
+
+            List<RefundEntity> refunds = refundRepository.findActiveForStudent(student.getId());
+
+            assertThat(refunds).extracting(RefundEntity::getId).containsExactly(early.getId(), late.getId());
+            assertThat(refunds.get(0).getPayment().getSessionSeries().getId()).isEqualTo(november.getId());
+            assertThat(refunds.get(1).getPayment().getGroup().getName()).isEqualTo("G-list");
+        }
+
+        @Test
+        @DisplayName("même date : départage par identifiant, pour un ordre stable")
+        void sameDateOrderedById() {
+            StudentEntity student = persistStudent("Nora");
+            SessionSeriesEntity series = persistSeries(persistGroup("G-tie"), 8);
+            PaymentEntity payment = persistPayment(student, series, 2400.0, "COMPLETED");
+            Date sameDay = new Date(2_000_000_000L);
+            RefundEntity first = persistRefundOn(student, payment, "10.00", sameDay);
+            RefundEntity second = persistRefundOn(student, payment, "20.00", sameDay);
+            em.flush();
+
+            assertThat(refundRepository.findActiveForStudent(student.getId()))
+                    .extracting(RefundEntity::getId).containsExactly(first.getId(), second.getId());
+        }
+
+        @Test
+        @DisplayName("ni remboursement désactivé, ni remboursement d'un autre étudiant")
+        void onlyActiveRefundsOfThisStudent() {
+            StudentEntity student = persistStudent("Omar");
+            StudentEntity other = persistStudent("Pauline");
+            SessionSeriesEntity series = persistSeries(persistGroup("G-scope"), 8);
+            PaymentEntity payment = persistPayment(student, series, 2400.0, "COMPLETED");
+            PaymentEntity otherPayment = persistPayment(other, series, 2400.0, "COMPLETED");
+            RefundEntity kept = persistRefund(student, payment, new BigDecimal("50.00"));
+            RefundEntity deactivated = persistRefund(student, payment, new BigDecimal("60.00"));
+            persistRefund(other, otherPayment, new BigDecimal("70.00"));
+            em.flush();
+            deactivated.setActive(false);
+            em.flush();
+
+            assertThat(refundRepository.findActiveForStudent(student.getId()))
+                    .extracting(RefundEntity::getId).containsExactly(kept.getId());
+        }
+
+        @Test
+        @DisplayName("par versement : du plus ancien au plus récent, ni désactivé ni autre versement")
+        void forPaymentChronologicalAndScoped() {
+            StudentEntity student = persistStudent("Sami");
+            SessionSeriesEntity series = persistSeries(persistGroup("G-payment"), 8);
+            PaymentEntity payment = persistPayment(student, series, 2400.0, "COMPLETED");
+            PaymentEntity other = persistPayment(student, series, 2400.0, "CANCELLED");
+            RefundEntity late = persistRefundOn(student, payment, "300.00", new Date(3_000_000_000L));
+            RefundEntity early = persistRefundOn(student, payment, "100.00", new Date(1_000_000_000L));
+            RefundEntity deactivated = persistRefund(student, payment, new BigDecimal("50.00"));
+            persistRefund(student, other, new BigDecimal("70.00"));
+            em.flush();
+            deactivated.setActive(false);
+            em.flush();
+            em.clear();
+
+            List<RefundEntity> refunds = refundRepository.findActiveForPayment(payment.getId());
+
+            assertThat(refunds).extracting(RefundEntity::getId).containsExactly(early.getId(), late.getId());
+            assertThat(refunds.get(0).getPayment().getSessionSeries().getId()).isEqualTo(series.getId());
+        }
+
+        @Test
+        @DisplayName("sommes par versement : une ligne par versement remboursé, actifs seuls")
+        void sumsByPayment() {
+            StudentEntity student = persistStudent("Tarek");
+            SessionSeriesEntity series = persistSeries(persistGroup("G-sums"), 8);
+            PaymentEntity first = persistPayment(student, series, 2400.0, "COMPLETED");
+            PaymentEntity second = persistPayment(student, series, 2400.0, "COMPLETED");
+            PaymentEntity untouched = persistPayment(student, series, 2400.0, "COMPLETED");
+            persistRefund(student, first, new BigDecimal("100.00"));
+            persistRefund(student, first, new BigDecimal("50.50"));
+            persistRefund(student, second, new BigDecimal("30.00"));
+            RefundEntity deactivated = persistRefund(student, second, new BigDecimal("999.00"));
+            em.flush();
+            deactivated.setActive(false);
+            em.flush();
+
+            List<Object[]> rows = refundRepository.sumActiveRefundsByPayment(
+                    List.of(first.getId(), second.getId(), untouched.getId()));
+
+            assertThat(rows).hasSize(2);
+            java.util.Map<Long, BigDecimal> sums = new java.util.HashMap<>();
+            rows.forEach(row -> sums.put((Long) row[0], new BigDecimal(row[1].toString())));
+            assertThat(sums.get(first.getId())).isEqualByComparingTo("150.50");
+            assertThat(sums.get(second.getId())).isEqualByComparingTo("30.00");
+            assertThat(sums).doesNotContainKey(untouched.getId());
+        }
+
+        @Test
+        @DisplayName("un versement sans série ni groupe n'efface pas le remboursement")
+        void paymentWithoutSeriesOrGroupIsKept() {
+            StudentEntity student = persistStudent("Rania");
+            PaymentEntity payment = persistPayment(student, null, 500.0, "COMPLETED");
+            RefundEntity refund = persistRefund(student, payment, new BigDecimal("25.00"));
+            em.flush();
+
+            assertThat(refundRepository.findActiveForStudent(student.getId()))
+                    .extracting(RefundEntity::getId).containsExactly(refund.getId());
         }
     }
 }

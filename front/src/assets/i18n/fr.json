@@ -860,7 +860,10 @@
         "openStudent": "Ouvrir la fiche étudiant",
         "openGroup": "Ouvrir la fiche groupe",
         "loading": "Chargement des paiements…",
-        "empty": "Aucun versement ne correspond aux filtres."
+        "empty": "Aucun versement ne correspond aux filtres.",
+        "refundedShare": "{{amount}} DA remboursés",
+        "refunded": "Remboursé",
+        "netAmount": "Montant net"
       },
       "rowStatus": {
         "active": "Actif",
@@ -873,13 +876,15 @@
         "IN_PROGRESS": "En cours",
         "COMPLETED": "Soldé",
         "CANCELLED": "Annulé",
-        "cancelledHint": "Le paiement parent est annulé : ce versement n'entre plus dans les soldes."
+        "cancelledHint": "Le paiement parent est annulé : ce versement n'entre plus dans les soldes.",
+        "REFUNDED": "Remboursé",
+        "refundedHint": "{{amount}} DA remboursés sur ce versement : statut calculé net des remboursements."
       },
       "actions": {
         "history": "Voir l'historique d'audit"
       },
       "audit": {
-        "title": "Historique des actions",
+        "title": "Historique du versement",
         "by": "par {{actor}}",
         "reason": "Motif",
         "change": "Avant : {{from}} → après : {{to}}",
@@ -889,6 +894,16 @@
           "MODIFIED": "Montant ou état modifié",
           "DELETED": "Supprimé définitivement",
           "REACTIVATED": "Réactivé"
+        },
+        "changesTitle": "Modifications de la ligne",
+        "refunds": {
+          "title": "Remboursements de ce versement",
+          "empty": "Aucun remboursement sur ce versement.",
+          "error": "Les remboursements n'ont pas pu être chargés.",
+          "noReason": "Motif non renseigné",
+          "reprint": "Réimprimer le reçu",
+          "reprintAria": "Réimprimer le reçu de remboursement {{number}}",
+          "reprintError": "Le reçu de remboursement n'a pas pu être imprimé. Réessayez."
         }
       }
     },
@@ -1276,7 +1291,8 @@
     },
     "seriesStatus": {
       "FULL": "Complet",
-      "PARTIAL": "Partiel"
+      "PARTIAL": "Partiel",
+      "UNPAID": "Non payé"
     },
     "series": "Série : {{name}}",
     "catchUpSeries": "Séance de rattrapage : {{name}}",
@@ -1294,7 +1310,8 @@
     "badge": {
       "FULL": "Soldé",
       "PARTIAL": "Partiel",
-      "EXEMPTED": "Exempté"
+      "EXEMPTED": "Exempté",
+      "UNPAID": "Non payé"
     },
     "amounts": {
       "due": "Dû",
@@ -1303,7 +1320,8 @@
       "dueBreakdown": "{{count}} séance(s) × {{price}} DA = {{total}} DA",
       "dueSessions": "{{count}} séance(s) facturée(s)",
       "paidSessions": "{{count}} séance(s) réglée(s)",
-      "remainingSessions": "{{count}} séance(s) à régler"
+      "remainingSessions": "{{count}} séance(s) à régler",
+      "paidNetOfRefunds": "Net de {{amount}} DA remboursés"
     },
     "exempted": "Exempté",
     "refunded": "Remboursé",
@@ -1317,7 +1335,6 @@
       "justified": "Justifiée",
       "payment": "Paiement",
       "amountPaid": "Montant affecté",
-      "refunded": "Remboursé",
       "description": "Description",
       "paymentDate": "Date de paiement"
     },
@@ -1382,7 +1399,9 @@
         "pendingDecisionSession": "Rattrapage à préciser — aucune facturation décidée à ce jour"
       },
       "amountAllocatedAndOverpaid": "Affecté : {{allocated}} DA — Trop-perçu : {{overpaid}} DA",
-      "pendingDecisionSession": "À préciser : {{name}}"
+      "pendingDecisionSession": "À préciser : {{name}}",
+      "amountPaidNetOfTotal": "Total versé, net des remboursements : {{paid}} DA / {{total}} DA dus",
+      "refundLine": "Pièce {{number}} du {{date}} : {{amount}} DA — {{reason}}"
     },
     "seriesLabel": "Série",
     "totalPaid": "Total versé",
@@ -1390,7 +1409,14 @@
     "overpaid": "Trop-perçu",
     "pendingDecisionTag": "À préciser",
     "pendingDecisionHint": "Rattrapage à préciser : ni dette, ni gratuité. La séance manquée et la décision de facturation restent à indiquer.",
-    "billedAtHostGroup": "facturée sur place"
+    "billedAtHostGroup": "facturée sur place",
+    "refunds": {
+      "noReason": "Motif non renseigné",
+      "reprint": "Réimprimer le reçu",
+      "reprintAria": "Réimprimer le reçu de remboursement {{number}}",
+      "reprintError": "Le reçu de remboursement n'a pas pu être imprimé. Réessayez.",
+      "unavailable": "Le détail des remboursements n'a pas pu être chargé."
+    }
   },
   "pricing": {
     "table": {
@@ -1459,7 +1485,7 @@
       "savedAmount": "{{amount}} DA rendus au bénéficiaire.",
       "printReceipt": "Imprimer le reçu",
       "downloadReceipt": "Télécharger le reçu",
-      "receiptFailed": "Le remboursement est enregistré, mais son reçu n'a pas pu être produit. Il reste imprimable depuis l'historique.",
+      "receiptFailed": "Le remboursement est enregistré, mais son reçu n'a pas pu être produit. Il reste imprimable depuis l'historique complet de l'étudiant.",
       "amountPlaceholder": "Ex. : 2000",
       "reasonNote": "Le motif figure sur le reçu de remboursement remis à la famille.",
       "back": "Modifier"

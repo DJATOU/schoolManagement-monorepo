@@ -215,7 +215,20 @@
           <td mat-cell *matCellDef="let element">
             <!-- « DZD6,000 » (code ISO collé) était illisible : on garde le suffixe DA
                  utilisé partout ailleurs dans l'application. -->
-            <strong class="amount-value">{{ element.amountPaid | number:'1.0-2' }} {{ currencySuffix }}</strong>
+            <ng-container *ngIf="!hasRefundedShare(element); else refundedAmount">
+              <strong class="amount-value">{{ element.amountPaid | amount }} {{ currencySuffix }}</strong>
+            </ng-container>
+            <!-- Part remboursée : le montant versé reste lisible, barré, et le net est mis en avant.
+                 Le montant d'origine ne disparaît pas : c'est ce que dit le reçu de la famille. -->
+            <ng-template #refundedAmount>
+              <div class="amount-refunded-cell">
+                <span class="amount-gross">{{ element.amountPaid | amount }} {{ currencySuffix }}</span>
+                <strong class="amount-value amount-net">{{ netAmountOf(element) | amount }} {{ currencySuffix }}</strong>
+                <span class="amount-refunded-share">
+                  {{ 'payment.admin.table.refundedShare' | translate: { amount: (refundedOf(element) | amount) } }}
+                </span>
+              </div>
+            </ng-template>
           </td>
         </ng-container>
 

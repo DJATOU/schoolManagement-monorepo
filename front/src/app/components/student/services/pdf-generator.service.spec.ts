@@ -6,6 +6,9 @@ import pdfMake from 'pdfmake/build/pdfmake';
 import { PdfGeneratorService } from './pdf-generator.service';
 import { SessionHistoryDTO } from '../../../models/session/SessionHistoryDTO';
 import { StudentFullHistoryDTO } from '../domain/StudentFullHistoryDTO';
+import { StudentRefund } from '../../../models/refund/refund';
+import { SeriesHistoryDTO } from '../../../models/sessionSerie/SeriesHistoryDTO';
+import { TDocumentDefinitions } from 'pdfmake/interfaces';
 
 /**
  * Tests unitaires du PdfGeneratorService (tâche 18.3).
@@ -19,6 +22,7 @@ describe('PdfGeneratorService', () => {
   let service: PdfGeneratorService;
 
   const EXEMPTED_COLOR = '#1e88e5';
+  const ABSENT_PAID_COLOR = '#dfe3e8';
 
   const baseSession = (overrides: Partial<SessionHistoryDTO> = {}): SessionHistoryDTO => ({
     catchUpSession: false,
@@ -73,9 +77,13 @@ describe('PdfGeneratorService', () => {
       expect(color(session)).toBe('#32a852');
     });
 
-    it('returns #ff6347 for absent + completed', () => {
+    it('returns a neutral colour for absent + completed, never an alert colour', () => {
+      // Décision du propriétaire produit : une séance absente mais réglée n'est pas une dette. Le
+      // rouge tomate d'origine (#ff6347) la faisait lire comme un impayé.
       const session = baseSession({ attendanceStatus: 'ABSENT', paymentStatus: 'PAID' });
-      expect(color(session)).toBe('#ff6347');
+      expect(color(session)).toBe(ABSENT_PAID_COLOR);
+      // Distincte du gris des présences non renseignées et des séances écartées.
+      expect(color(session)).not.toBe('#f5f5f5');
     });
 
     it('returns #ffd700 for present + in progress', () => {
@@ -274,6 +282,64 @@ describe('PdfGeneratorService', () => {
       expect(hasCatchUpLegend).toBeTrue();
     });
 
+    it('prints the justification of an absence as « Oui » / « Non », never as a raw key', async () => {
+      let captured: any;
+      spyOn(pdfMakeModule(), 'createPdf').and.callFake((def: any) => {
+        captured = def;
+        return { getBlob: (cb: (b: any) => void) => cb(new Blob()) } as any;
+      });
+      const absent = (sessionId: number, isJustified: boolean) => ({
+        ...fullHistory.groups[0].series[0].sessions[0], catchUpSession: false, sessionId,
+        sessionName: 'Séance ' + sessionId, attendanceStatus: 'ABSENT', isJustified, isExempted: false
+      });
+      const history = {
+        ...fullHistory,
+        groups: [{ ...fullHistory.groups[0], series: [{ ...fullHistory.groups[0].series[0], isExempted: false,
+          sessions: [absent(101, false), absent(102, true)] }] }]
+      } as any;
+
+      await service.generateFullHistoryPdf(history, 'logo.png');
+
+      const texts: string[] = [];
+      collectTexts(captured.content, texts);
+      expect(texts).toContain('Non');
+      expect(texts).toContain('Oui');
+      expect(texts.filter(t => t.startsWith('studentHistory.') || t.startsWith('common.')))
+        .withContext('clés imprimées brutes').toEqual([]);
+    });
+
+    it('lets a long title or description wrap between words, never a date or an amount', async () => {
+      // « Descriptio / n » : en 11 pt, les huit colonnes ne tenaient pas sur une page A4 et les
+      // mots se coupaient. Le titre et la description prennent la place restante et vont à la
+      // ligne ; dates et montants restent sur une ligne.
+      let captured: any;
+      spyOn(pdfMakeModule(), 'createPdf').and.callFake((def: any) => {
+        captured = def;
+        return { getBlob: (cb: (b: any) => void) => cb(new Blob()) } as any;
+      });
+
+      await service.generateFullHistoryPdf(fullHistory, 'logo.png');
+
+      const findTable = (node: any): any => {
+        if (Array.isArray(node)) { return node.map(findTable).find(Boolean); }
+        if (node && typeof node === 'object') {
+          if (node.style === 'historyTable') { return node; }
+          return findTable(node.stack ?? node.columns);
+        }
+        return undefined;
+      };
+      const table = findTable(captured.content);
+      expect(table.table.widths).toEqual(['*', 'auto', 'auto', 'auto', '*', 'auto', 'auto', 'auto']);
+      expect(captured.styles.historyTable.fontSize).toBeLessThan(10);
+      expect(captured.styles.tableHeader.fontSize).toBeLessThan(10);
+      const row = table.table.body[1];
+      expect(row[0].alignment).toBe('left');
+      expect(row[4].alignment).toBe('left');
+      expect([row[1].noWrap, row[5].noWrap, row[7].noWrap]).toEqual([true, true, true]);
+      expect(table.layout.paddingTop()).toBeGreaterThan(0);
+      expect(table.layout.hLineWidth()).toBe(0);
+    });
+
     it('prefixes a catch-up session title with the translated catch-up label', async () => {
       let captured: any;
       spyOn(pdfMakeModule(), 'createPdf').and.callFake((def: any) => {
@@ -325,6 +391,95 @@ describe('PdfGeneratorService', () => {
       collectTexts(captured.content, texts);
       const hasRefund = texts.some(t => t.includes('Montant remboursé') && t.includes('60'));
       expect(hasRefund).toBeTrue();
+    });
+
+    describe('refunds, net paid and status', () => {
+      /** Intercepte la définition passée à pdfMake ; la lecture se fait après génération. */
+      function captureDefinition(): () => TDocumentDefinitions {
+        let captured: TDocumentDefinitions = { content: [] };
+        spyOn(pdfMake, 'createPdf').and.callFake(((definition: TDocumentDefinitions) => {
+          captured = definition;
+          return { getBlob: (callback: (blob: Blob) => void) => callback(new Blob()) };
+        }) as never);
+        return () => captured;
+      }
+
+      /** Document produit pour une série, avec ou sans liste de remboursements. */
+      async function textsFor(series: Partial<SeriesHistoryDTO>, refunds: StudentRefund[] = []): Promise<string[]> {
+        const definition = captureDefinition();
+        const history: StudentFullHistoryDTO = {
+          studentId: 4, studentName: 'Camille Amrani', catchUp: false,
+          groups: [{
+            groupId: 1,
+            groupName: 'Maths 4 AM A',
+            catchUp: false,
+            series: [{
+              seriesId: 40, seriesName: 'Octobre', paymentStatus: 'PARTIAL', isExempted: false,
+              totalAmountPaid: 0, totalCost: 2400,
+              sessions: [baseSession({ sessionId: 400, sessionName: 'Séance 1' })],
+              ...series
+            }]
+          }]
+        };
+
+        await service.generateFullHistoryPdf(history, 'logo.png', refunds);
+
+        const texts: string[] = [];
+        collectTexts(definition().content, texts);
+        return texts;
+      }
+
+      const refund = (overrides: Partial<StudentRefund> = {}): StudentRefund => ({
+        refundId: 7, refundNumber: 'REMB-2026-0007', refundDate: '2026-10-05T10:00:00',
+        amount: 400, reason: 'Trop-perçu', seriesId: 40, seriesName: 'Octobre', ...overrides
+      });
+
+      it('prints the paid amount as net of refunds when money was returned', async () => {
+        const texts = await textsFor({ paymentStatus: 'PARTIAL', totalAmountPaid: 2000, totalRefunded: 400 });
+
+        expect(texts).toContain('Total versé, net des remboursements : 2 000,00 DA / 2 400,00 DA dus');
+      });
+
+      it('keeps the plain paid label when nothing was refunded', async () => {
+        const texts = await textsFor({ paymentStatus: 'FULL', totalAmountPaid: 2400, totalRefunded: 0 });
+
+        expect(texts).toContain('Total versé : 2 400,00 DA / 2 400,00 DA dus');
+      });
+
+      it('prints « Non payé » for a series with nothing paid', async () => {
+        const texts = await textsFor({ paymentStatus: 'UNPAID', totalAmountPaid: 0, totalRefunded: 0 });
+
+        expect(texts).toContain('Paiement : Non payé');
+      });
+
+      it('lists each refund of the series with its number, date, amount and reason', async () => {
+        const texts = await textsFor(
+          { paymentStatus: 'PARTIAL', totalAmountPaid: 2000, totalRefunded: 400 },
+          [refund(), refund({ refundId: 8, refundNumber: 'REMB-2026-0009', seriesId: 99, amount: 50 })]);
+
+        expect(texts).toContain('Pièce REMB-2026-0007 du 05/10/2026 : 400,00 DA — Trop-perçu');
+        // Le remboursement d'une autre série n'est pas imprimé sous celle-ci.
+        expect(texts.some(text => text.includes('REMB-2026-0009'))).toBeFalse();
+      });
+
+      it('names a missing reason instead of printing a blank', async () => {
+        const texts = await textsFor(
+          { paymentStatus: 'PARTIAL', totalAmountPaid: 2000, totalRefunded: 400 },
+          [refund({ reason: '  ' })]);
+
+        expect(texts).toContain('Pièce REMB-2026-0007 du 05/10/2026 : 400,00 DA — Motif non renseigné');
+      });
+
+      it('uses the neutral colour for absent + paid in the legend too', async () => {
+        const definition = captureDefinition();
+
+        await service.generateFullHistoryPdf(fullHistory, 'logo.png');
+
+        const colors: string[] = [];
+        collectFillColors(definition().content, colors);
+        expect(colors).toContain(ABSENT_PAID_COLOR);
+        expect(colors).not.toContain('#ff6347');
+      });
     });
 
     it('marks an exempted series title with "(exempté)"', async () => {

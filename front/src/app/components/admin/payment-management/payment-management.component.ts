@@ -26,6 +26,7 @@ import { GroupService } from '../../../services/group.service';
 import { PaymentDetailHistoryDialogComponent } from './dialogs/payment-detail-history-dialog.component';
 import { RefundCreateDialogComponent } from '../../payment/refund-create-dialog/refund-create-dialog.component';
 import { Refund } from '../../../models/refund/refund';
+import { AmountPipe, formatAmount } from '../../../pipes/amount.pipe';
 import { LevelService } from '../../../services/level.service';
 import { SessionService } from '../../../services/SessionService';
 import { SeriesService } from '../../../services/series.service';
@@ -48,8 +49,21 @@ interface PaymentDetailView {
   dateCreation?: Date;
   paymentDate?: Date;
   paymentId?: number;
+  /**
+   * Statut du versement. Pour un versement remboursé, le serveur le rend sur le net : `REFUNDED`
+   * quand tout a été rendu, sinon la règle habituelle appliquée au versé moins le remboursé.
+   */
   paymentStatus?: string;
   isCatchUp?: boolean;
+  /**
+   * Part des remboursements imputée à cette ligne. Un remboursement porte sur le versement : le
+   * serveur l'impute aux lignes les plus récentes d'abord, comme l'historique de l'étudiant.
+   */
+  refundedAmount?: number;
+  /** Montant de la ligne net de sa part remboursée. */
+  netAmount?: number;
+  /** Total remboursé sur le versement de la ligne, toutes lignes confondues. */
+  paymentRefunded?: number;
 }
 
 @Component({
@@ -78,6 +92,7 @@ interface PaymentDetailView {
     MatSnackBarModule,
     TranslateModule,
     AdminOnlyDirective,
+    AmountPipe,
     PaymentDetailHistoryDialogComponent,
     RefundCreateDialogComponent
   ]
@@ -654,6 +669,8 @@ export class PaymentManagementComponent implements OnInit {
       this.translate.instant('payment.admin.table.series'),
       this.translate.instant('payment.admin.table.session'),
       this.translate.instant('payment.admin.table.amount'),
+      this.translate.instant('payment.admin.table.refunded'),
+      this.translate.instant('payment.admin.table.netAmount'),
       this.translate.instant('payment.admin.table.rowStatus'),
       this.translate.instant('payment.admin.table.paymentStatus'),
       this.translate.instant('payment.admin.table.createdAt')
@@ -666,6 +683,9 @@ export class PaymentManagementComponent implements OnInit {
       row.seriesName,
       row.sessionName,
       row.amountPaid,
+      // Remboursé et net en colonnes à part : le montant reste celui du versement, tel qu'encaissé.
+      this.refundedOf(row),
+      this.netAmountOf(row),
       this.getStatusLabel(row),
       this.paymentStatusLabel(row),
       row.dateCreation ? new Date(row.dateCreation).toLocaleString(resolveLocale(this.translate.currentLang)) : ''
@@ -733,9 +753,32 @@ export class PaymentManagementComponent implements OnInit {
   }
 
   paymentStatusTooltip(detail: PaymentDetailView): string {
-    return detail.paymentStatus === 'CANCELLED'
-      ? this.translate.instant('payment.admin.paymentStatus.cancelledHint')
-      : '';
+    if (detail.paymentStatus === 'CANCELLED') {
+      return this.translate.instant('payment.admin.paymentStatus.cancelledHint');
+    }
+    // Versement remboursé : le statut est celui du net, l'info-bulle dit combien a été rendu. Sans
+    // elle, une ligne entière à 800 DA « En cours » paraîtrait contredire son propre montant.
+    if ((detail.paymentRefunded ?? 0) > 0) {
+      return this.translate.instant('payment.admin.paymentStatus.refundedHint', {
+        amount: formatAmount(detail.paymentRefunded, this.translate.currentLang)
+      });
+    }
+    return '';
+  }
+
+  /** Part remboursée de la ligne, zéro pour une réponse d'un serveur antérieur qui ne la porte pas. */
+  refundedOf(detail: PaymentDetailView): number {
+    return detail.refundedAmount ?? 0;
+  }
+
+  /** Montant net de la ligne ; à défaut, le montant versé. */
+  netAmountOf(detail: PaymentDetailView): number {
+    return detail.netAmount ?? detail.amountPaid;
+  }
+
+  /** Vrai lorsqu'une part de la ligne a été rendue : le montant s'affiche alors barré, net à côté. */
+  hasRefundedShare(detail: PaymentDetailView): boolean {
+    return this.refundedOf(detail) > 0;
   }
 
   /**

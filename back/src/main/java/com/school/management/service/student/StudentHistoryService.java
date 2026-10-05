@@ -129,6 +129,7 @@ public class StudentHistoryService {
 
     private static final String SERIES_FULL = "FULL";
     private static final String SERIES_PARTIAL = "PARTIAL";
+    private static final String SERIES_UNPAID = "UNPAID";
 
     /** Groupes classés par nom, insensible à la casse et aux valeurs nulles. */
     private static final Comparator<GroupEntity> GROUP_BY_NAME =
@@ -251,17 +252,19 @@ public class StudentHistoryService {
         // total_sessions × prix (exigence 11.1).
         BigDecimal totalCostForStudent = quote.monthTotalCost();
 
-        // Total versé : on réutilise les versements déjà chargés plus haut. Le calcul
-        // parcourait auparavant le graphe d'entités (session.getPaymentDetails()), donc une
-        // source différente de celle qui alimente les lignes de séances.
-        double totalPaidForSeries = sumAmounts(activePaymentDetails);
+        // Versé NET : versements non annulés diminués des remboursements actifs, borné à zéro,
+        // relu sur le devis. L'historique sommait auparavant ses propres lignes sans déduire les
+        // remboursements : après un remboursement, il annonçait la série « soldée » alors que le
+        // devis et le statut de retard, eux, voyaient un reste à payer. Une seule définition du
+        // versé, celle du devis (PaymentCostResolver), et le désaccord disparaît.
+        BigDecimal netPaid = money(Optional.ofNullable(quote.amountPaid()).orElse(BigDecimal.ZERO)
+                .max(BigDecimal.ZERO));
 
         // Statut de la série, évalué contre le Coût_Série_Prorata (exigences 11.1, 11.2) :
         // un étudiant arrivé à la dernière séance d'une série de quatre et l'ayant réglée est
         // soldé. Comparé au coût nominal de la série, il resterait indéfiniment « partiel ».
-        dto.setPaymentStatus(BigDecimal.valueOf(totalPaidForSeries).compareTo(totalCostForStudent) >= 0
-                ? SERIES_FULL : SERIES_PARTIAL);
-        dto.setTotalAmountPaid(totalPaidForSeries);
+        dto.setPaymentStatus(seriesStatus(netPaid, totalCostForStudent));
+        dto.setTotalAmountPaid(netPaid.doubleValue());
         dto.setTotalCost(totalCostForStudent.doubleValue());
 
         // NOUVEAU (tâche 16.1) : exemption (réduction 100 %) au niveau de la série.
@@ -284,9 +287,10 @@ public class StudentHistoryService {
         // présence (exigences 11.3, 11.5).
         Map<Long, BillingInclusionReason> inclusionReasons = resolveInclusionReasons(billable);
 
-        // Affectation des versements aux séances, du plus ancien au plus récent.
+        // Affectation des versements aux séances, du plus ancien au plus récent, dans la limite
+        // du versé net : l'argent rendu ne couvre plus aucune séance.
         Map<Long, SessionCoverage> coverages = allocatePayments(
-                billableSessions, netSessionPrice, activePaymentDetails);
+                billableSessions, netSessionPrice, activePaymentDetails, netPaid);
 
         // Réconciliation versé / affecté / trop-perçu : la somme des montants affectés aux
         // séances doit être justifiable ligne par ligne. L'écart avec le montant versé est
@@ -295,7 +299,7 @@ public class StudentHistoryService {
                 .map(SessionCoverage::allocated)
                 .reduce(BigDecimal.ZERO, BigDecimal::add)
                 .setScale(2, RoundingMode.HALF_UP);
-        BigDecimal overpaid = BigDecimal.valueOf(totalPaidForSeries).subtract(allocated);
+        BigDecimal overpaid = netPaid.subtract(allocated);
         dto.setTotalAllocated(allocated.doubleValue());
         dto.setTotalOverpaid(overpaid.signum() > 0
                 ? overpaid.setScale(2, RoundingMode.HALF_UP).doubleValue()
@@ -532,10 +536,19 @@ public class StudentHistoryService {
      * « combien est dû » : une séance restait donc « non payée » alors que l'étudiant avait
      * versé plus que le total de la série. L'affectation en cascade rétablit la cohérence
      * avec le témoin « à jour » de la fiche étudiante.</p>
+     *
+     * <p><strong>Plafond : le versé net.</strong> Les lignes de versement ne connaissent pas les
+     * remboursements, qui portent sur le versement de la série et non sur une séance. Sans plafond,
+     * une série remboursée de 400 DA affichait toutes ses séances réglées alors que le statut
+     * annonçait 400 DA à payer. La cascade s'arrête donc au versé net : ce qui a été rendu
+     * découvre les séances les plus récentes, et un trop-perçu remboursé ne découvre rien.</p>
+     *
+     * @param budget versé net de la série, plafond de la somme affectée
      */
     private Map<Long, SessionCoverage> allocatePayments(List<SessionEntity> billableSessions,
             BigDecimal netSessionPrice,
-            List<PaymentDetailEntity> paymentDetails) {
+            List<PaymentDetailEntity> paymentDetails,
+            BigDecimal budget) {
         Map<Long, SessionCoverage> coverages = new HashMap<>();
 
         // Séance gratuite ou exemptée à 100 % : il n'y a rien à régler.
@@ -554,10 +567,13 @@ public class StudentHistoryService {
                 .toList();
 
         int cursor = 0;
+        BigDecimal budgetLeft = budget;
         for (PaymentDetailEntity detail : chronological) {
-            BigDecimal remaining = detail.getAmountPaid() != null
+            BigDecimal lineAmount = detail.getAmountPaid() != null
                     ? BigDecimal.valueOf(detail.getAmountPaid()).setScale(2, RoundingMode.HALF_UP)
                     : BigDecimal.ZERO.setScale(2);
+            BigDecimal remaining = lineAmount.min(budgetLeft);
+            budgetLeft = budgetLeft.subtract(remaining);
 
             while (remaining.signum() > 0 && cursor < billableSessions.size()) {
                 Long sessionId = billableSessions.get(cursor).getId();
@@ -737,6 +753,21 @@ public class StudentHistoryService {
     }
 
     // ===================== Helper methods ======================
+
+    /**
+     * Statut de la série face à son coût au prorata.
+     *
+     * <p>{@code FULL} est testé en premier : une série dont le coût est nul (exemptée, ou sans
+     * séance facturable) n'attend rien et ne doit pas s'annoncer « non payée ». {@code UNPAID}
+     * nomme ensuite le cas « rien de versé », que {@code PARTIAL} présentait comme un règlement
+     * entamé.</p>
+     */
+    private static String seriesStatus(BigDecimal netPaid, BigDecimal cost) {
+        if (netPaid.compareTo(cost) >= 0) {
+            return SERIES_FULL;
+        }
+        return netPaid.signum() > 0 ? SERIES_PARTIAL : SERIES_UNPAID;
+    }
 
     /** Montant à l'échelle monétaire du projet (2 décimales, HALF_UP). */
     private BigDecimal money(BigDecimal amount) {

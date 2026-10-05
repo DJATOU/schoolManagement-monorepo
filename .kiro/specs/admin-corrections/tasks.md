@@ -754,6 +754,52 @@ des lignes) ; `StudentHistoryService.allocatePayments`.
 - [ ] T.5 Déploiement sur une base neuve avec `docker compose up` : migrations et fuseau
   vérifiés, parcours du lot
 
+## Retours des tests manuels
+
+- [x] R.1 PDF de l'historique élève : la justification s'imprimait en clé brute
+  (« studentHistory.common.no ») au lieu de « Oui / Non »
+- [x] R.2 PDF de l'historique élève : tableau des séances relu à la longueur réelle des textes —
+  titre et description en colonnes élastiques qui passent à la ligne, dates et montant sur une
+  seule ligne, police 9,5 pt. Vérifié par rendu réel du document
+- [x] R.3 Reçu de remboursement : le numéro de pièce ne s'imprimait pas (« Pièce n° {{number}} »),
+  le paramètre transmis portant un autre nom que celui du gabarit. Spec ajoutée : numéro FR et EN,
+  et aucun gabarit non résolu dans tout le document, duplicata compris (2 mutations tuées)
+- [x] R.4 Messages de refus de remboursement (plafond, bornes, réactivation) en DA au lieu de €,
+  vérifiés au mot près (3 mutations tuées)
+- [x] R.5 Historique : versé **net** des remboursements (décision du propriétaire produit). Le versé
+  de série est relu sur le devis (`quote.amountPaid()`, versements − remboursements actifs, borné à
+  zéro) : l'historique annonçait « soldé » sur le brut alors que le devis voyait un reste à payer. La
+  cascade sur les séances est plafonnée au versé net (l'argent rendu découvre les séances les plus
+  récentes ; un trop-perçu remboursé ne découvre rien), et le trop-perçu se calcule sur le net.
+  Écran et PDF disent « net des remboursements » quand il y en a
+- [x] R.6 Statut de série `UNPAID` (« Non payé ») quand rien n'est versé net alors qu'un montant est
+  dû ; `FULL` reste prioritaire, une série à coût nul n'est jamais « non payée ». Le dialogue
+  d'historique des paiements reprend le verdict du serveur au lieu de le déduire d'un versé brut
+- [x] R.7 Montants des deux dialogues d'historique au format de la langue active (« 2 400,00 DA »),
+  par un pipe `amount` partagé : le pipe `number` retombait sur « en-US » faute de `LOCALE_ID`
+- [x] R.8 PDF de l'historique : « absent et payé » en gris bleuté neutre (#dfe3e8), légende comprise ;
+  le rouge tomate se lisait comme une dette
+- [x] R.9 Remboursements nommés dans l'historique : `GET /api/students/{id}/refunds`, réservé à ADMIN
+  comme les reçus de versement (pièces de caisse), liste sous chaque série — numéro, date, montant,
+  motif — avec réimpression du reçu (duplicata compté par le serveur), et dans le PDF imprimé par un
+  ADMIN. Le total remboursé par série reste visible des deux rôles. Pas de montant remboursé par
+  séance : un remboursement porte sur le versement de la série, le champ `refundedAmount`, jamais
+  renseigné, est retiré avec sa colonne vide. Le message « reçu non produit » est désormais affiché
+  à l'administrateur après un remboursement, et dit où réimprimer
+- [x] R.10 Écran « Gestion des paiements » net des remboursements. Une ligne est la part d'un
+  versement sur une séance ; le remboursement, rattaché au versement, est imputé à ses lignes actives
+  les plus récentes d'abord (même règle que R.5, ordre décidé en Java et non par la base), sur toutes
+  les lignes du versement et non sur la seule page affichée. La ligne touchée montre le versé barré,
+  le net et la part rendue ; le statut d'un versement remboursé est recalculé sur le net
+  (`PaymentLineStatus` contre le coût au prorata, « Remboursé » si tout est rendu, « Annulé »
+  prioritaire), info-bulle « X DA remboursés sur ce versement ». Export CSV : colonnes « Remboursé »
+  et « Montant net », le montant restant celui encaissé. Montants au format de la langue
+- [x] R.11 Historique d'une ligne : les remboursements de son versement — pièce, date, montant, motif,
+  auteur (même mention de repli que le reçu) — avec réimpression du reçu, au-dessus du journal
+  d'audit de la ligne. `GET /api/refunds/payment/{id}`, réservé à ADMIN ; le plafond
+  `…/payment/{id}/cap` reste lisible des deux rôles (vérifié). Les lectures de remboursements sont
+  regroupées dans `RefundReadController`
+
 ## Livraison
 
 - [ ] L.1 Script `mise-a-jour.ps1` pour les mises à jour après la mise en service : sauvegarde

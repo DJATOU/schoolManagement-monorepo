@@ -1,6 +1,10 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { TranslateService } from '@ngx-translate/core';
+import pdfMake from 'pdfmake/build/pdfmake';
+import { TDocumentDefinitions } from 'pdfmake/interfaces';
 
 import { PaymentHistoryDialogComponent } from './payment-history-dialog.component';
+import { SeriesHistoryDTO } from '../../../../models/sessionSerie/SeriesHistoryDTO';
 import { createDialogRefSpy, DialogRefSpy, matDialogProviders, setupComponentTestBed } from '../../../../../testing/setup';
 
 /**
@@ -94,6 +98,80 @@ describe('PaymentHistoryDialogComponent', () => {
       // dépendre de cette confiance : la décision non prise primera toujours.
       expect(component.statusLabel(row({ pendingDecision: true, excluded: true })))
         .toBe('payment.history.pendingDecision.reason');
+    });
+  });
+
+  /**
+   * Résumé de la série : le statut vient du serveur, jugé sur le versé net des remboursements.
+   */
+  describe('résumé de la série', () => {
+    const series = (over: Partial<SeriesHistoryDTO> = {}): SeriesHistoryDTO => ({
+      seriesId: 5, seriesName: 'Octobre', paymentStatus: 'PARTIAL',
+      totalAmountPaid: 2000, totalCost: 2400, totalRefunded: 400, sessions: [], ...over
+    });
+
+    function select(value: SeriesHistoryDTO): void {
+      // L'historique est laissé en attente par le harnais : on simule sa fin de chargement.
+      component.loading = false;
+      component.sessionSeries = [value];
+      component.selectedSeries = value.seriesId;
+      component.loadPaymentHistory();
+      fixture.detectChanges();
+    }
+
+    it('reprend le statut du serveur : FULL, UNPAID, PARTIAL', () => {
+      select(series({ paymentStatus: 'FULL' }));
+      expect(component.seriesStatus).toBe('paid');
+      select(series({ paymentStatus: 'UNPAID', totalAmountPaid: 0 }));
+      expect(component.seriesStatus).toBe('unpaid');
+      select(series({ paymentStatus: 'PARTIAL' }));
+      expect(component.seriesStatus).toBe('partiallyPaid');
+    });
+
+    it('ne déduit plus « non payé » d\'un versé brut : une série remboursée reste celle du serveur', () => {
+      // Versé net 2 000 : le serveur dit « partiel », le dialogue ne le contredit pas.
+      select(series({ paymentStatus: 'PARTIAL', totalAmountPaid: 2000 }));
+      expect(component.seriesStatus).toBe('partiallyPaid');
+      expect(component.seriesRemaining).toBe(400);
+      expect(component.seriesRefunded).toBe(400);
+    });
+
+    it('affiche les montants au format français', () => {
+      TestBed.inject(TranslateService).use('fr');
+      select(series());
+
+      const text = (fixture.nativeElement.textContent as string).replace(/\s+/g, ' ');
+      expect(text).toContain('2 400,00 DA');
+      expect(text).not.toContain('2,400.00');
+    });
+
+    it('imprime le remboursé dans le PDF, à côté d\'un versé désormais net', async () => {
+      select(series());
+      spyOn(component as never, 'convertImageToBase64').and.returnValue(Promise.resolve('') as never);
+      let captured: TDocumentDefinitions = { content: [] };
+      spyOn(pdfMake, 'createPdf').and.callFake(((definition: TDocumentDefinitions) => {
+        captured = definition;
+        return { getBlob: () => undefined };
+      }) as never);
+
+      await component.generatePdf();
+
+      const texts = JSON.stringify(captured.content);
+      expect(texts).toContain('payment.history.labels.refunded : 400 DA');
+    });
+
+    it('n\'imprime pas de ligne « remboursé » sans remboursement', async () => {
+      select(series({ totalRefunded: 0 }));
+      spyOn(component as never, 'convertImageToBase64').and.returnValue(Promise.resolve('') as never);
+      let captured: TDocumentDefinitions = { content: [] };
+      spyOn(pdfMake, 'createPdf').and.callFake(((definition: TDocumentDefinitions) => {
+        captured = definition;
+        return { getBlob: () => undefined };
+      }) as never);
+
+      await component.generatePdf();
+
+      expect(JSON.stringify(captured.content)).not.toContain('payment.history.labels.refunded');
     });
   });
 });

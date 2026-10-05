@@ -1,5 +1,6 @@
 package com.school.management.service.payment;
 
+import com.school.management.dto.PaymentDetailSearchDTO;
 import com.school.management.persistance.EncashmentAllocationEntity;
 import com.school.management.persistance.EncashmentEntity;
 import com.school.management.persistance.PaymentDetailEntity;
@@ -8,8 +9,13 @@ import com.school.management.service.exception.CustomServiceException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -33,12 +39,29 @@ class PaymentDetailAdminServiceTest {
     private static final Long DETAIL_ID = 900L;
 
     private PaymentDetailRepository paymentDetailRepository;
+    private PaymentLineRefundAnnotator refundAnnotator;
     private PaymentDetailAdminService service;
 
     @BeforeEach
     void setUp() {
         paymentDetailRepository = mock(PaymentDetailRepository.class);
-        service = new PaymentDetailAdminService(paymentDetailRepository);
+        refundAnnotator = mock(PaymentLineRefundAnnotator.class);
+        service = new PaymentDetailAdminService(paymentDetailRepository, refundAnnotator);
+    }
+
+    @Test
+    @DisplayName("recherche : la page renvoyée est celle annotée des remboursements")
+    void searchAnnotatesTheReturnedPage() {
+        PaymentDetailSearchDTO row = new PaymentDetailSearchDTO();
+        Page<PaymentDetailSearchDTO> page = new PageImpl<>(List.of(row));
+        when(paymentDetailRepository.searchPaymentDetailsWithCompleteData(
+                any(), any(), any(), any(), any(), any(), any(), any(), any(Pageable.class))).thenReturn(page);
+
+        Page<PaymentDetailSearchDTO> result = service.searchPaymentDetailsWithCompleteData(
+                null, null, null, null, null, null, null, null, PageRequest.of(0, 10));
+
+        assertThat(result.getContent()).containsExactly(row);
+        verify(refundAnnotator).annotate(page.getContent());
     }
 
     private PaymentDetailEntity detailOfReceipt(String receiptNumber) {

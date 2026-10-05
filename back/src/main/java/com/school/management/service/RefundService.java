@@ -117,8 +117,8 @@ public class RefundService {
             // Les trois montants sont nommés : l'administrateur a une famille devant lui, et
             // « montant trop élevé » l'obligerait à aller chercher l'information ailleurs.
             throw new CustomServiceException(String.format(
-                    "Remboursement impossible : montant demandé %s €, mais le versement a rapporté "
-                            + "%s € dont %s € déjà remboursé(s). Plafond restant : %s €.",
+                    "Remboursement impossible : montant demandé %s DA, mais le versement a rapporté "
+                            + "%s DA dont %s DA déjà remboursé(s). Plafond restant : %s DA.",
                     amount, amountPaid, alreadyRefunded, cap),
                     HttpStatus.BAD_REQUEST);
         }
@@ -178,7 +178,7 @@ public class RefundService {
         if (toMoney(refund.getAmount()).compareTo(cap) > 0) {
             throw new CustomServiceException(String.format(
                     "Réactivation impossible : elle porterait les remboursements au-delà du montant "
-                            + "versé. Plafond restant : %s €.", cap),
+                            + "versé. Plafond restant : %s DA.", cap),
                     HttpStatus.BAD_REQUEST);
         }
 
@@ -199,8 +199,8 @@ public class RefundService {
         BigDecimal amount = raw.setScale(MONEY_SCALE, MONEY_ROUNDING);
         if (amount.compareTo(MIN_AMOUNT) < 0 || amount.compareTo(MAX_AMOUNT) > 0) {
             throw new CustomServiceException(String.format(
-                    "Le montant du remboursement doit être compris entre %s € et %s € "
-                            + "(montant reçu après arrondi : %s €).",
+                    "Le montant du remboursement doit être compris entre %s DA et %s DA "
+                            + "(montant reçu après arrondi : %s DA).",
                     MIN_AMOUNT, MAX_AMOUNT, amount),
                     HttpStatus.BAD_REQUEST);
         }

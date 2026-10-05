@@ -2,7 +2,7 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { catchError, Observable, throwError } from 'rxjs';
 import { API_BASE_URL } from '../api-base-url';
-import { Refund, RefundCap, RefundReceipt, RefundRequest } from '../models/refund/refund';
+import { Refund, RefundCap, RefundReceipt, RefundRequest, StudentRefund } from '../models/refund/refund';
 
 /**
  * Service des remboursements : appels HTTP uniquement, un service par entité.
@@ -56,6 +56,30 @@ export class RefundService {
    */
   issueReceipt(refundId: number): Observable<RefundReceipt> {
     return this.http.post<RefundReceipt>(`${this.baseUrl}/${refundId}/receipts`, {}).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  /**
+   * Remboursements actifs d'un étudiant, du plus ancien au plus récent.
+   *
+   * <p>Backend : `GET /api/students/{id}/refunds`, réservé à ADMIN en lecture, comme les reçus de
+   * versement : l'appelant ne le demande donc que pour un administrateur.</p>
+   */
+  getStudentRefunds(studentId: number): Observable<StudentRefund[]> {
+    return this.http.get<StudentRefund[]>(`${API_BASE_URL}/api/students/${studentId}/refunds`).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  /**
+   * Remboursements actifs d'un versement, du plus ancien au plus récent : l'historique d'une ligne de
+   * l'écran « Gestion des paiements ».
+   *
+   * <p>Backend : `GET /api/refunds/payment/{id}`, réservé à ADMIN en lecture.</p>
+   */
+  getPaymentRefunds(paymentId: number): Observable<StudentRefund[]> {
+    return this.http.get<StudentRefund[]>(`${this.baseUrl}/payment/${paymentId}`).pipe(
       catchError(this.handleError)
     );
   }

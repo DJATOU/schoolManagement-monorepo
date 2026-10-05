@@ -1,6 +1,6 @@
 /* Couleurs alignées sur la légende du PDF (pdf-generator.service.ts). */
 $color-present-paid: #32a852;
-$color-absent-paid: #ff6347;
+$color-absent-paid: #dfe3e8;
 $color-present-progress: #ffd700;
 $color-absent-progress: #ff4500;
 $color-not-filled: #f5f5f5;
@@ -225,6 +225,13 @@ mat-dialog-content {
   color: $color-due;
 }
 
+/* Rien de versé : rouge sombre, distinct de l'ambre « partiel ». L'icône et le libellé portent
+   l'information, la couleur ne fait que la renforcer. */
+.fh-badge-UNPAID {
+  background-color: rgba($color-present-unpaid, 0.12);
+  color: #a61b1b;
+}
+
 .fh-badge-EXEMPTED {
   background-color: rgba($color-exempted, 0.16);
   color: #14548f;
@@ -297,9 +304,51 @@ mat-dialog-content {
   }
 }
 
-.fh-refund-cell {
-  color: #e60000;
-  font-weight: bold;
+/* Versé net : la mention dit pourquoi le versé est inférieur à ce que la famille a remis. */
+.fh-amount-net {
+  color: #b71c1c;
+}
+
+/* Pièces de remboursement : une ligne par pièce, numéro, date, montant, motif, réimpression. */
+.fh-refunds {
+  margin: 4px 0 8px;
+}
+
+.fh-refund-list {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+}
+
+.fh-refund-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  padding: 4px 0;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  font-size: 13px;
+}
+
+.fh-refund-number {
+  font-weight: 600;
+}
+
+.fh-refund-amount {
+  color: #b71c1c;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.fh-refund-reason {
+  flex: 1 1 200px;
+  color: rgba(0, 0, 0, 0.7);
+}
+
+.fh-refund-unavailable {
+  font-size: 12px;
+  font-style: italic;
+  color: rgba(0, 0, 0, 0.6);
 }
 
 /* Trop-perçu : information, pas alerte — teinte distincte du rouge des remboursements. */

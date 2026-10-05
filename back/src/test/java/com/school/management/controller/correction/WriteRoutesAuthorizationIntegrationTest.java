@@ -49,7 +49,8 @@ class WriteRoutesAuthorizationIntegrationTest extends CorrectionIntegrationTestS
 
     /** Lectures financières : ADMIN seul, VIEWER compris en lecture. */
     private static final List<String> FINANCIAL_READS = List.of(
-            "/api/encashments/1", "/api/students/1/encashments", "/api/students/1/journal", "/api/groups/1/revenue");
+            "/api/encashments/1", "/api/students/1/encashments", "/api/students/1/journal",
+            "/api/students/1/refunds", "/api/refunds/payment/1", "/api/groups/1/revenue");
 
     /** Seul point d'écriture ouvert à tous : on s'y connecte. */
     private static final String LOGIN = "/api/v1/auth/login";
@@ -108,6 +109,15 @@ class WriteRoutesAuthorizationIntegrationTest extends CorrectionIntegrationTestS
             }
         }
         assertThat(wrong).as("statuts inattendus").isEmpty();
+    }
+
+    @Test
+    @DisplayName("le plafond d'un versement reste lisible par VIEWER : la règle des remboursements d'un versement ne le couvre pas")
+    void refundCapStaysReadableByViewer() throws Exception {
+        int viewer = mockMvc.perform(MockMvcRequestBuilders.get("/api/refunds/payment/1/cap")
+                        .with(user("lecteur").roles("VIEWER")))
+                .andReturn().getResponse().getStatus();
+        assertThat(viewer).as("GET /api/refunds/payment/1/cap en VIEWER").isNotIn(401, 403);
     }
 
     /** « POST /api/… » de chaque écriture déclarée, variables de chemin comprises. */

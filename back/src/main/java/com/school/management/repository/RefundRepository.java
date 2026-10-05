@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
+import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 
@@ -54,6 +55,21 @@ public interface RefundRepository extends JpaRepository<RefundEntity, Long> {
                                                      @Param("sessionSeriesId") Long sessionSeriesId);
 
     /**
+     * Remboursements actifs d'un étudiant, toutes séries confondues, du plus ancien au plus récent :
+     * ceux que l'historique nomme sous chaque série, avec de quoi réimprimer leur reçu.
+     *
+     * <p>Le versement, sa série et son groupe sont chargés dans la même requête : la liste est
+     * regroupée par série à l'affichage, et un chargement paresseux par ligne ferait une requête par
+     * remboursement. Jointure externe sur la série et le groupe : un versement sans l'un ou l'autre
+     * n'est pas une raison de taire le remboursement.</p>
+     */
+    @Query("SELECT r FROM RefundEntity r JOIN FETCH r.payment p "
+            + "LEFT JOIN FETCH p.sessionSeries LEFT JOIN FETCH p.group "
+            + "WHERE r.student.id = :studentId AND r.active = true "
+            + "ORDER BY r.refundDate ASC, r.id ASC")
+    List<RefundEntity> findActiveForStudent(@Param("studentId") Long studentId);
+
+    /**
      * Somme des remboursements <strong>actifs</strong> déjà accordés sur un paiement.
      *
      * <p>Base du Plafond_Remboursable (exigence 7.1) : le plafond est le montant versé diminué de
@@ -64,6 +80,28 @@ public interface RefundRepository extends JpaRepository<RefundEntity, Long> {
     @Query("SELECT COALESCE(SUM(r.amount), 0) FROM RefundEntity r "
             + "WHERE r.payment.id = :paymentId AND r.active = true")
     BigDecimal sumActiveRefundsForPayment(@Param("paymentId") Long paymentId);
+
+    /**
+     * Remboursements actifs de plusieurs versements à la fois, sommés par versement : de quoi
+     * annoter une page de l'écran « Gestion des paiements » en une requête plutôt qu'une par ligne.
+     * Un versement sans remboursement n'a pas de ligne dans le résultat.
+     *
+     * @return des lignes {@code [paymentId, somme remboursée]}
+     */
+    @Query("SELECT r.payment.id, COALESCE(SUM(r.amount), 0) FROM RefundEntity r "
+            + "WHERE r.payment.id IN :paymentIds AND r.active = true GROUP BY r.payment.id")
+    List<Object[]> sumActiveRefundsByPayment(@Param("paymentIds") Collection<Long> paymentIds);
+
+    /**
+     * Remboursements actifs d'un versement, du plus ancien au plus récent : l'historique d'une ligne
+     * de l'écran « Gestion des paiements ». Série et groupe chargés dans la même requête, comme
+     * {@link #findActiveForStudent}.
+     */
+    @Query("SELECT r FROM RefundEntity r JOIN FETCH r.payment p "
+            + "LEFT JOIN FETCH p.sessionSeries LEFT JOIN FETCH p.group "
+            + "WHERE p.id = :paymentId AND r.active = true "
+            + "ORDER BY r.refundDate ASC, r.id ASC")
+    List<RefundEntity> findActiveForPayment(@Param("paymentId") Long paymentId);
 
     /**
      * Rang le plus élevé déjà attribué dans la séquence annuelle des numéros de pièce.

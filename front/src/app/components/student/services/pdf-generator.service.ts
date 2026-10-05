@@ -5,6 +5,7 @@ import { Content, TDocumentDefinitions } from 'pdfmake/interfaces';
 import { TranslateService } from '@ngx-translate/core';
 import { StudentFullHistoryDTO } from '../domain/StudentFullHistoryDTO';
 import { SessionHistoryDTO } from '../../../models/session/SessionHistoryDTO';
+import { StudentRefund } from '../../../models/refund/refund';
 import { resolveLocale } from '../../../shared/locale';
 import {
   countBillableSessions,
@@ -25,6 +26,13 @@ export class PdfGeneratorService {
 
   /** Teinte des rattrapages à préciser : ambre, distincte du gris des séances écartées. */
   private static readonly PENDING_DECISION_COLOR = '#fef3c7';
+
+  /**
+   * Absent et payé : gris bleuté neutre. Le rouge tomate d'origine se lisait comme une dette, alors
+   * que la séance est réglée — une absence ne met jamais en retard. Distinct du gris clair des
+   * présences non renseignées et des séances écartées (#f5f5f5), pour rester repérable.
+   */
+  private static readonly ABSENT_PAID_COLOR = '#dfe3e8';
 
   constructor(private translate: TranslateService) {
     (pdfMake as any).vfs = pdfFonts.pdfMake.vfs;
@@ -75,7 +83,13 @@ export class PdfGeneratorService {
     return translated === key ? code : translated;
   }
 
-  async generateFullHistoryPdf(fullHistory: StudentFullHistoryDTO, logoUrl: string): Promise<void> {
+  /**
+   * @param refunds remboursements de l'étudiant, listés sous leur série (pièce, date, montant,
+   *                motif). Vide pour un rôle qui n'y a pas accès : seul le total par série, qui vient
+   *                de l'historique, est alors imprimé.
+   */
+  async generateFullHistoryPdf(fullHistory: StudentFullHistoryDTO, logoUrl: string,
+                               refunds: StudentRefund[] = []): Promise<void> {
 
     let logoBase64 = '';
     try {
@@ -108,7 +122,7 @@ export class PdfGeneratorService {
         alignment: 'right'
       },
       { text: '\n' },
-      ...this.getFullHistoryContent(fullHistory),
+      ...this.getFullHistoryContent(fullHistory, refunds),
       { text: '\n\n' },
       { text: this.t('pdf.legend.title'), style: 'subheader', alignment: 'left' },
       {
@@ -120,7 +134,7 @@ export class PdfGeneratorService {
               { text: this.t('pdf.legend.presentPaid') }
             ],
             [
-              { text: '', fillColor: '#ff6347', width: 15, height: 15 },
+              { text: '', fillColor: PdfGeneratorService.ABSENT_PAID_COLOR, width: 15, height: 15 },
               { text: this.t('pdf.legend.absentPaid') }
             ],
             [
@@ -209,10 +223,13 @@ export class PdfGeneratorService {
         },
         tableHeader: {
           bold: true,
-          fontSize: 12,
+          fontSize: 9.5,
           color: 'white',
           fillColor: '#4F81BD',
           alignment: 'center'
+        },
+        historyTable: {
+          fontSize: 9.5
         },
         tableCell: {
           margin: [0, 5, 0, 5]
@@ -258,7 +275,7 @@ export class PdfGeneratorService {
     });
   }
 
-  private getFullHistoryContent(fullHistory: StudentFullHistoryDTO): Content[] {
+  private getFullHistoryContent(fullHistory: StudentFullHistoryDTO, refunds: StudentRefund[]): Content[] {
     const content: Content[] = [];
 
     if (fullHistory.groups && fullHistory.groups.length > 0) {
@@ -339,10 +356,14 @@ export class PdfGeneratorService {
                     ]
                   },
                   {
-                    text: this.t('pdf.amountPaidOfTotal', {
-                      paid: this.amount(series.totalAmountPaid),
-                      total: this.amount(series.totalCost)
-                    }),
+                    // Le versé est net des remboursements : le libellé le dit quand il y en a,
+                    // sinon 2 000 DA imprimés face à 2 400 DA remis paraîtraient une erreur.
+                    text: this.t(
+                      (series.totalRefunded ?? 0) > 0 ? 'pdf.amountPaidNetOfTotal' : 'pdf.amountPaidOfTotal',
+                      {
+                        paid: this.amount(series.totalAmountPaid),
+                        total: this.amount(series.totalCost)
+                      }),
                     alignment: 'right',
                     margin: [0, 0, 0, 2]
                   },
@@ -387,14 +408,27 @@ export class PdfGeneratorService {
                   });
                 }
 
-                // Afficher le total remboursé lorsqu'il est strictement positif.
-                if (series.totalRefunded != null && series.totalRefunded > 0) {
+                // Afficher le total remboursé lorsqu'il est strictement positif, puis chaque pièce :
+                // le numéro et le motif sont ce qui répond à une famille qui conteste son versé.
+                const seriesRefunds = refunds.filter(refund => refund.seriesId === series.seriesId);
+                if ((series.totalRefunded != null && series.totalRefunded > 0) || seriesRefunds.length > 0) {
                   content.push({
                     text: this.t('pdf.amountRefunded', { amount: this.amount(series.totalRefunded) }),
                     alignment: 'right',
                     color: '#e60000',
-                    margin: [0, 0, 0, 10]
+                    margin: [0, 0, 0, seriesRefunds.length > 0 ? 2 : 10]
                   });
+                  seriesRefunds.forEach((refund, index) => content.push({
+                    text: this.t('pdf.refundLine', {
+                      number: refund.refundNumber,
+                      date: this.formatDate(refund.refundDate),
+                      amount: this.amount(refund.amount),
+                      reason: refund.reason?.trim() || this.t('refunds.noReason')
+                    }),
+                    alignment: 'right',
+                    fontSize: 9,
+                    margin: [0, 0, 0, index === seriesRefunds.length - 1 ? 10 : 2]
+                  }));
                 }
               }
 
@@ -471,8 +505,10 @@ export class PdfGeneratorService {
       }
 
       // La justification ne concerne que les absences.
+      // « Oui / Non » communs à l'application, hors de `studentHistory.` : passés par `t()`, ils
+      // s'imprimaient sous leur clé brute (« studentHistory.common.no »).
       const justificationText = session.attendanceStatus === 'ABSENT'
-        ? this.t(session.isJustified ? 'common.yes' : 'common.no')
+        ? this.translate.instant(session.isJustified ? 'common.yes' : 'common.no')
         : '';
 
       // Statut de paiement : une séance écartée n'en a pas. Le code « UNPAID » que le
@@ -490,27 +526,43 @@ export class PdfGeneratorService {
         ? '—'
         : this.t('pdf.amount', { amount: this.amount(session.amountPaid) });
 
+      // Titre et description vont à la ligne entre deux mots, alignés à gauche pour se lire ;
+      // dates et montants ne se coupent jamais (« 400,00 / DA » se lisait comme deux valeurs).
       const row: any[] = [
-        { text: sessionTitle, fillColor },
-        { text: this.formatDate(session.sessionDate), fillColor },
+        { text: sessionTitle, fillColor, alignment: 'left' },
+        { text: this.formatDate(session.sessionDate), fillColor, noWrap: true },
         { text: this.label('attendance', session.attendanceStatus), fillColor },
         { text: justificationText, fillColor },
-        { text: session.description || '', fillColor },
-        { text: this.formatDate(session.paymentDate), fillColor },
+        { text: session.description || '', fillColor, alignment: 'left' },
+        { text: this.formatDate(session.paymentDate), fillColor, noWrap: true },
         { text: paymentText, fillColor },
-        { text: amountText, fillColor }
+        { text: amountText, fillColor, noWrap: true, alignment: 'right' }
       ];
 
       body.push(row);
     });
 
+    // Le titre de la séance et la description se partagent la place restante (« * ») : un titre
+    // plus long ajoute des lignes à sa cellule, il n'écrase plus les autres colonnes. Les colonnes
+    // courtes prennent la largeur de leur contenu. En 11 pt, huit colonnes ne tenaient pas sur une
+    // page A4 : « Description » se coupait au milieu du mot.
     return {
       table: {
         headerRows: 1,
-        widths: ['auto', 'auto', 'auto', 'auto', '*', 'auto', 'auto', 'auto'],
+        widths: ['*', 'auto', 'auto', 'auto', '*', 'auto', 'auto', 'auto'],
         body: body
       },
-      layout: 'noBorders',
+      // Sans bordure, comme avant ; un peu d'air au-dessus et au-dessous de chaque ligne, que la
+      // police plus petite rendait serrées.
+      layout: {
+        hLineWidth: () => 0,
+        vLineWidth: () => 0,
+        paddingLeft: () => 4,
+        paddingRight: () => 4,
+        paddingTop: () => 4,
+        paddingBottom: () => 4
+      },
+      style: 'historyTable',
       alignment: 'center',
       margin: [0, 10, 0, 10]
     };
@@ -550,7 +602,7 @@ export class PdfGeneratorService {
     if (isCompleted && isPresent) {
       return '#32a852'; // Présent + payé
     } else if (isCompleted && isAbsent) {
-      return '#ff6347'; // Absent + payé
+      return PdfGeneratorService.ABSENT_PAID_COLOR; // Absent + payé : neutre, ce n'est pas une dette
     } else if (isInProgress && isPresent) {
       return '#ffd700'; // Présent + en cours
     } else if (isInProgress && isAbsent) {

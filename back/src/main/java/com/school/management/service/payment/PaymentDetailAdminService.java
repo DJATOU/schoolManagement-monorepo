@@ -37,10 +37,13 @@ import java.util.Objects;
 public class PaymentDetailAdminService {
 
     private final PaymentDetailRepository paymentDetailRepository;
+    private final PaymentLineRefundAnnotator refundAnnotator;
 
     @Autowired
-    public PaymentDetailAdminService(PaymentDetailRepository paymentDetailRepository) {
+    public PaymentDetailAdminService(PaymentDetailRepository paymentDetailRepository,
+                                     PaymentLineRefundAnnotator refundAnnotator) {
         this.paymentDetailRepository = paymentDetailRepository;
+        this.refundAnnotator = refundAnnotator;
     }
 
     @Transactional(readOnly = true)
@@ -60,6 +63,9 @@ public class PaymentDetailAdminService {
      * Uses DTO projection to include student, group, series, and session
      * information
      * Filters by dateCreation (createdAt) instead of paymentDate
+     *
+     * <p>Chaque ligne est ensuite annotée de sa part remboursée et de son montant net, et le statut
+     * d'un versement remboursé est rendu sur le net ({@link PaymentLineRefundAnnotator}).</p>
      */
     @Transactional(readOnly = true)
     public Page<PaymentDetailSearchDTO> searchPaymentDetailsWithCompleteData(Long studentId,
@@ -71,9 +77,11 @@ public class PaymentDetailAdminService {
             Date dateTo,
             Long levelId,
             Pageable pageable) {
-        return paymentDetailRepository.searchPaymentDetailsWithCompleteData(
+        Page<PaymentDetailSearchDTO> page = paymentDetailRepository.searchPaymentDetailsWithCompleteData(
                 studentId, groupId, sessionSeriesId, sessionId, active, dateFrom, endOfDay(dateTo),
                 levelId, pageable);
+        refundAnnotator.annotate(page.getContent());
+        return page;
     }
 
     /**

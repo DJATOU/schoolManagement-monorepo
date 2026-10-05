@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -262,6 +263,22 @@ public interface PaymentDetailRepository
 
         @Query("SELECT pd FROM PaymentDetailEntity pd WHERE pd.payment.sessionSeries.id = :sessionSeriesId")
         List<PaymentDetailEntity> findBySessionSeriesId(@Param("sessionSeriesId") Long sessionSeriesId);
+
+        /**
+         * Lignes actives de plusieurs versements : celles qui portent encore de l'argent, et donc
+         * celles auxquelles un remboursement s'impute (écran « Gestion des paiements »). Une ligne
+         * désactivée ou supprimée définitivement ne porte plus rien.
+         *
+         * <p>Aucun tri ici : il est fait en Java, avec le comparateur de l'historique de
+         * l'étudiant. PostgreSQL et H2 ne classent pas les dates nulles au même endroit, et l'ordre
+         * d'imputation ne doit pas dépendre de la base.</p>
+         *
+         * @return des lignes {@code [paymentId, lineId, montant, date de versement]}
+         */
+        @Query("SELECT pd.payment.id, pd.id, pd.amountPaid, pd.paymentDate FROM PaymentDetailEntity pd "
+                        + "WHERE pd.payment.id IN :paymentIds AND pd.active = true "
+                        + "AND (pd.permanentlyDeleted IS NULL OR pd.permanentlyDeleted = false)")
+        List<Object[]> findActiveLinesOfPayments(@Param("paymentIds") Collection<Long> paymentIds);
 
         /**
          * Search query with complete data for Payment Management UI

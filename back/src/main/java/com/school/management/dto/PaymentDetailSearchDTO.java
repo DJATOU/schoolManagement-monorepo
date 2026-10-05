@@ -3,17 +3,22 @@ package com.school.management.dto;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 
 /**
  * DTO for Payment Management Search Results
  * Contains complete payment information including student, group, series, and session details
+ *
+ * <p>Les trois champs de remboursement ne viennent pas de la requête : ils sont renseignés après
+ * coup par {@code PaymentLineRefundAnnotator}, un remboursement vivant dans une autre table que
+ * les lignes. Le statut {@code paymentStatus} est alors celui du versement <strong>net</strong> des
+ * remboursements (décision du propriétaire produit : on déduit ce qui a été rendu).</p>
  */
 @Getter
 @Setter
 @NoArgsConstructor
-@Builder
 public class PaymentDetailSearchDTO {
     private Long id;
 
@@ -51,6 +56,19 @@ public class PaymentDetailSearchDTO {
 
     // Additional info
     private Boolean isCatchUp;
+
+    /**
+     * Part des remboursements du versement imputée à cette ligne, échelle 2. Un remboursement porte
+     * sur le versement d'une série : il est imputé aux lignes les plus récentes d'abord, comme dans
+     * l'historique de l'étudiant, où l'argent rendu découvre les dernières séances.
+     */
+    private BigDecimal refundedAmount;
+
+    /** Montant de la ligne diminué de sa part remboursée, jamais négatif. */
+    private BigDecimal netAmount;
+
+    /** Total remboursé sur le versement dont la ligne fait partie, toutes lignes confondues. */
+    private BigDecimal paymentRefunded;
 
     /**
      * Constructor matching the JPQL query field order and types

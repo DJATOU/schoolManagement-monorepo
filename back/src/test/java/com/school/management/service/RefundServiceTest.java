@@ -132,10 +132,11 @@ class RefundServiceTest {
                     .isInstanceOf(CustomServiceException.class)
                     .satisfies(e -> assertThat(((CustomServiceException) e).getStatus())
                             .isEqualTo(HttpStatus.BAD_REQUEST))
-                    // L'administrateur a une famille devant lui : le message doit suffire.
-                    .hasMessageContaining("100.00")
-                    .hasMessageContaining("60.00")
-                    .hasMessageContaining("40.00");
+                    // L'administrateur a une famille devant lui : le message doit suffire, et
+                    // parler la devise de l'école (il affichait « € »).
+                    .hasMessage("Remboursement impossible : montant demandé 40.01 DA, mais le "
+                            + "versement a rapporté 100.00 DA dont 60.00 DA déjà remboursé(s). "
+                            + "Plafond restant : 40.00 DA.");
             verify(refundRepository, never()).saveAndFlush(any());
         }
 
@@ -203,7 +204,8 @@ class RefundServiceTest {
 
             assertThatThrownBy(() -> service.create(request(new BigDecimal("1000000000.00"))))
                     .isInstanceOf(CustomServiceException.class)
-                    .hasMessageContaining("compris entre");
+                    .hasMessage("Le montant du remboursement doit être compris entre 0.01 DA et "
+                            + "999999999.99 DA (montant reçu après arrondi : 1000000000.00 DA).");
         }
 
         @Test
@@ -433,7 +435,9 @@ class RefundServiceTest {
             assertThatThrownBy(() -> service.reactivate(10L))
                     .isInstanceOf(CustomServiceException.class)
                     .satisfies(e -> assertThat(((CustomServiceException) e).getStatus())
-                            .isEqualTo(HttpStatus.BAD_REQUEST));
+                            .isEqualTo(HttpStatus.BAD_REQUEST))
+                    .hasMessage("Réactivation impossible : elle porterait les remboursements "
+                            + "au-delà du montant versé. Plafond restant : 50.00 DA.");
             assertThat(desactive.isActive()).isFalse();
         }
 

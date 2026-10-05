@@ -51,6 +51,31 @@ export interface Refund {
 }
 
 /**
+ * Un remboursement d'un étudiant, tel que l'historique le nomme sous sa série.
+ *
+ * <p>Backend : `GET /api/students/{id}/refunds`, réservé à ADMIN (pièces de caisse). Le total
+ * remboursé par série, lui, reste dans l'historique et visible des deux rôles.</p>
+ */
+export interface StudentRefund {
+  refundId: number;
+  /** Numéro de pièce, de la forme `REMB-AAAA-NNNN`. */
+  refundNumber: string;
+  refundDate: string;
+  amount: number;
+  /** Motif. Nul pour un remboursement antérieur à la traçabilité. */
+  reason?: string | null;
+  /** Série du versement remboursé ; nulle si le versement n'en porte pas. */
+  seriesId?: number | null;
+  seriesName?: string | null;
+  groupId?: number | null;
+  groupName?: string | null;
+  /** Versement remboursé. */
+  paymentId?: number | null;
+  /** Administrateur qui a enregistré le remboursement, ou la mention de repli du reçu. */
+  recordedBy?: string | null;
+}
+
+/**
  * Données du reçu d'un remboursement.
  *
  * <p>Toutes les valeurs viennent du serveur, mentions de repli comprises — « Hors série », « Hors

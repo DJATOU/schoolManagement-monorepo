@@ -118,7 +118,9 @@ export class RefundReceiptPdfService {
       stack: [
         { text: this.t('refund.receipt.title'), style: 'header' },
         {
-          text: this.t('refund.receipt.number', { reference: receipt.refundNumber }),
+          // Le nom du paramètre doit être celui du gabarit (`{{number}}`) : un nom différent
+          // n'est pas une erreur pour ngx-translate, qui imprime alors le gabarit brut.
+          text: this.t('refund.receipt.number', { number: receipt.refundNumber }),
           style: 'subtitle'
         },
         // Mention de sortie de caisse : c'est elle qui empêche la confusion avec un encaissement,

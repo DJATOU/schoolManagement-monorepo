@@ -27,8 +27,10 @@ public class SessionHistoryDTO {
     // Présence exemptée : vrai lorsque l'étudiant bénéficie d'une exemption (réduction 100 %)
     // sur cette séance ; pilote la légende « Présent et exempté ».
     private Boolean isExempted;
-    // Montant remboursé rattaché à cette séance (BigDecimal, échelle 2)
-    private BigDecimal refundedAmount;
+    // Pas de montant remboursé par séance : un remboursement porte sur le versement d'une série
+    // (refund.payment), jamais sur une séance. Le champ existait sans jamais être renseigné ; il
+    // a été retiré pour qu'aucun écran n'affiche une ventilation qui n'existe pas. L'effet d'un
+    // remboursement se lit sur la couverture des séances, plafonnée au versé net de la série.
     /**
      * Séance facturable à cet étudiant : vrai lorsqu'elle appartient à
      * {@code BillableSessions.billable()}, faux lorsqu'elle appartient à {@code .excluded()}

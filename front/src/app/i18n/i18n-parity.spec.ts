@@ -164,7 +164,17 @@ describe('i18n FR/EN key parity', () => {
     ...['alreadyRefunded', 'amountLabel', 'amountPaid', 'amountPlaceholder', 'amountRequired', 'amountTooSmall', 'back',
       'confirmAmount', 'confirmButton', 'confirmReason', 'confirmTitle', 'exceedsCap', 'loading', 'notReversible',
       'nothingRefundable', 'reasonLabel', 'reasonNote', 'reasonPlaceholder', 'reasonRequired', 'refundableCap',
-      'savedAmount', 'submitButton', 'title'].map(key => `refund.dialog.${key}`)
+      'savedAmount', 'submitButton', 'title', 'receiptFailed'].map(key => `refund.dialog.${key}`),
+    // Historique : statut « Non payé » (composé à l'exécution), versé net, remboursements listés.
+    'studentHistory.seriesStatus.UNPAID', 'studentHistory.badge.UNPAID', 'studentHistory.amounts.paidNetOfRefunds',
+    'studentHistory.pdf.amountPaidNetOfTotal', 'studentHistory.pdf.refundLine',
+    ...['noReason', 'reprint', 'reprintAria', 'reprintError', 'unavailable'].map(key => `studentHistory.refunds.${key}`),
+    // Gestion des paiements : montant net, statut « Remboursé » (composé à l'exécution), historique.
+    'payment.admin.table.refundedShare', 'payment.admin.table.refunded', 'payment.admin.table.netAmount',
+    'payment.admin.paymentStatus.REFUNDED', 'payment.admin.paymentStatus.refundedHint',
+    'payment.admin.audit.changesTitle',
+    ...['title', 'empty', 'error', 'noReason', 'reprint', 'reprintAria', 'reprintError']
+      .map(key => `payment.admin.audit.refunds.${key}`)
   ];
 
   it('should define every key used by the correction screens and the refund dialog in both files', () => {

@@ -860,7 +860,10 @@
         "openStudent": "Open student profile",
         "openGroup": "Open group profile",
         "loading": "Loading payments…",
-        "empty": "No payment matches the filters."
+        "empty": "No payment matches the filters.",
+        "refundedShare": "{{amount}} DA refunded",
+        "refunded": "Refunded",
+        "netAmount": "Net amount"
       },
       "rowStatus": {
         "active": "Active",
@@ -873,13 +876,15 @@
         "IN_PROGRESS": "In progress",
         "COMPLETED": "Settled",
         "CANCELLED": "Cancelled",
-        "cancelledHint": "The parent payment is cancelled: this entry no longer counts towards balances."
+        "cancelledHint": "The parent payment is cancelled: this entry no longer counts towards balances.",
+        "REFUNDED": "Refunded",
+        "refundedHint": "{{amount}} DA refunded on this payment: status computed net of refunds."
       },
       "actions": {
         "history": "View audit history"
       },
       "audit": {
-        "title": "Action history",
+        "title": "Payment history",
         "by": "by {{actor}}",
         "reason": "Reason",
         "change": "Before: {{from}} → after: {{to}}",
@@ -889,6 +894,16 @@
           "MODIFIED": "Amount or state changed",
           "DELETED": "Permanently deleted",
           "REACTIVATED": "Reactivated"
+        },
+        "changesTitle": "Line changes",
+        "refunds": {
+          "title": "Refunds on this payment",
+          "empty": "No refund on this payment.",
+          "error": "Refunds could not be loaded.",
+          "noReason": "No reason recorded",
+          "reprint": "Reprint receipt",
+          "reprintAria": "Reprint refund receipt {{number}}",
+          "reprintError": "The refund receipt could not be printed. Please try again."
         }
       }
     },
@@ -1276,7 +1291,8 @@
     },
     "seriesStatus": {
       "FULL": "Settled",
-      "PARTIAL": "Partial"
+      "PARTIAL": "Partial",
+      "UNPAID": "Unpaid"
     },
     "series": "Series: {{name}}",
     "catchUpSeries": "Catch-up session: {{name}}",
@@ -1294,7 +1310,8 @@
     "badge": {
       "FULL": "Settled",
       "PARTIAL": "Partial",
-      "EXEMPTED": "Exempt"
+      "EXEMPTED": "Exempt",
+      "UNPAID": "Unpaid"
     },
     "amounts": {
       "due": "Owed",
@@ -1303,7 +1320,8 @@
       "dueBreakdown": "{{count}} session(s) × {{price}} DA = {{total}} DA",
       "dueSessions": "{{count}} billed session(s)",
       "paidSessions": "{{count}} session(s) settled",
-      "remainingSessions": "{{count}} session(s) to settle"
+      "remainingSessions": "{{count}} session(s) to settle",
+      "paidNetOfRefunds": "Net of {{amount}} DA refunded"
     },
     "exempted": "Exempt",
     "refunded": "Refunded",
@@ -1317,7 +1335,6 @@
       "justified": "Justified",
       "payment": "Payment",
       "amountPaid": "Amount allocated",
-      "refunded": "Refunded",
       "description": "Description",
       "paymentDate": "Payment date"
     },
@@ -1382,7 +1399,9 @@
         "pendingDecisionSession": "Catch-up awaiting a decision — no billing decided yet"
       },
       "amountAllocatedAndOverpaid": "Allocated: {{allocated}} DA — Overpaid: {{overpaid}} DA",
-      "pendingDecisionSession": "To be decided: {{name}}"
+      "pendingDecisionSession": "To be decided: {{name}}",
+      "amountPaidNetOfTotal": "Total paid, net of refunds: {{paid}} DA / {{total}} DA due",
+      "refundLine": "Document {{number}} of {{date}}: {{amount}} DA — {{reason}}"
     },
     "seriesLabel": "Series",
     "totalPaid": "Total paid",
@@ -1390,7 +1409,14 @@
     "overpaid": "Overpaid",
     "pendingDecisionTag": "To be decided",
     "pendingDecisionHint": "Catch-up awaiting a decision: neither a debt nor a waiver. The missed session and the billing decision still need to be indicated.",
-    "billedAtHostGroup": "billed here"
+    "billedAtHostGroup": "billed here",
+    "refunds": {
+      "noReason": "No reason recorded",
+      "reprint": "Reprint receipt",
+      "reprintAria": "Reprint refund receipt {{number}}",
+      "reprintError": "The refund receipt could not be printed. Please try again.",
+      "unavailable": "Refund details could not be loaded."
+    }
   },
   "pricing": {
     "table": {
@@ -1459,7 +1485,7 @@
       "savedAmount": "{{amount}} DA returned to the beneficiary.",
       "printReceipt": "Print receipt",
       "downloadReceipt": "Download receipt",
-      "receiptFailed": "The refund is recorded, but its receipt could not be produced. It remains printable from the history.",
+      "receiptFailed": "The refund is recorded, but its receipt could not be produced. It remains printable from the student's full history.",
       "amountPlaceholder": "e.g. 2000",
       "reasonNote": "The reason is printed on the refund receipt given to the family.",
       "back": "Edit"

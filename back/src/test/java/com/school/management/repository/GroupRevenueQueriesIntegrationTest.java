@@ -267,4 +267,28 @@ class GroupRevenueQueriesIntegrationTest {
                 .isEqualByComparingTo(BigDecimal.ZERO);
         assertThat(paymentDetailRepository.sumCollectedByGroupGroupedBySeries(group.getId())).isEmpty();
     }
+
+    @Test
+    @DisplayName("Lignes actives des versements remboursés : ni désactivées, ni supprimées, ni d'un autre versement")
+    void activeLinesOfPayments() {
+        baseFixture();
+        SessionEntity session = persistSession("session 1", date(2026, 8, 19));
+        PaymentEntity payment = persistPayment("COMPLETED");
+        PaymentEntity other = persistPayment("COMPLETED");
+
+        persistDetail(payment, session, 800.0, true, false, date(2026, 8, 19));
+        persistDetail(payment, session, 700.0, true, null, null);                   // sans date
+        persistDetail(payment, session, 500.0, false, false, date(2026, 8, 19));    // désactivée
+        persistDetail(payment, session, 600.0, true, true, date(2026, 8, 19));      // supprimée
+        persistDetail(other, session, 900.0, true, false, date(2026, 8, 19));       // autre versement
+
+        List<Object[]> lines = paymentDetailRepository.findActiveLinesOfPayments(List.of(payment.getId()));
+
+        assertThat(lines).extracting(line -> line[0]).containsOnly(payment.getId());
+        assertThat(lines).extracting(line -> ((Number) line[2]).doubleValue())
+                .containsExactlyInAnyOrder(800.0, 700.0);
+        // La date est restituée telle quelle, nulle comprise : l'ordre d'imputation se décide en Java.
+        assertThat(lines).extracting(line -> line[3]).containsNull();
+        assertThat(lines).allSatisfy(line -> assertThat(line[1]).isInstanceOf(Long.class));
+    }
 }

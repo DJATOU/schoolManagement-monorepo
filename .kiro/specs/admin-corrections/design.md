@@ -368,6 +368,10 @@ sous-liste pertinente ; `OTHER` exige un texte (11.1, 11.2).
 controller/
   EncashmentController             GET  /api/encashments/{id}                 (reçu, réimpression)
                                    GET  /api/students/{id}/encashments        (historique, A.8)
+  RefundReadController             GET  /api/students/{id}/refunds            (pièces de remboursement
+                                        de l'historique, ADMIN seul — R.9)
+                                   GET  /api/refunds/payment/{id}             (remboursements d'un
+                                        versement, historique d'une ligne, ADMIN seul — R.11)
 controller/correction/
   EncashmentCorrectionController   GET  /api/encashments/correction-reasons   (Motifs proposés, B.5)
                                    POST /api/encashments/{id}/cancel/{preview|confirm}
@@ -476,6 +480,15 @@ la base locale doit être réinitialisée avant de lancer A.6.
 | `session-modal` | Feuille_Appel serveur sans repli ; lignes refusées retirables en un clic ; sur Séance validée, « corriger » par élève et « ajouter un élève » ; dévalidation avec motif |
 | Composant commun `CorrectionPreviewDialog` | Aperçu avant/après par Série, effets listés, sélection du Motif, confirmation |
 | Fiche élève, journal | entrées en français, effet sur le dû, impression par période |
+| Historique complet (écran et PDF) | versé **net** des remboursements, statut « Non payé », montants au format de la langue ; pour un ADMIN, pièces de remboursement sous chaque série et réimpression du reçu (R.5 à R.9) |
+| Gestion des paiements | ligne nette de sa part remboursée (versé barré), statut du versement sur le net (« Remboursé » si tout est rendu) ; historique de la ligne : remboursements du versement et réimpression (R.10, R.11) |
+
+Précision (R.5) : un remboursement porte sur le versement d'une Série, jamais sur une Séance. Le
+versé de l'historique est celui du devis (versements − remboursements actifs) ; la couverture des
+séances est plafonnée à ce montant, de sorte que l'argent rendu découvre les séances les plus récentes.
+Il n'existe aucun montant remboursé par séance stocké. L'écran « Gestion des paiements », qui liste
+des lignes, applique la même règle à l'affichage (R.10) : le remboursement d'un versement est imputé à
+ses lignes actives les plus récentes d'abord. C'est une lecture, rien n'est écrit sur les lignes.
 
 Le composant d'Aperçu est unique : toutes les Corrections présentent leur effet de la même façon
 (11, « ne pas apprendre une règle par écran »).
