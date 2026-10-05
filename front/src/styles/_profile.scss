@@ -261,6 +261,30 @@ $pf-danger: #ef4444;
       font-weight: 500;
     }
   }
+
+  // Ligne menant à la fiche d'une autre entité (ex. enseignant du groupe).
+  &.pf-row--clickable {
+    cursor: pointer;
+    border-radius: 8px;
+    margin: 0 -8px;
+    padding: 9px 8px;
+    transition: background-color 0.15s ease;
+
+    &:hover {
+      background-color: $pf-accent-soft;
+    }
+
+    .pf-value {
+      color: $pf-accent-dark;
+      text-decoration: underline;
+      text-decoration-color: transparent;
+      transition: text-decoration-color 0.15s ease;
+    }
+
+    &:hover .pf-value {
+      text-decoration-color: $pf-accent-dark;
+    }
+  }
 }
 
 // ===== ACTIONS =====
