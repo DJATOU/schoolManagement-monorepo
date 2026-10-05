@@ -30,6 +30,7 @@ import com.school.management.service.RefundNumberService;
 import com.school.management.service.RefundService;
 import com.school.management.service.SeriesRolloverService;
 import com.school.management.service.SessionService;
+import com.school.management.service.SessionStartGuard;
 import com.school.management.service.exception.CustomServiceException;
 import com.school.management.service.payment.BillableSessionsResolver;
 import com.school.management.service.payment.BillableSessionsResolverImpl;
@@ -801,7 +802,7 @@ class EnrolmentWindowPropertiesTest {
                                             CatchUpRoutingService routing, AbsenceWindowGuard guard,
                                             ReadOnlyYearGuard yearGuard) {
             return new AttendanceService(attendances, (AttendanceMapper) null, students, sessions, series, groups,
-                    enrolments, routing, guard, yearGuard);
+                    enrolments, routing, guard, yearGuard, Mockito.mock(SessionStartGuard.class));
         }
 
         /** Seul le déplacement d'une séance est exercé : le reste du service est simulé. */
@@ -812,7 +813,8 @@ class EnrolmentWindowPropertiesTest {
             return new SessionService(sessions, groups, Mockito.mock(SessionMapper.class), rooms, teachers, series,
                     Mockito.mock(PaymentDetailDeactivationService.class), attendanceService, guard,
                     Mockito.mock(SeriesRolloverService.class),
-                    Mockito.mock(com.school.management.service.payroll.PaidSeriesGuard.class));
+                    Mockito.mock(com.school.management.service.payroll.PaidSeriesGuard.class),
+                    Mockito.mock(SessionStartGuard.class));
         }
     }
 }

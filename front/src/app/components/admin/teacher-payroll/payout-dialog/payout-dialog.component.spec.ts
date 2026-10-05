@@ -48,6 +48,10 @@ describe('PayoutDialogComponent', () => {
       fixture.detectChanges();
     });
 
+    it('série complète : aucun avertissement', () => {
+      expect((fixture.nativeElement as HTMLElement).querySelector('.pd-incomplete')).toBeNull();
+    });
+
     it('aucun taux par défaut : le calcul attend le choix', () => {
       expect(component.form.get('rateId')!.value).toBeNull();
       expect(button('.pd-preview-button')!.disabled).toBeTrue();
@@ -117,6 +121,20 @@ describe('PayoutDialogComponent', () => {
 
       expect(component.preview).toBeNull();
       expect(text()).toContain('déjà payée (PAIE-2030-0001)');
+    });
+  });
+
+  describe('payer une série incomplète', () => {
+    it('séance prévue pas encore créée : dit avant le calcul, sans bloquer la paie', async () => {
+      await open({ series: payableSeries({ activeSessions: 2, validatedSessions: 2, plannedSessions: 3, missingSessions: 1 }),
+        mode: 'pay', rates: [rate()] });
+      fixture.detectChanges();
+
+      const notice = (fixture.nativeElement as HTMLElement).querySelector('.pd-incomplete');
+      expect(notice?.textContent?.replace(/\s+/g, ' ')).toContain('Série incomplète : 1 séance(s) sur 3 prévues');
+      component.form.patchValue({ rateId: 7 });
+      fixture.detectChanges();
+      expect(button('.pd-preview-button')!.disabled).toBeFalse();
     });
   });
 

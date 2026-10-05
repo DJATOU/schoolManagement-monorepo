@@ -32,6 +32,17 @@ public interface SessionRepository extends JpaRepository<SessionEntity, Long>, J
             + "AND (s.active IS NULL OR s.active = true) GROUP BY s.sessionSeries.id")
     List<Object[]> countCompletionBySeries(@Param("seriesIds") Collection<Long> seriesIds);
 
+    /**
+     * Séances rattachées à chaque série, désactivées comprises : c'est ce que compte
+     * {@code SeriesRolloverService} pour dire qu'une série est pleine. Une séance annulée a occupé
+     * sa place ; elle n'est donc pas « manquante ».
+     *
+     * @return des lignes {@code [seriesId, séances rattachées]}
+     */
+    @Query("SELECT s.sessionSeries.id, COUNT(s) FROM SessionEntity s WHERE s.sessionSeries.id IN :seriesIds "
+            + "GROUP BY s.sessionSeries.id")
+    List<Object[]> countAttachedBySeries(@Param("seriesIds") Collection<Long> seriesIds);
+
     @Query("SELECT s from SessionEntity s JOIN FETCH s.group g JOIN FETCH s.room r JOIN FETCH s.teacher t")
     List<SessionEntity> findAllWithDetails();
 

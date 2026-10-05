@@ -47,6 +47,9 @@ public class AttendanceService {
     /** Aucune validation sur une année close (exigence 10.2). */
     private final ReadOnlyYearGuard readOnlyYearGuard;
 
+    /** Aucune feuille de présence sur une séance qui n'a pas encore commencé. */
+    private final SessionStartGuard sessionStartGuard;
+
     // MappingContext pour AttendanceMapper
     private MappingContext mappingContext;
 
@@ -57,8 +60,10 @@ public class AttendanceService {
             StudentGroupRepository studentGroupRepository,
             CatchUpRoutingService catchUpRoutingService,
             AbsenceWindowGuard absenceWindowGuard,
-            ReadOnlyYearGuard readOnlyYearGuard) {
+            ReadOnlyYearGuard readOnlyYearGuard,
+            SessionStartGuard sessionStartGuard) {
         this.readOnlyYearGuard = readOnlyYearGuard;
+        this.sessionStartGuard = sessionStartGuard;
         this.attendanceRepository = attendanceRepository;
         this.attendanceMapper = attendanceMapper;
         this.studentRepository = studentRepository;
@@ -119,7 +124,8 @@ public class AttendanceService {
 
     /**
      * Une séance d'une année close ne se valide plus (exigence 10.2) : sa feuille de présence, comme
-     * une présence isolée, est refusée avant toute écriture.
+     * une présence isolée, est refusée avant toute écriture. Une séance qui n'a pas encore commencé
+     * non plus : la feuille est la première étape de sa validation.
      *
      * <p>Une ligne sans séance est refusée ici (400) : son année ne se résout pas, et elle finissait
      * plus loin en erreur serveur.</p>
@@ -134,6 +140,7 @@ public class AttendanceService {
                                 HttpStatus.BAD_REQUEST);
                     }
                     readOnlyYearGuard.assertSessionMutable(session);
+                    sessionStartGuard.assertStarted(session);
                 });
     }
 

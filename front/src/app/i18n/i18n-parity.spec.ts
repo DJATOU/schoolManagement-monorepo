@@ -218,8 +218,19 @@ describe('i18n FR/EN key parity', () => {
       'rateValue', 'initialPayout', 'replaces', 'collectedGross', 'refunded', 'collectedNet', 'calculation',
       'calculationValue', 'baseDelta', 'deductionAmount', 'teacherAmount', 'schoolAmount', 'signatureTeacher',
       'signatureSchool', 'money'].map(key => `teacherPayroll.slip.${key}`),
-    ...['title', 'empty', 'total'].map(key => `teacherPayroll.profile.${key}`)
+    ...['title', 'empty', 'total'].map(key => `teacherPayroll.profile.${key}`),
+    // Séances prévues, série incomplète, séries payées sur demande (retours de tests).
+    'teacherPayroll.state.PAID', 'teacherPayroll.dialog.incomplete',
+    ...['includePaid', 'planned', 'missing', 'paidHint'].map(key => `teacherPayroll.payable.${key}`)
   ];
+
+  it('should say from when a session that has not started can be validated, in both files', () => {
+    for (const translations of [frTranslations, enTranslations]) {
+      const hint = readKey(translations, 'SESSION_MODAL.NOT_STARTED_HINT');
+      expect(hint).toContain('{{day}}');
+      expect(hint).toContain('{{time}}');
+    }
+  });
 
   it('should define every teacher payroll key in both files', () => {
     const missing = teacherPayrollKeys.filter((key) => !frKeys.has(key) || !enKeys.has(key));
@@ -228,10 +239,12 @@ describe('i18n FR/EN key parity', () => {
       .toEqual([]);
   });
 
-  it('should define the dashboard groups-with-students detail with its count in both files', () => {
-    // La précision sous la carte Groupes interpole le nombre de groupes ayant des élèves.
-    expect(readKey(frTranslations, 'dashboard.kpi.groupsActive')).toContain('{{count}}');
-    expect(readKey(enTranslations, 'dashboard.kpi.groupsActive')).toContain('{{count}}');
+  it('should define the dashboard active-groups card and its total in both files', () => {
+    // La carte Groupes affiche les groupes ayant des élèves ; la précision interpole le total créé.
+    expect(readKey(frTranslations, 'dashboard.kpi.activeGroups')).toBe('Groupes en activité');
+    expect(readKey(enTranslations, 'dashboard.kpi.activeGroups')).not.toBe('');
+    expect(readKey(frTranslations, 'dashboard.kpi.groupsTotal')).toContain('{{count}}');
+    expect(readKey(enTranslations, 'dashboard.kpi.groupsTotal')).toContain('{{count}}');
   });
 
   it('should print DUPLICATA with its rank and mark a cancelled slip', () => {

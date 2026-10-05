@@ -39,6 +39,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
@@ -121,6 +122,21 @@ public class TeacherPayoutService {
      */
     @Transactional(readOnly = true)
     public List<PayableSeriesDTO> payable(Long teacherId, Long groupId) {
+        return payable(teacherId, groupId, false);
+    }
+
+    /**
+     * Séries à traiter, et sur demande les séries payées et à jour ({@link PayableState#PAID}).
+     *
+     * <p>Une série payée et à jour disparaissait de l'onglet : on ne pouvait plus la retrouver depuis
+     * « À payer », et une série absente se lisait comme oubliée. {@code includePaid} la montre, sans
+     * action. Les années passées gardent leur règle : sans filtre de groupe, seules les séries qui
+     * appellent un paiement y remontent ; une série payée d'une année close n'est que du bruit.</p>
+     *
+     * @param includePaid montrer aussi les séries payées et à jour
+     */
+    @Transactional(readOnly = true)
+    public List<PayableSeriesDTO> payable(Long teacherId, Long groupId, boolean includePaid) {
         Long currentYearId = groupId != null ? null : currentSchoolYearService.findCurrent()
                 .map(SchoolYearEntity::getId).orElse(null);
         List<PayableSeriesDTO> rows = new ArrayList<>();
@@ -133,6 +149,9 @@ public class TeacherPayoutService {
             List<Long> seriesIds = seriesList.stream().map(SessionSeriesEntity::getId).toList();
             Map<Long, SeriesCollection> collections = collectionService.ofGroup(group.getId());
             Map<Long, SeriesCompletion> completions = completionService.of(seriesIds);
+            Map<Long, Integer> planned = new HashMap<>();
+            seriesList.forEach(series -> planned.put(series.getId(), series.getTotalSessions()));
+            Map<Long, Long> missing = completionService.missing(planned);
             Map<Long, List<TeacherPayoutEntity>> payouts = payoutRepository.findActiveForSeriesIn(seriesIds)
                     .stream().collect(Collectors.groupingBy(payout -> payout.getSeries().getId()));
 
@@ -140,7 +159,8 @@ public class TeacherPayoutService {
                 PayableSeriesDTO row = row(group, series,
                         collections.getOrDefault(series.getId(), SeriesCollection.none()),
                         completions.get(series.getId()),
-                        payouts.getOrDefault(series.getId(), List.of()));
+                        new Planning(Math.max(0, series.getTotalSessions()), missing.getOrDefault(series.getId(), 0L)),
+                        payouts.getOrDefault(series.getId(), List.of()), includePaid);
                 if (row != null && (teacherId == null || teacherId.equals(row.teacherId()))
                         && (!pastYear || calls(row.state()))) {
                     rows.add(row);
@@ -170,19 +190,28 @@ public class TeacherPayoutService {
                 .toList();
     }
 
-    /** Ligne d'une série, ou rien si la série n'appelle aucune action. */
+    /** Séances prévues pour une série, et celles qui n'ont pas encore été créées. */
+    private record Planning(long planned, long missing) {
+    }
+
+    /**
+     * Ligne d'une série, ou rien si la série n'appelle aucune action (et, pour une série payée et à
+     * jour, si elle n'est pas demandée).
+     */
     private PayableSeriesDTO row(GroupEntity group, SessionSeriesEntity series, SeriesCollection collection,
-                                 SeriesCompletion completion, List<TeacherPayoutEntity> payouts) {
+                                 SeriesCompletion completion, Planning planning, List<TeacherPayoutEntity> payouts,
+                                 boolean includePaid) {
         TeacherPayoutEntity initial = initialOf(payouts);
         if (initial != null) {
             BigDecimal teacherPaid = teacherPaid(payouts);
             BigDecimal gap = PayoutCalculator.gap(collection.net(), initial.getTeacherPercent(), teacherPaid);
-            if (gap.signum() == 0) {
+            if (gap.signum() == 0 && !includePaid) {
                 return null;
             }
             return new PayableSeriesDTO(series.getId(), series.getName(), group.getId(), group.getName(),
-                    initial.getTeacher().getId(), fullName(initial.getTeacher()), PayableState.TO_REGULARIZE,
-                    completion.activeSessions(), completion.validatedSessions(),
+                    initial.getTeacher().getId(), fullName(initial.getTeacher()),
+                    gap.signum() == 0 ? PayableState.PAID : PayableState.TO_REGULARIZE,
+                    completion.activeSessions(), completion.validatedSessions(), planning.planned(), planning.missing(),
                     collection.gross(), collection.refunded(), collection.net(),
                     initial.getPayoutNumber(), initial.getTeacherPercent(), teacherPaid, gap);
         }
@@ -202,7 +231,7 @@ public class TeacherPayoutService {
         }
         return new PayableSeriesDTO(series.getId(), series.getName(), group.getId(), group.getName(),
                 teacher == null ? null : teacher.getId(), teacher == null ? null : fullName(teacher), state,
-                completion.activeSessions(), completion.validatedSessions(),
+                completion.activeSessions(), completion.validatedSessions(), planning.planned(), planning.missing(),
                 collection.gross(), collection.refunded(), collection.net(), null, null, null, null);
     }
 

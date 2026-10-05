@@ -39,14 +39,20 @@ export class TeacherPayoutService {
   // Lecture
   // ------------------------------------------------------------------
 
-  /** Séries à payer, en cours ou à régulariser ; filtres facultatifs. */
-  getPayable(teacherId?: number | null, groupId?: number | null): Observable<PayableSeries[]> {
+  /**
+   * Séries à payer, en cours ou à régulariser ; filtres facultatifs. `includePaid` ajoute les séries
+   * payées et à jour (état `PAID`).
+   */
+  getPayable(teacherId?: number | null, groupId?: number | null, includePaid = false): Observable<PayableSeries[]> {
     let params = new HttpParams();
     if (teacherId != null) {
       params = params.set('teacherId', teacherId);
     }
     if (groupId != null) {
       params = params.set('groupId', groupId);
+    }
+    if (includePaid) {
+      params = params.set('includePaid', true);
     }
     return this.http.get<PayableSeries[]>(`${this.baseUrl}/teacher-payouts/payable`, { params })
       .pipe(catchError(error => this.handleError(error)));

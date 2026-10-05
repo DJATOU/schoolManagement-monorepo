@@ -454,6 +454,27 @@ mat-dialog-actions {
   }
 }
 
+/* Séance pas encore commencée : la validation attend son heure de début. */
+.not-started-hint {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin: 8px 24px 0;
+  padding: 8px 12px;
+  border: 1px solid #fcd34d;
+  border-radius: 8px;
+  background: #fffbeb;
+  color: #92400e;
+  font-size: 13px;
+
+  mat-icon {
+    flex: none;
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+  }
+}
+
 /* Suppression de la séance : action destructive, mise en évidence en rouge. */
 .delete-session-btn:not([disabled]) {
   color: #dc2626;

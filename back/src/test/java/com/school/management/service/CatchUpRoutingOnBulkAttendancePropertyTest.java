@@ -280,7 +280,8 @@ class CatchUpRoutingOnBulkAttendancePropertyTest {
                     studentRepository, sessionRepository, sessionSeriesRepository, groupRepository,
                     studentGroupRepository, catchUpRoutingService,
                     new com.school.management.service.session.AbsenceWindowGuard(studentGroupRepository),
-                    org.mockito.Mockito.mock(ReadOnlyYearGuard.class));
+                    org.mockito.Mockito.mock(ReadOnlyYearGuard.class),
+                    org.mockito.Mockito.mock(SessionStartGuard.class));
         }
     }
 }

@@ -64,6 +64,35 @@ public class SeriesCompletionService {
         return result;
     }
 
+    /**
+     * Séances encore attendues dans chaque série : prévues ({@code total_sessions}) moins
+     * rattachées, désactivées comprises, jamais négatif. Zéro si le nombre prévu n'est pas renseigné.
+     *
+     * <p>Ce n'est <strong>pas</strong> une condition de paie : une série dont toutes les séances
+     * actives sont validées est terminée (Série_Terminée), même si une séance prévue n'a pas encore
+     * été créée (design D9). C'est une information, pour que l'administrateur paie en connaissance
+     * de cause : l'argent encaissé pour une séance ajoutée ensuite passera par une régularisation.</p>
+     *
+     * @param plannedBySeries séances prévues, par série
+     * @return séances manquantes, par série ; chaque série demandée est présente
+     */
+    @Transactional(readOnly = true)
+    public Map<Long, Long> missing(Map<Long, Integer> plannedBySeries) {
+        Map<Long, Long> result = new HashMap<>();
+        if (plannedBySeries.isEmpty()) {
+            return result;
+        }
+        Map<Long, Long> attached = new HashMap<>();
+        for (Object[] row : sessionRepository.countAttachedBySeries(plannedBySeries.keySet())) {
+            attached.put((Long) row[0], count(row[1]));
+        }
+        plannedBySeries.forEach((seriesId, planned) -> {
+            long expected = planned == null ? 0 : planned;
+            result.put(seriesId, Math.max(0, expected - attached.getOrDefault(seriesId, 0L)));
+        });
+        return result;
+    }
+
     /** Avancement d'une série. */
     @Transactional(readOnly = true)
     public SeriesCompletion of(Long seriesId) {

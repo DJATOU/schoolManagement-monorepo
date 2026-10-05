@@ -366,6 +366,7 @@
     "OPEN_NEW_TAB": "Ouvrir dans un nouvel onglet",
     "EDIT": "Modifier la séance",
     "VALIDATE": "Valider la séance",
+    "NOT_STARTED_HINT": "Séance pas encore commencée : validation possible à partir du {{day}} à {{time}}.",
     "UNVALIDATE": "Dévalider la séance",
     "UNVALIDATE_TITLE": "Dévalider la séance",
     "UNVALIDATE_SUBJECT": "Séance du {{day}} ({{group}}) : toutes ses lignes de présence seront retirées, et elle sera de nouveau à valider.",
@@ -509,7 +510,8 @@
       "activeStudents": "Étudiants actifs",
       "teachers": "Enseignants",
       "groups": "Groupes",
-      "groupsActive": "dont {{count}} avec des élèves",
+      "activeGroups": "Groupes en activité",
+      "groupsTotal": "sur {{count}} créés",
       "newStudents": "Nouveaux inscrits",
       "leaving": "Sortants (total)",
       "catchUps": "Rattrapages"
@@ -1811,7 +1813,8 @@
       "NOT_FINISHED": "En cours",
       "NO_TEACHER": "Sans enseignant",
       "NOTHING_COLLECTED": "Rien d'encaissé",
-      "TO_REGULARIZE": "À régulariser"
+      "TO_REGULARIZE": "À régulariser",
+      "PAID": "Payée"
     },
     "status": {
       "ACTIVE": "Active",
@@ -1836,7 +1839,11 @@
       "payAria": "Payer la série {{series}} du groupe {{group}}",
       "regularize": "Régulariser",
       "regularizeAria": "Régulariser la paie de la série {{series}} du groupe {{group}}",
-      "recorded": "Paie {{number}} enregistrée : {{amount}} DA à l'enseignant."
+      "recorded": "Paie {{number}} enregistrée : {{amount}} DA à l'enseignant.",
+      "includePaid": "Afficher les séries payées",
+      "planned": "({{count}} prévues)",
+      "missing": "Série incomplète : {{count}} séance(s) prévue(s) pas encore créée(s)",
+      "paidHint": "Paie {{number}}, à jour : rien à faire."
     },
     "paid": {
       "empty": "Aucune paie pour ces filtres.",
@@ -1874,7 +1881,8 @@
       "preview": "Calculer",
       "confirm": "Enregistrer la paie",
       "confirmDeduction": "Enregistrer la retenue",
-      "error": "La paie n'a pas pu être calculée. Réessayez."
+      "error": "La paie n'a pas pu être calculée. Réessayez.",
+      "incomplete": "Série incomplète : {{count}} séance(s) sur {{planned}} prévues ne sont pas encore créées. La paie reste possible ; l'argent encaissé pour une séance ajoutée ensuite passera par une régularisation."
     },
     "correction": {
       "cancelTitle": "Annuler la paie",

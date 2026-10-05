@@ -23,7 +23,7 @@ interface Kpi {
   value: number;
   icon: string;
   variant: 'indigo' | 'cyan' | 'violet' | 'emerald' | 'amber' | 'rose';
-  /** Précision affichée sous le libellé (ex. « dont 1 avec des élèves »). */
+  /** Précision affichée sous le libellé (ex. « sur 16 créés »). */
   detail?: string;
 }
 
@@ -172,11 +172,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.kpis = [
       { label: t('activeStudents'), value: s.totalStudents, icon: 'school', variant: 'indigo' },
       { label: t('teachers'), value: s.totalTeachers, icon: 'workspace_premium', variant: 'cyan' },
-      // Le total compte aussi les groupes créés sans élèves : la précision évite de lire
-      // « 16 groupes » comme 16 classes qui tournent.
+      // Le chiffre affiché est celui des groupes qui ont des élèves : le total comptait aussi les
+      // groupes créés sans inscrit, et « 16 groupes » se lisait comme 16 classes qui tournent. Le
+      // total reste visible en précision.
       {
-        label: t('groups'), value: s.totalGroups, icon: 'groups', variant: 'violet',
-        detail: this.translate.instant('dashboard.kpi.groupsActive', { count: s.activeGroups ?? 0 })
+        label: t('activeGroups'), value: s.activeGroups ?? 0, icon: 'groups', variant: 'violet',
+        detail: this.translate.instant('dashboard.kpi.groupsTotal', { count: s.totalGroups })
       },
       { label: t('newStudents'), value: s.newStudentsInPeriod, icon: 'person_add', variant: 'emerald' },
       { label: t('leaving'), value: s.leavingStudents, icon: 'person_remove', variant: 'rose' },

@@ -33,6 +33,19 @@ describe('TeacherPayoutService', () => {
     all.flush([]);
   });
 
+  it('séries à payer : « Afficher les séries payées » transmis seulement s\'il est coché', () => {
+    service.getPayable(null, 3, true).subscribe();
+    const withPaid = http.expectOne(req => req.url === `${api}/teacher-payouts/payable`);
+    expect(withPaid.request.params.get('groupId')).toBe('3');
+    expect(withPaid.request.params.get('includePaid')).toBe('true');
+    withPaid.flush([]);
+
+    service.getPayable(null, 3, false).subscribe();
+    const withoutPaid = http.expectOne(req => req.url === `${api}/teacher-payouts/payable`);
+    expect(withoutPaid.request.params.has('includePaid')).toBeFalse();
+    withoutPaid.flush([]);
+  });
+
   it('paies versées : filtres vides écartés, dates au format du serveur', () => {
     service.searchPayouts({ teacherId: 5, groupId: null, status: 'ACTIVE', from: '2030-02-01', to: '' }).subscribe();
     const req = http.expectOne(r => r.url === `${api}/teacher-payouts`);

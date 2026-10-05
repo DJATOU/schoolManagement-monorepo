@@ -4,7 +4,8 @@ import java.math.BigDecimal;
 
 /**
  * Une série de l'onglet « À payer » : terminée et pas encore payée, encore en cours, ou payée mais
- * dont l'encaissé a changé depuis (spec teacher-payroll, exigence 2).
+ * dont l'encaissé a changé depuis (spec teacher-payroll, exigence 2). Sur demande, aussi les séries
+ * payées et à jour.
  *
  * @param seriesId            série
  * @param seriesName          nom de la série
@@ -16,6 +17,9 @@ import java.math.BigDecimal;
  * @param state               ce qu'il y a à faire sur la série
  * @param activeSessions      séances actives
  * @param validatedSessions   séances actives validées
+ * @param plannedSessions     séances prévues pour la série ({@code total_sessions}) ; 0 si inconnu
+ * @param missingSessions     séances prévues pas encore créées ; une information, pas une condition
+ *                            de paie
  * @param collectedGross      encaissé brut
  * @param refunded            remboursé
  * @param collectedNet        encaissé net : la base
@@ -34,6 +38,8 @@ public record PayableSeriesDTO(
         PayableState state,
         long activeSessions,
         long validatedSessions,
+        long plannedSessions,
+        long missingSessions,
         BigDecimal collectedGross,
         BigDecimal refunded,
         BigDecimal collectedNet,
@@ -53,6 +59,8 @@ public record PayableSeriesDTO(
         /** Terminée, mais rien n'a été encaissé : il n'y a rien à partager. */
         NOTHING_COLLECTED,
         /** Payée, mais l'encaissé a changé depuis : une régularisation est due. */
-        TO_REGULARIZE
+        TO_REGULARIZE,
+        /** Payée et à jour : rien à faire. Listée seulement sur demande (« Afficher les séries payées »). */
+        PAID
     }
 }

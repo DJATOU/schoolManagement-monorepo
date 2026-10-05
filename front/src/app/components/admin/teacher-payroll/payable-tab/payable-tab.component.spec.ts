@@ -67,7 +67,53 @@ describe('PayableTabComponent', () => {
 
   it('les filtres relisent la liste', () => {
     component.filterForm.patchValue({ teacherId: 5 });
-    expect(payouts.getPayable).toHaveBeenCalledWith(5, null);
+    expect(payouts.getPayable).toHaveBeenCalledWith(5, null, false);
+  });
+
+  it('« Afficher les séries payées » : la liste est relue avec les séries payées', () => {
+    const checkbox = (fixture.nativeElement as HTMLElement).querySelector<HTMLInputElement>('.tp-include-paid input');
+    expect(checkbox).not.toBeNull();
+    checkbox!.click();
+    fixture.detectChanges();
+
+    expect(payouts.getPayable).toHaveBeenCalledWith(null, null, true);
+  });
+
+  it('série payée et à jour : état « payée », numéro de la paie, aucune action', () => {
+    payouts.getPayable.and.returnValue(of([payableSeries({ state: 'PAID', initialPayoutNumber: 'PAIE-2026-0001',
+      teacherPaid: 2790, gap: 0 })]));
+    component.load();
+    fixture.detectChanges();
+
+    expect(row(0).querySelector('.tp-chip--PAID')).not.toBeNull();
+    expect(row(0).textContent).toContain('teacherPayroll.payable.paidHint');
+    expect(row(0).querySelector('.tp-pay, .tp-regularize')).toBeNull();
+    expect(row(0).classList).toContain('tp-row--muted');
+  });
+
+  it('séances prévues : « 0 / 2 (3 prévues) » et la série dite incomplète ; rien si le prévu est atteint', () => {
+    payouts.getPayable.and.returnValue(of([
+      payableSeries({ state: 'NOT_FINISHED', validatedSessions: 0, activeSessions: 2, plannedSessions: 3,
+        missingSessions: 1 }),
+      payableSeries({ seriesId: 13 })
+    ]));
+    component.load();
+    fixture.detectChanges();
+
+    const incomplete = row(0).querySelector('.tp-sessions')!;
+    expect(incomplete.textContent).toContain('0 / 2');
+    expect(incomplete.querySelector('.tp-planned')?.textContent).toContain('teacherPayroll.payable.planned');
+    expect(incomplete.querySelector('.tp-warning')?.textContent).toContain('teacherPayroll.payable.missing');
+
+    const complete = row(1).querySelector('.tp-sessions')!;
+    expect(complete.textContent?.trim()).toBe('8 / 8');
+    expect(complete.querySelector('.tp-planned, .tp-warning')).toBeNull();
+  });
+
+  it('le prévu ne s\'affiche que s\'il dit autre chose que les séances actives', () => {
+    expect(component.showPlanned(payableSeries({ plannedSessions: 3, activeSessions: 2 }))).toBeTrue();
+    expect(component.showPlanned(payableSeries({ plannedSessions: 8, activeSessions: 8 }))).toBeFalse();
+    expect(component.showPlanned(payableSeries({ plannedSessions: 0, activeSessions: 2 }))).toBeFalse();
   });
 
   it('payer : le dialogue reçoit les seuls taux actifs ; paie enregistrée, bordereau proposé puis imprimé', () => {

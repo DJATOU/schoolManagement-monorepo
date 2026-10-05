@@ -73,6 +73,31 @@
   white-space: normal;
 }
 
+/* Séances prévues, à côté des séances validées / actives. */
+.tp-planned {
+  margin-left: 4px;
+  color: #64748b;
+}
+
+/* Série incomplète : le texte porte le sens, l'icône ne fait que l'appuyer. */
+.tp-warning {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #92400e;
+
+  mat-icon {
+    flex: none;
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+  }
+}
+
+.tp-include-paid {
+  align-self: center;
+}
+
 .tp-actions {
   text-align: right;
   white-space: nowrap;
@@ -108,6 +133,7 @@
 }
 
 .tp-chip--PAYABLE,
+.tp-chip--PAID,
 .tp-chip--ACTIVE {
   background: #dcfce7;
   color: #166534;
