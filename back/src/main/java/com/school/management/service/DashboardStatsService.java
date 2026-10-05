@@ -98,6 +98,11 @@ public class DashboardStatsService {
         long totalGroups = byYear
                 ? groupRepository.countActiveBySchoolYearId(schoolYearId)
                 : groupRepository.countActive();
+        // Dont en activité : au moins un élève inscrit. Un groupe créé sans élève n'est pas une
+        // classe ouverte.
+        long activeGroups = byYear
+                ? groupRepository.countWithActiveEnrolmentBySchoolYearId(schoolYearId)
+                : groupRepository.countWithActiveEnrolment();
 
         // Enseignants : même règle que l'effectif d'élèves. Pour l'année courante (ou sans
         // filtre) = effectif actuel de l'établissement ; pour une année passée = historique
@@ -147,6 +152,7 @@ public class DashboardStatsService {
                 // Effectifs
                 .totalTeachers(totalTeachers)
                 .totalGroups(totalGroups)
+                .activeGroups(activeGroups)
                 // Sessions
                 .sessionsValidated(sessionsValidated)
                 .sessionsScheduled(sessionsScheduled)

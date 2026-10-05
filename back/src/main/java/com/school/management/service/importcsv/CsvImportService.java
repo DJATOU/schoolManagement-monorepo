@@ -32,6 +32,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -54,6 +55,12 @@ import java.util.Map;
  * nommable. L'unicité est également portée par le stockage (index uniques, migration V4) :
  * elle vaut alors quel que soit le nombre d'instances de l'application, et deux imports
  * concurrents ne peuvent pas contourner la garde applicative.</p>
+ *
+ * <p><b>Doublons d'enseignants.</b> Même refus pour un enseignant déjà présent (prénom et nom,
+ * casse et espaces de bord ignorés), ou répété dans le fichier. Le fichier des enseignants importé
+ * deux fois avait créé une seconde fiche par personne, comptée par le tableau de bord. Pas d'index
+ * unique ici : deux enseignants homonymes restent possibles par la saisie manuelle. Les élèves ne
+ * sont pas concernés, deux élèves pouvant légitimement porter le même nom.</p>
  */
 @Service
 public class CsvImportService {
@@ -393,6 +400,9 @@ public class CsvImportService {
         }
 
         Map<String, Integer> col = headerIndex(rows.get(0));
+        // Première ligne de chaque enseignant du fichier : une même personne deux fois dans le
+        // fichier n'est créée qu'une fois.
+        Map<String, Integer> firstLineOf = new HashMap<>();
         for (int i = 1; i < rows.size(); i++) {
             int lineNumber = i + 1;
             String[] row = rows.get(i);
@@ -401,6 +411,21 @@ public class CsvImportService {
                 String lastName = value(row, col, "lastname");
                 if (isBlank(firstName) || isBlank(lastName)) {
                     result.addError(lineNumber, "Prénom et nom obligatoires.");
+                    continue;
+                }
+
+                String fullName = firstName.trim() + " " + lastName.trim();
+                Integer earlierLine = firstLineOf.putIfAbsent(fullName.toLowerCase(Locale.ROOT), lineNumber);
+                if (earlierLine != null) {
+                    result.addError(lineNumber, "Enseignant en double dans le fichier : " + fullName
+                            + " (déjà ligne " + earlierLine + "). Ligne ignorée.");
+                    continue;
+                }
+                // Même refus que pour les référentiels : réimporter le fichier créait une seconde
+                // fiche par enseignant, comptée par le tableau de bord et proposée en double.
+                if (teacherRepository.existsByFullName(firstName.trim(), lastName.trim())) {
+                    result.addError(lineNumber, "Enseignant déjà présent : " + fullName
+                            + ". Ligne ignorée pour ne pas créer de doublon.");
                     continue;
                 }
 

@@ -228,6 +228,12 @@ describe('i18n FR/EN key parity', () => {
       .toEqual([]);
   });
 
+  it('should define the dashboard groups-with-students detail with its count in both files', () => {
+    // La précision sous la carte Groupes interpole le nombre de groupes ayant des élèves.
+    expect(readKey(frTranslations, 'dashboard.kpi.groupsActive')).toContain('{{count}}');
+    expect(readKey(enTranslations, 'dashboard.kpi.groupsActive')).toContain('{{count}}');
+  });
+
   it('should print DUPLICATA with its rank and mark a cancelled slip', () => {
     // Exigence 5.3 et 5.4 : la réimpression porte son rang, la paie annulée son tampon.
     expect(readKey(frTranslations, 'teacherPayroll.slip.duplicate')).toContain('DUPLICATA');

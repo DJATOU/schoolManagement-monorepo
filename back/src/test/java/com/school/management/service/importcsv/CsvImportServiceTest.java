@@ -5,6 +5,7 @@ import com.school.management.persistance.GroupEntity;
 import com.school.management.persistance.LevelEntity;
 import com.school.management.persistance.PricingEntity;
 import com.school.management.persistance.SubjectEntity;
+import com.school.management.persistance.TeacherEntity;
 import com.school.management.repository.GroupTypeRepository;
 import com.school.management.repository.LevelRepository;
 import com.school.management.repository.PricingRepository;
@@ -273,6 +274,50 @@ class CsvImportServiceTest {
             verify(subjectRepository, never()).save(any());
             verify(roomRepository, never()).save(any());
             verify(groupTypeRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("enseignant déjà présent : ligne refusée et nommée ; un nouvel enseignant passe")
+        void enseignantDejaPresent() {
+            when(teacherRepository.existsByFullName("Yasmine", "Belaïd")).thenReturn(true);
+            when(teacherRepository.existsByFullName("Karim", "Haddad")).thenReturn(false);
+
+            ImportResultDTO result = service.importTeachers(csv("""
+                    firstName,lastName,specialization
+                     Yasmine , Belaïd ,Anglais
+                    Karim,Haddad,SVT
+                    """));
+
+            assertThat(result.getImported()).isEqualTo(1);
+            assertThat(result.getErrors()).singleElement().satisfies(error -> {
+                assertThat(error.getLine()).isEqualTo(2);
+                assertThat(error.getMessage()).isEqualTo(
+                        "Enseignant déjà présent : Yasmine Belaïd. Ligne ignorée pour ne pas créer de doublon.");
+            });
+            ArgumentCaptor<TeacherEntity> captor = ArgumentCaptor.forClass(TeacherEntity.class);
+            verify(teacherRepository).save(captor.capture());
+            assertThat(captor.getValue().getLastName()).isEqualTo("Haddad");
+        }
+
+        @Test
+        @DisplayName("enseignant répété dans le fichier, casse comprise : créé une fois, la répétition nommée")
+        void enseignantRepeteDansLeFichier() {
+            when(teacherRepository.existsByFullName(any(), any())).thenReturn(false);
+
+            ImportResultDTO result = service.importTeachers(csv("""
+                    firstName,lastName
+                    Yasmine,Belaïd
+                    Karim,Haddad
+                    yasmine,BELAÏD
+                    """));
+
+            assertThat(result.getImported()).isEqualTo(2);
+            assertThat(result.getErrors()).singleElement().satisfies(error -> {
+                assertThat(error.getLine()).isEqualTo(4);
+                assertThat(error.getMessage()).isEqualTo(
+                        "Enseignant en double dans le fichier : yasmine BELAÏD (déjà ligne 2). Ligne ignorée.");
+            });
+            verify(teacherRepository, org.mockito.Mockito.times(2)).save(any());
         }
     }
 
