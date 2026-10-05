@@ -59,7 +59,10 @@
           <div class="pf-row"><mat-icon>menu_book</mat-icon><span class="pf-label">Matière</span><span class="pf-value">{{ group.subjectName || group.subjectId || '—' }}</span></div>
           <div class="pf-row"><mat-icon>event_repeat</mat-icon><span class="pf-label">Sessions par série</span><span class="pf-value">{{ group.sessionNumberPerSerie || '—' }}</span></div>
           <div class="pf-row"><mat-icon>payments</mat-icon><span class="pf-label">Prix</span><span class="pf-value">{{ group.priceAmount || group.pricing?.price || '—' }}</span></div>
-          <div class="pf-row"><mat-icon>person</mat-icon><span class="pf-label">Enseignant</span><span class="pf-value">{{ group.teacherName || '—' }}</span></div>
+          <div class="pf-row" [class.pf-row--clickable]="group.teacherId" (click)="goToTeacher()"
+            [matTooltip]="group.teacherId ? 'Voir la fiche de l\'enseignant' : ''">
+            <mat-icon>person</mat-icon><span class="pf-label">Enseignant</span><span class="pf-value">{{ group.teacherName || '—' }}</span>
+          </div>
         </section>
 
         <section class="pf-section">

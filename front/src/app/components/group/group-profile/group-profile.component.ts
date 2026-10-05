@@ -730,6 +730,14 @@ export class GroupProfileComponent implements OnInit {
     });
   }
 
+  /** Redirige vers la fiche de l'enseignant du groupe, si renseigné. */
+  goToTeacher(): void {
+    if (!this.group?.teacherId) {
+      return;
+    }
+    this.router.navigate(['/teacher', this.group.teacherId]);
+  }
+
   /** Ouvre le détail d'une série (liste de ses sessions). */
   openSeries(serie: SessionSeries): void {
     if (!this.group?.id || serie.id === undefined) {
