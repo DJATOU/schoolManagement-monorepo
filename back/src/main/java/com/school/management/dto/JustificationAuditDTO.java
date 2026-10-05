@@ -1,5 +1,7 @@
 package com.school.management.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+
 import java.time.LocalDateTime;
 
 /**
@@ -11,7 +13,9 @@ import java.time.LocalDateTime;
  *                     renseignée, ce qui est distinct d'un « non » explicite
  * @param newValue     valeur appliquée
  * @param performedBy  auteur, ou {@code system} en l'absence d'utilisateur authentifié
- * @param performedAt  horodatage à la milliseconde
+ * @param performedAt  horodatage à la milliseconde, {@code yyyy-MM-ddTHH:mm:ss.SSS} : sans format,
+ *                     {@code @EnableWebMvc} le sérialise en tableau, que le pipe {@code date}
+ *                     d'Angular refuse
  * @param comment      commentaire fourni, nul si aucun
  */
 public record JustificationAuditDTO(
@@ -20,6 +24,7 @@ public record JustificationAuditDTO(
         Boolean oldValue,
         Boolean newValue,
         String performedBy,
+        @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS")
         LocalDateTime performedAt,
         String comment) {
 }

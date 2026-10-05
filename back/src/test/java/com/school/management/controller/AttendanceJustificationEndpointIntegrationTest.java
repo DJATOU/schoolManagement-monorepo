@@ -138,6 +138,8 @@ class AttendanceJustificationEndpointIntegrationTest {
                 .andExpect(jsonPath("$[0].oldValue").value(false))
                 .andExpect(jsonPath("$[0].newValue").value(true))
                 .andExpect(jsonPath("$[0].performedBy").value("mme.martin"))
+                // Une chaîne que le pipe date d'Angular accepte, pas un tableau.
+                .andExpect(jsonPath("$[0].performedAt").value("2026-03-01T10:00:00.000"))
                 .andExpect(jsonPath("$[0].comment").value("Certificat remis"));
     }
 

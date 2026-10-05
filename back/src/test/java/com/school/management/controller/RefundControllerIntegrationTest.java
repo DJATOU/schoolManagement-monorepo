@@ -194,6 +194,8 @@ class RefundControllerIntegrationTest {
                 .andExpect(jsonPath("$.seriesName").value("Série janvier"))
                 .andExpect(jsonPath("$.recordedBy").value("mme.martin"))
                 .andExpect(jsonPath("$.issuanceRank").value(1))
+                // Une chaîne lisible par le navigateur, pas un tableau : le duplicata ne s'imprimait pas.
+                .andExpect(jsonPath("$.issuedAt").value("2026-03-01T10:00:00"))
                 .andExpect(jsonPath("$.fileName").value("remb-2026-0007_batoul_djatou.pdf"));
     }
 

@@ -1,5 +1,7 @@
 package com.school.management.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Date;
@@ -49,6 +51,9 @@ public record RefundReceiptDTO(
         String seriesName,
         String recordedBy,
         int issuanceRank,
+        // Chaîne à l'heure de l'école : sans format, @EnableWebMvc la sérialise en tableau, que le
+        // navigateur ne sait pas lire, et le duplicata ne s'imprimait pas.
+        @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
         LocalDateTime issuedAt,
         String fileName) {
 

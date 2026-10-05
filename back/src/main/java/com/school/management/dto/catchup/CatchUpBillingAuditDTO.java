@@ -1,5 +1,7 @@
 package com.school.management.dto.catchup;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+
 import java.time.LocalDateTime;
 
 /**
@@ -14,7 +16,9 @@ import java.time.LocalDateTime;
  * @param oldValue     valeur avant la modification, nulle si aucune
  * @param newValue     valeur après la modification
  * @param performedBy  auteur de la modification
- * @param performedAt  horodatage de la modification
+ * @param performedAt  horodatage de la modification, {@code yyyy-MM-ddTHH:mm:ss.SSS} : sans format,
+ *                     {@code @EnableWebMvc} le sérialise en tableau, que le pipe {@code date}
+ *                     d'Angular refuse
  * @param sequenceRank rang de séquence, qui départage deux entrées de même horodatage
  * @param comment      commentaire de l'auteur
  */
@@ -24,6 +28,7 @@ public record CatchUpBillingAuditDTO(
         String oldValue,
         String newValue,
         String performedBy,
+        @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS")
         LocalDateTime performedAt,
         Long sequenceRank,
         String comment) {

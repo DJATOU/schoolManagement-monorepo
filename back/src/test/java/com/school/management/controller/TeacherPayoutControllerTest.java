@@ -262,7 +262,9 @@ class TeacherPayoutControllerTest {
                 .andExpect(jsonPath("$.payout.payoutNumber").value("PAIE-2030-0001"))
                 .andExpect(jsonPath("$.issuanceRank").value(2))
                 .andExpect(jsonPath("$.issuedBy").value("directrice"))
-                .andExpect(jsonPath("$.issuedAt").exists())
+                // Une chaîne lisible par le navigateur, pas le tableau [2030,2,1,10,30] que produit
+                // Jackson par défaut : le duplicata ne s'imprimait pas.
+                .andExpect(jsonPath("$.issuedAt").value("2030-02-01T10:30:00"))
                 .andExpect(jsonPath("$.fileName").value("paie-2030-0001_nadia_ait_ahmed.pdf"));
     }
 }
