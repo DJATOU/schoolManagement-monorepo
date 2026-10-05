@@ -5,9 +5,11 @@ import com.school.management.persistance.SessionSeriesEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 
 @Repository
@@ -17,6 +19,18 @@ public interface SessionRepository extends JpaRepository<SessionEntity, Long>, J
 
 
     List<SessionEntity> findBySessionSeries(SessionSeriesEntity series);
+
+    /**
+     * Séances actives et séances actives validées, par série : de quoi dire qu'une série est
+     * terminée (spec teacher-payroll, Série_Terminée). Une séance désactivée n'est ni comptée ni
+     * attendue. Une série sans séance active est absente du résultat.
+     *
+     * @return des lignes {@code [seriesId, séances actives, séances actives validées]}
+     */
+    @Query("SELECT s.sessionSeries.id, COUNT(s), SUM(CASE WHEN s.isFinished = true THEN 1 ELSE 0 END) "
+            + "FROM SessionEntity s WHERE s.sessionSeries.id IN :seriesIds "
+            + "AND (s.active IS NULL OR s.active = true) GROUP BY s.sessionSeries.id")
+    List<Object[]> countCompletionBySeries(@Param("seriesIds") Collection<Long> seriesIds);
 
     @Query("SELECT s from SessionEntity s JOIN FETCH s.group g JOIN FETCH s.room r JOIN FETCH s.teacher t")
     List<SessionEntity> findAllWithDetails();

@@ -126,7 +126,34 @@ suivantes** par identifiant croissant, jusqu'à épuisement.
 
 - Payment installments ("paiement par facilité") = HOW an amount is paid (multiple
   payment records over time), not how much is owed. Handle in payment recording.
-- Book payments, teacher payroll, reminders / SMS / email — separate features.
+- Book payments, teacher payroll, reminders / SMS / email — separate features. Teacher payroll
+  has its own rules below (« Paie des enseignants ») : it reads the collected amount, it never
+  changes what a student owes.
+
+## Paie des enseignants — TRANCHÉ
+
+**Décision du propriétaire produit.** La rémunération d'un enseignant n'est pas un salaire : c'est
+une **part de ce que la série de son groupe a réellement encaissé**.
+
+```
+Encaissé_Net    = versements non annulés de la série − remboursements actifs   (tous élèves)
+Part_Enseignant = arrondi(Encaissé_Net × pourcentage / 100)
+Part_École      = Encaissé_Net − Part_Enseignant
+```
+
+- **Un impayé baisse la paie.** La base est l'encaissé, jamais le dû ni l'attendu.
+- **Deux parts seulement** : l'enseignant et l'école (l'administrateur).
+- **Le pourcentage vient d'un catalogue** que l'administrateur crée, comme les tarifs. Il le
+  **choisit au moment de chaque paie** ; la paie en garde une copie figée.
+- **Payable quand la série est terminée** : toutes ses séances actives validées. C'est
+  **l'administrateur qui déclenche** la paie, jamais le système.
+- **Une paie versée n'est jamais modifiée.** L'argent encaissé ou remboursé après coup donne lieu à
+  une **régularisation** (complément, ou retenue si de l'argent a été rendu), au pourcentage de la
+  paie initiale, enregistrée par l'administrateur.
+- **Les erreurs restent corrigeables** par une correction tracée (annuler, remplacer), avec motif,
+  aperçu et trace immuable.
+- **Les remplaçants sont ignorés pour l'instant** : l'enseignant du groupe reçoit toute la part.
+- Une séance d'une série payée ne se dévalide pas tant que la paie n'est pas annulée.
 
 ## La justification d'absence est documentaire — TRANCHÉ
 

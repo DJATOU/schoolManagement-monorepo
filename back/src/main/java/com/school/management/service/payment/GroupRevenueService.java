@@ -14,6 +14,7 @@ import com.school.management.repository.RefundRepository;
 import com.school.management.repository.SessionSeriesRepository;
 import com.school.management.repository.StudentGroupRepository;
 import com.school.management.service.exception.CustomServiceException;
+import com.school.management.service.payment.SeriesCollectionService.SeriesCollection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -59,6 +60,7 @@ public class GroupRevenueService {
     private final PaymentDetailRepository paymentDetailRepository;
     private final RefundRepository refundRepository;
     private final PaymentCostResolver paymentCostResolver;
+    private final SeriesCollectionService seriesCollectionService;
 
     public GroupRevenueService(GroupRepository groupRepository,
             SessionSeriesRepository sessionSeriesRepository,
@@ -66,7 +68,8 @@ public class GroupRevenueService {
             PaymentRepository paymentRepository,
             PaymentDetailRepository paymentDetailRepository,
             RefundRepository refundRepository,
-            PaymentCostResolver paymentCostResolver) {
+            PaymentCostResolver paymentCostResolver,
+            SeriesCollectionService seriesCollectionService) {
         this.groupRepository = groupRepository;
         this.sessionSeriesRepository = sessionSeriesRepository;
         this.studentGroupRepository = studentGroupRepository;
@@ -74,6 +77,7 @@ public class GroupRevenueService {
         this.paymentDetailRepository = paymentDetailRepository;
         this.refundRepository = refundRepository;
         this.paymentCostResolver = paymentCostResolver;
+        this.seriesCollectionService = seriesCollectionService;
     }
 
     /**
@@ -89,8 +93,9 @@ public class GroupRevenueService {
                 .orElseThrow(() -> new CustomServiceException(
                         "Groupe introuvable pour l'identifiant : " + groupId, HttpStatus.NOT_FOUND));
 
-        Map<Long, BigDecimal> collectedBySeries = readCollectedBySeries(groupId);
-        Map<Long, BigDecimal> refundedBySeries = readRefundsBySeries(groupId);
+        // Encaissé par série : la source partagée avec la Paie des enseignants, qui en fait sa base.
+        // Les deux écrans n'annoncent ainsi jamais deux montants pour la même série.
+        Map<Long, SeriesCollection> collectionsBySeries = seriesCollectionService.ofGroup(groupId);
         Map<Long, List<SessionRevenueDTO>> sessionsBySeries = readSessionsBySeries(groupId);
 
         // Tous les étudiants passés par le groupe, départs compris, chacun une fois : un étudiant
@@ -112,9 +117,9 @@ public class GroupRevenueService {
 
         for (SessionSeriesEntity series : sessionSeriesRepository.findByGroupId(groupId)) {
             Long seriesId = series.getId();
-            BigDecimal collected = collectedBySeries.getOrDefault(seriesId, zero());
-            BigDecimal refunded = refundedBySeries.getOrDefault(seriesId, zero());
-            BigDecimal netCollected = scale(collected.subtract(refunded));
+            SeriesCollection collection = collectionsBySeries.getOrDefault(seriesId, SeriesCollection.none());
+            BigDecimal refunded = collection.refunded();
+            BigDecimal netCollected = collection.net();
             SeriesBalance balance = balanceForSeries(memberIds, seriesId);
 
             totalExpected = totalExpected.add(balance.expected());
@@ -163,31 +168,6 @@ public class GroupRevenueService {
     // ------------------------------------------------------------------
     // Lectures agrégées
     // ------------------------------------------------------------------
-
-    /**
-     * Encaissé par série, lu sur le registre des paiements.
-     *
-     * <p>Source volontairement différente de la ventilation par séance : un versement que la
-     * ventilation n'a pas pu affecter (avance sur des séances non encore tenues) reste invisible
-     * dans {@code PaymentDetailEntity} alors qu'il est bien encaissé. Le lire ici garantit que
-     * le relevé du groupe et la situation individuelle de l'étudiant — qui s'appuie déjà sur le
-     * registre — annoncent le même montant.</p>
-     */
-    private Map<Long, BigDecimal> readCollectedBySeries(Long groupId) {
-        Map<Long, BigDecimal> result = new HashMap<>();
-        for (Object[] row : paymentRepository.sumPaidByGroupGroupedBySeries(groupId)) {
-            result.put((Long) row[0], scale(toBigDecimal(row[1])));
-        }
-        return result;
-    }
-
-    private Map<Long, BigDecimal> readRefundsBySeries(Long groupId) {
-        Map<Long, BigDecimal> result = new HashMap<>();
-        for (Object[] row : refundRepository.sumRefundsByGroupGroupedBySeries(groupId)) {
-            result.put((Long) row[0], scale(toBigDecimal(row[1])));
-        }
-        return result;
-    }
 
     private Map<Long, List<SessionRevenueDTO>> readSessionsBySeries(Long groupId) {
         Map<Long, List<SessionRevenueDTO>> result = new HashMap<>();

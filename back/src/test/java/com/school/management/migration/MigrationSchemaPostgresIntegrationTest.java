@@ -84,6 +84,8 @@ class MigrationSchemaPostgresIntegrationTest {
 
     private final String database = "school_schema_check_" + ProcessHandle.current().pid();
     private final AtomicInteger receiptCounter = new AtomicInteger();
+    /** Sur la classe englobante : une classe imbriquée est recréée à chaque test, la base non. */
+    private final AtomicInteger payoutRank = new AtomicInteger();
 
     private ConfigurableApplicationContext context;
     private JdbcTemplate jdbc;
@@ -254,13 +256,13 @@ class MigrationSchemaPostgresIntegrationTest {
     // ------------------------------------------------------------------
 
     @Test
-    @DisplayName("V1 à V8 appliquées sur une base vide, et chaque entité correspond à sa table")
+    @DisplayName("V1 à V9 appliquées sur une base vide, et chaque entité correspond à sa table")
     void allMigrationsApplyAndEntitiesValidate() {
         // Le démarrage du contexte en mode validate a déjà vérifié les entités ; reste à s'assurer
         // que toutes les migrations ont réussi, dans l'ordre, sans en sauter aucune.
         List<String> versions = jdbc.queryForList(
                 "SELECT version FROM flyway_schema_history WHERE success ORDER BY installed_rank", String.class);
-        assertThat(versions).containsExactly("1", "2", "3", "4", "5", "6", "7", "8");
+        assertThat(versions).containsExactly("1", "2", "3", "4", "5", "6", "7", "8", "9");
         assertThat(jdbc.queryForObject(
                 "SELECT count(*) FROM flyway_schema_history WHERE NOT success", Integer.class)).isZero();
     }
@@ -612,6 +614,215 @@ class MigrationSchemaPostgresIntegrationTest {
         void departureBeforeArrivalIsRejected() {
             assertThatThrownBy(() -> insert("student_groups", enrolment(false, "2029-09-30")))
                     .hasMessageContaining("ck_student_groups_window_ordered");
+        }
+    }
+
+    @Nested
+    @DisplayName("Paie des enseignants (V9)")
+    class PaieDesEnseignants {
+
+        private long teacherId;
+
+        @BeforeEach
+        void teacher() {
+            teacherId = insertReturningId("INSERT INTO teacher (first_name, last_name) VALUES ('Nadia', 'Aït Ahmed')");
+        }
+
+        private Map<String, Object> rate(String label, String percent) {
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("label", label);
+            row.put("teacher_percent", new java.math.BigDecimal(percent));
+            row.put("active", true);
+            return row;
+        }
+
+        /** Paie initiale valide : 72 000 encaissés nets, 60 % à l'enseignant. */
+        private Map<String, Object> payout(long series) {
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("payout_number", "PAIE-2030-" + String.format("%04d", payoutRank.incrementAndGet()));
+            row.put("kind", "INITIAL");
+            row.put("teacher_id", teacherId);
+            row.put("group_id", groupId);
+            row.put("series_id", series);
+            row.put("rate_label", "Standard");
+            row.put("teacher_percent", new java.math.BigDecimal("60.00"));
+            row.put("collected_gross", new java.math.BigDecimal("74000.00"));
+            row.put("refunded", new java.math.BigDecimal("2000.00"));
+            row.put("collected_net", new java.math.BigDecimal("72000.00"));
+            row.put("base_delta", new java.math.BigDecimal("72000.00"));
+            row.put("teacher_amount", new java.math.BigDecimal("43200.00"));
+            row.put("school_amount", new java.math.BigDecimal("28800.00"));
+            row.put("paid_at", java.sql.Timestamp.valueOf("2030-02-01 10:00:00"));
+            row.put("paid_by", "admin");
+            row.put("status", "ACTIVE");
+            return row;
+        }
+
+        /** Série neuve du groupe : chaque test pose ses paies sans gêner les autres. */
+        private long freshSeries() {
+            return insertReturningId("INSERT INTO session_series (name, group_id) VALUES ('Série paie', ?)", groupId);
+        }
+
+        @Test
+        @DisplayName("taux : 0 % et 100 % refusés, une borne intérieure acceptée")
+        void ratePercentIsStrictlyBetweenZeroAndHundred() {
+            assertThatThrownBy(() -> insert("teacher_pay_rate", rate("Nul", "0.00")))
+                    .hasMessageContaining("ck_teacher_pay_rate_percent");
+            assertThatThrownBy(() -> insert("teacher_pay_rate", rate("Tout", "100.00")))
+                    .hasMessageContaining("ck_teacher_pay_rate_percent");
+            assertThatCode(() -> insert("teacher_pay_rate", rate("Presque tout", "99.99"))).doesNotThrowAnyException();
+        }
+
+        @Test
+        @DisplayName("taux : libellé vide refusé ; deux actifs de même libellé refusés, casse et espaces ignorés")
+        void rateLabelIsMeaningfulAndUniqueAmongActive() {
+            assertThatThrownBy(() -> insert("teacher_pay_rate", rate("   ", "50.00")))
+                    .hasMessageContaining("ck_teacher_pay_rate_label");
+            long first = insert("teacher_pay_rate", rate("Confirmé", "65.00"));
+            assertThatThrownBy(() -> insert("teacher_pay_rate", rate(" confirmé ", "70.00")))
+                    .hasMessageContaining("uk_teacher_pay_rate_label");
+            // Désactivé, il libère son libellé.
+            jdbc.update("UPDATE teacher_pay_rate SET active = false WHERE id = ?", first);
+            assertThatCode(() -> insert("teacher_pay_rate", rate("Confirmé", "70.00"))).doesNotThrowAnyException();
+        }
+
+        @Test
+        @DisplayName("paie initiale valide acceptée")
+        void validInitialPayoutIsAccepted() {
+            assertThatCode(() -> insert("teacher_payout", payout(freshSeries()))).doesNotThrowAnyException();
+        }
+
+        @Test
+        @DisplayName("parts qui ne somment pas la base, ou net différent du brut moins le remboursé : refusés")
+        void partsAndNetAreExact() {
+            Map<String, Object> lost = payout(freshSeries());
+            lost.put("school_amount", new java.math.BigDecimal("28799.99"));
+            assertThatThrownBy(() -> insert("teacher_payout", lost)).hasMessageContaining("ck_teacher_payout_parts");
+
+            Map<String, Object> wrongNet = payout(freshSeries());
+            wrongNet.put("refunded", new java.math.BigDecimal("1000.00"));
+            assertThatThrownBy(() -> insert("teacher_payout", wrongNet)).hasMessageContaining("ck_teacher_payout_net");
+        }
+
+        @Test
+        @DisplayName("paie initiale : doit tout partager, rémunérer, et ne désigner aucune autre paie")
+        void initialPayoutSharesEverything() {
+            Map<String, Object> partial = payout(freshSeries());
+            partial.put("base_delta", new java.math.BigDecimal("70000.00"));
+            partial.put("school_amount", new java.math.BigDecimal("26800.00"));
+            assertThatThrownBy(() -> insert("teacher_payout", partial)).hasMessageContaining("ck_teacher_payout_initial");
+
+            Map<String, Object> unpaid = payout(freshSeries());
+            unpaid.put("teacher_amount", new java.math.BigDecimal("0.00"));
+            unpaid.put("school_amount", new java.math.BigDecimal("72000.00"));
+            assertThatThrownBy(() -> insert("teacher_payout", unpaid)).hasMessageContaining("ck_teacher_payout_initial");
+
+            long series = freshSeries();
+            long initial = insert("teacher_payout", payout(series));
+            Map<String, Object> linked = payout(freshSeries());
+            linked.put("initial_payout_id", initial);
+            assertThatThrownBy(() -> insert("teacher_payout", linked)).hasMessageContaining("ck_teacher_payout_initial");
+        }
+
+        @Test
+        @DisplayName("régularisation : désigne sa paie initiale et porte un écart non nul ; une retenue est acceptée")
+        void regularizationIsLinkedAndNonZero() {
+            long series = freshSeries();
+            long initial = insert("teacher_payout", payout(series));
+
+            Map<String, Object> orphan = regularization(series, null, "-600.00", "-400.00");
+            assertThatThrownBy(() -> insert("teacher_payout", orphan))
+                    .hasMessageContaining("ck_teacher_payout_regularization");
+
+            Map<String, Object> zero = regularization(series, initial, "0.00", "0.00");
+            assertThatThrownBy(() -> insert("teacher_payout", zero))
+                    .hasMessageContaining("ck_teacher_payout_regularization");
+
+            // 1 000 DA rendus après la paie : retenue de 600 sur l'enseignant, 400 sur l'école.
+            assertThatCode(() -> insert("teacher_payout", regularization(series, initial, "-600.00", "-400.00")))
+                    .doesNotThrowAnyException();
+        }
+
+        private Map<String, Object> regularization(long series, Long initial, String teacher, String school) {
+            Map<String, Object> row = payout(series);
+            row.put("kind", "REGULARIZATION");
+            row.put("initial_payout_id", initial);
+            row.put("collected_gross", new java.math.BigDecimal("74000.00"));
+            row.put("refunded", new java.math.BigDecimal("3000.00"));
+            row.put("collected_net", new java.math.BigDecimal("71000.00"));
+            row.put("base_delta", new java.math.BigDecimal(teacher).add(new java.math.BigDecimal(school)));
+            row.put("teacher_amount", new java.math.BigDecimal(teacher));
+            row.put("school_amount", new java.math.BigDecimal(school));
+            return row;
+        }
+
+        @Test
+        @DisplayName("une seule paie initiale active par série ; annulée, elle laisse place à une nouvelle")
+        void oneActiveInitialPayoutPerSeries() {
+            long series = freshSeries();
+            long first = insert("teacher_payout", payout(series));
+            assertThatThrownBy(() -> insert("teacher_payout", payout(series)))
+                    .hasMessageContaining("uk_teacher_payout_initial_active");
+
+            jdbc.update("UPDATE teacher_payout SET status = 'CANCELLED', cancelled_at = now(), cancelled_by = 'admin', "
+                    + "cancel_reason_type = 'DATA_ENTRY_ERROR' WHERE id = ?", first);
+            assertThatCode(() -> insert("teacher_payout", payout(series))).doesNotThrowAnyException();
+        }
+
+        @Test
+        @DisplayName("numéro de paie unique")
+        void payoutNumberIsUnique() {
+            Map<String, Object> first = payout(freshSeries());
+            insert("teacher_payout", first);
+            Map<String, Object> duplicate = payout(freshSeries());
+            duplicate.put("payout_number", first.get("payout_number"));
+            assertThatThrownBy(() -> insert("teacher_payout", duplicate))
+                    .hasMessageContaining("uk_teacher_payout_number");
+        }
+
+        @Test
+        @DisplayName("annulation : datée, signée, motivée ; active sans trace ; remplacée forcément annulée")
+        void cancellationRules() {
+            Map<String, Object> undated = payout(freshSeries());
+            undated.put("status", "CANCELLED");
+            undated.put("cancelled_by", "admin");
+            undated.put("cancel_reason_type", "WRONG_AMOUNT");
+            assertThatThrownBy(() -> insert("teacher_payout", undated))
+                    .hasMessageContaining("ck_teacher_payout_cancellation");
+
+            Map<String, Object> other = payout(freshSeries());
+            other.put("status", "CANCELLED");
+            other.put("cancelled_at", java.sql.Timestamp.valueOf("2030-02-02 10:00:00"));
+            other.put("cancelled_by", "admin");
+            other.put("cancel_reason_type", "OTHER");
+            other.put("cancel_reason_text", "  ");
+            assertThatThrownBy(() -> insert("teacher_payout", other))
+                    .hasMessageContaining("ck_teacher_payout_cancel_reason_other");
+
+            long replacement = insert("teacher_payout", payout(freshSeries()));
+            Map<String, Object> replacedButActive = payout(freshSeries());
+            replacedButActive.put("replaced_by_id", replacement);
+            assertThatThrownBy(() -> insert("teacher_payout", replacedButActive))
+                    .hasMessageContaining("ck_teacher_payout_replaced_is_cancelled");
+        }
+
+        @Test
+        @DisplayName("compteur des numéros de paie : une seule ligne")
+        void payoutCounterIsASingleRow() {
+            assertThat(jdbc.queryForList("SELECT id FROM payout_counter", Long.class)).containsExactly(1L);
+            assertThatThrownBy(() -> jdbc.update("INSERT INTO payout_counter VALUES (2, 0, 0)"))
+                    .hasMessageContaining("ck_payout_counter_single");
+        }
+
+        @Test
+        @DisplayName("bordereau : un rang par impression, unique pour une paie")
+        void slipRankIsUniquePerPayout() {
+            long payoutId = insert("teacher_payout", payout(freshSeries()));
+            jdbc.update("INSERT INTO payout_slip_issuance (payout_id, rank, issued_at, issued_by) VALUES (?, 1, now(), 'admin')",
+                    payoutId);
+            assertThatThrownBy(() -> jdbc.update(
+                    "INSERT INTO payout_slip_issuance (payout_id, rank, issued_at, issued_by) VALUES (?, 1, now(), 'admin')",
+                    payoutId)).hasMessageContaining("uk_payout_slip_rank");
         }
     }
 
