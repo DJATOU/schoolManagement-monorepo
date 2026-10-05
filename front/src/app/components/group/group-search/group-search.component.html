@@ -20,8 +20,8 @@
     </div>
   </div>
 
-  <!-- CONTENT (scrollable with infinite scroll) -->
-  <div class="content-area" #contentArea (scroll)="onScroll($event)">
+  <!-- CONTENT : la page courante du paginateur -->
+  <div class="content-area" #contentArea>
     <ng-container *ngIf="!isLoading && displayedGroups.length > 0">
       <div class="group-view" [ngClass]="viewMode === 'card' ? 'cards-grid' : 'list-view'">
         <ng-container *ngIf="viewMode === 'card'">
@@ -34,14 +34,8 @@
         </ng-container>
       </div>
 
-      <!-- Loading indicator for infinite scroll -->
-      <div class="loading-more" *ngIf="isLoadingMore">
-        <mat-spinner diameter="32"></mat-spinner>
-        <span>Chargement...</span>
-      </div>
-
-      <!-- End of list indicator -->
-      <div class="end-of-list" *ngIf="!hasMoreData && displayedGroups.length > 0">
+      <!-- Fin de liste : seulement quand la page montre tous les groupes -->
+      <div class="end-of-list" *ngIf="displayedGroups.length === totalGroups">
         <span>Tous les groupes affichés ({{displayedGroups.length}})</span>
       </div>
     </ng-container>

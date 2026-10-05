@@ -56,11 +56,8 @@ export class GroupSearchComponent implements OnInit, OnDestroy {
   filteredGroups: Group[] = [];
   currentPageGroups: Group[] = [];
 
-  // Infinite scroll state
+  /** Cartes affichées : la page courante du paginateur, et elle seule. */
   displayedGroups: Group[] = [];
-  itemsPerLoad: number = 10;
-  isLoadingMore: boolean = false;
-  hasMoreData: boolean = true;
   currentPageIndex: number = 0;
 
   totalGroups: number = 0;
@@ -176,7 +173,6 @@ export class GroupSearchComponent implements OnInit, OnDestroy {
       this.filteredGroups = [...this.allGroups];
     }
     this.currentPageIndex = 0;
-    this.initializeDisplayedGroups();
     this.updatePageGroups();
   }
 
@@ -189,66 +185,28 @@ export class GroupSearchComponent implements OnInit, OnDestroy {
   }
 
   changePage(event: PageEvent): void {
-    const startIndex = event.pageIndex * event.pageSize;
-    const endIndex = startIndex + event.pageSize;
-    this.currentPageGroups = this.filteredGroups.slice(startIndex, endIndex);
+    this.currentPageIndex = event.pageIndex;
     this.pageSize = event.pageSize;
+    this.updatePageGroups();
   }
 
   changeViewMode(mode: 'card' | 'list'): void {
     this.viewMode = mode;
   }
 
+  /**
+   * Affiche la page courante du paginateur.
+   *
+   * <p>L'écran mêlait deux mécanismes : le compteur et le paginateur lisaient la liste entière
+   * (« 1 – 16 sur 16 »), mais les cartes venaient d'un défilement infini qui en chargeait 10, puis
+   * la suite au défilement. Un écran assez grand pour les 10 premières ne défile pas : les 6 autres
+   * ne s'affichaient jamais, et changer de page ne changeait rien. Le paginateur décide désormais
+   * seul, comme sur la liste des élèves.</p>
+   */
   private updatePageGroups(): void {
     this.totalGroups = this.filteredGroups.length;
-    this.currentPageGroups = this.filteredGroups.slice(0, this.pageSize);
-  }
-
-  /**
-   * Handle scroll event for infinite scroll
-   */
-  onScroll(event: Event): void {
-    const element = event.target as HTMLElement;
-    const scrollPosition = element.scrollTop + element.clientHeight;
-    const scrollHeight = element.scrollHeight;
-
-    const threshold = 200;
-    const isNearBottom = scrollHeight - scrollPosition < threshold;
-
-    if (isNearBottom && !this.isLoadingMore && this.hasMoreData) {
-      this.loadMoreGroups();
-    }
-  }
-
-  /**
-   * Load more groups for infinite scroll
-   */
-  private loadMoreGroups(): void {
-    if (this.isLoadingMore || !this.hasMoreData) return;
-
-    this.isLoadingMore = true;
-
-    setTimeout(() => {
-      const currentLength = this.displayedGroups.length;
-      const nextBatch = this.filteredGroups.slice(
-        currentLength,
-        currentLength + this.itemsPerLoad
-      );
-
-      if (nextBatch.length > 0) {
-        this.displayedGroups = [...this.displayedGroups, ...nextBatch];
-      }
-
-      this.hasMoreData = this.displayedGroups.length < this.filteredGroups.length;
-      this.isLoadingMore = false;
-    }, 300);
-  }
-
-  /**
-   * Initialize displayed groups with first batch
-   */
-  private initializeDisplayedGroups(): void {
-    this.displayedGroups = this.filteredGroups.slice(0, this.itemsPerLoad);
-    this.hasMoreData = this.filteredGroups.length > this.itemsPerLoad;
+    const startIndex = this.currentPageIndex * this.pageSize;
+    this.currentPageGroups = this.filteredGroups.slice(startIndex, startIndex + this.pageSize);
+    this.displayedGroups = this.currentPageGroups;
   }
 }

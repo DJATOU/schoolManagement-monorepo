@@ -65,4 +65,25 @@ describe('TeacherSearchComponent', () => {
     expect(component.filteredTeachers.map(t => t.lastName)).toEqual(['Belhadj']);
     expect(component.totalTeachers).toBe(1);
   });
+
+  it('affiche toute la page annoncée par le paginateur, au-delà de 10 enseignants', () => {
+    // Le défilement infini n'en chargeait que 10 : sur un écran qui ne défile pas, les suivants
+    // n'apparaissaient jamais alors que le paginateur annonçait « 1 – 12 sur 12 ».
+    component.pageSize = 16;
+    flushTeachers(Array.from({ length: 12 }, (_, i) => teacher(i + 1, `Nom${String(i).padStart(2, '0')}`)));
+
+    expect(component.displayedTeachers.length).toBe(12);
+    expect(fixture.nativeElement.querySelectorAll('app-teacher-card').length).toBe(12);
+  });
+
+  it('changer de page affiche la page demandée', () => {
+    component.pageSize = 8;
+    flushTeachers(Array.from({ length: 12 }, (_, i) => teacher(i + 1, `Nom${String(i).padStart(2, '0')}`)));
+
+    component.changePage({ pageIndex: 1, pageSize: 8, length: 12 });
+    fixture.detectChanges();
+
+    expect(component.displayedTeachers.map(t => t.lastName)).toEqual(['Nom08', 'Nom09', 'Nom10', 'Nom11']);
+    expect(fixture.nativeElement.querySelectorAll('app-teacher-card').length).toBe(4);
+  });
 });

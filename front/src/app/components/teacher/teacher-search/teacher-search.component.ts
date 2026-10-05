@@ -32,11 +32,8 @@ export class TeacherSearchComponent implements OnInit {
   filteredTeachers: Teacher[] = [];
   currentPageTeachers: Teacher[] = [];
 
-  // Infinite scroll state
+  /** Cartes affichées : la page courante du paginateur, et elle seule. */
   displayedTeachers: Teacher[] = [];
-  itemsPerLoad: number = 10;
-  isLoadingMore: boolean = false;
-  hasMoreData: boolean = true;
   currentPageIndex: number = 0;
 
   totalTeachers: number = 0;
@@ -120,7 +117,6 @@ export class TeacherSearchComponent implements OnInit {
       this.filteredTeachers = [...this.allTeachers];
     }
     this.currentPageIndex = 0;
-    this.initializeDisplayedTeachers();
     this.updatePageTeachers();
   }
 
@@ -133,10 +129,9 @@ export class TeacherSearchComponent implements OnInit {
   }
 
   changePage(event: PageEvent): void {
-    const startIndex = event.pageIndex * event.pageSize;
-    const endIndex = startIndex + event.pageSize;
-    this.currentPageTeachers = this.filteredTeachers.slice(startIndex, endIndex);
+    this.currentPageIndex = event.pageIndex;
     this.pageSize = event.pageSize;
+    this.updatePageTeachers();
   }
 
   changeViewMode(mode: 'card' | 'list'): void {
@@ -144,58 +139,16 @@ export class TeacherSearchComponent implements OnInit {
   }
 
   /**
-   * Update the teachers displayed on the current page
+   * Affiche la page courante du paginateur.
+   *
+   * <p>Même défaut que la liste des groupes : le paginateur comptait toute la liste, les cartes
+   * venaient d'un défilement infini par lots de 10 qui ne se déclenchait pas sur un écran assez
+   * grand. Au-delà de 10 enseignants, les suivants ne s'affichaient jamais.</p>
    */
   private updatePageTeachers(): void {
     this.totalTeachers = this.filteredTeachers.length;
-    this.currentPageTeachers = this.filteredTeachers.slice(0, this.pageSize);
-  }
-
-  /**
-   * Handle scroll event for infinite scroll
-   */
-  onScroll(event: Event): void {
-    const element = event.target as HTMLElement;
-    const scrollPosition = element.scrollTop + element.clientHeight;
-    const scrollHeight = element.scrollHeight;
-
-    const threshold = 200;
-    const isNearBottom = scrollHeight - scrollPosition < threshold;
-
-    if (isNearBottom && !this.isLoadingMore && this.hasMoreData) {
-      this.loadMoreTeachers();
-    }
-  }
-
-  /**
-   * Load more teachers for infinite scroll
-   */
-  private loadMoreTeachers(): void {
-    if (this.isLoadingMore || !this.hasMoreData) return;
-
-    this.isLoadingMore = true;
-
-    setTimeout(() => {
-      const currentLength = this.displayedTeachers.length;
-      const nextBatch = this.filteredTeachers.slice(
-        currentLength,
-        currentLength + this.itemsPerLoad
-      );
-
-      if (nextBatch.length > 0) {
-        this.displayedTeachers = [...this.displayedTeachers, ...nextBatch];
-      }
-
-      this.hasMoreData = this.displayedTeachers.length < this.filteredTeachers.length;
-      this.isLoadingMore = false;
-    }, 300);
-  }
-
-  /**
-   * Initialize displayed teachers with first batch
-   */
-  private initializeDisplayedTeachers(): void {
-    this.displayedTeachers = this.filteredTeachers.slice(0, this.itemsPerLoad);
-    this.hasMoreData = this.filteredTeachers.length > this.itemsPerLoad;
+    const startIndex = this.currentPageIndex * this.pageSize;
+    this.currentPageTeachers = this.filteredTeachers.slice(startIndex, startIndex + this.pageSize);
+    this.displayedTeachers = this.currentPageTeachers;
   }
 }

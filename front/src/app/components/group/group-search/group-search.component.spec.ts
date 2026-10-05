@@ -59,4 +59,45 @@ describe('GroupSearchComponent', () => {
     expect(component.filteredGroups.map(g => g.name)).toEqual(['Maths']);
     expect(component.totalGroups).toBe(1);
   });
+
+  /** 16 groupes, comme la base de démonstration : « Groupe 01 » à « Groupe 16 ». */
+  const sixteen = () => Array.from({ length: 16 }, (_, i) => group(i + 1, `Groupe ${String(i + 1).padStart(2, '0')}`, true));
+
+  it('affiche toute la page annoncée par le paginateur : 16 sur 16, pas 10', () => {
+    // Défaut corrigé : le paginateur annonçait « 1 – 16 sur 16 », mais les cartes venaient d'un
+    // défilement infini qui en chargeait 10. L'écran ne défilant pas, les 6 autres ne venaient jamais.
+    component.pageSize = 16;
+    flushGroups(sixteen());
+
+    expect(component.totalGroups).toBe(16);
+    expect(component.displayedGroups.length).toBe(16);
+    expect(fixture.nativeElement.querySelectorAll('app-group-card').length).toBe(16);
+  });
+
+  it('changer de page affiche la page demandée, et la taille choisie', () => {
+    component.pageSize = 12;
+    flushGroups(sixteen());
+    expect(fixture.nativeElement.querySelectorAll('app-group-card').length).toBe(12);
+
+    component.changePage({ pageIndex: 1, pageSize: 12, length: 16 });
+    fixture.detectChanges();
+
+    expect(component.displayedGroups.map(g => g.name)).toEqual(['Groupe 13', 'Groupe 14', 'Groupe 15', 'Groupe 16']);
+    expect(fixture.nativeElement.querySelectorAll('app-group-card').length).toBe(4);
+
+    component.changePage({ pageIndex: 0, pageSize: 20, length: 16 });
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelectorAll('app-group-card').length).toBe(16);
+  });
+
+  it('un filtre ramène à la première page', () => {
+    component.pageSize = 12;
+    flushGroups(sixteen());
+    component.changePage({ pageIndex: 1, pageSize: 12, length: 16 });
+
+    component.onActiveFilterChange(true);
+
+    expect(component.currentPageIndex).toBe(0);
+    expect(component.displayedGroups[0].name).toBe('Groupe 01');
+  });
 });
