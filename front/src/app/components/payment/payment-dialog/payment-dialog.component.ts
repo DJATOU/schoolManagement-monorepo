@@ -27,7 +27,7 @@ import { PaymentAllocationResult } from '../../../models/payment/payment-allocat
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { AdminOnlyDirective } from '../../../shared/admin-only.directive';
 import { PaymentReceiptPdfService } from '../../../services/payment-receipt-pdf.service';
-import { AuthService } from '../../../services/auth.service';
+import { PAYMENT_METHOD_OPTIONS } from '../../../utils/form-options';
 import { GroupChangeNoticeComponent } from '../../shared/group-change-notice/group-change-notice.component';
 
 /**
@@ -131,12 +131,7 @@ export class PaymentDialogComponent implements OnInit {
   paymentForm: FormGroup;
   groups: Group[];
   sessionSeries: SessionSeries[] = [];
-  paymentMethods = [
-    { value: 'cash', labelKey: 'payment.dialog.methods.cash' },
-    { value: 'cheque', labelKey: 'payment.dialog.methods.cheque' },
-    { value: 'carte_bancaire', labelKey: 'payment.dialog.methods.card' },
-    { value: 'autre', labelKey: 'payment.dialog.methods.other' }
-  ];
+  readonly paymentMethods = PAYMENT_METHOD_OPTIONS;
   studentId: number;
   /** Nom de l'étudiant, imprimé sur le reçu. Vide si l'appelant ne l'a pas fourni. */
   studentName: string;
@@ -198,7 +193,6 @@ export class PaymentDialogComponent implements OnInit {
     private snackBar: MatSnackBar,
     private translate: TranslateService,
     private receiptPdfService: PaymentReceiptPdfService,
-    private authService: AuthService,
     @Inject(MAT_DIALOG_DATA) public data: { studentId: number, groups: Group[], studentName?: string }
   ) {
     this.groups = data.groups;
@@ -787,9 +781,11 @@ export class PaymentDialogComponent implements OnInit {
       paymentData.sessionId = this.nextCatchUpSessionId;
     }
 
-    const paymentRequest: Observable<PaymentAllocationResult | Payment> =
+    // Les deux chemins renvoient désormais le même contrat : la répartition et l'Encaissement
+    // enregistré, porteur du numéro de reçu.
+    const paymentRequest: Observable<PaymentAllocationResult> =
       paymentData.sessionId && this.nextCatchUpSessionId
-        ? this.paymentService.processCatchUpPayment(paymentData)
+        ? this.paymentService.processCatchUpPayment(paymentData, this.idempotencyKey)
         : this.paymentService.processPayment(paymentData, this.idempotencyKey);
 
     // Contexte capturé avant l'appel : la génération du reçu s'appuie sur la saisie et le
@@ -797,25 +793,19 @@ export class PaymentDialogComponent implements OnInit {
     const receiptContext = this.captureReceiptContext(paymentData);
 
     paymentRequest.subscribe({
-      next: (response) => {
-        // Le chemin rattrapage renvoie encore une ligne de paiement, le chemin série renvoie la
-        // répartition complète. On ramène les deux à la ligne de paiement créditée, seule
-        // source de la date et de l'identifiant imprimés sur le reçu.
-        const allocation = this.asAllocationResult(response);
-        const payment = allocation ? allocation.payment : (response as Payment);
-
+      next: (allocation) => {
         // Un versement nul n'encaisse rien : il n'y a aucun justificatif à remettre à
         // l'étudiant, et imprimer un reçu à 0 DA laisserait croire à un paiement.
-        const hasReceipt = receiptContext.amountPaid > 0;
+        const hasReceipt = allocation.amountReceived > 0;
         this.snackBar.open(
           this.successMessage(hasReceipt, allocation),
           this.translate.instant('common.close'),
-          { duration: allocation && allocation.carryOvers.length > 0 ? 8000 : 3000 }
+          { duration: allocation.carryOvers.length > 0 ? 8000 : 3000 }
         );
         if (hasReceipt) {
-          this.printReceipt(receiptContext, payment, allocation);
+          this.printReceipt(receiptContext, allocation);
         }
-        this.dialogRef.close(response);
+        this.dialogRef.close(allocation);
       },
       // PaymentService.handleError convertit l'erreur HTTP en Error dont le message porte
       // déjà le motif renvoyé par le serveur. Le code précédent typait l'erreur
@@ -830,24 +820,13 @@ export class PaymentDialogComponent implements OnInit {
   }
 
   /**
-   * Distingue la répartition d'un versement de série de la ligne de paiement d'un rattrapage.
-   *
-   * <p>Les deux chemins de l'API ne renvoient pas le même contrat : {@code /process} renvoie la
-   * répartition, {@code /process/catch-up} une ligne de paiement.</p>
-   */
-  private asAllocationResult(response: PaymentAllocationResult | Payment): PaymentAllocationResult | null {
-    const candidate = response as PaymentAllocationResult;
-    return candidate && Array.isArray(candidate.carryOvers) ? candidate : null;
-  }
-
-  /**
    * Message de succès, enrichi du report lorsqu'une part du versement a changé de série.
    *
    * <p>Un report silencieux serait incompréhensible : l'administrateur verrait la série visée
    * créditée d'un montant inférieur à celui qu'il a encaissé.</p>
    */
-  private successMessage(hasReceipt: boolean, allocation: PaymentAllocationResult | null): string {
-    if (allocation && allocation.carryOvers.length > 0) {
+  private successMessage(hasReceipt: boolean, allocation: PaymentAllocationResult): string {
+    if (allocation.carryOvers.length > 0) {
       const destinations = allocation.carryOvers
         .map(carryOver => `${carryOver.seriesName} (${carryOver.amount.toFixed(2)} DA)`)
         .join(', ');
@@ -916,20 +895,18 @@ export class PaymentDialogComponent implements OnInit {
    * déjà enregistré côté serveur. L'erreur est donc signalée séparément, sans masquer le
    * message de succès.</p>
    */
-  private printReceipt(
-    context: ReceiptContext,
-    response: Payment,
-    allocation: PaymentAllocationResult | null
-  ): void {
-    const issuedAt = response.paymentDate ? new Date(response.paymentDate) : new Date();
+  private printReceipt(context: ReceiptContext, allocation: PaymentAllocationResult): void {
+    // Numéro, date, heure et auteur viennent de l'Encaissement enregistré : l'écran n'en
+    // fabrique aucun. Un réimprimé depuis l'historique porte ainsi exactement les mêmes.
+    const encashment = allocation.encashment;
 
-    // Montant reçu : celui de la répartition serveur, jamais `response.amountPaid` qui porte le
-    // CUMUL de la série — l'imprimer ferait apparaître sur le reçu du jour la somme de tous les
-    // versements antérieurs. À défaut de répartition (rattrapage), la saisie fait foi.
-    const amountReceived = allocation ? allocation.amountReceived : context.amountPaid;
+    // Montant reçu : celui de l'Encaissement, jamais `payment.amountPaid` qui porte le CUMUL de
+    // la série — l'imprimer ferait apparaître sur le reçu du jour la somme de tous les
+    // versements antérieurs.
+    const amountReceived = encashment.amountReceived;
     // Seule la part imputée réduit la dette de cette série ; les parts reportées en créditent
     // d'autres et ne doivent pas entrer dans son cumul ni dans son reste à payer (exigence 7.3).
-    const allocatedHere = allocation ? allocation.amountAllocated : context.amountPaid;
+    const allocatedHere = allocation.amountAllocated;
     const seriesPaidAfter = context.seriesAlreadyPaid !== undefined
       ? this.round(context.seriesAlreadyPaid + allocatedHere)
       : undefined;
@@ -940,8 +917,8 @@ export class PaymentDialogComponent implements OnInit {
     // La génération est asynchrone depuis l'ajout du logo (chargement de l'image) : l'échec
     // doit être capté sur la promesse, un try/catch synchrone le laisserait passer.
     this.receiptPdfService.generateAndPrint({
-        reference: this.receiptPdfService.buildReference(response.id, issuedAt),
-        issuedAt,
+        reference: encashment.receiptNumber,
+        issuedAt: new Date(encashment.receivedAt),
         studentName: this.studentName,
         groupName: context.groupName,
         seriesName: context.seriesName,
@@ -955,12 +932,10 @@ export class PaymentDialogComponent implements OnInit {
         remainingAfter,
         // Répartition telle que décidée par le serveur : la part imputée et les séries
         // destinataires des reports sont imprimées sur le reçu (exigences 7.2, 7.4, 7.5).
-        amountAllocated: allocation ? allocation.amountAllocated : undefined,
-        carryOvers: allocation ? allocation.carryOvers : undefined,
-        // L'admin connecté est celui qui encaisse ce versement. Le champ d'audit de la ligne
-        // de paiement désigne l'admin du premier versement de la série, pas celui-ci.
-        adminUsername: this.authService.currentUser?.username
-          ?? this.translate.instant('payment.receipt.unknownAdmin')
+        amountAllocated: allocation.amountAllocated,
+        carryOvers: allocation.carryOvers,
+        // Le compte qui a encaissé CE versement, tel qu'enregistré par le serveur.
+        adminUsername: encashment.receivedBy
     }).catch((err: unknown) => {
       console.error('Erreur lors de la génération du reçu:', err);
       this.snackBar.open(

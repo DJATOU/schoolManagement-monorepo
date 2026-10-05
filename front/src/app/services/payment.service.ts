@@ -223,26 +223,18 @@ export class PaymentService {
    * Backend: PaymentController.processCatchUpPayment()
    * Endpoint: POST /api/payments/process/catch-up
    *
+   * Même règle d'idempotence que processPayment : la clé est celle de la soumission, engendrée à
+   * l'ouverture du formulaire.
+   *
    * @param payment Données du paiement (studentId, sessionId, amountPaid)
-   * @returns Observable<Payment>
+   * @param idempotencyKey Clé de la soumission, engendrée à l'ouverture du formulaire
+   * @returns Observable<PaymentAllocationResult> même contrat que processPayment, reçu compris
    */
-  processCatchUpPayment(payment: Payment): Observable<Payment> {
-    return this.http.post<Payment>(`${this.baseUrl}/process/catch-up`, payment).pipe(
-      catchError(this.handleError)
-    );
-  }
-
-  /**
-   * Crée un paiement de base
-   *
-   * Backend: PaymentController.createPayment()
-   * Endpoint: POST /api/payments
-   *
-   * @param payment Données du paiement
-   * @returns Observable<Payment>
-   */
-  createPayment(payment: Payment): Observable<Payment> {
-    return this.http.post<Payment>(this.baseUrl, payment).pipe(
+  processCatchUpPayment(payment: Payment, idempotencyKey?: string): Observable<PaymentAllocationResult> {
+    const options = idempotencyKey
+      ? { headers: new HttpHeaders({ 'Idempotency-Key': idempotencyKey }) }
+      : {};
+    return this.http.post<PaymentAllocationResult>(`${this.baseUrl}/process/catch-up`, payment, options).pipe(
       catchError(this.handleError)
     );
   }
@@ -323,10 +315,10 @@ export class PaymentService {
   }
 
   /**
-   * @deprecated À supprimer - Utiliser createPayment() ou processPayment()
+   * @deprecated À supprimer - Utiliser processPayment()
    */
   addPayment(payment: Payment): Observable<PaymentAllocationResult> {
-    console.warn('[DEPRECATED] Use createPayment() or processPayment() instead');
+    console.warn('[DEPRECATED] Use processPayment() instead');
     return this.processPayment(payment);
   }
 

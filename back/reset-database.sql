@@ -13,8 +13,12 @@
 
 TRUNCATE TABLE
     payment_detail_audit,
+    payment_idempotency,
     payment_detail,
     payment_carry_over,
+    encashment_allocation,
+    encashment,
+    correction_audit,
     refund,
     payments,
     attendance,
@@ -35,6 +39,10 @@ TRUNCATE TABLE
     administrator,
     school_year
 RESTART IDENTITY CASCADE;
+
+-- Numérotation des reçus repartie de zéro : le prochain encaissement reçoit RECU-AAAA-0001.
+-- La ligne unique du compteur est conservée (créée par la migration V6).
+UPDATE receipt_counter SET counter_year = 0, last_rank = 0;
 
 -- Après ce reset : redémarrez le backend. Le SchoolYearMigrationRunner recréera
 -- une année scolaire courante initiale (aucun groupe/élève n'existant plus).

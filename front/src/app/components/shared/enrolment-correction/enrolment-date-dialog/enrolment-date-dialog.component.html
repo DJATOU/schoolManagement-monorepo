@@ -1,0 +1,35 @@
+<h2 mat-dialog-title>{{ titleKey | translate }}</h2>
+
+<mat-dialog-content>
+  <p class="ed-subject">
+    {{ 'enrolment.correction.subject' | translate: {
+         student: data.studentName,
+         group: data.enrolment.groupName,
+         period: (period.key | translate: period.params)
+       } }}
+  </p>
+
+  <form [formGroup]="form" (ngSubmit)="submit()" class="ed-form">
+    <mat-form-field appearance="outline">
+      <mat-label>{{ (departure ? 'enrolment.correction.DEPARTURE.date' : 'enrolment.correction.ARRIVAL.date') | translate }}</mat-label>
+      <input matInput type="date" formControlName="date" required [attr.min]="min" [attr.max]="max">
+      <mat-hint *ngIf="departure">{{ 'enrolment.correction.DEPARTURE.dateHint' | translate }}</mat-hint>
+      <mat-error>{{ 'enrolment.correction.dateRequired' | translate }}</mat-error>
+    </mat-form-field>
+
+    <mat-checkbox *ngIf="departure" formControlName="removePresencesAfter" class="ed-remove">
+      {{ 'enrolment.correction.DEPARTURE.removePresencesAfter' | translate }}
+    </mat-checkbox>
+    <p class="ed-hint" *ngIf="departure">{{ 'enrolment.correction.DEPARTURE.removePresencesHint' | translate }}</p>
+  </form>
+
+  <p class="ed-unchanged" role="status" *ngIf="unchanged">{{ 'enrolment.correction.unchanged' | translate }}</p>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button type="button" (click)="cancel()">{{ 'common.cancel' | translate }}</button>
+  <button mat-flat-button color="primary" type="button" class="ed-submit" (click)="submit()"
+    [disabled]="form.invalid || unchanged">
+    {{ 'enrolment.correction.next' | translate }}
+  </button>
+</mat-dialog-actions>

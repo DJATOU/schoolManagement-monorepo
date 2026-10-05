@@ -1,5 +1,6 @@
 package com.school.management.service.payment;
 
+import com.school.management.domain.valueobject.EnrolmentWindow;
 import com.school.management.persistance.AttendanceEntity;
 import com.school.management.persistance.CatchUpBillingState;
 import com.school.management.persistance.GroupEntity;
@@ -16,10 +17,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -32,7 +31,8 @@ import java.util.Set;
  * {@code student.getGroups().contains(group)} : une collection {@code @ManyToMany} dont
  * l'appartenance dépend de {@code equals}/{@code hashCode} et du chargement de la session
  * Hibernate. Un inscrit régulier pouvait ainsi basculer en mode rattrapage.
- * {@code findByGroupIdAndStudentIdAndActiveTrue} est déterministe et testable.</p>
+ * {@code findByGroupIdAndStudentId} est déterministe et testable. Il rend les inscriptions closes
+ * aussi : leurs Fenêtres_Inscription bornent ce qui reste dû (spec admin-corrections, C.5).</p>
  *
  * <p><strong>Une séance suivie est toujours facturable</strong>, y compris antérieure à
  * l'inscription : elle a été consommée (exigence 1.2). L'ensemble des séances suivies est donc
@@ -83,8 +83,13 @@ public class BillableSessionsResolverImpl implements BillableSessionsResolver {
                         "Série introuvable pour l'identifiant : " + seriesId,
                         HttpStatus.NOT_FOUND));
 
-        Optional<StudentGroupEntity> enrolment = resolveEnrolment(series.getGroup(), studentId);
-        Date enrollmentDate = enrolment.map(StudentGroupEntity::getDateAssigned).orElse(null);
+        // Toutes les inscriptions de l'étudiant au groupe, closes comprises : un étudiant parti doit
+        // encore les séances de sa fenêtre, et un étudiant revenu en a deux. Le résolveur ne lisait
+        // que l'inscription active : à la clôture, l'étudiant devenait « sans inscription », et une
+        // séance de sa période pas encore validée cessait d'être due.
+        List<StudentGroupEntity> enrolments = resolveEnrolments(series.getGroup(), studentId);
+        List<EnrolmentWindow> windows = enrolments.stream().map(StudentGroupEntity::window).toList();
+        boolean activeEnrolment = enrolments.stream().anyMatch(e -> !Boolean.FALSE.equals(e.getActive()));
 
         List<AttendanceEntity> attendances =
                 attendanceRepository.findByStudentIdAndSessionSeriesIdAndActiveTrue(studentId, seriesId);
@@ -100,10 +105,15 @@ public class BillableSessionsResolverImpl implements BillableSessionsResolver {
         List<SessionEntity> billable = new ArrayList<>();
         List<SessionEntity> excluded = new ArrayList<>();
         Set<Long> compensatedAway = new HashSet<>();
+        Set<Long> withinEnrolment = new HashSet<>();
         int attendedCount = 0;
 
         for (SessionEntity session : sessionRepository.findBySessionSeriesId(seriesId)) {
             Long sessionId = session.getId();
+            boolean inWindow = windows.stream().anyMatch(window -> window.contains(session.getSessionTimeStart()));
+            if (inWindow) {
+                withinEnrolment.add(sessionId);
+            }
 
             // Rattrapage à préciser : la séance est INERTE. Elle n'entre ni dans les facturables,
             // ni dans les écartées, et n'alimente pas le décompte des séances suivies.
@@ -129,7 +139,7 @@ public class BillableSessionsResolverImpl implements BillableSessionsResolver {
             }
 
             boolean hasAttendance = attendedSessionIds.contains(sessionId);
-            if (hasAttendance || isOnOrAfterEnrolment(session, enrollmentDate)) {
+            if (hasAttendance || inWindow) {
                 billable.add(session);
                 // Exigence 2.12 : une séance rattrapée ailleurs compte comme suivie ICI, dans sa
                 // série d'origine, alors que sa présence reste une absence. Sans cela, la séance
@@ -143,30 +153,26 @@ public class BillableSessionsResolverImpl implements BillableSessionsResolver {
             }
         }
 
+        // Membre du groupe pour cette série : inscription active — comme avant, une série entière
+        // antérieure à l'arrivée reste affichée avec ses séances écartées — ou inscription close
+        // dont la fenêtre touche la série. Une série postérieure au départ ne le concerne plus.
+        boolean enrolled = activeEnrolment || !withinEnrolment.isEmpty();
         return new BillableSessions(List.copyOf(billable), List.copyOf(excluded),
-                attendedCount, enrolment.isPresent(), enrollmentDate, Set.copyOf(compensatedAway));
-    }
-
-    /** Inscription active de l'étudiant au groupe de la série, vide si le groupe est absent. */
-    private Optional<StudentGroupEntity> resolveEnrolment(GroupEntity group, Long studentId) {
-        if (group == null || group.getId() == null) {
-            return Optional.empty();
-        }
-        return studentGroupRepository.findByGroupIdAndStudentIdAndActiveTrue(group.getId(), studentId);
+                attendedCount, enrolled, withinEnrolment, compensatedAway);
     }
 
     /**
-     * Séance postérieure ou égale à la date d'inscription (exigence 1.1).
+     * Inscriptions de l'étudiant au groupe de la série, actives et closes ; vide si le groupe est
+     * absent.
      *
-     * <p>Sans date d'inscription, aucune séance n'est retenue à ce titre : seules les séances
-     * suivies sont facturables (exigence 1.4). C'est le cas du rattrapage pur.</p>
+     * <p>Une inscription sans date d'arrivée a une fenêtre vide : elle ne rend aucune séance
+     * facturable à ce titre, seules les séances suivies le sont (exigence 1.4).</p>
      */
-    private boolean isOnOrAfterEnrolment(SessionEntity session, Date enrollmentDate) {
-        if (enrollmentDate == null) {
-            return false;
+    private List<StudentGroupEntity> resolveEnrolments(GroupEntity group, Long studentId) {
+        if (group == null || group.getId() == null) {
+            return List.of();
         }
-        Date sessionDate = session.getSessionTimeStart();
-        return sessionDate != null && !sessionDate.before(enrollmentDate);
+        return studentGroupRepository.findByGroupIdAndStudentId(group.getId(), studentId);
     }
 
     /**

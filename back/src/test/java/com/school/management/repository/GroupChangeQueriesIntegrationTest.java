@@ -1,5 +1,6 @@
 package com.school.management.repository;
 
+import com.school.management.domain.valueobject.EnrolmentWindow;
 import com.school.management.persistance.AttendanceEntity;
 import com.school.management.persistance.GroupEntity;
 import com.school.management.persistance.SessionEntity;
@@ -31,14 +32,12 @@ import static org.assertj.core.api.Assertions.assertThat;
  * <p>Les tests unitaires du détecteur simulent les dépôts : ils vérifient la règle, pas les deux
  * requêtes qu'elle consomme. Ce test comble exactement ce trou, et il valide surtout
  * l'<strong>hypothèse de représentation</strong> sur laquelle repose tout le composant : une
- * clôture d'inscription est une ligne {@code active = false} dont la date de clôture est
- * {@code date_update}, horodatée par le rappel {@code @PreUpdate} au moment de la désactivation.
- * Il n'existe pas de colonne de date de fin. Si cette hypothèse était fausse, le détecteur
+ * clôture d'inscription est une ligne {@code active = false} datée par sa Date_Sortie
+ * ({@code date_left}), un jour stocké à 00:00. Si cette hypothèse était fausse, le détecteur
  * daterait les clôtures au mauvais mois sans qu'aucun test simulé ne s'en aperçoive.</p>
  *
- * <p>La clôture est donc produite ici comme en production : mise à {@code false} d'une ligne
- * gérée puis {@code flush}, exactement ce que fait
- * {@code StudentGroupService.removeStudentFromGroup}.</p>
+ * <p>La clôture est donc produite ici comme en production : ligne gérée désactivée et datée, puis
+ * {@code flush}, ce que fait {@code EnrolmentCorrectionService.setDeparture}.</p>
  */
 @DataJpaTest
 @TestPropertySource(properties = {
@@ -57,7 +56,7 @@ class GroupChangeQueriesIntegrationTest {
     private GroupEntity maths;
     private GroupEntity physique;
 
-    /** Mois courant : la clôture est horodatée par JPA, on ne peut pas la situer ailleurs. */
+    /** Mois des données ; la clôture est datée par sa Date_Sortie, posée dans ce mois. */
     private final YearMonth currentMonth = YearMonth.now();
 
     @BeforeEach
@@ -72,33 +71,26 @@ class GroupChangeQueriesIntegrationTest {
     // Fixtures
     // ------------------------------------------------------------------
 
-    /**
-     * Inscription active dans un groupe.
-     *
-     * <p>{@code StudentGroupEntity.onCreate()} écrase {@code dateAssigned} avec l'instant de la
-     * persistance : la date voulue est donc posée par une mise à jour en masse, qui ne déclenche
-     * aucun rappel de cycle de vie et laisse {@code date_update} vide.</p>
-     */
+    /** Inscription active dans un groupe ; la date d'arrivée fournie est conservée (5.1). */
     private StudentGroupEntity enrol(GroupEntity group, LocalDate assignedOn) {
         StudentGroupEntity enrolment = em.persist(StudentGroupEntity.builder()
                 .student(student)
                 .group(group)
+                .dateAssigned(toDate(assignedOn))
                 .build());
         em.flush();
-        em.getEntityManager()
-                .createQuery("UPDATE StudentGroupEntity sg SET sg.dateAssigned = :assignedOn "
-                        + "WHERE sg.id = :id")
-                .setParameter("assignedOn", toDate(assignedOn))
-                .setParameter("id", enrolment.getId())
-                .executeUpdate();
-        em.refresh(enrolment);
         return enrolment;
     }
 
-    /** Clôture d'inscription, par le même chemin que {@code removeStudentFromGroup}. */
-    private void close(StudentGroupEntity enrolment) {
+    /**
+     * Clôture d'inscription, par le même chemin que {@code EnrolmentCorrectionService.setDeparture}. La date est
+     * posée avec une heure : le stockage doit la ramener au jour.
+     */
+    private StudentGroupEntity close(StudentGroupEntity enrolment, LocalDate leftOn) {
         enrolment.setActive(false);
+        enrolment.setDateLeft(Date.from(leftOn.atTime(17, 45).atZone(ZoneId.systemDefault()).toInstant()));
         em.flush();
+        return enrolment;
     }
 
     private SessionEntity persistSession(GroupEntity group, LocalDate day) {
@@ -142,19 +134,22 @@ class GroupChangeQueriesIntegrationTest {
     // ------------------------------------------------------------------
 
     @Test
-    @DisplayName("Une clôture est une ligne active = false, datée par date_update ; "
+    @DisplayName("Une clôture est une ligne active = false, datée par sa Date_Sortie à 00:00 ; "
             + "findByStudentId la restitue là où findByStudentIdAndActiveTrue l'ignore")
-    void closureIsRepresentedByInactiveRowWithUpdateDate() {
-        StudentGroupEntity enrolment = enrol(maths, currentMonth.atDay(1));
-        close(enrolment);
+    void closureIsRepresentedByInactiveRowWithDepartureDay() {
+        LocalDate arrival = currentMonth.atDay(1);
+        LocalDate departure = currentMonth.atDay(Math.min(12, currentMonth.lengthOfMonth()));
+        StudentGroupEntity enrolment = close(enrol(maths, arrival), departure);
         em.clear();
 
         StudentGroupEntity reloaded = em.find(StudentGroupEntity.class, enrolment.getId());
         assertThat(reloaded.getActive()).isFalse();
-        assertThat(reloaded.getDateUpdate())
-                .as("la date de clôture, seule datation disponible : il n'y a pas de colonne de fin")
-                .isNotNull();
-        assertThat(YearMonth.from(reloaded.getDateUpdate())).isEqualTo(currentMonth);
+        assertThat(reloaded.getDateLeft().getTime())
+                .as("le jour du départ, à 00:00 : l'heure de la saisie est effacée (D1)")
+                .isEqualTo(toDate(departure).getTime());
+        assertThat(reloaded.getDateAssigned().getTime()).isEqualTo(toDate(arrival).getTime());
+        assertThat(reloaded.window().describe())
+                .isEqualTo("du " + EnrolmentWindow.format(arrival) + " au " + EnrolmentWindow.format(departure));
 
         assertThat(studentGroupRepository.findByStudentId(student.getId())).hasSize(1);
         assertThat(studentGroupRepository.findByStudentIdAndActiveTrue(student.getId())).isEmpty();
@@ -193,7 +188,7 @@ class GroupChangeQueriesIntegrationTest {
             + "les données réelles, avec les décomptes de chaque groupe")
     void detectorFlagsRealGroupChange() {
         LocalDate day = currentMonth.atDay(Math.min(10, currentMonth.lengthOfMonth()));
-        close(enrol(maths, currentMonth.atDay(1)));
+        close(enrol(maths, currentMonth.atDay(1)), day);
         enrol(physique, day);
         persistAttendance(maths, day, true);
         persistAttendance(maths, day, true);

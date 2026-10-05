@@ -5,6 +5,14 @@
 </h2>
 
 <mat-dialog-content>
+  <!-- Date d'arrivée réelle des élèves ajoutés (exigence 5.1) : un jour, sans conversion en Date. -->
+  <mat-form-field appearance="outline" class="search-field arrival-field" subscriptSizing="dynamic">
+    <mat-label>{{ 'enrolment.add.arrival' | translate }}</mat-label>
+    <input matInput type="date" [(ngModel)]="arrival" required
+      [attr.min]="data.yearStart ?? null" [attr.max]="data.yearEnd ?? null">
+    <mat-hint>{{ 'enrolment.add.arrivalHint' | translate }}</mat-hint>
+  </mat-form-field>
+
   <mat-form-field appearance="outline" class="search-field" subscriptSizing="dynamic">
     <mat-icon matPrefix>search</mat-icon>
     <input matInput #searchInput [(ngModel)]="searchTerm" (ngModelChange)="applySearch()"
@@ -94,7 +102,8 @@
 
 <mat-dialog-actions align="end">
   <button mat-button (click)="onCancel()">{{ 'common.cancel' | translate }}</button>
-  <button mat-flat-button color="primary" (click)="onConfirm()" [disabled]="selectedIds.size === 0" appAdminOnly>
+  <button mat-flat-button color="primary" (click)="onConfirm()" [disabled]="selectedIds.size === 0 || !arrivalValid"
+    appAdminOnly>
     <mat-icon>add</mat-icon>
     {{ selectedIds.size > 0
         ? ('ADD_STUDENTS_DIALOG.ADD_COUNT' | translate: { count: selectedIds.size })

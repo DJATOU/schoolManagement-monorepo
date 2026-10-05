@@ -87,11 +87,15 @@ services:
       # photos sont donc relatives et restent valables si l'IP de la machine change.
       SERVER_BASE_URL: ${SERVER_BASE_URL:-}
 
-      # Horodatage des paiements et des séances en heure locale de l'école.
-      # Africa/Algiers et non Europe/Paris : l'Algérie est à UTC+1 toute l'année,
-      # sans heure d'été. Avec Europe/Paris, tout serait décalé d'une heure de fin
-      # mars à fin octobre, et une séance tardive changerait de jour — ce qui fausse
-      # la comparaison avec la date d'inscription, donc ce que l'étudiant doit.
+      # Fuseau de l'école : jour d'une séance, heure d'un reçu, « aujourd'hui ».
+      # L'application l'applique elle-même au démarrage, quel que soit le réglage du
+      # conteneur (UTC par défaut), et l'écrit dans son journal. Africa/Algiers et non
+      # Europe/Paris : l'Algérie est à UTC+1 toute l'année, sans heure d'été. Une
+      # valeur inconnue empêche le démarrage, en la nommant.
+      APP_TIMEZONE: ${APP_TIMEZONE:-Africa/Algiers}
+      # Fuseau du système du conteneur : seulement l'heure écrite en tête de chaque ligne du
+      # journal. Les dates de l'application suivent APP_TIMEZONE ; gardé identique pour
+      # que le journal se lise à l'heure de l'école.
       TZ: ${TZ:-Africa/Algiers}
     volumes:
       # Dossier de l'hôte, et non volume nommé : la sauvegarde des photos se

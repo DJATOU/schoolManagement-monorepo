@@ -27,9 +27,9 @@ export interface ReceiptCarryOver {
  * <strong>versement courant</strong>, pas le cumul de la série.</p>
  */
 export interface PaymentReceiptData {
-  /** Référence du reçu, imprimée en en-tête (voir PaymentReceiptPdfService.buildReference). */
+  /** Numéro de reçu attribué par le serveur (`RECU-AAAA-NNNN`), imprimé en en-tête. */
   reference: string;
-  /** Date d'encaissement retenue (date serveur si disponible, sinon date locale). */
+  /** Date et heure d'encaissement fixées par le serveur. */
   issuedAt: Date;
   studentName: string;
   groupName: string;
@@ -69,8 +69,7 @@ export interface PaymentReceiptData {
   /**
    * Part du versement imputée sur la série visée (exigence 7.2).
    *
-   * <p>Absente pour les chemins qui ne renvoient pas de répartition, comme le rattrapage : le
-   * reçu se limite alors au montant reçu.</p>
+   * <p>Facultative : absente, le reçu se limite au montant reçu.</p>
    */
   amountAllocated?: number;
   /**
@@ -81,8 +80,21 @@ export interface PaymentReceiptData {
    * série qu'elle a réglée.</p>
    */
   carryOvers?: ReceiptCarryOver[];
-  /** Identifiant de l'admin qui a encaissé CE versement. */
+  /** Compte qui a encaissé CE versement, tel qu'enregistré par le serveur. */
   adminUsername: string;
+  /**
+   * Versement annulé : le reçu réimprimé porte le tampon « ANNULÉ », la date de l'annulation et, s'il
+   * existe, le reçu qui le remplace (spec admin-corrections, exigence 2.6). Absent pour un versement
+   * valide.
+   */
+  cancellation?: ReceiptCancellation;
+}
+
+/** Annulation d'un versement, telle que le reçu réimprimé l'énonce. */
+export interface ReceiptCancellation {
+  cancelledAt: Date;
+  /** Numéro du reçu de remplacement, s'il y en a un. */
+  replacedBy?: string | null;
 }
 
 /**
@@ -103,21 +115,6 @@ export class PaymentReceiptPdfService {
 
   constructor(private translate: TranslateService) {
     (pdfMake as any).vfs = pdfFonts.pdfMake.vfs;
-  }
-
-  /**
-   * Construit une référence de reçu.
-   *
-   * <p>L'identifiant de paiement seul ne suffit pas : le backend regroupe tous les versements
-   * d'une même série sur une seule ligne de paiement, si bien que deux versements successifs
-   * partagent cet identifiant. On y adjoint donc l'horodatage d'encaissement pour distinguer
-   * les reçus tout en restant traçable jusqu'à la ligne de paiement.</p>
-   */
-  buildReference(paymentId: number | undefined, issuedAt: Date): string {
-    const pad = (n: number) => String(n).padStart(2, '0');
-    const stamp = `${issuedAt.getFullYear()}${pad(issuedAt.getMonth() + 1)}${pad(issuedAt.getDate())}`
-      + `-${pad(issuedAt.getHours())}${pad(issuedAt.getMinutes())}${pad(issuedAt.getSeconds())}`;
-    return paymentId != null ? `${paymentId}-${stamp}` : stamp;
   }
 
   /**
@@ -265,13 +262,28 @@ export class PaymentReceiptPdfService {
   /**
    * Reçu au format A5 : il tient sur une demi-feuille, format habituel d'un justificatif
    * remis en main propre, et deux reçus s'impriment sur une A4.
+   *
+   * <p>Public pour être vérifié sans passer par l'impression : la définition du document est ce
+   * que la famille aura entre les mains.</p>
    */
-  private buildDocument(data: PaymentReceiptData, logo: string): TDocumentDefinitions {
+  buildDocument(data: PaymentReceiptData, logo: string): TDocumentDefinitions {
     return {
       pageSize: 'A5',
       pageMargins: [32, 32, 32, 40],
+      // Un reçu annulé ne doit pas pouvoir passer pour valide, même photocopié en noir et blanc :
+      // le tampon traverse toute la page.
+      ...(data.cancellation ? {
+        watermark: {
+          text: this.t('payment.receipt.cancelledStamp'),
+          color: '#dc2626',
+          opacity: 0.25,
+          bold: true,
+          angle: -35
+        }
+      } : {}),
       content: [
         this.buildHeader(data, logo),
+        ...this.buildCancellation(data),
         this.buildDivider(),
         this.buildAmountBanner(data),
         ...this.buildDetails(data),
@@ -336,6 +348,37 @@ export class PaymentReceiptPdfService {
       : [titleBlock, dateBlock];
 
     return { columns, columnGap: 0 };
+  }
+
+  /**
+   * Mention d'annulation, en clair sous l'en-tête : la date et, s'il existe, le reçu qui remplace
+   * celui-ci — la seule pièce valide à présenter (exigence 2.6).
+   */
+  private buildCancellation(data: PaymentReceiptData): Content[] {
+    if (!data.cancellation) {
+      return [];
+    }
+    const lines: Content[] = [{
+      text: this.t('payment.receipt.cancelledOn', { date: this.formatDateTime(data.cancellation.cancelledAt) }),
+      bold: true
+    }];
+    if (data.cancellation.replacedBy) {
+      lines.push({ text: this.t('payment.receipt.replacedBy', { number: data.cancellation.replacedBy }) });
+    }
+    return [{
+      table: {
+        widths: ['*'],
+        body: [[{
+          stack: lines,
+          color: '#991b1b',
+          fillColor: '#fee2e2',
+          margin: [8, 6, 8, 6],
+          border: [false, false, false, false]
+        }]]
+      },
+      layout: 'noBorders',
+      margin: [0, 8, 0, 0]
+    }];
   }
 
   private buildDivider(): Content {
@@ -426,8 +469,7 @@ export class PaymentReceiptPdfService {
    * la famille, que l'intégralité du versement est restée sur la série qu'elle a réglée. La
    * taire laisserait planer un doute qu'un reçu est justement censé lever.</p>
    *
-   * <p>Le bloc est omis quand l'appelant ne fournit aucune répartition — chemin rattrapage, qui
-   * ne reporte rien : imprimer « imputé : montant total, reporté : 0 » n'apporterait rien.</p>
+   * <p>Le bloc est omis quand l'appelant ne fournit aucune répartition.</p>
    */
   private buildAllocation(data: PaymentReceiptData): Content[] {
     if (data.amountAllocated == null) {
@@ -471,7 +513,7 @@ export class PaymentReceiptPdfService {
    * le montant annoncé par l'appelant signale une répartition incomplète : le serveur refusant
    * tout encaissement partiel, il ne doit jamais s'en produire, d'où la trace en console.</p>
    *
-   * <p>Sans répartition — chemin rattrapage — le montant du versement fait foi.</p>
+   * <p>Sans répartition, le montant du versement fait foi.</p>
    */
   private receivedTotal(data: PaymentReceiptData): number {
     if (data.amountAllocated == null) {

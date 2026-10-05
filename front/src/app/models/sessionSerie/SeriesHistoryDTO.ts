@@ -4,7 +4,12 @@ export interface SeriesHistoryDTO {
     seriesId: number;
     seriesName: string;
     sessions: SessionHistoryDTO[];
+    /** `FULL` (versé net ≥ coût), `UNPAID` (rien de versé, net) ou `PARTIAL`. */
     paymentStatus: string;
+    /**
+     * Versé **net** : versements non annulés diminués des remboursements actifs, borné à zéro.
+     * Même définition que le devis : un remboursement rouvre le reste à payer.
+     */
     totalAmountPaid: number;
     /**
      * Coût de la série au prorata : séances facturables × prix net, et non
@@ -18,7 +23,7 @@ export interface SeriesHistoryDTO {
      * justifie ligne par ligne.
      */
     totalAllocated?: number;
-    /** Trop-perçu : part versée au-delà du coût de la série. */
+    /** Trop-perçu : part du versé net au-delà du coût de la série. */
     totalOverpaid?: number;
     // Exemption : vrai lorsque l'étudiant est exempté (réduction 100 %) pour cette série ;
     // pilote la légende « Présent et exempté ».

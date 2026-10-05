@@ -7,6 +7,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { Refund, RefundCap } from '../../../models/refund/refund';
 import { RefundReceiptPdfService } from '../../../services/refund-receipt-pdf.service';
@@ -88,6 +89,7 @@ export class RefundCreateDialogComponent implements OnInit {
     private refundService: RefundService,
     private receiptPdf: RefundReceiptPdfService,
     private translate: TranslateService,
+    private snackBar: MatSnackBar,
     public dialogRef: MatDialogRef<RefundCreateDialogComponent, Refund | undefined>,
     @Inject(MAT_DIALOG_DATA) public data: RefundCreateDialogData
   ) {
@@ -197,13 +199,29 @@ export class RefundCreateDialogComponent implements OnInit {
    * Produit le reçu du remboursement enregistré.
    *
    * <p>Un échec de génération n'annule rien et n'est pas remonté comme une erreur d'enregistrement :
-   * le remboursement est bien enregistré, et le reçu reste réimprimable depuis l'historique.</p>
+   * le remboursement est bien enregistré, et le reçu reste réimprimable depuis l'historique complet
+   * de l'étudiant. L'administrateur en est averti : un échec seulement journalisé laissait croire
+   * que le reçu allait s'imprimer, alors que l'argent était déjà sorti de la caisse.</p>
    */
   private offerReceipt(refund: Refund): void {
     this.refundService.issueReceipt(refund.id).subscribe({
-      next: (receipt) => void this.receiptPdf.generateAndPrint(receipt),
-      error: (err: Error) => console.error('Reçu de remboursement indisponible :', err.message)
+      next: (receipt) => this.receiptPdf.generateAndPrint(receipt).catch((err: unknown) => {
+        console.error('Reçu de remboursement non imprimé :', err);
+        this.warnReceiptFailed();
+      }),
+      error: (err: Error) => {
+        console.error('Reçu de remboursement indisponible :', err.message);
+        this.warnReceiptFailed();
+      }
     });
+  }
+
+  /** Avertissement persistant : le dialogue est déjà fermé, seul le bandeau reste à l'écran. */
+  private warnReceiptFailed(): void {
+    this.snackBar.open(
+      this.translate.instant('refund.dialog.receiptFailed'),
+      this.translate.instant('common.close'),
+      { duration: 10000 });
   }
 
   /** Charge le plafond du versement. */

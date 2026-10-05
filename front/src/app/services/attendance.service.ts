@@ -7,6 +7,11 @@ import {
   JustificationAudit,
   JustificationUpdateResult
 } from '../models/Attendance/justification';
+import { AttendanceSubmissionError } from '../models/Attendance/rejected-absence';
+import { AttendanceCorrection, AttendanceState } from '../models/Attendance/attendance-correction';
+import { CorrectionReason, CorrectionReasonType, CorrectionResponse } from '../models/correction/correction';
+import { correctionErrorOf } from '../models/correction/correction-error';
+import { CorrectionStep } from './encashment.service';
 
 
 @Injectable({
@@ -34,24 +39,113 @@ export class AttendanceService {
     
     
    
+    /**
+     * Valide une feuille de présence. Un refus garde ce que le serveur y joint : pour des absences
+     * hors période (409 `ABSENCE_OUTSIDE_WINDOW`), chaque ligne refusée, que l'écran retire avant
+     * de revalider (exigence 7.5). Tout autre 409 était lu comme un doublon : il l'est encore
+     * quand le serveur ne dit rien de plus.
+     */
     submitAttendance(attendances: Attendance[]): Observable<Attendance[]> {
       return this.http.post<Attendance[]>(`${this.apiUrl}/bulk`, attendances).pipe(
-        catchError(error => {
-          if (error.status === 409) {
-            return throwError(() => new Error('Attendance already exists for one or more students in the same session.'));
-          }
-          return throwError(() => error);
-        })
+        catchError((error: HttpErrorResponse) => throwError(() => this.submissionError(error)))
       );
     }
 
-    deleteAttendanceBySessionId(sessionId: number): Observable<void> {
-      return this.http.delete<void>(`${this.apiUrl}/session/${sessionId}`);
+    private submissionError(error: HttpErrorResponse): AttendanceSubmissionError {
+      const body = error.error ?? {};
+      const serverMessage = typeof body.message === 'string' && body.message.trim().length > 0 ? body.message : null;
+      let message: string;
+      switch (error.status) {
+        case 409:
+          message = serverMessage ?? 'Une présence existe déjà pour un ou plusieurs étudiants de cette séance.';
+          break;
+        case 400:
+        case 404:
+          message = serverMessage ?? 'Feuille de présence refusée.';
+          break;
+        case 403:
+          message = 'Action réservée aux administrateurs';
+          break;
+        case 0:
+          message = 'Serveur injoignable';
+          break;
+        default:
+          message = 'La feuille de présence n\'a pas pu être enregistrée.';
+      }
+      return new AttendanceSubmissionError(message, error.status, body.errorCode ?? null,
+        Array.isArray(body.rejected) ? body.rejected : []);
     }
 
-    deactivateAttendanceBySessionId(sessionId: number): Observable<void> {
-      return this.http.patch<void>(`${this.apiUrl}/deactivate/${sessionId}`, { active: false });
-  }
+    // deleteAttendanceBySessionId et deactivateAttendanceBySessionId retirés (D.3) : leurs adresses
+    // n'existent plus côté serveur. Une feuille se désactive par la dévalidation de sa séance
+    // (SessionService.unvalidate), avec Motif, Aperçu et Trace.
+
+    // ------------------------------------------------------------------
+    // Corrections d'une séance validée (spec admin-corrections, D.1, D.2, D.7 ; exigences 8 et 9)
+    // ------------------------------------------------------------------
+
+    /** Motifs proposés pour corriger une présence, dans l'ordre d'affichage. */
+    getCorrectionReasons(): Observable<CorrectionReasonType[]> {
+      return this.http.get<CorrectionReasonType[]>(`${this.apiUrl}/correction-reasons`).pipe(
+        catchError((error: HttpErrorResponse) => this.correctionError(error))
+      );
+    }
+
+    /**
+     * Passe une présence à absent (justifié ou non), ou une absence à présent : Aperçu, puis
+     * confirmation. `POST /api/attendances/{id}/correct/{step}`.
+     */
+    correctAttendance(attendanceId: number, step: CorrectionStep, state: AttendanceState, reason: CorrectionReason,
+                      previewToken?: string): Observable<CorrectionResponse<AttendanceCorrection>> {
+      return this.http.post<CorrectionResponse<AttendanceCorrection>>(
+        `${this.apiUrl}/${attendanceId}/correct/${step}`, this.body(reason, previewToken, state)).pipe(
+        catchError((error: HttpErrorResponse) => this.correctionError(error))
+      );
+    }
+
+    /**
+     * Retire une ligne, par désactivation ; une présence de rattrapage, en rouvrant le droit de
+     * rattraper la séance qu'elle compensait. `POST /api/attendances/{id}/remove/{step}`.
+     */
+    removeAttendance(attendanceId: number, step: CorrectionStep, reason: CorrectionReason,
+                     previewToken?: string): Observable<CorrectionResponse<AttendanceCorrection>> {
+      return this.http.post<CorrectionResponse<AttendanceCorrection>>(
+        `${this.apiUrl}/${attendanceId}/remove/${step}`, this.body(reason, previewToken)).pipe(
+        catchError((error: HttpErrorResponse) => this.correctionError(error))
+      );
+    }
+
+    /**
+     * Ajoute la ligne manquante d'un élève inscrit au groupe ; un élève d'ailleurs relève d'une
+     * demande de rattrapage, le serveur le refuse en le disant. `POST /api/sessions/{id}/attendances/
+     * add/{step}`.
+     */
+    addAttendance(sessionId: number, studentId: number, step: CorrectionStep, state: AttendanceState,
+                  reason: CorrectionReason, previewToken?: string): Observable<CorrectionResponse<AttendanceCorrection>> {
+      return this.http.post<CorrectionResponse<AttendanceCorrection>>(
+        `${API_BASE_URL}/api/sessions/${sessionId}/attendances/add/${step}`,
+        { studentId, ...this.body(reason, previewToken, state) }).pipe(
+        catchError((error: HttpErrorResponse) => this.correctionError(error))
+      );
+    }
+
+    private body(reason: CorrectionReason, previewToken?: string, state?: AttendanceState): Record<string, unknown> {
+      return {
+        ...(state ? { present: state.present, justified: state.justified } : {}),
+        reasonType: reason.type,
+        reasonText: reason.text ?? null,
+        previewToken: previewToken ?? null
+      };
+    }
+
+    /** Un refus garde son motif et, pour un Aperçu périmé, le nouvel Aperçu. */
+    private correctionError(error: HttpErrorResponse): Observable<never> {
+      console.error('Attendance correction error:', error);
+      return throwError(() => correctionErrorOf(error, {
+        notFound: 'Présence introuvable',
+        fallback: 'La correction de la présence n\'a pas pu aboutir'
+      }));
+    }
 
 
   getAttendanceByStudentAndSeries(studentId: number, sessionSeriesId : number): Observable<Attendance[]> {

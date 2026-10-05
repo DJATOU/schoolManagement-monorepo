@@ -1,0 +1,87 @@
+<h2 mat-dialog-title>{{ data.titleKey | translate }}</h2>
+
+<mat-dialog-content class="cd-content">
+  <p class="cd-subject">{{ data.subject }}</p>
+
+  <form [formGroup]="form" class="cd-reason" (ngSubmit)="requestPreview()">
+    <mat-form-field appearance="outline" class="cd-field">
+      <mat-label>{{ 'correction.dialog.reason' | translate }}</mat-label>
+      <mat-select formControlName="reasonType" required>
+        <mat-option *ngFor="let type of data.reasons" [value]="type">{{ reasonKey(type) | translate }}</mat-option>
+      </mat-select>
+      <mat-error>{{ 'correction.dialog.reasonRequired' | translate }}</mat-error>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="cd-field">
+      <mat-label>{{ (otherSelected ? 'correction.dialog.reasonTextRequired' : 'correction.dialog.reasonText') | translate }}</mat-label>
+      <textarea matInput formControlName="reasonText" rows="2" [attr.maxlength]="maxReasonTextLength"
+        [required]="otherSelected"></textarea>
+      <mat-hint align="end">{{ (form.get('reasonText')!.value || '').length }} / {{ maxReasonTextLength }}</mat-hint>
+    </mat-form-field>
+  </form>
+
+  <div class="cd-busy" *ngIf="busy">
+    <mat-spinner diameter="28"></mat-spinner>
+  </div>
+
+  <div class="cd-error" role="alert" *ngIf="errorMessage">
+    <mat-icon aria-hidden="true">error_outline</mat-icon>
+    <div>
+      <p>{{ errorMessage }}</p>
+      <ul *ngIf="blockingRefunds.length > 0">
+        <li *ngFor="let refund of blockingRefunds">
+          {{ 'correction.dialog.blockingRefund' | translate: {
+               number: refund.refundNumber,
+               date: (refund.refundDate | date:'dd/MM/yyyy'),
+               amount: (refund.amount | number:'1.2-2'),
+               series: refund.seriesName
+             } }}
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="cd-stale" role="alert" *ngIf="staleNotice">
+    <mat-icon aria-hidden="true">update</mat-icon>
+    <p>{{ 'correction.dialog.stale' | translate }}</p>
+  </div>
+
+  <section *ngIf="preview" aria-live="polite">
+    <h3 class="cd-preview-title">{{ 'correction.dialog.previewTitle' | translate }}</h3>
+    <p class="cd-mark-hint" *ngIf="hasMarkable">
+      <mat-icon aria-hidden="true">how_to_reg</mat-icon>
+      {{ 'correction.dialog.mark.hint' | translate }}
+    </p>
+    <app-correction-preview [preview]="preview" [effectAction]="markTemplate"></app-correction-preview>
+  </section>
+</mat-dialog-content>
+
+<!-- Choix proposé à côté d'une séance que l'Aperçu désigne (exigence 5.7). -->
+<ng-template #markTemplate let-effect>
+  <div class="cd-mark" *ngIf="markable(effect)">
+    <mat-form-field appearance="outline" subscriptSizing="dynamic" class="cd-mark-field">
+      <mat-label>{{ 'correction.dialog.mark.label' | translate }}</mat-label>
+      <mat-select [value]="markOf(effect.sessionId)" [disabled]="busy"
+        (selectionChange)="setMark(effect.sessionId, $event.value)">
+        <mat-option value="none">{{ 'correction.dialog.mark.none' | translate }}</mat-option>
+        <mat-option value="present">{{ 'correction.dialog.mark.present' | translate }}</mat-option>
+        <mat-option value="absent">{{ 'correction.dialog.mark.absent' | translate }}</mat-option>
+      </mat-select>
+    </mat-form-field>
+  </div>
+</ng-template>
+
+<mat-dialog-actions align="end">
+  <button mat-button type="button" (click)="cancel()">{{ 'common.cancel' | translate }}</button>
+  <button mat-stroked-button type="button" *ngIf="data.allowBack" (click)="back()" [disabled]="busy">
+    {{ 'correction.dialog.back' | translate }}
+  </button>
+  <button mat-stroked-button type="button" class="cd-preview-button" *ngIf="!previewToken"
+    (click)="requestPreview()" [disabled]="busy || !reasonComplete">
+    {{ 'correction.dialog.preview' | translate }}
+  </button>
+  <button mat-flat-button color="warn" type="button" class="cd-confirm-button" *ngIf="previewToken"
+    (click)="confirm()" [disabled]="busy">
+    {{ 'correction.dialog.confirm' | translate }}
+  </button>
+</mat-dialog-actions>

@@ -58,15 +58,16 @@
         >
           <mat-icon>phone</mat-icon>
         </button>
+        <!-- Départ daté, motivé et aperçu avant confirmation (exigence 6.1) : plus de retrait sec. -->
         <button
           *ngIf="showDeleteButton"
           mat-icon-button
-          matTooltip="Supprimer l'étudiant du groupe"
+          matTooltip="Enregistrer le départ du groupe"
           (click)="onDeleteStudent($event)"
-          aria-label="Désactiver"
+          aria-label="Enregistrer le départ du groupe"
           class="disable-button"
         >
-          <mat-icon>block</mat-icon>
+          <mat-icon>logout</mat-icon>
         </button>
       </div>
     </div>

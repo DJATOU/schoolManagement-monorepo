@@ -16,6 +16,7 @@ import { StudentFullHistoryDTO } from '../../../student/domain/StudentFullHistor
 import { GroupHistoryDTO } from '../../../../models/group/GroupHistoryDTO';
 import { SeriesHistoryDTO } from '../../../../models/sessionSerie/SeriesHistoryDTO';
 import { resolveLocale } from '../../../../shared/locale';
+import { AmountPipe } from '../../../../pipes/amount.pipe';
 import {
   countBillableSessions,
   countExcludedSessions,
@@ -89,7 +90,8 @@ interface SessionPaymentRow {
     MatProgressSpinnerModule,
     MatTableModule,
     MatIconModule,
-    TranslateModule
+    TranslateModule,
+    AmountPipe
   ]
 })
 export class PaymentHistoryDialogComponent implements OnInit {
@@ -225,14 +227,21 @@ export class PaymentHistoryDialogComponent implements OnInit {
   }
 
   /**
-   * Statut de la série : le serveur renvoie FULL ou PARTIAL. « Partiel » sans aucun
-   * versement se lit plus clairement « non payé ».
+   * Statut de la série, tel que le serveur l'a jugé sur le versé net : FULL, UNPAID ou PARTIAL.
+   *
+   * <p>Le dialogue déduisait auparavant « non payé » lui-même, à partir d'un versé brut : une série
+   * entièrement remboursée restait « partiellement payée ». Le serveur porte désormais ce verdict,
+   * avec la même définition du versé que le devis.</p>
    */
   private resolveSeriesStatus(series: SeriesHistoryDTO): DisplayStatus {
-    if (series.paymentStatus === 'FULL') {
-      return 'paid';
+    switch (series.paymentStatus) {
+      case 'FULL':
+        return 'paid';
+      case 'UNPAID':
+        return 'unpaid';
+      default:
+        return 'partiallyPaid';
     }
-    return (series.totalAmountPaid ?? 0) > 0 ? 'partiallyPaid' : 'unpaid';
   }
 
   /** Traduit un code de séance du serveur (PAID / PARTIAL / UNPAID) en statut affichable. */
@@ -459,6 +468,12 @@ export class PaymentHistoryDialogComponent implements OnInit {
             }
           ]
         },
+        // Remboursé : le versé imprimé est net, cette ligne dit pourquoi il est inférieur à ce
+        // que la famille a remis.
+        ...(this.seriesRefunded > 0 ? [{
+          text: `${this.translate.instant('payment.history.labels.refunded')} : `
+            + this.formatAmount(this.seriesRefunded)
+        }] : []),
         // Trop-perçu : sans cette ligne, le versement affiché en tête ne correspondait pas
         // à la somme des montants affectés dans le tableau des séances.
         ...(this.seriesOverpaid > 0 ? [{

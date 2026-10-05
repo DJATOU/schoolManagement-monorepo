@@ -1,7 +1,7 @@
 package com.school.management.controller;
 
+import com.school.management.dto.EnrolmentDTO;
 import com.school.management.dto.GroupDTO;
-import com.school.management.dto.StudentDTO;
 import com.school.management.dto.StudentGroupDTO;
 import com.school.management.service.StudentGroupService;
 import com.school.management.service.exception.GroupAlreadyAssociatedException;
@@ -9,12 +9,10 @@ import jakarta.persistence.EntityNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -48,20 +46,10 @@ public class StudentGroupController {
         return handleGroupAssociation(() -> studentGroupService.manageStudentGroupAssociations(studentGroupDto));
     }
 
-    @GetMapping("/{groupId}/students")
-    public ResponseEntity<List<StudentDTO>> getStudentsOfGroup(@PathVariable Long groupId) {
-        List<StudentDTO> students = studentGroupService.getStudentsByGroupId(groupId);
-        return ResponseEntity.ok(students);
-    }
-
-    @GetMapping("/{groupId}/studentsForSession")
-    public ResponseEntity<List<StudentDTO>> getStudentsForSession(
-            @PathVariable Long groupId,
-            @RequestParam("date") @DateTimeFormat(iso=DateTimeFormat.ISO.DATE_TIME) Date sessionDate) {
-
-        List<StudentDTO> students = studentGroupService.getStudentsForSession(groupId, sessionDate);
-        return ResponseEntity.ok(students);
-    }
+    // La Feuille_Appel d'une Séance est servie par GET /api/sessions/{id}/roll-call. Les deux
+    // lectures qui la précédaient ici ont été retirées : « /{groupId}/studentsForSession »
+    // ignorait les inscriptions closes et comparait des instants, et « /{groupId}/students »,
+    // toutes inscriptions confondues sans fenêtre, ne servait qu'à compléter une feuille vide.
 
 
     /**
@@ -82,6 +70,19 @@ public class StudentGroupController {
         return ResponseEntity.ok(groups);
     }
 
+    /**
+     * Inscriptions d'un étudiant, ouvertes et closes, avec arrivée et départ : ce que la fiche élève
+     * affiche et permet de corriger (spec admin-corrections, exigences 5 et 6).
+     *
+     * @param studentId    identifiant de l'étudiant
+     * @param schoolYearId année scolaire à filtrer (optionnel)
+     */
+    @GetMapping("/{studentId}/enrolments")
+    public ResponseEntity<List<EnrolmentDTO>> getEnrolmentsOfStudent(@PathVariable Long studentId,
+            @RequestParam(required = false) Long schoolYearId) {
+        return ResponseEntity.ok(studentGroupService.getEnrolmentsOfStudent(studentId, schoolYearId));
+    }
+
     private ResponseEntity<Map<String, Object>> handleGroupAssociation(Runnable associationTask) {
         try {
             associationTask.run();
@@ -99,21 +100,13 @@ public class StudentGroupController {
             Map<String, Object> response = new HashMap<>();
             response.put(ERROR_MESSAGE, e.getMessage());
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
-        } catch (Exception e) {
-            logger.error("Exception: {}", e.getMessage());
-            Map<String, Object> response = new HashMap<>();
-            response.put(ERROR_MESSAGE, "Error during operation: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
+        // Les autres refus (niveau, année close, arrivée hors de l'année, réinscription qui
+        // recouvre un départ) remontent au gestionnaire global avec leur statut : les intercepter
+        // ici les rendait tous en 500, comme une panne.
     }
 
-    @DeleteMapping("/{groupId}/students/{studentId}")
-    public ResponseEntity<Map<String, Object>> removeStudentFromGroup(@PathVariable Long groupId, @PathVariable Long studentId) {
-        logger.info("Received request to remove student {} from group {}", studentId, groupId);
-        studentGroupService.removeStudentFromGroup(groupId, studentId);
-        Map<String, Object> response = new HashMap<>();
-        response.put("message", "Student removed from group successfully");
-        return ResponseEntity.ok(response);
-    }
-
+    // « DELETE /{groupId}/students/{studentId} » a été retiré (C.8) : il clôturait l'inscription au
+    // jour même, sans Motif ni Aperçu. Un départ passe par POST /api/enrolments/{id}/departure/…
+    // (exigence 6.1).
 }

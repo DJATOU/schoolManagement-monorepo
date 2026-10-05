@@ -60,31 +60,31 @@
       <!-- Coût au prorata : le total d'une série ordinaire porte les seules séances
            facturables, il est nommé comme tel et accompagné de leur décompte. -->
       <p><strong>{{ (isCatchUpSeries ? 'payment.history.labels.totalCatchUp' : 'payment.history.labels.seriesCost') | translate }} :</strong>
-        {{ seriesTotal | number:'1.2-2' }} {{ currencySuffix }}</p>
+        {{ seriesTotal | amount }} {{ currencySuffix }}</p>
       <!-- Le calcul énoncé en clair remplace le mot « prorata » : « 2 séances × 6 000 DA =
            12 000 DA ». Replié sur le seul décompte si le prix unitaire n'est pas fourni. -->
       <p *ngIf="unitPriceNet !== null">
         {{ 'studentHistory.amounts.dueBreakdown' | translate: {
              count: billableSessions,
-             price: (unitPriceNet | number:'1.2-2'),
-             total: (seriesTotal | number:'1.2-2')
+             price: (unitPriceNet | amount),
+             total: (seriesTotal | amount)
            } }}
       </p>
       <p *ngIf="unitPriceNet === null"><strong>{{ 'payment.history.labels.billableSessions' | translate }} :</strong>
         {{ billableSessions }}</p>
       <p><strong>{{ 'payment.history.labels.paid' | translate }} :</strong>
-        {{ seriesPaid | number:'1.2-2' }} {{ currencySuffix }}</p>
+        {{ seriesPaid | amount }} {{ currencySuffix }}</p>
       <p *ngIf="seriesOverpaid > 0"><strong>{{ 'payment.history.labels.allocated' | translate }} :</strong>
-        {{ seriesAllocated | number:'1.2-2' }} {{ currencySuffix }}</p>
+        {{ seriesAllocated | amount }} {{ currencySuffix }}</p>
       <p *ngIf="seriesOverpaid > 0" class="ph-overpaid">
         <strong>{{ 'payment.history.labels.overpaid' | translate }} :</strong>
-        {{ seriesOverpaid | number:'1.2-2' }} {{ currencySuffix }}
+        {{ seriesOverpaid | amount }} {{ currencySuffix }}
         <span class="ph-overpaid-hint">{{ 'payment.history.overpaidHint' | translate }}</span>
       </p>
       <p><strong>{{ 'payment.history.labels.remaining' | translate }} :</strong>
-        {{ seriesRemaining | number:'1.2-2' }} {{ currencySuffix }}</p>
+        {{ seriesRemaining | amount }} {{ currencySuffix }}</p>
       <p *ngIf="seriesRefunded > 0"><strong>{{ 'payment.history.labels.refunded' | translate }} :</strong>
-        {{ seriesRefunded | number:'1.2-2' }} {{ currencySuffix }}</p>
+        {{ seriesRefunded | amount }} {{ currencySuffix }}</p>
       <!-- Séances écartées : visibles dans le tableau, mais hors dette. La note le dit en
            mots, la teinte grise seule ne le dirait pas (exigences 11.3, 11.4). -->
       <p *ngIf="excludedSessions > 0" class="ph-excluded-note">
@@ -139,7 +139,7 @@
           'paid': !payment.pendingDecision && !payment.excluded && payment.status === 'paid',
           'partially-paid': !payment.pendingDecision && !payment.excluded && payment.status === 'partiallyPaid',
           'unpaid': !payment.pendingDecision && !payment.excluded && payment.attendanceRecorded && payment.status === 'unpaid'
-        }"> {{ payment.amountPaid | number:'1.2-2' }} {{ currencySuffix }} </td>
+        }"> {{ payment.amountPaid | amount }} {{ currencySuffix }} </td>
       </ng-container>
 
       <ng-container matColumnDef="paymentStatus">

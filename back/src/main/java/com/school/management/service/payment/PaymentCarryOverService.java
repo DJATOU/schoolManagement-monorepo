@@ -1,5 +1,6 @@
 package com.school.management.service.payment;
 
+import com.school.management.persistance.EncashmentAllocationEntity;
 import com.school.management.persistance.PaymentCarryOverEntity;
 import com.school.management.persistance.PaymentEntity;
 import com.school.management.persistance.SessionSeriesEntity;
@@ -68,10 +69,13 @@ public class PaymentCarryOverService {
      * @param targetPayment     la ligne de paiement de la série destination créditée
      * @param amount            le montant reporté, strictement positif
      * @param originPaymentDate la date du versement d'origine
+     * @param allocation        l'Imputation reportée dont cette trace est le détail : annuler
+     *                          l'Encaissement désactive la trace avec elle (spec admin-corrections, D3)
      * @return la trace enregistrée
      * @throws CustomServiceException 400 si un argument est absent, si le montant est nul ou
-     *                                négatif, ou si source et destination sont la même série ;
-     *                                404 si l'étudiant ou une série est introuvable
+     *                                négatif, si source et destination sont la même série, ou si
+     *                                l'Imputation ne correspond pas au report ; 404 si l'étudiant
+     *                                ou une série est introuvable
      */
     @Transactional
     public PaymentCarryOverEntity record(Long studentId,
@@ -79,13 +83,15 @@ public class PaymentCarryOverService {
                                          Long targetSeriesId,
                                          PaymentEntity targetPayment,
                                          BigDecimal amount,
-                                         Date originPaymentDate) {
+                                         Date originPaymentDate,
+                                         EncashmentAllocationEntity allocation) {
         requirePresent(studentId, "l'identifiant de l'étudiant");
         requirePresent(sourceSeriesId, "l'identifiant de la série source");
         requirePresent(targetSeriesId, "l'identifiant de la série destination");
         requirePresent(targetPayment, "la ligne de paiement créditée");
         requirePresent(originPaymentDate, "la date du versement d'origine");
         requirePresent(amount, "le montant reporté");
+        requirePresent(allocation, "l'imputation reportée");
 
         // Un report vers la série visée à la saisie n'est pas un report : ce serait une
         // imputation directe, et l'historique présenterait « série A vers série A ».
@@ -105,6 +111,21 @@ public class PaymentCarryOverService {
                     HttpStatus.BAD_REQUEST);
         }
 
+        // La trace est le détail d'une Imputation reportée : elle doit en porter le montant, la
+        // série et le caractère de report, sans quoi annuler l'Encaissement désactiverait une
+        // trace qui ne lui correspond pas.
+        boolean matchesAllocation = Boolean.TRUE.equals(allocation.getCarriedOver())
+                && allocation.getSeries() != null
+                && targetSeriesId.equals(allocation.getSeries().getId())
+                && allocation.getAmount() != null
+                && allocation.getAmount().compareTo(normalizedAmount) == 0;
+        if (!matchesAllocation) {
+            throw new CustomServiceException(
+                    "Report incohérent avec son imputation : " + normalizedAmount.toPlainString()
+                            + " DA vers la série " + targetSeriesId + ".",
+                    HttpStatus.BAD_REQUEST);
+        }
+
         StudentEntity student = studentRepository.findById(studentId)
                 .orElseThrow(() -> notFound("Étudiant", studentId));
         SessionSeriesEntity sourceSeries = sessionSeriesRepository.findById(sourceSeriesId)
@@ -119,6 +140,7 @@ public class PaymentCarryOverService {
                 .targetPayment(targetPayment)
                 .amount(normalizedAmount)
                 .originPaymentDate(originPaymentDate)
+                .encashmentAllocation(allocation)
                 .build();
 
         PaymentCarryOverEntity saved = paymentCarryOverRepository.save(carryOver);

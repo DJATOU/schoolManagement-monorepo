@@ -21,8 +21,10 @@ import java.util.List;
  * @param amountAllocated  la part imputée sur la série visée, nulle si celle-ci était soldée
  * @param amountCarriedOver la somme des parts reportées, nulle en l'absence de report
  * @param carryOvers       le détail des reports, par identifiant de série croissant
- * @param payment          la ligne de paiement principale créditée, pour compatibilité avec les
- *                         écrans qui lisent la date d'encaissement faisant foi
+ * @param payment          la ligne de paiement principale créditée : son {@code amountPaid} est le
+ *                         <strong>cumul</strong> de la série, pas le versement du jour
+ * @param encashment       l'Encaissement enregistré : numéro de reçu, date, heure et auteur à
+ *                         imprimer, fixés par le serveur (spec admin-corrections, exigence 1.2)
  */
 public record PaymentAllocationResultDTO(
         Long studentId,
@@ -32,7 +34,8 @@ public record PaymentAllocationResultDTO(
         BigDecimal amountAllocated,
         BigDecimal amountCarriedOver,
         List<CarriedOverAmountDTO> carryOvers,
-        PaymentDTO payment) {
+        PaymentDTO payment,
+        EncashmentDTO encashment) {
 
     /**
      * Une part reportée et sa série destinataire.

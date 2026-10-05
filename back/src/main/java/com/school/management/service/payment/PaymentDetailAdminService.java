@@ -1,54 +1,49 @@
 package com.school.management.service.payment;
 
 import com.school.management.dto.PaymentDetailSearchDTO;
-import com.school.management.dto.PaymentDetailUpdateDTO;
+import com.school.management.persistance.EncashmentAllocationEntity;
 import com.school.management.persistance.PaymentDetailEntity;
-import com.school.management.persistance.PaymentEntity;
 import com.school.management.repository.PaymentDetailRepository;
-import com.school.management.repository.PaymentRepository;
-import com.school.management.service.ReadOnlyYearGuard;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.school.management.service.exception.CustomServiceException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 
+/**
+ * Consultation des lignes de ventilation pour l'écran « Gestion des paiements ».
+ *
+ * <h2>Une ligne ne se corrige plus à l'unité (spec admin-corrections, A.6)</h2>
+ * Cet écran permettait de modifier le montant d'une ligne, de la désactiver, de la supprimer
+ * définitivement ou de la réactiver. Depuis que l'argent reçu est porté par l'Encaissement, une
+ * ligne n'est plus que la part, sur une séance, d'un versement enregistré tel qu'il a eu lieu :
+ * <ul>
+ *   <li>la modifier ne corrige pas le versement — le reçu, le cumul et le dû restent ceux de
+ *       l'Encaissement ;</li>
+ *   <li>mais elle fait diverger les recettes, qui somment la ventilation, de l'argent au
+ *       registre : deux écrans affichent deux montants pour le même versement.</li>
+ * </ul>
+ * Ces actions sont donc refusées, avec le reçu à corriger. Un versement se corrige par
+ * l'Annulation ou le Remplacement de son Encaissement (lot B), qui réécrit sa ventilation avec
+ * lui. L'historique d'audit des lignes reste consultable.
+ */
 @Service
 public class PaymentDetailAdminService {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(PaymentDetailAdminService.class);
-
-    private static final int MONEY_SCALE = 2;
-    private static final RoundingMode MONEY_ROUNDING = RoundingMode.HALF_UP;
-
     private final PaymentDetailRepository paymentDetailRepository;
-    private final PaymentRepository paymentRepository;
-    private final PaymentDetailAuditService paymentDetailAuditService;
-    private final ReadOnlyYearGuard readOnlyYearGuard;
-    private final PaymentCostResolver paymentCostResolver;
+    private final PaymentLineRefundAnnotator refundAnnotator;
 
     @Autowired
     public PaymentDetailAdminService(PaymentDetailRepository paymentDetailRepository,
-            PaymentRepository paymentRepository,
-            PaymentDetailAuditService paymentDetailAuditService,
-            ReadOnlyYearGuard readOnlyYearGuard,
-            PaymentCostResolver paymentCostResolver) {
+                                     PaymentLineRefundAnnotator refundAnnotator) {
         this.paymentDetailRepository = paymentDetailRepository;
-        this.paymentRepository = paymentRepository;
-        this.paymentDetailAuditService = paymentDetailAuditService;
-        this.readOnlyYearGuard = readOnlyYearGuard;
-        this.paymentCostResolver = paymentCostResolver;
+        this.refundAnnotator = refundAnnotator;
     }
 
     @Transactional(readOnly = true)
@@ -68,6 +63,9 @@ public class PaymentDetailAdminService {
      * Uses DTO projection to include student, group, series, and session
      * information
      * Filters by dateCreation (createdAt) instead of paymentDate
+     *
+     * <p>Chaque ligne est ensuite annotée de sa part remboursée et de son montant net, et le statut
+     * d'un versement remboursé est rendu sur le net ({@link PaymentLineRefundAnnotator}).</p>
      */
     @Transactional(readOnly = true)
     public Page<PaymentDetailSearchDTO> searchPaymentDetailsWithCompleteData(Long studentId,
@@ -79,9 +77,11 @@ public class PaymentDetailAdminService {
             Date dateTo,
             Long levelId,
             Pageable pageable) {
-        return paymentDetailRepository.searchPaymentDetailsWithCompleteData(
+        Page<PaymentDetailSearchDTO> page = paymentDetailRepository.searchPaymentDetailsWithCompleteData(
                 studentId, groupId, sessionSeriesId, sessionId, active, dateFrom, endOfDay(dateTo),
                 levelId, pageable);
+        refundAnnotator.annotate(page.getContent());
+        return page;
     }
 
     /**
@@ -105,178 +105,37 @@ public class PaymentDetailAdminService {
 
     @Transactional(readOnly = true)
     public PaymentDetailEntity getPaymentDetail(Long id) {
+        return findDetail(id);
+    }
+
+    /**
+     * Refuse toute correction d'une ligne de ventilation — montant, désactivation, suppression,
+     * réactivation — en nommant le reçu à corriger à la place.
+     *
+     * @throws CustomServiceException 404 si la ligne est introuvable, 409 sinon
+     */
+    @Transactional(readOnly = true)
+    public void refuseLineCorrection(Long id) {
+        PaymentDetailEntity detail = findDetail(id);
+        String receipt = receiptOf(detail);
+        throw new CustomServiceException("Une ligne par séance ne se corrige pas à l'unité : elle est la part du "
+                + "reçu " + receipt + ", enregistré tel qu'il a été encaissé. Pour corriger le montant ou "
+                + "retirer ce versement, annulez ou corrigez le reçu " + receipt + " depuis la fiche de l'élève : "
+                + "sa répartition par séance suivra.",
+                HttpStatus.CONFLICT);
+    }
+
+    private PaymentDetailEntity findDetail(Long id) {
         return paymentDetailRepository.findById(Objects.requireNonNull(id))
-                .orElseThrow(() -> new RuntimeException("Payment detail not found with id: " + id));
+                .orElseThrow(() -> new CustomServiceException(
+                        "Ligne de paiement introuvable : " + id, HttpStatus.NOT_FOUND));
     }
 
-    @Transactional
-    public PaymentDetailEntity updatePaymentDetail(Long id, PaymentDetailUpdateDTO updateDTO, String adminName) {
-        validateReason(updateDTO.getReason());
-
-        PaymentDetailEntity detail = paymentDetailRepository.findById(Objects.requireNonNull(id))
-                .orElseThrow(() -> new RuntimeException("Payment detail not found with id: " + id));
-        assertYearMutable(detail);
-
-        String oldValue = buildValueString(detail);
-
-        if (updateDTO.getAmount() != null) {
-            detail.setAmountPaid(updateDTO.getAmount());
+    private static String receiptOf(PaymentDetailEntity detail) {
+        EncashmentAllocationEntity allocation = detail.getEncashmentAllocation();
+        if (allocation == null || allocation.getEncashment() == null) {
+            return "d'origine";
         }
-        if (updateDTO.getActive() != null) {
-            detail.setActive(updateDTO.getActive());
-        }
-
-        String newValue = buildValueString(detail);
-        paymentDetailRepository.save(Objects.requireNonNull(detail));
-
-        paymentDetailAuditService.logAction(id, "MODIFIED", adminName, oldValue, newValue, updateDTO.getReason());
-        recalculatePayment(detail.getPayment().getId());
-
-        return detail;
-    }
-
-    @Transactional
-    public void deletePaymentDetail(Long id, String reason, String adminName) {
-        validateReason(reason);
-
-        PaymentDetailEntity detail = paymentDetailRepository.findById(Objects.requireNonNull(id))
-                .orElseThrow(() -> new RuntimeException("Payment detail not found with id: " + id));
-        assertYearMutable(detail);
-
-        String oldValue = buildValueString(detail);
-        detail.setActive(false);
-        detail.setPermanentlyDeleted(true); // SUPPRESSION DÉFINITIVE - irréversible
-        paymentDetailRepository.save(detail);
-
-        paymentDetailAuditService.logAction(id, "DELETED", adminName, oldValue, buildValueString(detail), reason);
-        recalculatePayment(detail.getPayment().getId());
-    }
-
-    @Transactional
-    public PaymentDetailEntity reactivatePaymentDetail(Long id, String reason, String adminName) {
-        validateReason(reason);
-
-        PaymentDetailEntity detail = paymentDetailRepository.findById(Objects.requireNonNull(id))
-                .orElseThrow(() -> new RuntimeException("Payment detail not found with id: " + id));
-        assertYearMutable(detail);
-
-        if (detail.getActive() != null && detail.getActive()) {
-            throw new IllegalStateException("Payment detail is already active");
-        }
-
-        // IMPORTANT: Empêcher la réactivation des suppressions définitives
-        if (detail.getPermanentlyDeleted() != null && detail.getPermanentlyDeleted()) {
-            throw new IllegalStateException(
-                    "Cannot reactivate a permanently deleted payment detail. This deletion is irreversible.");
-        }
-
-        String oldValue = buildValueString(detail);
-        detail.setActive(true);
-        paymentDetailRepository.save(detail);
-
-        paymentDetailAuditService.logAction(id, "REACTIVATED", adminName, oldValue, buildValueString(detail), reason);
-        recalculatePayment(detail.getPayment().getId());
-
-        return detail;
-    }
-
-    @Transactional
-    public void recalculatePayment(Long paymentId) {
-        PaymentEntity payment = paymentRepository.findById(Objects.requireNonNull(paymentId))
-                .orElseThrow(() -> new RuntimeException("Payment not found with id: " + paymentId));
-
-        // Récupérer TOUS les PaymentDetails (actifs et inactifs)
-        List<PaymentDetailEntity> allDetails = paymentDetailRepository.findByPaymentId(paymentId);
-
-        // Vérifier si tous les PaymentDetails ont été définitivement supprimés
-        boolean allPermanentlyDeleted = !allDetails.isEmpty() &&
-                allDetails.stream()
-                        .allMatch(detail -> detail.getPermanentlyDeleted() != null && detail.getPermanentlyDeleted());
-
-        // Calculer le total payé (uniquement les actifs) en BigDecimal (audit H4).
-        BigDecimal totalPaid = allDetails.stream()
-                .filter(detail -> detail.getActive() != null && detail.getActive())
-                .map(PaymentDetailEntity::getAmountPaid)
-                .filter(Objects::nonNull)
-                .map(BigDecimal::valueOf)
-                .reduce(BigDecimal.ZERO, BigDecimal::add)
-                .setScale(MONEY_SCALE, MONEY_ROUNDING);
-
-        payment.setAmountPaid(totalPaid.doubleValue());
-
-        Optional<BigDecimal> monthTotalCost = resolveMonthTotalCost(payment);
-
-        // LOGIQUE DE STATUT (cf. business-rules.md) :
-        // 1. Tous les détails définitivement supprimés → CANCELLED ;
-        // 2. coût du mois connu : versé >= coût → COMPLETED (couvre le coût nul d'un
-        //    étudiant exempté), versé nul → PENDING, sinon IN_PROGRESS ;
-        // 3. coût inconnu (série absente, résolution impossible) : on ne prétend jamais
-        //    COMPLETED.
-        if (allPermanentlyDeleted) {
-            payment.setStatus("CANCELLED");
-        } else if (monthTotalCost.isPresent() && totalPaid.compareTo(monthTotalCost.get()) >= 0) {
-            payment.setStatus("COMPLETED");
-        } else if (totalPaid.signum() <= 0) {
-            payment.setStatus("PENDING");
-        } else {
-            payment.setStatus("IN_PROGRESS");
-        }
-
-        paymentRepository.save(payment);
-    }
-
-    /**
-     * Coût total du mois pour le paiement, délégué au {@link PaymentCostResolver}.
-     *
-     * <p>L'ancien calcul local ({@code prix × totalSessions}, avec repli silencieux sur
-     * {@code sessions = 1}) ignorait les réductions et divergeait de la source de vérité
-     * monétaire : un étudiant exempté restait éternellement « en cours », et un paiement
-     * mal rattaché à une série passait « soldé » dès le premier versement.</p>
-     *
-     * @return le coût du mois, ou {@link Optional#empty()} si l'information est
-     *         indisponible (paiement sans étudiant ou sans série, série introuvable)
-     */
-    private Optional<BigDecimal> resolveMonthTotalCost(PaymentEntity payment) {
-        if (payment.getStudent() == null || payment.getSessionSeries() == null) {
-            return Optional.empty();
-        }
-
-        try {
-            return Optional.of(paymentCostResolver
-                    .resolve(payment.getStudent().getId(), payment.getSessionSeries().getId())
-                    .monthTotalCost());
-        } catch (RuntimeException e) {
-            LOGGER.warn("Coût du mois non résolu pour le paiement {} : {}", payment.getId(), e.getMessage());
-            return Optional.empty();
-        }
-    }
-
-    /**
-     * Refuse toute écriture sur un détail de paiement rattaché à une année scolaire
-     * close (exigence 9.2). L'année est résolue via la séance, avec repli sur le groupe
-     * du paiement.
-     */
-    private void assertYearMutable(PaymentDetailEntity detail) {
-        if (detail.getSession() != null) {
-            readOnlyYearGuard.assertSessionMutable(detail.getSession());
-            return;
-        }
-        readOnlyYearGuard.assertGroupMutable(detail.getPayment() == null ? null : detail.getPayment().getGroup());
-    }
-
-    private void validateReason(String reason) {
-        if (!StringUtils.hasText(reason)) {
-            throw new IllegalArgumentException("Reason is required for audit logging.");
-        }
-    }
-
-    private String buildValueString(PaymentDetailEntity detail) {
-        return "PaymentDetail{" +
-                "id=" + detail.getId() +
-                ", amountPaid=" + detail.getAmountPaid() +
-                ", active=" + detail.getActive() +
-                ", sessionId=" + (detail.getSession() != null ? detail.getSession().getId() : null) +
-                ", paymentId=" + (detail.getPayment() != null ? detail.getPayment().getId() : null) +
-                '}';
+        return allocation.getEncashment().getReceiptNumber();
     }
 }

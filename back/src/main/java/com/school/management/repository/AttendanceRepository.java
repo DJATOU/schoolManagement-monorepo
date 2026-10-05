@@ -133,8 +133,6 @@ public interface AttendanceRepository extends JpaRepository<AttendanceEntity, Lo
     @Query("SELECT a FROM AttendanceEntity a WHERE a.session.id = :sessionId")
     List<AttendanceEntity> findBySessionId(@Param("sessionId") Long sessionId);
 
-    void deleteBySessionId(Long sessionId);
-
     List<AttendanceEntity> findBySessionIdAndActiveTrue(Long sessionId);
 
     List<AttendanceEntity> findByStudentIdAndSessionSeriesIdAndActiveTrue(Long studentId, Long sessionSeriesId);
@@ -144,6 +142,12 @@ public interface AttendanceRepository extends JpaRepository<AttendanceEntity, Lo
     boolean existsByGroupIdAndStudentIdAndIsCatchUp(Long id, Long studentId, boolean b);
 
     List<AttendanceEntity> findByStudentIdAndActiveTrue(Long studentId);
+
+    /**
+     * Toutes les présences d'un élève, retirées comprises : une trace de justification ou de
+     * rattrapage survit à la désactivation de sa présence, et le Journal doit encore la nommer.
+     */
+    List<AttendanceEntity> findByStudentId(Long studentId);
 
     /**
      * Liste les absences actives d'un étudiant (fiches {@code isPresent = false}),

@@ -274,9 +274,13 @@ class CatchUpRoutingOnBulkAttendancePropertyTest {
                                             GroupRepository groupRepository,
                                             StudentGroupRepository studentGroupRepository,
                                             CatchUpRoutingService catchUpRoutingService) {
+            // Le garde de fenêtre est le vrai : les lignes soumises sont des présences, qu'il admet.
+            // Le garde d'année est simulé : la propriété porte sur le classement des rattrapages.
             return new AttendanceService(attendanceRepository, (AttendanceMapper) null,
                     studentRepository, sessionRepository, sessionSeriesRepository, groupRepository,
-                    studentGroupRepository, catchUpRoutingService);
+                    studentGroupRepository, catchUpRoutingService,
+                    new com.school.management.service.session.AbsenceWindowGuard(studentGroupRepository),
+                    org.mockito.Mockito.mock(ReadOnlyYearGuard.class));
         }
     }
 }

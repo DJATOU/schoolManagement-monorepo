@@ -167,8 +167,10 @@ export class SeriesDetailComponent implements OnInit {
     });
 
     dialogRef.afterClosed().subscribe((result) => {
-      // Recharger la liste pour refléter une validation / dévalidation / édition.
-      if (result && this.seriesId) {
+      // Recharger la liste pour refléter une validation / dévalidation / édition. Une dévalidation
+      // laisse la modale ouverte, qui peut se fermer sans résultat : elle se lit sur les données.
+      const unvalidated = !!session.isFinished && !sessionData.isFinished;
+      if ((result || unvalidated) && this.seriesId) {
         this.loadSessions(this.seriesId);
       }
     });

@@ -5,11 +5,14 @@ import com.school.management.mapper.AttendanceMapper;
 import com.school.management.persistance.AttendanceEntity;
 import com.school.management.persistance.CatchUpBillingState;
 import com.school.management.repository.*;
+import com.school.management.service.exception.CustomServiceException;
+import com.school.management.service.session.AbsenceWindowGuard;
 import com.school.management.shared.mapper.MappingContext;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,6 +41,12 @@ public class AttendanceService {
      */
     private final CatchUpRoutingService catchUpRoutingService;
 
+    /** Aucune absence hors Fenêtre_Inscription, sur chaque écriture (exigences 7.3 à 7.5). */
+    private final AbsenceWindowGuard absenceWindowGuard;
+
+    /** Aucune validation sur une année close (exigence 10.2). */
+    private final ReadOnlyYearGuard readOnlyYearGuard;
+
     // MappingContext pour AttendanceMapper
     private MappingContext mappingContext;
 
@@ -46,7 +55,10 @@ public class AttendanceService {
             StudentRepository studentRepository, SessionRepository sessionRepository,
             SessionSeriesRepository sessionSeriesRepository, GroupRepository groupRepository,
             StudentGroupRepository studentGroupRepository,
-            CatchUpRoutingService catchUpRoutingService) {
+            CatchUpRoutingService catchUpRoutingService,
+            AbsenceWindowGuard absenceWindowGuard,
+            ReadOnlyYearGuard readOnlyYearGuard) {
+        this.readOnlyYearGuard = readOnlyYearGuard;
         this.attendanceRepository = attendanceRepository;
         this.attendanceMapper = attendanceMapper;
         this.studentRepository = studentRepository;
@@ -55,6 +67,7 @@ public class AttendanceService {
         this.groupRepository = groupRepository;
         this.studentGroupRepository = studentGroupRepository;
         this.catchUpRoutingService = catchUpRoutingService;
+        this.absenceWindowGuard = absenceWindowGuard;
     }
 
     /**
@@ -99,7 +112,29 @@ public class AttendanceService {
     }
 
     public AttendanceEntity createAttendance(AttendanceEntity attendance) {
-        return attendanceRepository.save(Objects.requireNonNull(attendance));
+        assertYearsOpen(List.of(Objects.requireNonNull(attendance)));
+        absenceWindowGuard.assertSubmittedAbsencesConcerned(List.of(attendance));
+        return attendanceRepository.save(attendance);
+    }
+
+    /**
+     * Une séance d'une année close ne se valide plus (exigence 10.2) : sa feuille de présence, comme
+     * une présence isolée, est refusée avant toute écriture.
+     *
+     * <p>Une ligne sans séance est refusée ici (400) : son année ne se résout pas, et elle finissait
+     * plus loin en erreur serveur.</p>
+     */
+    private void assertYearsOpen(List<AttendanceEntity> attendances) {
+        attendances.stream()
+                .map(AttendanceEntity::getSession)
+                .distinct()
+                .forEach(session -> {
+                    if (session == null) {
+                        throw new CustomServiceException("Présence sans séance : indiquez la séance concernée.",
+                                HttpStatus.BAD_REQUEST);
+                    }
+                    readOnlyYearGuard.assertSessionMutable(session);
+                });
     }
 
     // updateAttendance(Long) retiré : c'était un talon qui rechargeait la présence puis la
@@ -107,16 +142,23 @@ public class AttendanceService {
     // La modification de la justification passe par AttendanceJustificationService, dont le
     // périmètre est explicite et la trace obligatoire.
 
-    public void deleteAttendance(Long id) {
-        attendanceRepository.deleteById(Objects.requireNonNull(id));
-    }
+    // deleteAttendance(Long) et deleteBySessionId(Long) retirés (D.3) : suppressions définitives de
+    // présences, sans Motif ni Trace (exigence 8.4). Une ligne se retire par désactivation, par
+    // AttendanceCorrectionService.
 
-    // Save attendance
-    public AttendanceEntity save(AttendanceEntity attendance) {
-        return attendanceRepository.save(Objects.requireNonNull(attendance));
-    }
+    // save(AttendanceEntity) retiré : sans appelant, c'était une écriture de présence qui
+    // contournait tous les contrôles, la fenêtre d'inscription comprise.
 
+    /**
+     * Feuille de présence d'une séance.
+     *
+     * <p>Refusée en bloc si une absence vise un étudiant que la séance ne concerne pas (7.5) : la
+     * vérification porte sur toutes les lignes avant toute écriture, et chaque ligne refusée est
+     * nommée, pour être retirée en une fois.</p>
+     */
     public List<AttendanceEntity> saveAll(List<AttendanceEntity> attendances) {
+        assertYearsOpen(attendances);
+        absenceWindowGuard.assertSubmittedAbsencesConcerned(attendances);
         for (AttendanceEntity attendance : attendances) {
             if (attendanceRepository.existsByStudentIdAndSessionIdAndActiveTrue(attendance.getStudent().getId(),
                     attendance.getSession().getId())) {
@@ -227,9 +269,13 @@ public class AttendanceService {
         }
     }
 
-    @Transactional
-    public void deleteBySessionId(Long sessionId) {
-        attendanceRepository.deleteBySessionId(sessionId);
+    /**
+     * Une séance déplacée (jour ou groupe) ne doit laisser aucune de ses absences actives hors
+     * Fenêtre_Inscription. Appelé par la modification de séance, la séance déjà modifiée en mémoire.
+     */
+    public void assertAbsencesStayConcerned(Long sessionId) {
+        absenceWindowGuard.assertMovedSessionAbsencesConcerned(
+                attendanceRepository.findBySessionIdAndActiveTrue(sessionId));
     }
 
     public void deactivateBySessionId(Long sessionId) {

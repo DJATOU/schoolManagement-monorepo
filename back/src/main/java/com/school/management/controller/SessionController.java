@@ -120,12 +120,8 @@ public class SessionController {
         return ResponseEntity.ok(sessionMapper.sessionEntityToSessionDto(updatedSession));
     }
 
-    @PatchMapping("/{sessionId}/unfinish")
-    public ResponseEntity<SessionDTO> markSessionAsUnfinished(@PathVariable Long sessionId) {
-        SessionEntity updatedSession = sessionService.markSessionAsUnfinished(sessionId);
-        return ResponseEntity.ok(sessionMapper.sessionEntityToSessionDto(updatedSession));
-    }
-
+    // PATCH /{sessionId}/unfinish retiré (D.3) : la dévalidation exige un Motif et un Aperçu, et
+    // désactive les présences dans la même opération — POST /api/sessions/{id}/unvalidate/… (10.1).
 
     @GetMapping("/series/{sessionSeriesId}")
     public ResponseEntity<List<SessionDTO>> getSessionsBySeriesId(@PathVariable Long sessionSeriesId) {

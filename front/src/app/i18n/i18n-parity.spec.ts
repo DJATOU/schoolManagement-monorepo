@@ -139,6 +139,51 @@ describe('i18n FR/EN key parity', () => {
     }
   });
 
+  /**
+   * Clés des écrans de correction (spec admin-corrections, D.3 à D.7) et du dialogue de
+   * remboursement : relevées dans le code, y compris celles composées à l'exécution (catégories,
+   * colonnes, états). Une clé oubliée dans les deux fichiers échapperait au contrôle de parité et
+   * s'afficherait brute ; trois l'étaient dans le dialogue de remboursement.
+   */
+  const correctionScreenKeys = [
+    'SESSION_MODAL.SESSION_LABEL', 'SESSION_MODAL.UNVALIDATE', 'SESSION_MODAL.UNVALIDATE_ERROR',
+    'SESSION_MODAL.UNVALIDATE_SUBJECT', 'SESSION_MODAL.UNVALIDATE_SUCCESS', 'SESSION_MODAL.UNVALIDATE_TITLE',
+    ...['ADD_STUDENT', 'CATCH_UP_REMOVED', 'DONE', 'JUSTIFICATION', 'LINE_ADDED', 'LINE_REMOVED', 'MENU', 'MENU_ARIA',
+      'NOTE_ABSENT', 'NOTE_JUSTIFIED', 'NOTE_PRESENT', 'NO_LINE', 'NO_LINE_HINT', 'REASONS_ERROR', 'REMOVE',
+      'REMOVE_CATCH_UP', 'STATE_HINT', 'STATE_LABEL', 'STATE_NEXT', 'STATE_TITLE', 'SUBJECT', 'TITLE_ADD',
+      'TITLE_CATCH_UP', 'TITLE_CHANGE', 'TITLE_REMOVE', 'ADD.PRESENT', 'ADD.ABSENT', 'ADD.JUSTIFIED', 'STATE.PRESENT',
+      'STATE.ABSENT', 'STATE.JUSTIFIED', 'STATE_INLINE.PRESENT', 'STATE_INLINE.ABSENT', 'STATE_INLINE.JUSTIFIED']
+      .map(key => `SESSION_MODAL.CORRECTION.${key}`),
+    ...['apply', 'by', 'count', 'empty', 'fileName', 'from', 'generatedOn', 'loadError', 'noEffect', 'page',
+      'period.all', 'period.between', 'period.from', 'period.to', 'periodInvalid', 'print', 'printAria', 'printError',
+      'reset', 'title', 'to', 'columns.date', 'columns.correction', 'columns.effect', 'columns.reason', 'columns.by',
+      'category.ENCASHMENT', 'category.ENROLMENT', 'category.ATTENDANCE', 'category.JUSTIFICATION', 'category.CATCH_UP']
+      .map(key => `journal.${key}`),
+    ...['DATA_ENTRY_ERROR', 'DOCUMENT_RECEIVED', 'ARRIVAL_DATE_CORRECTED', 'STUDENT_LEFT', 'WRONG_STUDENT', 'WRONG_AMOUNT',
+      'OTHER'].map(key => `correction.reason.${key}`),
+    ...['alreadyRefunded', 'amountLabel', 'amountPaid', 'amountPlaceholder', 'amountRequired', 'amountTooSmall', 'back',
+      'confirmAmount', 'confirmButton', 'confirmReason', 'confirmTitle', 'exceedsCap', 'loading', 'notReversible',
+      'nothingRefundable', 'reasonLabel', 'reasonNote', 'reasonPlaceholder', 'reasonRequired', 'refundableCap',
+      'savedAmount', 'submitButton', 'title', 'receiptFailed'].map(key => `refund.dialog.${key}`),
+    // Historique : statut « Non payé » (composé à l'exécution), versé net, remboursements listés.
+    'studentHistory.seriesStatus.UNPAID', 'studentHistory.badge.UNPAID', 'studentHistory.amounts.paidNetOfRefunds',
+    'studentHistory.pdf.amountPaidNetOfTotal', 'studentHistory.pdf.refundLine',
+    ...['noReason', 'reprint', 'reprintAria', 'reprintError', 'unavailable'].map(key => `studentHistory.refunds.${key}`),
+    // Gestion des paiements : montant net, statut « Remboursé » (composé à l'exécution), historique.
+    'payment.admin.table.refundedShare', 'payment.admin.table.refunded', 'payment.admin.table.netAmount',
+    'payment.admin.paymentStatus.REFUNDED', 'payment.admin.paymentStatus.refundedHint',
+    'payment.admin.audit.changesTitle',
+    ...['title', 'empty', 'error', 'noReason', 'reprint', 'reprintAria', 'reprintError']
+      .map(key => `payment.admin.audit.refunds.${key}`)
+  ];
+
+  it('should define every key used by the correction screens and the refund dialog in both files', () => {
+    const missing = correctionScreenKeys.filter((key) => !frKeys.has(key) || !enKeys.has(key));
+    expect(missing)
+      .withContext(`Correction screen keys missing from fr.json or en.json: ${JSON.stringify(missing)}`)
+      .toEqual([]);
+  });
+
   it('should include the school-year feature keys in both files', () => {
     const featurePrefixes = ['schoolYear.', 'parcours.', 'yearEnd.'];
     const frFeatureKeys = [...frKeys].filter((key) =>

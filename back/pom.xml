@@ -399,6 +399,61 @@
                                              (RoutingVerdict). -->
                                         <include>com.school.management.service.CatchUpRoutingService*</include>
                                         <include>com.school.management.service.CatchUpBillingResolutionService</include>
+                                        <!-- Spec admin-corrections, B.1 : le runner décide si une
+                                             correction est écrite ou annulée, et ses valeurs portent
+                                             ce que l'Aperçu annonce. Une branche non testée y
+                                             produit un Aperçu qui ment, ou une confirmation qui
+                                             écrit autre chose que ce qui a été lu. Sha256 reste
+                                             hors seuil : son seul cas non testé est une JVM sans
+                                             SHA-256. -->
+                                        <include>com.school.management.service.correction.CorrectionRunner</include>
+                                        <include>com.school.management.service.correction.CorrectionScope*</include>
+                                        <include>com.school.management.service.correction.AmountSnapshot</include>
+                                        <include>com.school.management.service.correction.CorrectionPreview</include>
+                                        <include>com.school.management.service.correction.CorrectionEffect</include>
+                                        <include>com.school.management.service.correction.CorrectionExecution</include>
+                                        <include>com.school.management.service.correction.SeriesKey</include>
+                                        <!-- B.2 : la trace est la seule mémoire de qui a corrigé
+                                             quoi ; son effet sur les montants est ce qu'on montre à
+                                             un parent qui conteste. -->
+                                        <include>com.school.management.service.correction.CorrectionAuditService</include>
+                                        <include>com.school.management.service.correction.AuditDraft</include>
+                                        <include>com.school.management.service.correction.AmountEffectWriter</include>
+                                        <!-- B.3 : les règles d'une annulation (plancher des
+                                             remboursements, seconde annulation, année close). -->
+                                        <include>com.school.management.service.correction.EncashmentCorrectionService*</include>
+                                        <!-- C.2 : la Fenêtre_Inscription décide quelles séances
+                                             concernent un étudiant ; une borne fausse d'un jour
+                                             le fait attendre, noter absent ou facturer à tort. -->
+                                        <include>com.school.management.domain.valueobject.EnrolmentWindow</include>
+                                        <!-- C.3 : la Feuille_Appel dit qui une séance concerne ;
+                                             un oubli y fait noter absent un non-concerné, ou
+                                             disparaître un concerné parti depuis. -->
+                                        <include>com.school.management.service.session.RollCallService*</include>
+                                        <!-- C.4 : une absence hors fenêtre présente un étudiant
+                                             comme ayant manqué une séance qui ne le concernait
+                                             pas ; le garde la refuse sur chaque point d'entrée. -->
+                                        <include>com.school.management.service.session.AbsenceWindowGuard</include>
+                                        <include>com.school.management.service.session.AbsenceOutsideWindowException</include>
+                                        <!-- C.6 : corriger les dates d'une inscription change ce
+                                             qui est dû, retire des absences et déplace de la
+                                             ventilation ; une règle d'arrivée non testée ici se
+                                             retrouve dans le relevé d'une famille. -->
+                                        <include>com.school.management.service.correction.EnrolmentCorrectionService*</include>
+                                        <include>com.school.management.service.correction.VentilationMover*</include>
+                                        <include>com.school.management.service.EnrolmentDates</include>
+                                        <!-- C.9 : le fuseau de l'école décide du jour d'une séance
+                                             et de l'heure d'un reçu ; un conteneur laissé en UTC
+                                             décalait tout d'une heure. -->
+                                        <include>com.school.management.config.ApplicationTimeZone</include>
+                                        <!-- D.1 : corriger une présence change ce qui est dû ;
+                                             la suite d'une correction (ventilation, statut,
+                                             trop-perçu) est partagée avec celles des dates. -->
+                                        <include>com.school.management.service.correction.AttendanceCorrectionService*</include>
+                                        <include>com.school.management.service.correction.SeriesSettlement*</include>
+                                        <!-- D.4 : le Journal est ce qu'on montre à un parent qui
+                                             conteste ; chaque source doit être lue en clair. -->
+                                        <include>com.school.management.service.correction.*Journal*</include>
                                     </includes>
                                     <limits>
                                         <limit>

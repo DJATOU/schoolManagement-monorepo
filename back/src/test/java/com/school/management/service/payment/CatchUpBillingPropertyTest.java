@@ -108,11 +108,10 @@ class CatchUpBillingPropertyTest {
             inscriptions.add(inscription(GROUP_B, INSCRIPTION_A));
         }
         when(studentGroupRepository.findByStudentIdAndActiveTrue(STUDENT_ID)).thenReturn(inscriptions);
-        when(studentGroupRepository.findByGroupIdAndStudentIdAndActiveTrue(GROUP_A, STUDENT_ID))
-                .thenReturn(Optional.of(inscription(GROUP_A, INSCRIPTION_A)));
-        when(studentGroupRepository.findByGroupIdAndStudentIdAndActiveTrue(GROUP_B, STUDENT_ID))
-                .thenReturn(inscritEnB
-                        ? Optional.of(inscription(GROUP_B, INSCRIPTION_A)) : Optional.empty());
+        when(studentGroupRepository.findByGroupIdAndStudentId(GROUP_A, STUDENT_ID))
+                .thenReturn(List.of(inscription(GROUP_A, INSCRIPTION_A)));
+        when(studentGroupRepository.findByGroupIdAndStudentId(GROUP_B, STUDENT_ID))
+                .thenReturn(inscritEnB ? List.of(inscription(GROUP_B, INSCRIPTION_A)) : List.of());
 
         CatchUpBillingQualifier qualifier = new CatchUpBillingQualifierImpl(
                 attendanceRepository, sessionRepository, studentGroupRepository);

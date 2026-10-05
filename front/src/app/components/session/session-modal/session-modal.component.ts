@@ -24,10 +24,34 @@ import { SessionAttendancePdfService, SessionAttendanceStudentRow } from '../../
 import { ConfirmationDialogComponent } from '../../shared/confirmation-dialog/confirmation-dialog.component';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { Observable, combineLatest, forkJoin } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { Observable, combineLatest, firstValueFrom, forkJoin, of } from 'rxjs';
+import { map, tap } from 'rxjs/operators';
+import { MatMenuModule } from '@angular/material/menu';
+import { AttendanceCorrection, AttendanceState } from '../../../models/Attendance/attendance-correction';
+import { JustificationUpdateResult } from '../../../models/Attendance/justification';
+import { CorrectionResponse } from '../../../models/correction/correction';
+import {
+  JustificationEditDialogComponent,
+  JustificationEditDialogData
+} from '../../attendance/justification-edit-dialog/justification-edit-dialog.component';
+import {
+  ATTENDANCE_STATES,
+  AttendanceStateDialogComponent,
+  AttendanceStateDialogData
+} from '../attendance-state-dialog/attendance-state-dialog.component';
 import { SchoolYearContextService } from '../../../services/school-year-context.service';
 import { AuthService } from '../../../services/auth.service';
+import { NotConcernedStudent, RollCall } from '../../../models/session/roll-call';
+import { AttendanceSubmissionError, RejectedAbsence } from '../../../models/Attendance/rejected-absence';
+import { calendarDayOf, formatCalendarDay } from '../../../utils/calendar-day';
+import { CorrectionReason, CorrectionReasonType } from '../../../models/correction/correction';
+import { SessionUnvalidation } from '../../../models/session/session-unvalidation';
+import { CorrectionStep } from '../../../services/encashment.service';
+import {
+  CorrectionDialogComponent,
+  CorrectionDialogData,
+  CorrectionDialogResult
+} from '../../shared/correction-dialog/correction-dialog.component';
 
 @Component({
   selector: 'app-session-modal',
@@ -44,12 +68,16 @@ import { AuthService } from '../../../services/auth.service';
     MatCardModule,
     MatTabsModule,
     MatIcon,
+    MatMenuModule,
     MatTooltipModule,
     TranslateModule
   ]
 })
 export class SessionModalComponent implements OnInit {
   isFinished = false;
+
+  /** Les trois états d'une ligne, pour les menus « Ajouter » et « Noter ». */
+  readonly states = ATTENDANCE_STATES;
 
   /**
    * Vue en lecture seule (Read_Only_History) lorsque l'année scolaire
@@ -113,37 +141,65 @@ export class SessionModalComponent implements OnInit {
     }
   }
 
+  /**
+   * Feuille d'appel servie par le serveur : les étudiants dont la fenêtre d'inscription contient
+   * le jour de la séance. Nulle tant qu'elle n'est pas chargée.
+   *
+   * Une feuille vide n'est plus complétée par le reste du groupe : cela notait absents des
+   * étudiants arrivés après la séance ou déjà partis. Elle s'explique par les non-concernés.
+   */
+  rollCall: RollCall | null = null;
+
+  /** La feuille n'a pas pu être chargée : une liste vide ne doit pas passer pour une feuille vide. */
+  rollCallError = false;
+
+  /**
+   * Absences refusées par la dernière validation : élèves que la séance ne concerne pas (arrivés
+   * après, partis avant, ou sans inscription au groupe). Vide tant que rien n'est refusé.
+   */
+  rejectedAbsences: RejectedAbsence[] = [];
+
   private async loadStudentsData(): Promise<void> {
     // On ne charge les étudiants que si la liste est vide
-    if (!this.sessionData.students || this.sessionData.students.length === 0) {
-      try {
-        const sessionDate = this.sessionData.sessionTimeStart;
-
-        // 1) Étudiants assignés au groupe avant la date de la session
-        let students = await this.sessionService
-          .getStudentsForSession(this.sessionData.groupId, sessionDate)
-          .toPromise();
-
-        // 2) Fallback : si rien (ex. assignations sans date antérieure),
-        //    on remonte tous les étudiants du groupe pour la prise de présence
-        if (!students || students.length === 0) {
-          students = await this.sessionService
-            .getStudentsByGroupId(this.sessionData.groupId)
-            .toPromise();
-        }
-
-        this.sessionData.students = students?.map(student => ({
-          ...student,
-          id: student.id as number,
-          isPresent: true,
-          description: '',
-          isCatchUp: false
-        })) ?? [];
-
-      } catch (error) {
-        console.error('Error fetching students:', error);
-      }
+    if (this.sessionData.students && this.sessionData.students.length > 0) {
+      return;
     }
+    try {
+      const rollCall = await firstValueFrom(this.sessionService.getRollCall(this.sessionData.id));
+      this.rollCall = rollCall;
+      this.sessionData.students = rollCall.students.map(student => ({
+        id: student.id,
+        firstName: student.firstName,
+        lastName: student.lastName,
+        gender: student.gender ?? '',
+        enrolmentDeparture: student.departure,
+        isPresent: true,
+        description: '',
+        isCatchUp: false
+      } as Student & { id: number; isPresent: boolean }));
+    } catch (error) {
+      this.rollCallError = true;
+      this.sessionData.students = this.sessionData.students ?? [];
+      console.error('Error fetching roll call:', error);
+    }
+  }
+
+  /** Jour `yyyy-MM-dd` affiché `dd/MM/yyyy`. */
+  day(value: string | null | undefined): string {
+    return formatCalendarDay(value);
+  }
+
+  /** Fenêtres d'un étudiant non concerné, en clair : « à partir du 14/01/2030 », « du … au … ». */
+  describeWindows(student: NotConcernedStudent): string {
+    return student.windows.map(window => {
+      if (!window.arrival) {
+        return this.translate.instant('SESSION_MODAL.WINDOW_UNDATED');
+      }
+      return window.departure
+        ? this.translate.instant('SESSION_MODAL.WINDOW_FROM_TO',
+            { from: this.day(window.arrival), to: this.day(window.departure) })
+        : this.translate.instant('SESSION_MODAL.WINDOW_FROM', { from: this.day(window.arrival) });
+    }).join(' ; ');
   }
   
 
@@ -200,6 +256,7 @@ private loadAttendanceData(): void {
 
                 if (existingStudent) {
                     // Mettre à jour les informations de l'étudiant existant
+                    existingStudent.attendanceId = attendance.id;
                     existingStudent.isPresent = attendance.isPresent;
                     existingStudent.isJustified = attendance.isJustified ?? false;
                     existingStudent.isCatchUp = attendance.isCatchUp ?? existingStudent.isCatchUp;
@@ -213,6 +270,7 @@ private loadAttendanceData(): void {
                     this.studentService.getStudentById(attendance.studentId).subscribe((student: Student) => {
                         this.sessionData.students.push({
                             ...student,
+                            attendanceId: attendance.id,
                             isPresent: attendance.isPresent,
                             isJustified: attendance.isJustified ?? false,
                             isCatchUp: attendance.isCatchUp ?? false,
@@ -270,6 +328,7 @@ onValidateSession(): void {
       next: (response) => {
           console.log('Attendance submitted successfully', response);
 
+          this.rejectedAbsences = [];
           this.isFinished = true;
           this.loadAttendanceData();
 
@@ -291,12 +350,31 @@ onValidateSession(): void {
             this.markSessionAsFinished();
           });
       },
-      error: (error) => {
+      error: (error: unknown) => {
           console.error('Failed to submit attendance', error);
-          this.showErrorMessage(this.translate.instant('SESSION_MODAL.VALIDATE_ERROR'));
+          if (error instanceof AttendanceSubmissionError && error.outsideWindow) {
+            // Refus entier : chaque ligne en cause est nommée, à retirer en une action (7.5).
+            this.rejectedAbsences = error.rejected;
+            return;
+          }
+          this.showErrorMessage(error instanceof AttendanceSubmissionError
+            ? error.message : this.translate.instant('SESSION_MODAL.VALIDATE_ERROR'));
       }
   });
 }
+
+  /**
+   * Retire de la feuille les absences refusées, en une action, avant de revalider (exigence 7.5).
+   *
+   * <p>Seules les lignes nommées par le serveur partent : un élève non concerné par la séance n'a
+   * pas à y être noté absent. La validation reste à refaire, la feuille sous les yeux.</p>
+   */
+  removeRejectedLines(): void {
+    const rejected = new Set(this.rejectedAbsences.map(line => line.studentId));
+    this.sessionData.students = this.sessionData.students
+      .filter(student => !rejected.has(student.id as number)) as typeof this.sessionData.students;
+    this.rejectedAbsences = [];
+  }
 
   private showErrorMessage(message: string): void {
     this.snackBar.open(message, 'OK', {
@@ -327,50 +405,237 @@ onValidateSession(): void {
     this.sessionData.students.forEach((student) => student.isPresent = isChecked);
   }
 
+  /**
+   * Dévalide une séance validée par erreur (spec admin-corrections, D.3 ; exigence 10.1).
+   *
+   * <p>Le dialogue commun aux corrections : Motif, Aperçu, confirmation. L'Aperçu nomme chaque
+   * ligne retirée et ce qui change sur le dû de chaque élève, par exemple « Séance du 07/01/2030
+   * (Math 1ère A) dévalidée : 2 lignes retirées », janvier d'Amine 2 000 → 0 DA dû à ce jour. Le
+   * serveur fait tout en une opération : séance de nouveau à valider, lignes désactivées, Trace.</p>
+   *
+   * <p>La modale reste ouverte, la feuille rechargée depuis le serveur : on dévalide pour refaire
+   * la feuille, et les lignes désactivées ne doivent pas y rester cochées.</p>
+   */
   onUnvalidateSession(): void {
-    // Demande de confirmation avant dévalidation (action destructive).
-    this.dialog.open(ConfirmationDialogComponent, {
-      data: {
-        title: this.translate.instant('CONFIRMATION_DIALOG.UNVALIDATE_SESSION.TITLE'),
-        message: this.translate.instant('CONFIRMATION_DIALOG.UNVALIDATE_SESSION.MESSAGE'),
-        confirmText: this.translate.instant('CONFIRMATION_DIALOG.UNVALIDATE_SESSION.CONFIRM'),
-        cancelText: this.translate.instant('CONFIRMATION_DIALOG.UNVALIDATE_SESSION.CANCEL'),
-        confirmColor: 'warn'
-      }
-    }).afterClosed().subscribe((confirmed: boolean) => {
-      if (!confirmed) {
-        console.log('Unvalidation canceled.');
+    this.sessionService.getUnvalidationReasons().subscribe({
+      next: reasons => this.openUnvalidation(reasons),
+      error: (error: unknown) => this.showErrorMessage(error instanceof Error && error.message
+        ? error.message : this.translate.instant('SESSION_MODAL.UNVALIDATE_ERROR'))
+    });
+  }
+
+  private openUnvalidation(reasons: CorrectionReasonType[]): void {
+    const data: CorrectionDialogData<SessionUnvalidation> = {
+      titleKey: 'SESSION_MODAL.UNVALIDATE_TITLE',
+      subject: this.translate.instant('SESSION_MODAL.UNVALIDATE_SUBJECT', {
+        day: formatCalendarDay(calendarDayOf(new Date(this.sessionData.sessionTimeStart))),
+        group: this.sessionData.groupName ?? ''
+      }),
+      reasons,
+      run: (step: CorrectionStep, reason: CorrectionReason, token?: string) =>
+        this.sessionService.unvalidate(this.sessionData.id, step, reason, token)
+    };
+    this.dialog.open<CorrectionDialogComponent<SessionUnvalidation>, CorrectionDialogData<SessionUnvalidation>,
+      CorrectionDialogResult<SessionUnvalidation>>(CorrectionDialogComponent, { data, width: '660px', maxWidth: '95vw' })
+      .afterClosed().subscribe(outcome => {
+        if (outcome?.kind === 'confirmed') {
+          void this.afterUnvalidation(outcome.result);
+        }
+      });
+  }
+
+  /**
+   * La séance est de nouveau à valider. L'état est aussi porté par les données reçues : l'écran qui a
+   * ouvert la modale le relit à la fermeture, quelle qu'elle soit (bouton, Échap, clic au dehors).
+   */
+  private async afterUnvalidation(result: SessionUnvalidation): Promise<void> {
+    this.isFinished = false;
+    this.sessionData.isFinished = false;
+    this.snackBar.open(
+      this.translate.instant('SESSION_MODAL.UNVALIDATE_SUCCESS', { count: result.removedLines }),
+      this.translate.instant('common.close'),
+      { duration: 4000, panelClass: ['snack-bar-success'] }
+    );
+    await this.reloadSheet();
+  }
+
+  /** La feuille relue du serveur : lignes retirées, ajoutées ou changées, telles qu'elles sont désormais. */
+  private async reloadSheet(): Promise<void> {
+    this.rejectedAbsences = [];
+    this.rollCall = null;
+    this.rollCallError = false;
+    this.sessionData.students = [];
+    await this.loadStudentsData();
+    this.loadAttendanceData();
+  }
+
+  // ------------------------------------------------------------------
+  // Corriger une séance validée, élève par élève (D.7 ; exigences 8 et 9)
+  // ------------------------------------------------------------------
+
+  /** Motifs d'une correction de présence, lus au premier besoin. */
+  private correctionReasons: CorrectionReasonType[] | null = null;
+
+  /**
+   * Ce que la ligne d'un élève permet de corriger : un rattrapage se retire ; une présence ou une
+   * absence se change ou se retire ; un élève attendu sans ligne s'ajoute. Un rattrapage se retire
+   * même si la séance n'est pas validée : sa demande l'a enregistré avant la feuille.
+   */
+  lineKind(student: Student): 'catchUp' | 'present' | 'absent' | 'missing' | null {
+    if (student.attendanceId === undefined || student.attendanceId === null) {
+      return this.isFinished ? 'missing' : null;
+    }
+    if (student.isCatchUp) {
+      return 'catchUp';
+    }
+    if (!this.isFinished) {
+      return null;
+    }
+    return student.isPresent ? 'present' : 'absent';
+  }
+
+  /** Présent ↔ absent, justifié ou non : la justification se fixe dans la même correction (8.2). */
+  changeLine(student: Student, state: AttendanceState): void {
+    const attendanceId = student.attendanceId;
+    if (attendanceId === undefined) {
+      return;
+    }
+    this.openCorrection('SESSION_MODAL.CORRECTION.TITLE_CHANGE',
+      this.subject(student, `${this.stateLabel(this.currentState(student))} → ${this.stateLabel(state)}`),
+      (step, reason, token) => this.attendanceService.correctAttendance(attendanceId, step, state, reason, token));
+  }
+
+  /** Retirer une ligne saisie à tort, ou un rattrapage : la séance qu'il compensait redevient à rattraper. */
+  removeLine(student: Student): void {
+    const attendanceId = student.attendanceId;
+    if (attendanceId === undefined) {
+      return;
+    }
+    const catchUp = this.lineKind(student) === 'catchUp';
+    this.openCorrection(catchUp ? 'SESSION_MODAL.CORRECTION.TITLE_CATCH_UP' : 'SESSION_MODAL.CORRECTION.TITLE_REMOVE',
+      this.subject(student, this.translate.instant(catchUp ? 'SESSION_MODAL.CORRECTION.CATCH_UP_REMOVED'
+        : 'SESSION_MODAL.CORRECTION.LINE_REMOVED', { state: this.stateLabel(this.currentState(student)) })),
+      (step, reason, token) => this.attendanceService.removeAttendance(attendanceId, step, reason, token));
+  }
+
+  /** Ajouter la ligne d'un élève attendu ; un élève d'ailleurs est refusé par le serveur, qui dit pourquoi. */
+  addLine(student: Student, state: AttendanceState): void {
+    const studentId = student.id;
+    if (studentId === undefined || studentId === null) {
+      return;
+    }
+    this.openCorrection('SESSION_MODAL.CORRECTION.TITLE_ADD',
+      this.subject(student, this.translate.instant('SESSION_MODAL.CORRECTION.LINE_ADDED',
+        { state: this.stateLabel(state) })),
+      (step, reason, token) => this.attendanceService.addAttendance(this.sessionData.id, studentId, step, state,
+        reason, token));
+  }
+
+  /** La justification d'une absence a son propre dialogue, avec sa piste d'audit ; aucun effet sur le dû. */
+  editJustification(student: Student): void {
+    const attendanceId = student.attendanceId;
+    if (attendanceId === undefined) {
+      return;
+    }
+    this.dialog.open<JustificationEditDialogComponent, JustificationEditDialogData, JustificationUpdateResult>(
+      JustificationEditDialogComponent, {
+        width: '520px',
+        maxWidth: '95vw',
+        data: {
+          attendanceId,
+          justified: student.isJustified ?? null,
+          sessionName: this.sessionData.groupName,
+          sessionDate: this.sessionData.sessionTimeStart
+        }
+      }).afterClosed().subscribe(result => {
+        if (result) {
+          void this.reloadSheet();
+        }
+      });
+  }
+
+  /**
+   * Sur une séance validée, ajouter un élève : son choix, l'état de sa ligne, puis la correction. Un
+   * élève d'un autre groupe relève d'une demande de rattrapage : l'Aperçu le refuse en le disant.
+   */
+  private addStudentToValidatedSession(existingStudentIds: (number | undefined)[], levelId: number,
+                                       groupMemberIds: number[]): void {
+    this.dialog.open(AddStudentDialogComponent, {
+      width: '520px',
+      maxWidth: '95vw',
+      maxHeight: '90vh',
+      autoFocus: false,
+      data: { groupId: this.sessionData.groupId, levelId, existingStudentIds, groupMemberIds }
+    }).afterClosed().subscribe((selected: Student | null) => {
+      if (!selected) {
         return;
       }
-
-      this.sessionService.markSessionAsUnfinished(this.sessionData.id).subscribe({
-          next: () => {
-              this.attendanceService.deactivateAttendanceBySessionId(this.sessionData.id).subscribe({
-                  next: () => {
-                      console.log('Session unvalidated and attendance deactivated successfully');
-                      this.isFinished = false;
-
-                      // Mettre à jour uniquement le champ `isPresent` pour refléter la dévalidation
-                      this.sessionData.students.forEach(student => {
-                          student.isPresent = false;
-                      });
-
-                      // Log pour vérifier les données des étudiants après mise à jour
-                      console.log('Updated student data after unvalidation:', this.sessionData.students);
-                  },
-                  error: (error) => {
-                      console.error('Failed to deactivate attendance:', error);
-                      alert('Failed to deactivate attendance: ' + error.message);
-                  }
-              });
-          },
-          error: (error) => {
-              console.error('Failed to unvalidate session:', error);
-              alert('Failed to unvalidate session: ' + error.message);
+      this.dialog.open<AttendanceStateDialogComponent, AttendanceStateDialogData, AttendanceState>(
+        AttendanceStateDialogComponent, {
+          width: '440px',
+          maxWidth: '95vw',
+          data: { studentName: this.studentName(selected), session: this.sessionLabel() }
+        }).afterClosed().subscribe(state => {
+          if (state) {
+            this.addLine(selected, state);
           }
-      });
+        });
     });
-}
+  }
+
+  private openCorrection(titleKey: string, subject: string,
+                         run: (step: CorrectionStep, reason: CorrectionReason, token?: string)
+                           => Observable<CorrectionResponse<AttendanceCorrection>>): void {
+    this.loadCorrectionReasons().subscribe({
+      next: reasons => {
+        const data: CorrectionDialogData<AttendanceCorrection> = { titleKey, subject, reasons, run };
+        this.dialog.open<CorrectionDialogComponent<AttendanceCorrection>, CorrectionDialogData<AttendanceCorrection>,
+          CorrectionDialogResult<AttendanceCorrection>>(CorrectionDialogComponent,
+          { data, width: '660px', maxWidth: '95vw' })
+          .afterClosed().subscribe(outcome => {
+            if (outcome?.kind === 'confirmed') {
+              this.snackBar.open(this.translate.instant('SESSION_MODAL.CORRECTION.DONE'),
+                this.translate.instant('common.close'), { duration: 4000, panelClass: ['snack-bar-success'] });
+              void this.reloadSheet();
+            }
+          });
+      },
+      error: (error: unknown) => this.showErrorMessage(error instanceof Error && error.message
+        ? error.message : this.translate.instant('SESSION_MODAL.CORRECTION.REASONS_ERROR'))
+    });
+  }
+
+  private loadCorrectionReasons(): Observable<CorrectionReasonType[]> {
+    return this.correctionReasons
+      ? of(this.correctionReasons)
+      : this.attendanceService.getCorrectionReasons().pipe(tap(reasons => this.correctionReasons = reasons));
+  }
+
+  private currentState(student: Student): AttendanceState {
+    return { present: !!student.isPresent, justified: !student.isPresent && !!student.isJustified };
+  }
+
+  private stateLabel(state: AttendanceState): string {
+    const key = state.present ? 'PRESENT' : state.justified ? 'JUSTIFIED' : 'ABSENT';
+    return this.translate.instant('SESSION_MODAL.CORRECTION.STATE_INLINE.' + key);
+  }
+
+  /** « Séance du 07/01/2030 (Math 1ère A) — Amine Belkacem : présent → absent ». */
+  private subject(student: Student, change: string): string {
+    return this.translate.instant('SESSION_MODAL.CORRECTION.SUBJECT',
+      { session: this.sessionLabel(), student: this.studentName(student), change });
+  }
+
+  private sessionLabel(): string {
+    return this.translate.instant('SESSION_MODAL.SESSION_LABEL', {
+      day: formatCalendarDay(calendarDayOf(new Date(this.sessionData.sessionTimeStart))),
+      group: this.sessionData.groupName ?? ''
+    });
+  }
+
+  private studentName(student: Student): string {
+    return `${student.firstName ?? ''} ${student.lastName ?? ''}`.trim();
+  }
 
 
 /**
@@ -436,6 +701,12 @@ openAddStudentDialog(): void {
       const groupMemberIds = (groupStudents || [])
         .map(student => student.id)
         .filter((id): id is number => id !== undefined);
+
+      // Séance validée : la feuille ne se ressoumet plus, l'ajout est une correction (D.7).
+      if (this.isFinished) {
+        this.addStudentToValidatedSession(existingStudentIds, levelId, groupMemberIds);
+        return;
+      }
 
       const dialogRef = this.dialog.open(AddStudentDialogComponent, {
         width: '520px',

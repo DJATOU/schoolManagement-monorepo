@@ -3,6 +3,12 @@
     <div>
       <h1>{{ 'payment.admin.page.title' | translate }}</h1>
       <p>{{ 'payment.admin.page.subtitle' | translate }}</p>
+      <!-- Une ligne est la part d'un reçu sur une séance : elle se corrige avec lui (spec
+           admin-corrections, A.6). L'avertir ici évite de chercher le bouton « modifier ». -->
+      <p class="correction-notice" role="note">
+        <mat-icon inline>info</mat-icon>
+        {{ 'payment.admin.page.correctionNotice' | translate }}
+      </p>
     </div>
     <button mat-raised-button color="primary" (click)="exportToCSV()" [disabled]="dataSource.data.length === 0"
       [matTooltip]="'payment.admin.page.exportTooltip' | translate">
@@ -209,7 +215,20 @@
           <td mat-cell *matCellDef="let element">
             <!-- « DZD6,000 » (code ISO collé) était illisible : on garde le suffixe DA
                  utilisé partout ailleurs dans l'application. -->
-            <strong class="amount-value">{{ element.amountPaid | number:'1.0-2' }} {{ currencySuffix }}</strong>
+            <ng-container *ngIf="!hasRefundedShare(element); else refundedAmount">
+              <strong class="amount-value">{{ element.amountPaid | amount }} {{ currencySuffix }}</strong>
+            </ng-container>
+            <!-- Part remboursée : le montant versé reste lisible, barré, et le net est mis en avant.
+                 Le montant d'origine ne disparaît pas : c'est ce que dit le reçu de la famille. -->
+            <ng-template #refundedAmount>
+              <div class="amount-refunded-cell">
+                <span class="amount-gross">{{ element.amountPaid | amount }} {{ currencySuffix }}</span>
+                <strong class="amount-value amount-net">{{ netAmountOf(element) | amount }} {{ currencySuffix }}</strong>
+                <span class="amount-refunded-share">
+                  {{ 'payment.admin.table.refundedShare' | translate: { amount: (refundedOf(element) | amount) } }}
+                </span>
+              </div>
+            </ng-template>
           </td>
         </ng-container>
 
@@ -255,10 +274,6 @@
         <ng-container matColumnDef="actions" stickyEnd>
           <th mat-header-cell *matHeaderCellDef class="actions-header"> {{ 'payment.admin.table.actions' | translate }} </th>
           <td mat-cell *matCellDef="let element" class="actions-cell">
-            <button mat-icon-button color="primary" [matTooltip]="'payment.admin.actions.edit' | translate"
-              (click)="openEditDialog(element)" appAdminOnly>
-              <mat-icon>edit</mat-icon>
-            </button>
             <button mat-icon-button color="accent" [matTooltip]="'payment.admin.actions.history' | translate"
               (click)="openHistoryDialog(element)">
               <mat-icon>history</mat-icon>
@@ -272,16 +287,6 @@
               [matTooltip]="'refund.dialog.title' | translate"
               (click)="openRefundDialog(element)" appAdminOnly>
               <mat-icon>currency_exchange</mat-icon>
-            </button>
-            <button *ngIf="element.active" mat-icon-button color="warn"
-              [matTooltip]="'payment.admin.actions.delete' | translate"
-              (click)="deletePaymentDetail(element)" appAdminOnly>
-              <mat-icon>delete_forever</mat-icon>
-            </button>
-            <button *ngIf="!element.active && !element.permanentlyDeleted" mat-icon-button color="success"
-              [matTooltip]="'payment.admin.actions.reactivate' | translate"
-              (click)="reactivatePaymentDetail(element)" appAdminOnly>
-              <mat-icon>check_circle</mat-icon>
             </button>
             <!-- Suppression définitive : aucune action possible. Une icône avec infobulle
                  tient dans la colonne, contrairement au libellé complet qui la faisait

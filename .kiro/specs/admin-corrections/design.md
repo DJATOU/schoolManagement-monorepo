@@ -2,337 +2,592 @@
 
 ## Overview
 
-L'étape 1 couvre les exigences 1 (date d'inscription), 2 (non concerné avant l'inscription),
-3 (correction d'une présence), 7 (motif et trace communs) et le journal par Étudiant (8.2, 8.3,
-8.5). L'étape 2 (exigences 4, 5, 6, 9, journal filtrable) sera conçue après livraison.
+L'étape 1 couvre les exigences 1 à 12. Elle repose sur quatre décisions structurantes :
 
-Le principe directeur : **une seule notion d'Étudiant concerné, appliquée par le serveur**.
-Aujourd'hui trois endroits en décident chacun à leur façon : la requête de la Feuille_Appel
-(`findByGroupIdAndDateAssignedBefore`), le repli de l'écran (tout le groupe), et le résolveur de
-Séances facturables (`BillableSessionsResolverImpl`). Aucun n'est consulté à l'écriture d'une
-présence. Le design introduit un composant unique, `EnrolmentWindow`, consulté partout.
+1. **L'Encaissement devient une entité** (D2). Toute correction d'argent est une Annulation ou un
+   Remplacement d'Encaissement ; plus aucune modification en place d'un montant reçu.
+2. **Le cumul par Série devient un dérivé** des Imputations actives (D3), et cesse d'être réécrit
+   par la somme des lignes de ventilation, qui effaçait de l'argent reçu.
+3. **Une seule notion de Fenêtre_Inscription**, bornée par la Date_Inscription et la Date_Sortie,
+   appliquée par le serveur à la Feuille_Appel, à l'écriture des présences et à la facturation (D5).
+4. **Aperçu et confirmation passent par le même code** (D7) : l'Aperçu est la Correction exécutée
+   puis annulée. Ce que l'Administratrice voit est, par construction, ce qui sera écrit.
 
-Le calcul des montants n'est pas modifié. Il lit la Date_Inscription et les Présences ; ce sont
-ces entrées que le design rend justes et corrigeables.
+Cible : installation sur site, en Docker, poste de l'école, fuseau `Africa/Algiers`.
 
 ## Décisions de conception
 
-### D1 — La Date_Inscription est stockée au début du jour
+### D1 — Date calendaire, fuseau de la JVM
 
-L'exigence 1.5 fait de la Date_Inscription une date calendaire. Deux options :
+Les colonnes sont des `TIMESTAMP` sans fuseau : elles portent l'heure murale de la JVM. Date_Inscription
+et Date_Sortie sont stockées à 00:00 du jour ; une comparaison d'instants avec une Séance devient
+une comparaison de jours sans modifier le résolveur. La Date_Sortie est **incluse** : la
+comparaison se fait contre le lendemain 00:00 exclu.
 
-| Option | Conséquence |
-|---|---|
-| Comparer au jour près partout | chaque lecteur doit tronquer ; `BillableSessionsResolverImpl` compare aujourd'hui des instants (`!sessionDate.before(enrollmentDate)`), il faudrait le modifier |
-| **Stocker à 00:00 du jour** | toute comparaison d'instants existante devient une comparaison de jours, sans toucher au calcul |
+**Fuseau de la JVM — révisé en C.9.** Il venait de `TZ` dans le conteneur, réglé sur UTC par défaut :
+un oubli imprimait un versement de 10:00 à 09:00 et datait de la veille ce qui se passe entre minuit
+et une heure à Alger. Le plan était de comparer ce fuseau à `app.expected-timezone` et d'afficher un
+bandeau rouge. Décision retenue avec le propriétaire produit : **l'application fixe elle-même son
+fuseau** au démarrage, `app.timezone` (variable `APP_TIMEZONE`, `Africa/Algiers` par défaut), avant la
+création de tout composant (`ApplicationTimeZone`, inscrit par `main`). Le risque disparaît au lieu
+d'être signalé, et aucun écran n'en dépend. Une installation dans un autre pays change cette seule
+valeur. Le fuseau appliqué, l'heure locale et le fuseau du système sont journalisés. Une valeur
+inconnue empêche le démarrage en la nommant : elle ne peut venir que d'une saisie à l'installation,
+où l'échec se voit tout de suite, alors qu'un repli sur Alger fausserait sans bruit toutes les heures
+d'une école située ailleurs. Hors périmètre : la monnaie (« DA »), écrite en dur ; à rendre
+réglable si une installation hors d'Algérie se présente.
 
-La seconde est retenue : elle satisfait 1.5 sans modifier le calcul des montants, conformément au
-hors-périmètre. `EnrolmentWindow.normalize` tronque toute date entrante ; la migration V6 tronque
-les valeurs existantes.
+### D2 — L'Encaissement, entité de premier rang
 
-**Fuseau : `Africa/Algiers`** (confirmé). L'application est installée sur site, en Docker, sur le
-poste de l'école. Les colonnes sont des `TIMESTAMP` sans fuseau : elles portent l'heure murale de
-la JVM, fixée par la variable `TZ` du conteneur. Le jour d'une Date_Inscription est donc calculé
-dans `ZoneId.systemDefault()`, et c'est `TZ` qui doit être juste. Il valait `Europe/Paris` dans
-`docker-compose.yml` et `.env.example` : décalage d'une heure de fin mars à fin octobre, l'Algérie
-n'ayant pas d'heure d'été. Corrigé à `Africa/Algiers`.
-
-Au démarrage, `EnrolmentWindow` journalise le fuseau effectif, et refuse de démarrer si ce n'est
-pas celui attendu (`app.expected-timezone`, défaut `Africa/Algiers`) : un `.env` copié d'une
-ancienne installation ne doit pas fausser les dates en silence.
-
-### D2 — `StudentGroupEntity.onCreate` n'écrase plus la date
-
-`onCreate` ne pose la date du jour que si elle est absente. C'est la correction du défaut 1 : la
-date fournie par `addStudentsToGroup` / `addGroupsToStudent` était perdue à la persistance.
-L'annotation `@PastOrPresent` de `StudentGroupDTO.dateAssigned` est retirée (exigence 1.3) ; le
-contrôle « dans l'année scolaire du Groupe » (1.4) est fait par le service, qui connaît l'année.
-
-### D3 — Une table de trace commune, pas une par domaine
-
-Trois tables d'audit existent, chacune avec ses colonnes et son rang de séquence calculé par
-`MAX + 1` — ce qui laisse deux écritures concurrentes obtenir le même rang. Pour les nouvelles
-corrections, une seule table `correction_audit`, dont le rang vient d'une **séquence de base de
-données** : strictement croissant par construction, sans course (exigence 7.4).
-
-Les trois tables existantes ne sont **pas migrées** : elles sont lues par le journal (exigence 8.3)
-à travers un adaptateur. Les migrer serait un changement de données sans bénéfice pour l'étape 1.
-
-### D4 — Une présence avant l'inscription reste acceptée ; une absence, jamais
-
-C'est la règle tranchée (`business-rules.md`). `EnrolmentWindow` ne refuse donc que les absences.
-Une présence ordinaire d'un non-membre est déjà classée rattrapage par `AttendanceService`
-(`normalizeCatchUpFlag`, `routeCatchUpBilling`) : ce chemin n'est pas modifié.
-
-### D5 — Correction atomique de la date, avec liste vérifiée
-
-L'exigence 1.10 impose que rien ne soit retiré sans avoir été vu. Le client renvoie donc les
-identifiants des absences qu'on lui a présentées ; le serveur recalcule la liste et refuse si
-elle diffère. Pas de jeton de prévisualisation à stocker : la liste elle-même fait preuve.
-
-```mermaid
-sequenceDiagram
-    participant UI as Écran inscription
-    participant API as EnrolmentCorrectionController
-    participant S as EnrolmentCorrectionService
-    UI->>API: PATCH date (nouvelle date, motif)
-    API->>S: correctDate(..., absencesToRemove = null)
-    S-->>UI: 409 + absences en conflit [A1, A2]
-    Note over UI: l'Administrateur voit la liste et confirme
-    UI->>API: PATCH date (nouvelle date, motif, absencesToRemove=[A1, A2])
-    API->>S: correctDate(..., [A1, A2])
-    S->>S: recalcule le conflit = [A1, A2] ? sinon 409 liste à jour
-    S->>S: désactive A1, A2 · met à jour la date · 3 Traces (une transaction)
-    S-->>UI: 200
+```
+encashment
+  id, receipt_number (unique), student_id, group_id, target_series_id,
+  amount_received NUMERIC(12,2), payment_method, notes,
+  received_at, received_by,
+  status            ACTIVE | CANCELLED
+  cancelled_at, cancelled_by, cancel_reason_type, cancel_reason_text,
+  replaces_id, replaced_by_id,
+  kind              REGULAR | CATCH_UP
 ```
 
-### D6 — Une correction qui écarterait une séance déjà payée est refusée
+`receipt_number` (`RECU-AAAA-NNNN`) vient d'un **compteur verrouillé**, et non du modèle
+`RefundNumberService` (rang `MAX + 1`, rejeu sur collision). Ce rejeu ne peut pas réussir sur
+PostgreSQL : la violation de contrainte interrompt la transaction, que Spring marque à annuler.
 
-**Point à confirmer.** Un `payment_detail` rattache un montant à une Séance. Si une correction
-(date avancée, retrait d'une présence de rattrapage consommé) rend une Séance non facturable alors
-qu'elle porte un `payment_detail` actif, l'argent resterait imputé à une Séance que l'Étudiant ne
-doit plus.
+```
+receipt_counter
+  id = 1 (ck_receipt_counter_single), counter_year, last_rank >= 0
+```
 
-Option retenue : **refus**, en nommant la Séance et le montant, et en renvoyant vers l'outil de
-correction des Détails de paiement existant. Déplacer de l'argent est une décision de paiement,
-qui a son propre outil et sa propre trace ; la faire en effet de bord d'une correction de date
-la rendrait invisible. L'alternative — recalculer la ventilation automatiquement — est écartée
-pour la même raison que D5.
+- `ReceiptNumberService.next` verrouille l'unique ligne (`PESSIMISTIC_WRITE`) dans la transaction de
+  l'encaissement (`MANDATORY`) : deux encaissements simultanés sont numérotés l'un après l'autre.
+- Un encaissement refusé, ou un Aperçu exécuté puis annulé, ne consomme aucun numéro.
+- Le rang repart à 1 à chaque année civile. Une horloge revenue à une année antérieure est refusée
+  (409) : repartir à 1 réattribuerait un numéro déjà remis à une famille.
+- Au-delà de 9999, le rang s'écrit en entier, sans troncature. L'index unique reste un filet.
 
-### D7 — Le statut stocké du paiement est recalculé après correction
+Le même défaut du rejeu existe dans `RefundService.saveWithNumber` : relevé, non corrigé ici.
 
-`payments.status` est posé à l'encaissement. Une correction qui change le montant dû peut le
-rendre faux. Après toute correction, le statut du paiement de l'Étudiant sur la Série concernée
-est recalculé par la méthode existante `PaymentDetailAdminService.recalculatePayment`. Le retard
-lui-même est calculé à la lecture et n'a pas besoin de ce recalcul.
+Un Encaissement n'est jamais modifié sur ses champs monétaires (exigence 1.5). Mode de paiement
+et note sont modifiables avec Trace (3.6) : ils n'entrent dans aucun calcul.
+
+### D3 — Imputations et ventilation rattachées à l'Encaissement
+
+```
+encashment_allocation
+  id, encashment_id, series_id, payment_id, amount NUMERIC(12,2),
+  carried_over BOOLEAN, active BOOLEAN
+payment_detail        + encashment_allocation_id
+payment_carry_over    + encashment_allocation_id
+payment_idempotency   + encashment_id
+```
+
+- **Qui désigne quoi.** Une ligne de ventilation et un report sont chacun une *part* d'une
+  Imputation : ils la désignent, et l'Encaissement s'en déduit. Les relier aussi directement à
+  l'Encaissement dupliquerait l'information, avec le risque de deux valeurs contradictoires.
+  L'empreinte d'idempotence porte sur la requête entière : elle désigne l'Encaissement. Le rejeu
+  relit ses Imputations, actives ou non, pour rendre la réponse d'origine même après annulation.
+- **Rattrapage (1.7).** Même Encaissement (`kind = CATCH_UP`), même clé ; l'empreinte ajoute la
+  séance payée (`payment_idempotency.session_id`) : deux rattrapages du même montant sur deux
+  séances sont deux encaissements, et une clé passée d'un chemin à l'autre est réutilisée (409).
+  Plafond : prix net de la séance et reste dû de la série ; aucun report.
+
+- **Une ligne de ventilation par (Encaissement, Séance).** `distributeToSession` ne complète plus
+  une ligne partagée : il crée la ligne de l'Encaissement courant, plafonnée à ce qui reste dû sur
+  la Séance **au prix net** (1.6). Une Séance peut donc porter plusieurs lignes, une par
+  Encaissement ; `findByPaymentIdAndSessionId` (Optional) est remplacé par la somme des lignes
+  actives de la séance (`sumActiveAmountForPaymentAndSession`), et ses lecteurs somment. Le prix
+  net a une seule définition, `PaymentQuoteService.netPricePerSession`. Une ligne garde la date de
+  son Encaissement : une mise à jour ne la redate plus.
+- **Le cumul `payments.amount_paid` = Σ Imputations actives de la Série.** Il est recalculé à
+  chaque écriture d'Imputation, jamais depuis la ventilation (défaut 2). `recalculatePayment`
+  délègue à `EncashmentService.refreshSeriesCumul` : le cumul reste celui des Imputations, seul
+  le statut peut bouger. Aucun autre point d'entrée n'écrit le cumul (`POST /api/payments`
+  retiré en A.6).
+- **Neutraliser un Encaissement** = désactiver ses Imputations, ses lignes de ventilation et ses
+  reports, puis recalculer les cumuls et statuts des Séries touchées.
+
+Lecteurs inchangés : `PaymentCostResolver`, devis, statut, relevés lisent le cumul, qui garde sa
+signification. Le registre des paiements reste la source des montants ; la ventilation reste une
+répartition indicative par Séance.
+
+### D4 — Correction d'un Encaissement = Remplacement indivisible
+
+```
+correct(encashmentId, changes, reason, previewToken)
+  └─ une transaction
+       1. annuler l'original (D3, neutralisation)
+       2. encaisser le remplacement par le chemin ordinaire (plan, plafond, report, année)
+       3. relier replaces_id / replaced_by_id
+       4. Traces
+```
+
+Le chemin ordinaire d'encaissement est réutilisé tel quel : aucune règle d'encaissement n'est
+dupliquée. Si le plan refuse le remplacement, l'exception annule la transaction, donc l'Annulation
+aussi (3.5). Réutiliser le chemin ordinaire garantit que corriger « 20 000 → 2 000 » produit
+exactement ce qu'aurait produit un encaissement correct de 2 000 : c'est la propriété P2.
+
+Refus d'Annulation si le cumul passait sous le total remboursé de la Série (2.4) : les
+remboursements restent rattachés au cumul, dont ils bornent la diminution. Pour un Remplacement,
+le plancher se juge sur l'état final : un remplacement sur la même Série peut rendre ce que
+l'annulation retirait.
+
+Précisions (B.4) : la correction reçoit l'état voulu complet ; seuls le mode et la note changés,
+elle corrige en place (3.6), sinon elle remplace. Quand l'élève change, une seconde Trace au nom du
+nouvel élève alimente son Journal. Un Encaissement de rattrapage ne se remplace pas : il ne garde
+pas la séance payée, que le chemin de rattrapage exige ; il s'annule puis se ré-encaisse.
+
+### D5 — Fenêtre_Inscription
+
+```
+student_groups  + date_left DATE-like TIMESTAMP (00:00), nullable
+```
+
+`EnrolmentWindow.contains(enrolment, sessionDate)` :
+`dateAssigned <= jour(séance) AND (dateLeft IS NULL OR jour(séance) <= dateLeft)`.
+
+| Lecteur | Avant | Après |
+|---|---|---|
+| Feuille_Appel | inscriptions actives, `dateAssigned <= séance` | inscriptions dont la fenêtre contient la séance, actives ou clôturées (6.2) |
+| Écriture d'une absence | aucun contrôle | refus hors fenêtre (7.3) |
+| `BillableSessionsResolverImpl` | inscription **active** seulement | toutes les inscriptions au groupe, closes comprises ; facturable = dans une fenêtre, ou suivie |
+| `GroupRevenueService` (relevé de groupe) | inscrits actifs | tous les étudiants passés par le groupe |
+| Rattrapage (`CatchUpBillingQualifierImpl`, routage) | inscriptions actives | inchangé à l'étape 1 |
+
+Le changement du résolveur est le premier des deux changements de calcul assumés dans les
+exigences. `removeStudentFromGroup` (clôture sans date) devient la clôture avec Date_Sortie.
+Une inscription inactive porte donc toujours une Date_Sortie : aucune n'est créée sans elle.
+
+Précisions (C.1, C.2) :
+
+- La colonne arrive en **V8** : V6 et V7 sont celles du lot A. V8 porte aussi l'invariant :
+  `date_left >= date_assigned`, et close si et seulement si datée.
+- `EnrolmentWindow` est une valeur (`domain/valueobject`) : `enrolment.window().contains(date)`.
+  L'entité ramène ses deux dates à 00:00 à chaque écriture, pas seulement le service : la
+  comparaison en jours ne dépend d'aucun appelant.
+- Un étudiant qui revient dans un groupe quitté reçoit une **nouvelle** inscription. Rouvrir
+  l'ancienne (6.5) sert à annuler un départ saisi par erreur : sur un vrai retour, elle étendrait
+  la fenêtre sur l'intervalle d'absence, et ses séances le concerneraient. Deux fenêtres d'un même
+  groupe ne se recouvrent jamais (409 à l'inscription).
+- Le départ par `DELETE` était daté du jour même, sans Motif ni Aperçu, en attendant C.6 ; il est
+  retiré en C.8, le départ passant par la correction avec Motif et Aperçu.
+
+Précisions (C.6) : arrivée, départ et réouverture sont une seule correction de la fenêtre,
+`POST /api/enrolments/{id}/arrival|departure|reopen/{preview|confirm}` ; ses conséquences se
+lisent en comparant la période avant et après, séance par séance. La confirmation explicite du
+maintien des présences hors période (5.6) est celle de l'Aperçu, qui les liste : le jeton change si
+la liste change. Un départ futur dans l'année est admis, l'étudiant reste attendu jusqu'à ce jour.
+
+Précisions (C.5) : le résolveur lit toutes les inscriptions de l'étudiant au groupe et rend les
+séances que contient une fenêtre (`withinEnrolmentSessionIds`), dont l'historique tire son motif.
+« Membre de la série » (`enrolled`) garde l'inscription active comme critère suffisant — une série
+entière antérieure à l'arrivée reste affichée, séances écartées — et y ajoute une fenêtre close qui
+touche la série. Le relevé de groupe compte tous les étudiants passés par le groupe.
+
+Précisions (C.4) : `AbsenceWindowGuard` juge toute ligne qui n'est pas une présence, sur la
+feuille de présence, la présence unitaire et la modification d'une séance pointée — déplacer une
+séance d'un jour ou d'un groupe change qui elle concerne. Refus 409 entier, corps `rejected`.
+
+Précisions (C.3) : la Feuille_Appel est `GET /api/sessions/{id}/roll-call`. Elle est désignée par
+la Séance et non par un groupe et une date : le jour d'une Séance se lit dans le fuseau qui a écrit
+les dates d'inscription, que le navigateur ne connaît pas. Elle renvoie aussi les étudiants du
+groupe non concernés, avec leurs fenêtres : une feuille vide s'explique au lieu d'être complétée.
+
+### D6 — Déplacement de ventilation, jamais d'argent
+
+Quand une correction de date rend non facturable une Séance ventilée (5.9), ses lignes de
+ventilation sont redistribuées sur les Séances facturables **de la même Série et du même
+Encaissement**. Aucun montant ne change de Série ni d'Encaissement : le cumul, le montant dû et le
+statut sont inchangés, seule la répartition affichée bouge. Si la Série n'a plus assez de Séances
+facturables, le reliquat reste non ventilé et l'Aperçu annonce le trop-perçu ; le traiter (report,
+remboursement) reste une décision explicite, par les outils existants.
+
+Cela remplace la décision précédente de refuser la correction : l'outil vers lequel on renvoyait
+ne savait pas déplacer d'argent, seulement le supprimer du registre.
+
+### D7 — Aperçu = exécution puis annulation
+
+Chaque Correction a deux points d'entrée, `…/preview` et `…/confirm`, servis par la même méthode :
+
+```java
+<T> CorrectionOutcome<T> run(CorrectionCommand command, Mode mode)   // PREVIEW | CONFIRM
+```
+
+1. Photographier les montants des Séries susceptibles d'être touchées (`PaymentCostResolver`,
+   `PaymentQuoteService`).
+2. Exécuter la Correction.
+3. Photographier de nouveau les mêmes Séries, plus celles que la Correction a touchées.
+4. Construire l'Aperçu : écarts de montants, et effets listés (Imputations neutralisées, absences
+   retirées, Séances devenues facturables, ventilation déplacée).
+5. `PREVIEW` : annuler la transaction, renvoyer l'Aperçu et son jeton, empreinte SHA-256 de
+   l'Aperçu canonique. `CONFIRM` : comparer l'empreinte à celle fournie ; différente → annuler et
+   renvoyer 409 avec le nouvel Aperçu (4.3) ; identique → valider.
+
+Une seule implémentation pour l'Aperçu et l'écriture : l'Aperçu ne peut pas mentir, et aucune
+règle n'est codée deux fois. Le jeton n'est pas stocké : l'Aperçu lui-même fait preuve. Les numéros
+de reçu consommés par une exécution annulée ne sont pas réservés : la séquence est recalculée à la
+confirmation.
+
+Précisions (B.1) :
+
+- **Portée déclarée avant d'écrire.** La commande déclare les Séries, ou les groupes entiers quand un
+  report peut atteindre des Séries suivantes, qu'elle peut toucher. Une Série touchée hors portée
+  n'aurait pas d'état « avant » : le runner refuse la correction.
+- **Le jeton lie l'Aperçu à la commande.** L'empreinte couvre la description canonique de la commande
+  (type et paramètres) en plus des montants et des effets : un jeton obtenu pour annuler un reçu ne
+  confirme pas l'annulation d'un autre reçu au même Aperçu. Les effets ne citent donc que des valeurs
+  stables d'une exécution à l'autre — jamais un identifiant, un numéro de reçu attribué pendant
+  l'exécution ou une date du jour.
+- **Une transaction à lui.** Le runner refuse d'être appelé dans une transaction ouverte, et force
+  l'écriture avant la mesure « après » : une correction que la base refuserait échoue dès l'Aperçu,
+  et non à la confirmation.
+
+### D8 — Trace commune et lisible
+
+```
+correction_audit
+  id, domain, action, entity_id, student_id, group_id, session_id, series_id,
+  old_value, new_value,            -- valeurs structurées (JSON texte), pour la machine
+  summary  VARCHAR(500),           -- phrase en français, pour l'Administratrice (12.2)
+  amount_effect VARCHAR(500),      -- « dû 6 000,00 → 4 000,00 DA » ou vide (12.3)
+  reason_type, reason_text,
+  performed_by, performed_at
+```
+
+- `summary` est rédigé **à l'écriture**, quand toutes les données sont disponibles : une Trace
+  reste lisible même si la Séance ou l'Encaissement a disparu ensuite.
+- **Qui écrit la Trace (B.2).** La correction rédige sa Trace (`AuditDraft`) ; le
+  `CorrectionRunner` l'écrit, une fois l'Aperçu mesuré, avec `amount_effect` tiré des Séries
+  changées de l'étudiant de la Trace. L'effet sur les montants n'est connu qu'après la mesure :
+  la correction ne peut pas l'écrire elle-même. Une correction sans Trace n'a rien changé, et
+  elle est refusée (11.3). Sans utilisateur authentifié, la correction est refusée : une Trace
+  signée « system » ne dirait pas qui a corrigé.
+- **Le rang est l'identifiant** (colonne d'identité), et non une séquence à part : attribué par
+  la base, strictement croissant dans l'ordre des écritures, sans course (11.4). Une séquence
+  dédiée n'apporterait rien de plus, et une valeur par défaut `nextval` n'existerait pas dans le
+  schéma H2 des tests, généré depuis les entités.
+- Pas de clé étrangère : la Trace survit à la donnée (11.6).
+- Les trois tables d'audit existantes ne sont pas migrées. Le Journal les lit par un adaptateur qui
+  rédige leurs entrées en français. Pour `payment_detail_audit`, dont les valeurs sont des chaînes
+  techniques (`PaymentDetail{id=…, amountPaid=…}`), l'adaptateur relit la ligne et la Séance ; si
+  elles ont disparu, il affiche le montant extrait et « séance supprimée ».
+
+Précisions (D.4) — le Journal :
+
+- **Trois sources lues, pas quatre.** `payment_detail_audit` n'a plus d'écrivain depuis A.6, qui a
+  retiré la correction d'une ligne de ventilation à l'unité, et l'installation part d'une base vide :
+  la table restera vide. Un adaptateur serait du code mort. Une ventilation déplacée l'est par une
+  correction, dont la Trace dit l'effet.
+- **`correction_audit`** : phrase et effet sur le dû repris tels qu'écrits avec la correction. La
+  Trace d'une séance dévalidée n'a pas d'élève et n'y figure pas ; chaque ligne retirée a la sienne.
+- **`attendance_justification_audit`** : « Séance du 14/01/2030 (Math 1ère A) : absence non
+  justifiée → justifiée », commentaire en guise de Motif, aucun effet sur le dû (la justification est
+  documentaire). L'élève, le jour et le groupe se lisent sur la présence, jamais effacée.
+- **`catch_up_billing_audit`** : « Rattrapage du 09/01/2030 (Math 1ère B) : séance manquée aucune →
+  07/01/2030 (Math 1ère A) », « … : déjà payée non tranché → oui » ; une séance manquée qui n'existe
+  plus est dite « supprimée ». L'effet sur le dû n'a pas été mesuré à l'écriture : vide, plutôt que
+  reconstitué après coup.
+- **Ordre** : le plus récent d'abord ; à horodatage égal, la dernière écrite. **Période** : bornes
+  incluses, à la journée, chacune facultative. **Accès** : ADMIN seul, comme les versements d'un
+  élève, dont le Journal nomme les reçus ; ouvert sur une année close (12.5).
+- `GET /api/students/{id}/journal?from=yyyy-MM-dd&to=yyyy-MM-dd` → `{studentId, studentName, from,
+  to, entries: [{performedAt, category, description, amountEffect, reasonType, reasonText,
+  performedBy}]}`, `category` ∈ ENCASHMENT, ENROLMENT, ATTENDANCE, JUSTIFICATION, CATCH_UP.
+- Un paramètre de requête mal formé (« 2030-13-40 ») rend désormais 400 en le nommant, partout : le
+  gestionnaire générique en faisait une 500.
+
+### D9 — Retrait d'une présence de rattrapage
+
+Deux verrous empêchent aujourd'hui de rattraper de nouveau une Séance manquée :
+`existsByStudentIdAndMissedSessionIdAndActiveTrue` (une présence active la compense déjà) et
+`getEligibleAbsences`, qui écarte toute absence portant une demande de rattrapage non annulée.
+Retirer la présence de rattrapage (exigence 9) doit lever les deux, dans la même transaction :
+
+1. désactiver la présence de rattrapage ;
+2. passer la demande de rattrapage qui l'a produite à `CANCELLED`, si elle existe ;
+3. écrire la Trace avec la Séance manquée et la décision « déjà payée » qu'elle portait (9.3).
+
+L'absence d'origine redevient alors éligible, et son droit au rattrapage n'a jamais été touché.
+Les deux montants concernés — Série d'accueil et Série d'origine — figurent dans l'Aperçu : un
+rattrapage compensatoire comptait la Séance manquée comme suivie dans sa Série d'origine.
+
+Précisions (D.2) : le retrait passe par le même point d'entrée que celui d'une ligne ordinaire, le
+serveur reconnaissant le rattrapage. La demande annulée est celle qui a produit la présence : même
+séance d'accueil, même séance manquée (si la présence en désigne une), statut non annulé ; une
+demande `COMPLETED` passe directement à `CANCELLED`, ce que l'annulation ordinaire d'une demande
+refuse. La séance d'accueil n'a pas à être validée. Seule la série d'accueil peut perdre une séance
+facturable, donc sa ventilation ; à l'origine, la séance manquée reste facturable et seul le dû à
+ce jour baisse.
+
+Précisions (D.1) — corriger une présence :
+
+- **Trois corrections**, une ligne d'une Séance validée à la fois : présent ↔ absent (justification
+  fixée dans la même action, effacée et tracée au passage à présent), ajout d'une ligne manquante,
+  retrait par désactivation. Retrait distinct du changement : `POST /api/attendances/{id}/remove/…`.
+- **Ajout réservé aux inscrits du groupe**, inscription active ou close : une présence après le
+  départ est une séance consommée, facturée par la série du groupe. Un non-inscrit relève d'un
+  rattrapage, et de sa demande : le classement « à préciser / facturé sur place » n'est pas refait ici.
+- **Séance rattrapée ou en voie de l'être** (présence de rattrapage active qui la désigne, ou demande
+  en attente ou planifiée) : elle ne peut devenir suivie ni perdre sa ligne. Le rattrapage
+  compenserait une séance qui n'est plus manquée ; il se retire ou s'annule d'abord. Une absence
+  ajoutée reste admise.
+- **Justification** : la correction écrit `is_justified` et sa propre Trace (`correction_audit`), pas
+  `attendance_justification_audit`, réservé à « Justifier » une absence existante. Le Journal (D.4)
+  lit les deux sources.
+- **Suites sur l'argent** : `SeriesSettlement`, partagé avec les corrections de dates — ventilation
+  d'une séance devenue non facturable déplacée, statut stocké des lignes recalculé, trop-perçu
+  annoncé.
+
+Précisions (D.3) — dévalider une séance :
+
+- **Une opération**, `POST /api/sessions/{id}/unvalidate/{preview|confirm}`, Motifs « Erreur de
+  saisie » et « Autre » : toutes les lignes actives désactivées, la séance de nouveau à valider.
+  Elle remplace deux appels sans Motif ni Trace (`PATCH …/unfinish`, puis `PATCH /api/attendances/
+  deactivate/{id}`), dont le second pouvait échouer après le premier. Les suppressions définitives
+  `DELETE /api/attendances/{id}` et `…/session/{id}` disparaissent avec eux (8.4).
+- **Chaque ligne suit sa correction** : une ligne ordinaire comme un retrait (D.1), un rattrapage
+  accueilli comme en D.2 — demande annulée, séance d'origine de nouveau à rattraper, groupe
+  d'origine dans l'Aperçu. Une absence rattrapée ailleurs, ou dont une demande est en cours, bloque
+  tout (409) : le rattrapage se retire d'abord. Une ligne héritée sans étudiant est désactivée avec
+  la feuille.
+- **Traces** : une pour la séance, en tête, qui liste chaque ligne telle qu'elle était (élève,
+  présent, justifié, rattrapage) et les identifiants désactivés ; une par ligne, pour le Journal de
+  chaque élève. Lignes rangées par nom, pour un Aperçu et un jeton stables.
+- **Année close (10.2)** : dévalider, enregistrer une feuille ou une présence isolée, valider une
+  séance — tous refusés (409) avant écriture.
+
+### D10 — Motif
+
+`CorrectionReasonType` : `DATA_ENTRY_ERROR`, `DOCUMENT_RECEIVED`, `ARRIVAL_DATE_CORRECTED`,
+`STUDENT_LEFT`, `WRONG_STUDENT`, `WRONG_AMOUNT`, `OTHER`. Chaque type de Correction expose la
+sous-liste pertinente ; `OTHER` exige un texte (11.1, 11.2).
 
 ## Architecture
 
 ```
 controller/
-  EnrolmentCorrectionController     PATCH /api/enrolments/{id}/date-assigned
-  AttendanceCorrectionController    PATCH /api/attendances/{id}/presence
-                                    POST  /api/sessions/{sessionId}/attendances/corrections
-                                    POST  /api/attendances/{id}/removal
-  CorrectionJournalController       GET   /api/students/{id}/corrections
+  EncashmentController             GET  /api/encashments/{id}                 (reçu, réimpression)
+                                   GET  /api/students/{id}/encashments        (historique, A.8)
+  RefundReadController             GET  /api/students/{id}/refunds            (pièces de remboursement
+                                        de l'historique, ADMIN seul — R.9)
+                                   GET  /api/refunds/payment/{id}             (remboursements d'un
+                                        versement, historique d'une ligne, ADMIN seul — R.11)
+controller/correction/
+  EncashmentCorrectionController   GET  /api/encashments/correction-reasons   (Motifs proposés, B.5)
+                                   POST /api/encashments/{id}/cancel/{preview|confirm}
+                                   POST /api/encashments/{id}/correct/{preview|confirm}
+                                        (mode et note seuls : corrigés en place, sans
+                                        Remplacement ni nouveau reçu — B.4)
+  EnrolmentCorrectionController    GET  /api/enrolments/correction-reasons     (Motifs par correction)
+                                   POST /api/enrolments/{id}/arrival/{preview|confirm}
+                                   POST /api/enrolments/{id}/departure/{preview|confirm}
+                                   POST /api/enrolments/{id}/reopen/{preview|confirm}
+  AttendanceCorrectionController   GET  /api/attendances/correction-reasons     (Motifs proposés)
+                                   POST /api/attendances/{id}/correct/{preview|confirm}
+                                   POST /api/attendances/{id}/remove/{preview|confirm}
+                                   POST /api/sessions/{id}/attendances/add/{preview|confirm}
+                                   POST /api/sessions/{id}/unvalidate/{preview|confirm}
+  CorrectionJournalController      GET  /api/students/{id}/journal?from&to
 service/correction/
-  EnrolmentWindow                   qui est concerné, quand ; normalisation du jour
-  CorrectionReason                  règle unique du Motif (exigence 7.1)
-  CorrectionAuditService            écriture des Traces (7.3 à 7.6)
-  EnrolmentCorrectionService        exigence 1
-  AttendanceCorrectionService       exigence 3
-  CorrectionJournalService          exigence 8, lecture des quatre sources
-persistance/
-  CorrectionAuditEntity, CorrectionDomain, CorrectionField
+  CorrectionRunner                 D7 : exécution, photographie, Aperçu, jeton
+  AmountSnapshot                   montants d'une Série à un instant
+  CorrectionAuditService           D8
+  CorrectionReason                 D10
+  EnrolmentWindow                  D5, D1
+  EncashmentCorrectionService      exigences 2, 3
+  EnrolmentCorrectionService       exigences 5, 6
+  AttendanceCorrectionService      exigences 8, 9, 10
+  VentilationMover                 D6
+  CorrectionJournalService         exigence 12, adaptateurs des audits existants
+service/payment/
+  EncashmentService                création, imputation, neutralisation (D2, D3) ; mécanique
+                                   seule, les gardes métier d'une annulation sont au lot B
+  ReceiptNumberService             compteur verrouillé RECU-AAAA-NNNN (D2)
+  PaymentLineStatus                statut stocké d'une ligne de paiement, partagé avec
+                                   recalculatePayment (A.6)
+  PaymentProcessingService         encaisse via EncashmentService
+  PaymentDistributionService       ventilation par Encaissement, prix net
 ```
 
-Contrôleurs minces, logique en services séparés par responsabilité (conventions). Toutes les
-écritures sont en `PATCH`/`POST` sous `/api/**` : `SecurityConfig` les réserve déjà au rôle ADMIN
-(exigence 7.7), sans règle supplémentaire.
+Contrôleurs minces. Toutes les écritures sont des `POST`/`PATCH` sous `/api/**`, déjà réservés au
+rôle ADMIN par `SecurityConfig` (11.7). Les `preview` sont des `POST` : ils exécutent une écriture
+annulée, et doivent être refusés au rôle VIEWER comme une écriture.
 
-## Components and Interfaces
+## Flux principaux
 
-### EnrolmentWindow
+### Corriger un Encaissement (exigence 3)
 
-```java
-Date normalize(Date date);                               // D1 : 00:00 du jour, fuseau de la JVM (TZ)
-Optional<StudentGroupEntity> activeEnrolment(Long studentId, Long groupId);
-boolean isConcerned(Long studentId, Long groupId, Date sessionDate);
-List<AttendanceEntity> absencesOutside(StudentGroupEntity enrolment, Date newDateAssigned);
-void assertWithinSchoolYear(GroupEntity group, Date dateAssigned);   // exigence 1.4
+```mermaid
+sequenceDiagram
+    participant UI as Historique élève
+    participant C as EncashmentCorrectionController
+    participant R as CorrectionRunner
+    participant E as EncashmentCorrectionService
+    UI->>C: correct/preview {montant: 2000, motif: WRONG_AMOUNT}
+    C->>R: run(PREVIEW)
+    R->>E: annuler RECU-2027-0042 (6 000) · encaisser 2 000
+    R-->>UI: Aperçu : Série Janvier versé 6 000 → 2 000, reste 0 → 4 000, statut à jour → en retard · jeton
+    Note over UI: l'Administratrice lit, confirme
+    UI->>C: correct/confirm {…, jeton}
+    C->>R: run(CONFIRM)
+    R->>E: même exécution
+    R->>R: empreinte = jeton ? sinon 409 + nouvel Aperçu
+    R-->>UI: 200 · RECU-0043 · impression proposée
 ```
 
-`isConcerned` = inscription active **et** `dateAssigned <= normalize(sessionDate)`. L'étape 2
-ajoutera la borne de sortie (exigence 6.2) ici seulement.
+### Avancer une date d'arrivée (exigence 5.7)
 
-Consommateurs :
+L'Aperçu liste les Séances validées devenues concernées sans Présence. Pour chacune,
+l'Administratrice choisit présent, absent ou « laisser » ; « laisser » est annoncé comme
+facturable. La confirmation enregistre la date et les Présences choisies en une transaction.
 
-| Appelant | Usage |
-|---|---|
-| `StudentGroupService.getStudentsForSession` | Feuille_Appel (2.1) — la requête actuelle est conservée, la date est normalisée |
-| `AttendanceService.saveAll` | refus des absences hors fenêtre (2.3, 2.4, 2.6) |
-| `AttendanceCorrectionService` | refus du passage à absent hors fenêtre (3.4) |
-| `EnrolmentCorrectionService` | absences mises en conflit par une nouvelle date (1.8) |
+## Data Models — migrations
 
-### Validation en masse (exigence 2.6)
+**Structure seulement, aucune donnée transformée** : la base est réinitialisée avant
+l'installation chez le client (exigences, hors périmètre).
 
-`AttendanceService.saveAll` valide **toutes** les lignes avant d'en écrire une. Les absences hors
-fenêtre sont collectées puis refusées ensemble :
+- **V6** (A.2) — tables `encashment`, `encashment_allocation`, `correction_audit` ; colonne
+  `encashment_allocation_id` sur `payment_detail` et `payment_carry_over`, `encashment_id` sur
+  `payment_idempotency`, **facultatives** ; contraintes de cohérence de l'Encaissement (montant
+  positif, annulation datée et motivée, remplacé forcément annulé, motif « Autre » avec texte).
+- **V7** (A.6) — ces trois colonnes deviennent **`NOT NULL`**. Une ligne de ventilation, un report
+  ou une empreinte sans Encaissement devient impossible par construction : l'invariant 1.3 porté
+  par le stockage, possible parce qu'aucune ligne ancienne n'est à reprendre.
+- **V8** (C.1) — colonne `student_groups.date_left`, facultative ; contraintes : fenêtre ordonnée
+  (`date_left >= date_assigned`) et inscription close si et seulement si datée.
 
-```
-400 {
-  "message": "Validation refusée : 2 absence(s) portent sur des étudiants non concernés par cette séance.",
-  "rejected": [
-    { "studentId": 7, "studentName": "Amine Belkacem", "reason": "inscrit le 2030-01-14, séance du 2030-01-07" },
-    { "studentId": 9, "studentName": "Lina Hamdani",   "reason": "aucune inscription active au groupe" }
-  ]
-}
-```
+**Pourquoi deux migrations et non une.** Le code n'écrit ces liens qu'à partir de A.4 et A.5.
+Des colonnes obligatoires dès V6 feraient échouer tout encaissement dans l'intervalle, donc la
+suite de tests, que chaque tâche doit laisser verte. V7 est livrée avec le code qui les écrit.
 
-### CorrectionReason
+**Vérification.** La suite de tests tourne sur H2, Flyway désactivé : le SQL des migrations n'y
+est jamais exécuté. `MigrationSchemaPostgresIntegrationTest` applique toutes les migrations à une
+base PostgreSQL jetable, valide chaque entité contre le schéma obtenu (Hibernate `validate`), puis
+éprouve les contraintes en SQL. Il est ignoré, en le disant, si aucun PostgreSQL n'est joignable.
 
-```java
-static String require(String raw);   // trim ; refus si vide ou > 500 caractères
-```
-
-Seule règle de Motif pour les nouvelles corrections (7.1). `PaymentDetailAdminService.validateReason`
-et `RefundService.validatedReason` n'y sont pas raccordés à l'étape 1 : même intention, messages
-différents, raccordement prévu à l'étape 2.
-
-### CorrectionAuditService
-
-```java
-void record(CorrectionDomain domain, CorrectionField field, Long entityId,
-            Long studentId, Long groupId, Long sessionId,
-            String oldValue, String newValue, String reason);
-```
-
-- Auteur lu par `AuditorAware`, jamais reçu du client (7.3).
-- Appelé **dans la transaction** de la correction : un échec annule la Trace (7.6).
-- `oldValue.equals(newValue)` est une erreur de programmation : le service appelant refuse une
-  correction sans changement avant d'y arriver (7.2).
-
-### EnrolmentCorrectionService
-
-```java
-StudentGroupEntity correctDate(Long enrolmentId, Date newDate, String reason,
-                               List<Long> absencesToRemove);
-```
-
-Ordre des contrôles, du plus structurant au plus détaillé :
-
-1. inscription existante (404) ;
-2. année close (409, `ReadOnlyYearGuard.assertGroupMutable`) ;
-3. Motif (400) ;
-4. date dans l'année scolaire du Groupe (400) ;
-5. date inchangée après normalisation (400, 7.2) ;
-6. séance déjà payée qui deviendrait non facturable (409, D6) ;
-7. absences en conflit (409 avec la liste, ou comparaison à `absencesToRemove`, D5) ;
-8. écritures : désactivation des absences, nouvelle date, Traces, recalcul du statut (D7).
-
-### AttendanceCorrectionService
-
-```java
-AttendanceEntity setPresence(Long attendanceId, boolean present, String reason);
-AttendanceEntity addToValidatedSession(Long sessionId, Long studentId, boolean present, String reason);
-AttendanceEntity remove(Long attendanceId, String reason);
-```
-
-| Contrôle | Réponse |
-|---|---|
-| présence introuvable ou inactive | 404 |
-| année close | 409 |
-| présence de rattrapage | 409, en désignant `PATCH /api/catch-up-billing/{id}/correct` (3.6) |
-| passage ou ajout d'une absence hors fenêtre | 400 (3.4) |
-| ajout sur une séance non validée | 400 : la saisie normale s'applique |
-| ajout d'un élève déjà présent sur la séance | 409 |
-| valeur inchangée | 400 (7.2) |
-| retrait d'une présence qui écarterait une séance payée | 409 (D6) |
-
-Passer à présent efface `isJustified` ; la Trace porte les deux changements dans ses valeurs
-(3.5). Le retrait est une désactivation (3.3).
-
-### CorrectionJournalService
-
-```java
-List<CorrectionEntryDTO> forStudent(Long studentId);
-```
-
-Réunit quatre sources en une liste unique, la plus récente d'abord (8.2, 8.3) :
-
-| Source | Rattachement à l'Étudiant |
-|---|---|
-| `correction_audit` | colonne `student_id` |
-| `attendance_justification_audit` | via `attendance.student_id` |
-| `catch_up_billing_audit` | via `attendance.student_id` |
-| `payment_detail_audit` | via `payment_detail → payments.student_id` |
-
-**Limite connue** : les trois tables existantes ne portent pas l'Étudiant. Une Trace dont la
-présence ou le détail a été supprimé définitivement ne peut plus lui être rattachée. C'est l'un
-des motifs de D3 pour les nouvelles traces, et de l'exigence 4.2 (plus de suppression définitive)
-à l'étape 2.
-
-## Data Models
-
-### Migration V6
-
-```sql
--- D1 : la date d'inscription est une date calendaire. La colonne est un TIMESTAMP sans fuseau,
--- qui porte déjà l'heure murale locale : une troncature simple suffit. Une conversion
--- AT TIME ZONE décalerait ici chaque date d'une heure.
-UPDATE student_groups
-   SET date_assigned = date_trunc('day', date_assigned)
- WHERE date_assigned IS NOT NULL;
-
-CREATE SEQUENCE correction_audit_rank_seq;
-
-CREATE TABLE correction_audit (
-    id             BIGSERIAL    PRIMARY KEY,
-    domain         VARCHAR(40)  NOT NULL,   -- ENROLMENT, ATTENDANCE
-    field          VARCHAR(40)  NOT NULL,   -- DATE_ASSIGNED, PRESENCE, ADDED, REMOVED
-    entity_id      BIGINT       NOT NULL,
-    student_id     BIGINT,
-    group_id       BIGINT,
-    session_id     BIGINT,
-    old_value      TEXT,
-    new_value      TEXT,
-    reason         VARCHAR(500) NOT NULL,
-    performed_by   VARCHAR(255) NOT NULL,
-    performed_at   TIMESTAMP    NOT NULL,
-    sequence_rank  BIGINT       NOT NULL DEFAULT nextval('correction_audit_rank_seq')
-);
-CREATE UNIQUE INDEX uk_correction_audit_rank ON correction_audit (sequence_rank);
-CREATE INDEX idx_correction_audit_student ON correction_audit (student_id, performed_at DESC);
-```
-
-Aucune clé étrangère sur `entity_id`, `student_id`, `group_id`, `session_id` : la Trace doit
-survivre à la disparition de la donnée tracée (7.5). Même choix que les tables d'audit existantes.
+Conséquence pratique : V6 ne fait qu'ajouter et s'applique sur la base de développement locale
+telle quelle. V7 échouera en revanche sur les lignes de paiement existantes sans Encaissement :
+la base locale doit être réinitialisée avant de lancer A.6.
 
 ## Frontend
 
 | Écran | Changement |
 |---|---|
-| Ajout d'élèves à un groupe (`group-profile`, `student-profile`) | champ « date d'arrivée », par défaut aujourd'hui, borné à l'année scolaire |
-| Fiche élève, onglet groupes | action « corriger la date d'arrivée » : dialogue date + motif ; sur 409, liste des absences en conflit et case « les retirer avec la correction » |
-| `session-modal` | suppression du repli « tout le groupe » ; sur séance validée, bouton « corriger » par élève (présent / absent / retirer, motif) et « ajouter un élève » |
-| Fiche élève | onglet « journal des corrections » |
+| Fiche élève, panneau « Versements » | liste des **Encaissements** (reçu, date, montant, Série, statut) ; actions « annuler », « corriger », « réimprimer » ; lien « remplace / remplacé par ». Le relevé par Série et par Séance reste dans le dialogue « Historique des paiements » : il porte la facturation séance par séance |
+| Dialogue de paiement | reçu imprimé avec le `receipt_number` renvoyé par le serveur |
+| Réimpression | tampon « ANNULÉ » et renvoi vers le reçu de remplacement |
+| Fiche élève, groupes | date d'arrivée et date de départ ; « corriger l'arrivée », « enregistrer le départ », « rouvrir » |
+| `session-modal` | Feuille_Appel serveur sans repli ; lignes refusées retirables en un clic ; sur Séance validée, « corriger » par élève et « ajouter un élève » ; dévalidation avec motif |
+| Composant commun `CorrectionPreviewDialog` | Aperçu avant/après par Série, effets listés, sélection du Motif, confirmation |
+| Fiche élève, journal | entrées en français, effet sur le dû, impression par période |
+| Historique complet (écran et PDF) | versé **net** des remboursements, statut « Non payé », montants au format de la langue ; pour un ADMIN, pièces de remboursement sous chaque série et réimpression du reçu (R.5 à R.9) |
+| Gestion des paiements | ligne nette de sa part remboursée (versé barré), statut du versement sur le net (« Remboursé » si tout est rendu) ; historique de la ligne : remboursements du versement et réimpression (R.10, R.11) |
 
-Le filtrage de la Feuille_Appel n'est plus confié à l'écran : la suppression du repli rend visible
-une Feuille_Appel vide, ce qui est juste — personne n'était encore inscrit.
+Précision (R.5) : un remboursement porte sur le versement d'une Série, jamais sur une Séance. Le
+versé de l'historique est celui du devis (versements − remboursements actifs) ; la couverture des
+séances est plafonnée à ce montant, de sorte que l'argent rendu découvre les séances les plus récentes.
+Il n'existe aucun montant remboursé par séance stocké. L'écran « Gestion des paiements », qui liste
+des lignes, applique la même règle à l'affichage (R.10) : le remboursement d'un versement est imputé à
+ses lignes actives les plus récentes d'abord. C'est une lecture, rien n'est écrit sur les lignes.
+
+Le composant d'Aperçu est unique : toutes les Corrections présentent leur effet de la même façon
+(11, « ne pas apprendre une règle par écran »).
+
+Précisions (B.7) : `CorrectionPreviewComponent` affiche l'Aperçu ; `CorrectionDialogComponent` mène
+la correction (Motif, Aperçu, confirmation, reprise sur un Aperçu périmé) sans rien connaître d'elle
+qu'une fonction `run(step, motif, jeton)`. Corriger un Encaissement enchaîne deux dialogues — la
+saisie de l'état voulu, puis l'Aperçu, avec « Modifier » pour revenir à la saisie ; annuler ouvre
+directement l'Aperçu.
+
+Précisions (C.8) :
+
+- **Séances à noter depuis l'Aperçu (5.7).** Un effet peut désigner une séance
+  (`CorrectionEffect.sessionId`) : séance validée entrée dans la période sans présence, ou présence
+  notée à sa place. Le dialogue y propose « Sans présence (facturée) / Présent / Absent » ;
+  `run(step, motif, jeton, présences)` porte les choix. Le jeton les couvre : en changer redemande
+  l'Aperçu. L'Aperçu ne décide rien : il rend, à côté de chaque effet, le gabarit que lui confie
+  l'hôte (`effectAction`).
+- **Inscriptions.** La fiche élève liste les inscriptions de l'année, closes comprises
+  (`GET /api/student-groups/{id}/enrolments`). Arrivée, départ, réouverture passent par
+  `EnrolmentCorrectionFlow` : saisie de la date, puis le dialogue commun. La fiche groupe
+  « enregistre le départ » par le même chemin ; le retrait sec (`DELETE`) n'existe plus.
+- **Jours.** Toute date d'inscription est un jour `yyyy-MM-dd`, saisi par un champ `date` natif et
+  envoyé tel quel ; `calendarDayOf` donne le jour local, jamais `toISOString()`, qui donne la veille
+  avant 1 h du matin à Alger.
+- **Feuille refusée (7.5).** La validation garde les lignes du 409 `ABSENCE_OUTSIDE_WINDOW` ;
+  « Retirer ces lignes » les ôte de la feuille, la validation se refait.
+
+Précisions (D.3) : « Dévalider la séance » ouvre le dialogue commun (Motifs lus sur
+`GET /api/sessions/unvalidation-reasons`). Confirmée, la modale reste ouverte et recharge la feuille
+du serveur, cochée par défaut : on dévalide pour refaire la feuille. L'état est aussi écrit sur les
+données de la modale, que le calendrier et la liste d'une série relisent à la fermeture, quelle
+qu'elle soit (bouton, Échap, clic au dehors). `correctionErrorOf` met en commun la lecture d'un refus
+de correction.
+
+Précisions (D.7) : sur une Séance validée, `session-modal` garde chaque ligne en lecture et lui donne
+un menu « Corriger » ; l'identifiant de la ligne est retenu au chargement des présences. Ajouter un
+élève passe par le même dialogue de sélection, puis par le choix de l'état de sa ligne
+(`AttendanceStateDialogComponent`), puis par la correction. Après confirmation, la feuille est relue
+du serveur, comme après une dévalidation.
+
+Précisions (D.5) : le Journal est un panneau de la fiche élève, ADMIN seul, lu à l'ouverture. Il
+s'imprime en A4 paysage, composé par pdfmake comme les reçus. « Imprimer » relit le Journal sur la
+période saisie avant de l'imprimer. La police embarquée n'a pas de flèche : « → » s'imprime « -> ».
+L'impression passe par une iframe masquée, téléchargement en repli (`utils/pdf-print`,
+`PdfOutputService`) ; les services de reçus gardent pour l'instant leur propre copie de ce code.
 
 ## Error Handling
 
-Toutes les erreurs passent par `CustomServiceException` avec un statut explicite ; aucun `500`
-pour un cas métier. Le corps suit le format existant `{ "message": ... }`, enrichi d'une liste
-(`rejected`, `conflictingAbsences`, `paidSessions`) quand l'Administrateur doit agir sur plusieurs
-lignes.
+`CustomServiceException` avec statut explicite ; aucun 500 pour un cas métier. Corps
+`{ "message": … }`, enrichi de `preview` (409 d'Aperçu périmé), `rejected` (validation refusée),
+`blockingRefund` (2.4).
 
 ## Correctness Properties
 
-Propriétés à éprouver, dans l'esprit de `JustificationNeutralityPropertyTest` : sur base H2
-réelle, et vérifiées par mutation.
+Sur H2 réel, jqwik, vérifiées par mutation comme `JustificationNeutralityPropertyTest`.
 
-1. **Fenêtre respectée à l'écriture.** Pour toute Date_Inscription et toute Séance, aucun point
-   d'entrée (saisie en masse, correction, ajout) ne laisse subsister une absence active sur une
-   Séance où l'Étudiant n'est pas concerné. (2.3, 3.4)
-2. **Corriger équivaut à avoir bien saisi.** Pour tout jeu de données, corriger la Date_Inscription
-   de D1 vers D2 produit le même coût au prorata, le même montant dû, le même plafond et le même
-   statut qu'un jeu identique saisi directement avec D2. Propriété métamorphique : elle garantit
-   que la correction n'introduit aucun état qu'une saisie correcte n'aurait pas produit. (1.11)
-3. **Indivisibilité.** Si une étape de la correction combinée échoue, la date, les absences et les
-   Traces sont toutes inchangées. (1.9, 7.6)
-4. **Une Trace par changement effectif.** Toute correction réussie écrit exactement une Trace par
-   champ changé ; une correction refusée ou sans changement n'en écrit aucune ; les rangs sont
-   strictement croissants et sans doublon. (7.2, 7.4, 7.6)
-5. **Jour calendaire.** Une Séance tenue le jour de l'inscription concerne l'Étudiant, quelle que
-   soit l'heure de l'inscription ou de la Séance. (1.5)
+- **P1 — Conservation de l'argent.** Pour toute suite d'Encaissements, d'Annulations et de
+  Remplacements, le cumul de chaque Série vaut la somme des Imputations actives, et la somme des
+  Encaissements actifs vaut la somme des cumuls. Aucune correction ne crée ni ne détruit d'argent
+  reçu. (1.4, 2.2)
+- **P2 — Remplacer équivaut à avoir bien saisi.** Remplacer le dernier Encaissement A par B donne
+  les mêmes montants, reports, statuts et ventilation qu'un jeu de données où B aurait été encaissé
+  à la place de A, et l'un est refusé si et seulement si l'autre l'est (P2a). Pour un A quelconque,
+  remplacer équivaut à annuler A puis encaisser B (P2b) : un remplacement ne recalcule pas la
+  répartition des versements postérieurs à A, qui a pu dépendre de lui. (3.2, 3.4)
+- **P3 — Indivisibilité.** Toute Correction refusée ou échouée laisse Encaissements, Imputations,
+  ventilation, Présences, dates et Traces inchangés. (3.5, 5.8, 11.5)
+- **P4 — L'Aperçu ne ment pas.** Pour toute Correction, les montants après confirmation sont ceux
+  annoncés par l'Aperçu. (4.3)
+- **P5 — Fenêtre respectée.** Aucun point d'entrée ne laisse subsister une absence active hors
+  Fenêtre_Inscription ; une Séance de la fenêtre validée après le départ fait figurer l'Étudiant
+  sur la Feuille_Appel. (6.2, 7.1, 7.3)
+- **P6 — Déplacer la ventilation ne change aucun montant.** (5.9, D6)
+- **P7 — Une Trace par changement effectif**, aucune sur refus ou sans changement, rangs
+  strictement croissants. (11.3 à 11.5) Précision (D.6) : « changement effectif » s'entend par
+  objet — versement, inscription, présence, séance — dont l'état relu en SQL a changé, ou présence
+  créée ; chacun a exactement une Trace. Un remplacement n'a la sienne que s'il change d'élève. Ce
+  qui suit (ventilation, statut, demande de rattrapage annulée) est dit par la Trace de la
+  correction.
 
-S'y ajoutent des tests HTTP de bout en bout, sur le modèle de
-`PaymentProcessingEndpointIntegrationTest` : statuts, corps, absence d'écriture après refus, et
-403 pour le rôle VIEWER sur chaque point d'entrée de correction.
+Plus des tests HTTP de bout en bout (statuts, corps, absence d'écriture après refus, 403 VIEWER sur
+chaque `preview` et `confirm`), et des tests Karma des composants d'Aperçu et de correction.
 
-## Décisions confirmées
+## Mise à jour chez le client
 
-1. **Fuseau** (D1) : `Africa/Algiers`, installation sur site en Docker.
-2. **Séance déjà payée qu'une correction écarterait** (D6) : refus, avec renvoi vers l'outil de
-   correction des Détails de paiement.
+L'installation initiale part d'une base vide. La procédure ci-dessous sert aux mises à jour
+**suivantes**, dès que l'école aura saisi de vraies données — à commencer par l'étape 2 :
+
+1. sauvegarde (`pg_dump` depuis le conteneur, fichier daté sur le poste et sur clé USB) ;
+2. `docker compose pull` / `build`, puis `up` ;
+3. vérification du fuseau (ligne « Fuseau de l'école » du journal) et des migrations ;
+4. retour arrière documenté : restauration de la sauvegarde et image précédente.
+
+Un script `mise-a-jour.ps1` enchaîne ces étapes sur le Mini PC Windows.
+
+## Risques
+
+- **Ventilation multiple par Séance** (D3) : tout lecteur qui suppose une ligne unique par
+  (paiement, Séance) doit être revu. Inventaire établi en A.1 (`tasks.md`).
+- **Volume** : l'étape 1 est plus grosse que prévu. Le plan la livre en quatre lots indépendants,
+  chacun déployable.

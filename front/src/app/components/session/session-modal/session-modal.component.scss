@@ -201,12 +201,13 @@
 }
 
 /*
-  Grille plutôt que flex : les quatre colonnes gardent une largeur stable d'une ligne
-  à l'autre et la colonne « Justifié » ne peut plus être rognée.
+  Grille plutôt que flex : les colonnes gardent une largeur stable d'une ligne à l'autre et la
+  colonne « Justifié » ne peut plus être rognée. La dernière porte « Corriger », sur une séance
+  validée ; vide sinon.
 */
 .student-list-item {
   display: grid;
-  grid-template-columns: auto minmax(130px, 1fr) minmax(120px, 1.4fr) auto;
+  grid-template-columns: auto minmax(130px, 1fr) minmax(120px, 1.4fr) auto auto;
   align-items: center;
   gap: 10px;
   padding: 8px 10px;
@@ -236,10 +237,10 @@
 /* Sous 620px, la note passe sur une deuxième ligne au lieu de tout comprimer. */
 @media (max-width: 620px) {
   .student-list-item {
-    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
     grid-template-areas:
-      "check name justified"
-      ".     note note";
+      "check name justified correct"
+      ".     note note      note";
     row-gap: 6px;
   }
 
@@ -257,6 +258,10 @@
 
   .description-input {
     grid-area: note;
+  }
+
+  .correct-line-btn {
+    grid-area: correct;
   }
 }
 
@@ -288,6 +293,109 @@
     width: 14px;
     height: 14px;
   }
+}
+
+/* Parti après la séance : information neutre, l'étudiant est bien attendu. */
+.departed-label {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 6px;
+  padding: 1px 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  background: #f1f5f9;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* Feuille vide ou non chargée : le texte porte le sens, l'icône ne fait que l'appuyer. */
+.roll-call-empty,
+.roll-call-error,
+.rejected-absences {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+
+  mat-icon {
+    flex: none;
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+  }
+
+  p {
+    margin: 0 0 6px;
+  }
+
+  ul {
+    margin: 0;
+    padding-left: 18px;
+  }
+}
+
+.roll-call-empty {
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  color: #334155;
+}
+
+.roll-call-error,
+.rejected-absences {
+  border: 1px solid #fca5a5;
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+/* Absences refusées : titre, lignes nommées, puis l'action qui les retire. */
+.rejected-absences {
+  .rejected-title {
+    font-weight: 600;
+  }
+
+  .rejected-hint {
+    margin: 6px 0;
+    color: #7f1d1d;
+  }
+
+  .remove-rejected-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #991b1b;
+    border-color: #fca5a5;
+  }
+}
+
+/* Séance validée sans ligne pour l'élève : à ajouter, ou à laisser, d'un coup d'œil. */
+.no-line-label {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 6px;
+  padding: 1px 8px;
+  border: 1px dashed #94a3b8;
+  border-radius: 12px;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.no-line-mark {
+  display: inline-flex;
+  justify-content: center;
+  color: #94a3b8;
+}
+
+/* Corriger une ligne d'une séance validée : discret, au bout de la ligne. */
+.correct-line-btn {
+  flex: none;
+  color: #4f46e5;
 }
 
 /* Facturée sur place : information neutre, pas une alerte. Aucune décision n'est attendue. */

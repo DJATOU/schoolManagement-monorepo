@@ -1,4 +1,5 @@
 import { Payment } from './payment';
+import { Encashment } from './encashment';
 
 /**
  * Une part de versement reportée sur une série et sa série destinataire.
@@ -28,7 +29,7 @@ export interface CarriedOverAmount {
  * est `amountReceived`, jamais `payment.amountPaid`.</p>
  *
  * <p>Contrat serveur : `PaymentAllocationResultDTO`, renvoyé par
- * `POST /api/payments/process`.</p>
+ * `POST /api/payments/process` et `POST /api/payments/process/catch-up`.</p>
  */
 export interface PaymentAllocationResult {
   /** L'étudiant qui a versé. */
@@ -45,6 +46,8 @@ export interface PaymentAllocationResult {
   amountCarriedOver: number;
   /** Détail des reports, par identifiant de série croissant. */
   carryOvers: CarriedOverAmount[];
-  /** Ligne de paiement principale créditée : porte la date d'encaissement faisant foi. */
+  /** Ligne de paiement principale créditée : son `amountPaid` est le cumul de la série. */
   payment: Payment;
+  /** L'Encaissement enregistré : numéro de reçu, date, heure et auteur à imprimer. */
+  encashment: Encashment;
 }

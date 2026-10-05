@@ -1,5 +1,8 @@
 package com.school.management.service.payment;
 
+import com.school.management.persistance.EncashmentAllocationEntity;
+import com.school.management.persistance.EncashmentEntity;
+import com.school.management.persistance.EncashmentKind;
 import com.school.management.persistance.GroupEntity;
 import com.school.management.persistance.PaymentEntity;
 import com.school.management.persistance.SessionEntity;
@@ -27,6 +30,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * Encaissement d'un versement : plafonnement sur la série visée puis report du surplus sur les
@@ -45,24 +49,39 @@ import java.util.Objects;
  * l'administrateur conserve la différence en main sans aucune trace. Le message de refus annonce
  * donc le maximum réellement encaissable <em>et</em> l'action corrective (exigence 5.12).
  *
- * <h2>Une seule transaction</h2>
- * Imputations, ventilations et traces de report vivent dans la même transaction (exigence 5.6) :
- * un échec à n'importe quelle étape annule l'ensemble, y compris la part déjà imputée sur la
- * série visée (exigences 4.9, 5.5, 5.7).
+ * <h2>Un versement est un Encaissement</h2>
+ * Chaque versement accepté devient un Encaissement numéroté ({@link EncashmentService}), et
+ * chaque part qu'il crédite une Imputation. Le cumul d'une série n'est plus incrémenté ici : il
+ * est recalculé par {@link EncashmentService#allocate} comme la somme des Imputations actives,
+ * avec le statut évalué contre le coût au prorata (spec admin-corrections, exigences 1.1 et 1.4).
+ * Un Encaissement annulé cesse ainsi de compter sans qu'aucun montant ne soit réécrit à la main.
  *
- * <h2>Statut évalué contre le coût au prorata</h2>
- * Le statut de la ligne de paiement se compare au Coût_Série_Prorata de sa série, et non au coût
- * des séances assistées : un étudiant arrivé à la dernière séance d'une série et l'ayant réglée
- * est soldé (exigences 11.1, 11.2). Ce sont deux quantités que {@code business-rules.md} demande
- * explicitement de ne pas confondre.
+ * <h2>Une seule transaction</h2>
+ * Encaissement, Imputations, ventilations et traces de report vivent dans la même transaction
+ * (exigence 5.6) : un échec à n'importe quelle étape annule l'ensemble, numéro de reçu compris
+ * (exigences 4.9, 5.5, 5.7).
+ *
+ * <h2>Le rattrapage suit la même règle</h2>
+ * Le chemin rattrapage passe par le même Encaissement, la même clé d'idempotence et le même
+ * calcul de statut (spec admin-corrections, exigence 1.7). Il paie une séance : il est plafonné
+ * au prix net de la séance et à ce qui reste dû sur sa série, et ne se reporte jamais.
  */
 @Service
 public class PaymentProcessingService {
 
         private static final Logger LOGGER = LoggerFactory.getLogger(PaymentProcessingService.class);
 
-        private static final String STATUS_COMPLETED = "COMPLETED";
-        private static final String STATUS_IN_PROGRESS = "IN_PROGRESS";
+        /**
+         * Mode de paiement et note saisis avec le versement. Ils sont conservés sur l'Encaissement
+         * et n'entrent dans aucun calcul.
+         *
+         * @param method mode de paiement (« cash », « cheque »…), facultatif
+         * @param note   note libre, facultative
+         */
+        public record PaymentMeans(String method, String note) {
+                /** Aucun mode ni note : appels internes et tests. */
+                public static final PaymentMeans NONE = new PaymentMeans(null, null);
+        }
 
         private final PaymentRepository paymentRepository;
         private final StudentRepository studentRepository;
@@ -91,6 +110,9 @@ public class PaymentProcessingService {
         /** Sépare le rejeu d'une soumission du second encaissement réel. */
         private final PaymentIdempotencyService idempotencyService;
 
+        /** Enregistre l'Encaissement, ses Imputations, et recalcule le cumul de chaque série. */
+        private final EncashmentService encashmentService;
+
         /**
          * Refuse l'encaissement sur un groupe d'une année scolaire close (school-year, exigence
          * 9.2). Les autres écritures liées au paiement (édition et suppression d'une ligne de
@@ -111,8 +133,10 @@ public class PaymentProcessingService {
                         PaymentAllocationService allocationService,
                         PaymentCarryOverService carryOverService,
                         PaymentIdempotencyService idempotencyService,
+                        EncashmentService encashmentService,
                         com.school.management.service.ReadOnlyYearGuard readOnlyYearGuard) {
                 this.idempotencyService = idempotencyService;
+                this.encashmentService = encashmentService;
                 this.readOnlyYearGuard = readOnlyYearGuard;
                 this.paymentRepository = paymentRepository;
                 this.studentRepository = studentRepository;
@@ -126,6 +150,10 @@ public class PaymentProcessingService {
                 this.allocationService = allocationService;
                 this.carryOverService = carryOverService;
         }
+
+        // ------------------------------------------------------------------
+        // Versement de série
+        // ------------------------------------------------------------------
 
         /**
          * Encaisse un versement sur une série, en reportant sur les séries suivantes la part qui
@@ -144,7 +172,15 @@ public class PaymentProcessingService {
         @Transactional
         public PaymentAllocationResult processPayment(Long studentId, Long groupId, Long sessionSeriesId,
                         double amountPaid) {
-                return processPayment(studentId, groupId, sessionSeriesId, amountPaid, null);
+                return processPayment(studentId, groupId, sessionSeriesId, amountPaid, null, PaymentMeans.NONE);
+        }
+
+        /** Comme {@link #processPayment(Long, Long, Long, double, String, PaymentMeans)}, sans mode ni note. */
+        @Transactional
+        public PaymentAllocationResult processPayment(Long studentId, Long groupId, Long sessionSeriesId,
+                        double amountPaid, String idempotencyKey) {
+                return processPayment(studentId, groupId, sessionSeriesId, amountPaid, idempotencyKey,
+                                PaymentMeans.NONE);
         }
 
         /**
@@ -159,11 +195,12 @@ public class PaymentProcessingService {
          * <p>Sans clé, le comportement est celui d'avant : chaque appel encaisse.</p>
          *
          * @param idempotencyKey clé fournie par le client, ou {@code null}
+         * @param means          mode de paiement et note, conservés sur l'Encaissement
          * @throws CustomServiceException 409 si la clé a déjà servi pour un encaissement différent
          */
         @Transactional
         public PaymentAllocationResult processPayment(Long studentId, Long groupId, Long sessionSeriesId,
-                        double amountPaid, String idempotencyKey) {
+                        double amountPaid, String idempotencyKey, PaymentMeans means) {
                 LOGGER.info("Processing payment for student {} on series {} - amount: {}",
                                 studentId, sessionSeriesId, amountPaid);
 
@@ -172,7 +209,7 @@ public class PaymentProcessingService {
                 // Le rejeu est écarté AVANT toute validation et toute écriture : une soumission
                 // déjà traitée ne doit pas pouvoir échouer sur un contrôle que l'original a passé,
                 // ni produire un second versement.
-                java.util.Optional<PaymentAllocationResult> replay = idempotencyService.findReplay(
+                Optional<PaymentAllocationResult> replay = idempotencyService.findReplay(
                                 key, studentId, groupId, sessionSeriesId, money(amountPaid));
                 if (replay.isPresent()) {
                         return replay.get();
@@ -193,27 +230,32 @@ public class PaymentProcessingService {
 
                 requireEnrolmentOrCatchUp(studentId, group, sessionSeriesId);
 
-                sessionSeriesRepository.findById(Objects.requireNonNull(sessionSeriesId))
+                SessionSeriesEntity targetSeries = sessionSeriesRepository.findById(Objects.requireNonNull(sessionSeriesId))
                                 .orElseThrow(() -> new CustomServiceException(
                                                 "Session series not found with ID: " + sessionSeriesId, HttpStatus.NOT_FOUND));
 
                 // Refus du montant nul ou négatif (exigence 4.6). Le contrôle est délégué au
                 // garde-fou du service de ventilation, qui nomme la cause réelle — série soldée,
-                // étudiant exempté, reste à payer — au lieu du seul symptôme. requirePositiveAmount
-                // reste le garde-fou du chemin rattrapage, qui n'a pas de devis contextuel à sa
-                // disposition. Le plafond, lui, n'est plus de son ressort : il appartient au plan.
+                // étudiant exempté, reste à payer — au lieu du seul symptôme. Le plafond, lui,
+                // n'est plus de son ressort : il appartient au plan.
                 distributionService.canProcessPayment(studentId, sessionSeriesId, amountPaid);
 
                 BigDecimal amount = money(amountPaid);
 
-                // Plan calculé AVANT toute écriture : le refus total n'a ainsi rien à annuler.
+                // Plan calculé AVANT toute écriture : le refus total n'a ainsi rien à annuler, et
+                // aucun numéro de reçu n'est attribué à un versement refusé.
                 AllocationPlan plan = allocationService.plan(studentId, groupId, sessionSeriesId, amount);
                 if (!plan.isComplete()) {
                         throw new CustomServiceException(unplaceableMessage(plan, amount),
                                         HttpStatus.BAD_REQUEST);
                 }
 
-                Date paymentDate = new Date();
+                EncashmentEntity encashment = encashmentService.open(new EncashmentService.NewEncashment(
+                                student, group, targetSeries, amount, EncashmentKind.REGULAR,
+                                means.method(), means.note()));
+                // Une seule date pour tout ce que produit ce versement : celle de l'Encaissement.
+                Date paymentDate = encashment.getReceivedAt();
+
                 BigDecimal directlyAllocated = zero();
                 List<CarriedOverAmount> carryOvers = new ArrayList<>();
                 PaymentEntity targetedPayment = null;
@@ -221,21 +263,21 @@ public class PaymentProcessingService {
 
                 for (SeriesAllocation allocation : plan.allocations()) {
                         PaymentEntity payment = getOrCreateSeriesPayment(student, group, allocation.seriesId());
-
-                        BigDecimal newTotal = money(payment.getAmountPaid()).add(allocation.amount());
-                        payment.setAmountPaid(newTotal.doubleValue());
                         payment.setPaymentDate(paymentDate);
-                        payment.setStatus(resolveStatus(studentId, allocation.seriesId(), newTotal));
-                        payment = paymentRepository.save(payment);
+
+                        // Imputation, puis cumul et statut de la série recalculés depuis les
+                        // Imputations actives : jamais un incrément fait ici.
+                        EncashmentAllocationEntity imputation = encashmentService.allocate(
+                                        encashment, payment, allocation.amount(), allocation.carriedOver());
 
                         // Un versement n'est traité qu'une fois sa ventilation achevée (exigence
-                        // 4.8) : un échec ici remonte et annule la transaction entière.
-                        distributionService.distributePayment(payment, allocation.seriesId(),
-                                        allocation.amount().doubleValue());
+                        // 4.8) : un échec ici remonte et annule la transaction entière. Chaque ligne
+                        // créée est une part de cette Imputation (exigence 1.3).
+                        distributionService.distribute(imputation);
 
                         if (allocation.carriedOver()) {
                                 carryOverService.record(studentId, sessionSeriesId, allocation.seriesId(),
-                                                payment, allocation.amount(), paymentDate);
+                                                payment, allocation.amount(), paymentDate, imputation);
                                 carryOvers.add(new CarriedOverAmount(allocation.seriesId(),
                                                 allocation.seriesName(), allocation.amount()));
                         } else {
@@ -257,28 +299,67 @@ public class PaymentProcessingService {
                 PaymentEntity primaryPayment = targetedPayment != null ? targetedPayment : firstCreditedPayment;
 
                 PaymentAllocationResult result = new PaymentAllocationResult(studentId, groupId,
-                                sessionSeriesId, amount, directlyAllocated, carryOvers, primaryPayment);
+                                sessionSeriesId, amount, directlyAllocated, carryOvers, primaryPayment, encashment);
 
                 // Empreinte conservée dans la MÊME transaction : si la ventilation avait échoué,
                 // elle disparaîtrait avec, et une nouvelle tentative resterait possible. Une
                 // empreinte survivant à un échec bloquerait la reprise d'un versement jamais abouti.
-                idempotencyService.remember(key, result, paymentDate);
+                idempotencyService.remember(key, result, null);
 
-                LOGGER.info("Versement de {} DA réparti : {} DA sur la série {}, {} DA reportés sur {} série(s)",
-                                amount.toPlainString(), directlyAllocated.toPlainString(), sessionSeriesId,
+                LOGGER.info("Versement {} de {} DA réparti : {} DA sur la série {}, {} DA reportés sur {} série(s)",
+                                encashment.getReceiptNumber(), amount.toPlainString(),
+                                directlyAllocated.toPlainString(), sessionSeriesId,
                                 result.amountCarriedOver().toPlainString(), carryOvers.size());
 
                 return result;
         }
 
+        // ------------------------------------------------------------------
+        // Rattrapage
+        // ------------------------------------------------------------------
+
+        /** Comme {@link #processCatchUpPayment(Long, Long, double, String, PaymentMeans)}, sans clé ni mode. */
         @Transactional
-        public PaymentEntity processCatchUpPayment(Long studentId, Long sessionId, double amountPaid) {
+        public PaymentAllocationResult processCatchUpPayment(Long studentId, Long sessionId, double amountPaid) {
+                return processCatchUpPayment(studentId, sessionId, amountPaid, null, PaymentMeans.NONE);
+        }
+
+        /**
+         * Encaisse le paiement d'une séance de rattrapage.
+         *
+         * <p>Même règle que le versement de série (spec admin-corrections, exigence 1.7) : un
+         * Encaissement numéroté, de type {@link EncashmentKind#CATCH_UP}, une Imputation sur la
+         * série de la séance, le cumul et le statut recalculés depuis les Imputations, la même clé
+         * d'idempotence. Le statut se compare donc au coût au prorata, et non plus au coût des
+         * séances assistées au tarif catalogue.</p>
+         *
+         * <p><b>Plafond.</b> Un rattrapage paie une séance : le montant ne dépasse ni le prix net de
+         * la séance, ni ce qui reste dû sur sa série. Il ne se reporte pas sur une autre série. Une
+         * séance gratuite ici (rattrapage compensatoire, facturé dans le groupe d'origine), déjà
+         * réglée ou encore « à préciser » ne laisse rien à encaisser : le versement est refusé, au
+         * lieu de créer un crédit que rien n'explique.</p>
+         *
+         * @param idempotencyKey clé fournie par le client, ou {@code null}
+         * @param means          mode de paiement et note, conservés sur l'Encaissement
+         * @throws CustomServiceException 400 si le montant est nul, négatif ou au-delà du plafond,
+         *                                si la séance n'a pas de série, ou si l'étudiant n'est ni
+         *                                inscrit ni présent sur la série ; 404 si l'étudiant ou la
+         *                                séance est introuvable ; 409 sur une année close ou une clé
+         *                                réutilisée
+         */
+        @Transactional
+        public PaymentAllocationResult processCatchUpPayment(Long studentId, Long sessionId, double amountPaid,
+                        String idempotencyKey, PaymentMeans means) {
                 LOGGER.info("Processing catch-up payment for student {} on session {} - amount: {}",
                                 studentId, sessionId, amountPaid);
 
-                // Ce chemin ne passe pas par PaymentDistributionService.canProcessPayment : il
-                // n'applique que son propre plafond. Le refus du versement nul doit donc être
-                // répété ici, sans quoi un rattrapage à 0 resterait encaissable.
+                String key = idempotencyService.normalizeKey(idempotencyKey);
+                Optional<PaymentAllocationResult> replay = idempotencyService.findCatchUpReplay(
+                                key, studentId, sessionId, money(amountPaid));
+                if (replay.isPresent()) {
+                        return replay.get();
+                }
+
                 requirePositiveAmount(amountPaid);
 
                 StudentEntity student = studentRepository.findById(Objects.requireNonNull(studentId))
@@ -290,73 +371,94 @@ public class PaymentProcessingService {
                                                 "Session not found with ID: " + sessionId, HttpStatus.NOT_FOUND));
 
                 GroupEntity group = session.getGroup();
-                SessionSeriesEntity sessionSeries = session.getSessionSeries();
+                SessionSeriesEntity series = session.getSessionSeries();
 
                 // Même règle que l'encaissement de série : pas d'écriture sur une année close.
                 readOnlyYearGuard.assertGroupMutable(group);
 
-                if (sessionSeries == null) {
-                        throw new CustomServiceException("Session is not part of a series");
-                }
-
-                Long sessionSeriesId = sessionSeries.getId();
-
-                // Prix net de la séance : le contrôle se faisait sur le tarif catalogue, donc un
-                // étudiant réduit pouvait verser jusqu'au plein tarif pour un rattrapage.
-                PaymentQuoteDTO quote = paymentQuoteService.quote(studentId, sessionSeriesId);
-                double sessionCost = quote.netPricePerSession().doubleValue();
-
-                if (amountPaid > sessionCost) {
-                        throw new CustomServiceException(String.format(
-                                        "Le montant payé (%.2f DA) dépasse le coût de la séance (%.2f DA)%s.",
-                                        amountPaid, sessionCost, discountSuffix(quote)),
+                if (series == null) {
+                        throw new CustomServiceException(
+                                        "La séance " + sessionId + " n'appartient à aucune série : aucun "
+                                                        + "rattrapage ne peut y être encaissé.",
                                         HttpStatus.BAD_REQUEST);
                 }
 
-                PaymentEntity payment = getOrCreateSeriesPayment(student, group, sessionSeriesId);
+                requireEnrolmentOrCatchUp(studentId, group, series.getId());
 
-                double previousTotal = payment.getAmountPaid();
-                double newTotal = previousTotal + amountPaid;
-                payment.setAmountPaid(newTotal);
-                payment.setPaymentDate(new Date());
+                BigDecimal amount = money(amountPaid);
+                requireWithinCatchUpCeiling(amount, paymentQuoteService.quote(studentId, series.getId()), series);
 
-                double attendedSessionsCost = distributionService.calculateAttendedSessionsCost(
-                                studentId, sessionSeriesId, group);
+                EncashmentEntity encashment = encashmentService.open(new EncashmentService.NewEncashment(
+                                student, group, series, amount, EncashmentKind.CATCH_UP,
+                                means.method(), means.note()));
 
-                if (newTotal >= attendedSessionsCost) {
-                        payment.setStatus(STATUS_COMPLETED);
-                        LOGGER.info("Payment COMPLETED for student {} - Total: {}/{}",
-                                        studentId, newTotal, attendedSessionsCost);
-                } else {
-                        payment.setStatus(STATUS_IN_PROGRESS);
-                        LOGGER.info("Payment IN_PROGRESS for student {} - Total: {}/{}",
-                                        studentId, newTotal, attendedSessionsCost);
-                }
+                PaymentEntity payment = getOrCreateSeriesPayment(student, group, series.getId());
+                payment.setPaymentDate(encashment.getReceivedAt());
+                EncashmentAllocationEntity imputation = encashmentService.allocate(encashment, payment, amount, false);
 
-                payment = paymentRepository.save(payment);
+                distributionService.distribute(imputation);
 
-                distributionService.distributePayment(payment, sessionSeriesId, amountPaid);
+                PaymentAllocationResult result = new PaymentAllocationResult(studentId, group.getId(),
+                                series.getId(), amount, amount, List.of(), payment, encashment);
+                idempotencyService.remember(key, result, sessionId);
 
-                LOGGER.info("Catch-up payment processed successfully - Payment ID: {}, Status: {}",
+                LOGGER.info("Rattrapage {} de {} DA encaissé sur la série {} - ligne {}, statut {}",
+                                encashment.getReceiptNumber(), amount.toPlainString(), series.getId(),
                                 payment.getId(), payment.getStatus());
 
-                return payment;
+                return result;
         }
 
         /**
-         * Statut de la ligne de paiement, évalué contre le <strong>coût au prorata</strong> de la
-         * série et non contre le coût des séances assistées.
+         * Plafond d'un rattrapage : le prix net de la séance, et ce qui reste dû sur sa série.
          *
-         * <p>Comparer au coût des séances assistées faisait apparaître « soldé » un étudiant qui
-         * n'avait réglé que les séances déjà suivies, et comparer au coût nominal
-         * ({@code total_sessions × prix}) laisserait indéfiniment « en cours » un étudiant arrivé en
-         * cours de série. Le Coût_Série_Prorata est la seule quantité qui répond à la question
-         * « cette série est-elle soldée pour cet étudiant ? » (exigences 11.1, 11.2).</p>
+         * <p>Le second est le plafond encaissable du devis : pour un étudiant venu seulement en
+         * rattrapage, le dû à ce jour, c'est-à-dire les séances suivies et facturables. Un
+         * rattrapage compensatoire n'y entre pas (sa séance est facturée dans le groupe
+         * d'origine), un rattrapage « à préciser » non plus (il ne facture rien tant qu'il n'est
+         * pas tranché).</p>
          */
-        private String resolveStatus(Long studentId, Long seriesId, BigDecimal newTotal) {
-                BigDecimal prorataCost = paymentQuoteService.quote(studentId, seriesId).monthTotalCost();
-                return newTotal.compareTo(prorataCost) >= 0 ? STATUS_COMPLETED : STATUS_IN_PROGRESS;
+        private void requireWithinCatchUpCeiling(BigDecimal amount, PaymentQuoteDTO quote,
+                        SessionSeriesEntity series) {
+                BigDecimal maxPayable = quote.maxPayable();
+
+                if (maxPayable.signum() <= 0) {
+                        if (quote.exempted()) {
+                                throw new CustomServiceException(
+                                                "Cet étudiant est exempté : aucun montant n'est dû pour cette série.",
+                                                HttpStatus.BAD_REQUEST);
+                        }
+                        throw new CustomServiceException(String.format(
+                                        "Rien à encaisser pour ce rattrapage : la série « %s » ne doit plus rien "
+                                                        + "à cet étudiant. La séance est déjà réglée, gratuite ici "
+                                                        + "(rattrapage compensatoire, facturé dans le groupe d'origine), "
+                                                        + "ou encore « à préciser » : renseignez d'abord la séance "
+                                                        + "manquée et la décision « déjà payée ».",
+                                        series.getName()),
+                                        HttpStatus.BAD_REQUEST);
+                }
+
+                BigDecimal sessionPrice = quote.netPricePerSession();
+                if (amount.compareTo(sessionPrice) > 0) {
+                        throw new CustomServiceException(String.format(
+                                        "Le montant payé (%s DA) dépasse le coût de la séance (%s DA)%s.",
+                                        amount.toPlainString(), sessionPrice.toPlainString(), discountSuffix(quote)),
+                                        HttpStatus.BAD_REQUEST);
+                }
+
+                if (amount.compareTo(maxPayable) > 0) {
+                        throw new CustomServiceException(String.format(
+                                        "Versement de %s DA refusé en totalité : au maximum %s DA restent dus sur "
+                                                        + "la série « %s » pour ce rattrapage. Un rattrapage ne se "
+                                                        + "reporte pas sur une autre série.",
+                                        amount.toPlainString(), maxPayable.toPlainString(), series.getName()),
+                                        HttpStatus.BAD_REQUEST);
+                }
         }
+
+        // ------------------------------------------------------------------
+        // Messages de refus
+        // ------------------------------------------------------------------
 
         /**
          * Message de refus d'un versement dont une part n'est plaçable nulle part.
@@ -439,6 +541,10 @@ public class PaymentProcessingService {
                                 quote.grossPricePerSession().toPlainString());
         }
 
+        // ------------------------------------------------------------------
+        // Garde-fous et outils
+        // ------------------------------------------------------------------
+
         /**
          * Exige un rattachement de l'étudiant à la série visée : une inscription au groupe, ou
          * une présence de rattrapage sur cette série.
@@ -507,10 +613,13 @@ public class PaymentProcessingService {
                 }
         }
 
+        /**
+         * Ligne de paiement (cumul) de l'étudiant pour la série, créée vide si elle n'existe pas.
+         * Son montant et son statut sont ensuite fixés par {@link EncashmentService#allocate}.
+         */
         private PaymentEntity getOrCreateSeriesPayment(StudentEntity student, GroupEntity group,
                         Long sessionSeriesId) {
-                // IMPORTANT: Utiliser findActive... pour ignorer les paiements CANCELLED
-                // Cela permet de créer un nouveau paiement même si un paiement CANCELLED existe
+                // findActive... ignore les lignes CANCELLED : une ligne annulée ne reçoit plus rien.
                 return paymentRepository.findActiveByStudentIdAndSessionSeriesId(student.getId(), sessionSeriesId)
                                 .map(existingPayment -> {
                                         LOGGER.info("Using existing active payment {} for student {} and series {}",
@@ -532,7 +641,7 @@ public class PaymentProcessingService {
                                                         .sessionSeries(sessionSeries)
                                                         .amountPaid(0.0)
                                                         .paymentDate(new Date())
-                                                        .status(STATUS_IN_PROGRESS)
+                                                        .status(PaymentLineStatus.PENDING)
                                                         .build();
 
                                         return paymentRepository.save(Objects.requireNonNull(newPayment));

@@ -1,0 +1,30 @@
+.ed-subject {
+  margin: 0 0 14px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.ed-form {
+  display: flex;
+  flex-direction: column;
+  min-width: min(420px, 85vw);
+}
+
+.ed-remove {
+  margin-top: 6px;
+}
+
+.ed-hint {
+  margin: 2px 0 0 40px;
+  font-size: 0.82rem;
+  color: #64748b;
+}
+
+.ed-unchanged {
+  margin: 10px 0 0;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: #fffbeb;
+  color: #92400e;
+  font-size: 0.86rem;
+}

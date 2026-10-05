@@ -12,8 +12,8 @@ export interface SessionHistoryDTO {
     // Présence exemptée : vrai lorsque l'étudiant bénéficie d'une exemption (réduction 100 %)
     // sur cette séance ; pilote la légende « Présent et exempté ».
     isExempted?: boolean;
-    // Montant remboursé rattaché à cette séance
-    refundedAmount?: number;
+    // Pas de montant remboursé par séance : un remboursement porte sur le versement d'une série.
+    // Voir `SeriesHistoryDTO.totalRefunded` et la liste des remboursements de l'étudiant.
     /**
      * Séance retenue dans le coût au prorata de l'étudiant (exigences 11.3, 11.4).
      *

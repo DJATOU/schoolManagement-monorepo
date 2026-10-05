@@ -94,12 +94,24 @@ public class PaymentDetailDeactivationService {
 
         int count = 0;
         for (PaymentDetailEntity detail : paymentDetails) {
-            if (Boolean.FALSE.equals(detail.getActive())) {
-                detail.setActive(true);
-                paymentDetailRepository.save(detail);
-                count++;
-                LOGGER.debug("Reactivated payment detail {} for session {}", detail.getId(), sessionId);
+            if (!Boolean.FALSE.equals(detail.getActive())) {
+                continue;
             }
+            // Une ligne dont l'Imputation est neutralisée appartient à un Encaissement annulé :
+            // la réactiver ferait revenir dans la ventilation de l'argent annulé (spec
+            // admin-corrections, inventaire A.1). Une ligne supprimée définitivement reste
+            // supprimée.
+            if (Boolean.TRUE.equals(detail.getPermanentlyDeleted())
+                    || (detail.getEncashmentAllocation() != null
+                    && !Boolean.TRUE.equals(detail.getEncashmentAllocation().getActive()))) {
+                LOGGER.debug("Payment detail {} left inactive: cancelled encashment or permanent deletion",
+                        detail.getId());
+                continue;
+            }
+            detail.setActive(true);
+            paymentDetailRepository.save(detail);
+            count++;
+            LOGGER.debug("Reactivated payment detail {} for session {}", detail.getId(), sessionId);
         }
 
         LOGGER.info("Successfully reactivated {} payment details for session {}", count, sessionId);

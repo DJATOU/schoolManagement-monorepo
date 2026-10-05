@@ -1,7 +1,8 @@
 package com.school.management.service;
 
+import com.school.management.domain.valueobject.EnrolmentWindow;
+import com.school.management.dto.EnrolmentDTO;
 import com.school.management.dto.GroupDTO;
-import com.school.management.dto.StudentDTO;
 import com.school.management.dto.StudentGroupDTO;
 import com.school.management.mapper.GroupMapper;
 import com.school.management.persistance.GroupEntity;
@@ -19,12 +20,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.Date;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 @Service
 public class StudentGroupService {
@@ -82,19 +82,12 @@ public class StudentGroupService {
         // Validation : l'élève ne peut être inscrit que dans des groupes de son niveau courant.
         groups.forEach(group -> assertSameLevel(student, group));
 
+        LocalDate arrival = arrivalOf(studentGroupDto);
         List<GroupEntity> alreadyAssociatedGroups = new ArrayList<>();
         groups.forEach(group -> {
             boolean exists = studentGroupRepository.existsByStudentAndGroupAndActiveTrue(student, group);
             if (!exists) {
-                StudentGroupEntity studentGroup = StudentGroupEntity.builder()
-                        .student(student)
-                        .group(group)
-                        .dateAssigned(studentGroupDto.getDateAssigned() != null ? studentGroupDto.getDateAssigned()
-                                : new Date())
-                        .createdBy(studentGroupDto.getAssignedBy())
-                        .description(studentGroupDto.getDescription())
-                        .build();
-                studentGroupRepository.save(Objects.requireNonNull(studentGroup));
+                enrol(student, group, arrival, studentGroupDto);
             } else {
                 alreadyAssociatedGroups.add(group);
             }
@@ -126,25 +119,65 @@ public class StudentGroupService {
         // Validation : chaque élève ne peut rejoindre un groupe que s'il est de son niveau courant.
         students.forEach(student -> assertSameLevel(student, group));
 
-        Set<StudentEntity> existingStudents = group.getStudents();
+        // Déjà membre = inscription ACTIVE. Le test portait sur group.getStudents(), qui lit toute
+        // la table d'inscription, clôtures comprises : réinscrire un étudiant parti ne faisait
+        // alors rien, sans le dire.
+        LocalDate arrival = arrivalOf(studentGroupDto);
         students.forEach(student -> {
-            if (!existingStudents.contains(student)) {
-                StudentGroupEntity studentGroup = StudentGroupEntity.builder()
-                        .student(student)
-                        .group(group)
-                        .dateAssigned(studentGroupDto.getDateAssigned() != null ? studentGroupDto.getDateAssigned()
-                                : new Date())
-                        .createdBy(studentGroupDto.getAssignedBy())
-                        .description(studentGroupDto.getDescription())
-                        .build();
-
-                studentGroupRepository.save(Objects.requireNonNull(studentGroup));
-                existingStudents.add(student); // Ajout de l'étudiant aux étudiants existants du groupe
+            if (!studentGroupRepository.existsByStudentAndGroupAndActiveTrue(student, group)) {
+                enrol(student, group, arrival, studentGroupDto);
             }
         });
+    }
 
-        group.setStudents(existingStudents);
-        groupRepository.save(group);
+    /** Date_Inscription demandée, ou le jour même sans date (exigence 5.1). */
+    private LocalDate arrivalOf(StudentGroupDTO studentGroupDto) {
+        return studentGroupDto.getDateAssigned() != null ? studentGroupDto.getDateAssigned() : LocalDate.now();
+    }
+
+    /**
+     * Crée l'inscription, après avoir vérifié que sa fenêtre est possible : arrivée dans l'année
+     * scolaire du groupe, et après toute inscription passée de l'étudiant au même groupe.
+     */
+    private void enrol(StudentEntity student, GroupEntity group, LocalDate arrival, StudentGroupDTO studentGroupDto) {
+        // Arrivée dans l'année scolaire du groupe, bornes comprises (exigences 5.2, 5.3).
+        EnrolmentDates.assertWithinSchoolYear(group, arrival, "La date d'arrivée");
+        assertAfterPastEnrolments(student, group, arrival);
+        studentGroupRepository.save(StudentGroupEntity.builder()
+                .student(student)
+                .group(group)
+                .dateAssigned(EnrolmentWindow.startOfDay(arrival))
+                .createdBy(studentGroupDto.getAssignedBy())
+                .description(studentGroupDto.getDescription())
+                .build());
+    }
+
+    /**
+     * Un étudiant revenu dans un groupe qu'il a quitté reçoit une <strong>nouvelle</strong>
+     * inscription : l'ancienne garde sa fenêtre, et les séances de l'intervalle ne le concernent
+     * pas. Les deux fenêtres ne doivent donc pas se recouvrir, sinon une même séance le
+     * concernerait deux fois.
+     */
+    private void assertAfterPastEnrolments(StudentEntity student, GroupEntity group, LocalDate arrival) {
+        for (StudentGroupEntity past : studentGroupRepository.findByStudentId(student.getId())) {
+            if (past.getGroup() == null || !Objects.equals(past.getGroup().getId(), group.getId())) {
+                continue;
+            }
+            EnrolmentWindow window = past.window();
+            if (window.departure() != null && !window.departure().isBefore(arrival)) {
+                throw new CustomServiceException(
+                        fullName(student) + " a déjà été inscrit au groupe « " + group.getName() + " » "
+                                + window.describe() + " : une nouvelle arrivée doit être postérieure au "
+                                + EnrolmentWindow.format(window.departure())
+                                + ". Si ce départ est une erreur, rouvrez cette inscription.",
+                        HttpStatus.CONFLICT);
+            }
+        }
+    }
+
+    private static String fullName(StudentEntity student) {
+        return ((student.getFirstName() != null ? student.getFirstName() : "") + " "
+                + (student.getLastName() != null ? student.getLastName() : "")).trim();
     }
 
     /**
@@ -180,33 +213,41 @@ public class StudentGroupService {
         }
     }
 
-    public List<StudentDTO> getStudentsByGroupId(Long groupId) {
-        List<StudentGroupEntity> studentGroups = studentGroupRepository.findByGroupId(groupId);
-        return studentGroups.stream()
-                .map(sg -> StudentDTO.builder()
-                        .id(sg.getStudent().getId())
-                        .gender(sg.getStudent().getGender())
-                        .lastName(sg.getStudent().getLastName())
-                        .firstName(sg.getStudent().getFirstName())
-                        .build())
-                .collect(Collectors.toList());
+    // Le retrait d'un étudiant (« removeStudentFromGroup ») a été retiré en C.8 : il clôturait
+    // l'inscription au jour même, sans Motif ni Aperçu. Un départ se date, se motive et s'aperçoit
+    // (exigence 6.1) : EnrolmentCorrectionService.setDeparture.
+
+    /**
+     * Inscriptions d'un étudiant, ouvertes et closes, avec leur Fenêtre_Inscription (spec
+     * admin-corrections, exigences 5 et 6) : ce que la fiche élève affiche et corrige.
+     *
+     * <p>Les inscriptions closes sont listées : un étudiant parti reste débiteur des séances de sa
+     * fenêtre, et son départ peut être corrigé ou annulé. Un étudiant revenu dans un groupe y a deux
+     * inscriptions, listées chacune avec sa période. Ordre : groupe, puis arrivée.</p>
+     *
+     * @param studentId    identifiant de l'étudiant
+     * @param schoolYearId année scolaire à filtrer, ou {@code null} pour toutes les années
+     */
+    @Transactional(readOnly = true)
+    public List<EnrolmentDTO> getEnrolmentsOfStudent(Long studentId, Long schoolYearId) {
+        return studentGroupRepository.findByStudentId(studentId).stream()
+                .filter(enrolment -> enrolment.getGroup() != null)
+                .filter(enrolment -> matchesSchoolYear(enrolment.getGroup(), schoolYearId))
+                .map(StudentGroupService::toEnrolment)
+                .sorted(Comparator.comparing(EnrolmentDTO::groupName, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER))
+                        .thenComparing(EnrolmentDTO::arrival, Comparator.nullsFirst(Comparator.naturalOrder()))
+                        .thenComparing(EnrolmentDTO::id))
+                .toList();
     }
 
-    // In `StudentGroupService.java`
-    @Transactional
-    public void removeStudentFromGroup(Long groupId, Long studentId) {
-        StudentGroupEntity studentGroup = studentGroupRepository
-                .findByGroupIdAndStudentIdAndActiveTrue(groupId, studentId)
-                .orElseThrow(() -> new EntityNotFoundException(
-                        "StudentGroup not found for groupId " + groupId + " and studentId " + studentId));
-
-        // Un groupe d'une année passée conserve ses étudiants : on ne peut plus en retirer
-        // (Exigence 9.2). Sinon la composition historique aurait pu être vidée après coup,
-        // faussant les présences et les soldes déjà enregistrés.
-        readOnlyYearGuard.assertGroupMutable(studentGroup.getGroup());
-
-        studentGroup.setActive(false);
-        studentGroupRepository.save(studentGroup);
+    private static EnrolmentDTO toEnrolment(StudentGroupEntity enrolment) {
+        GroupEntity group = enrolment.getGroup();
+        EnrolmentWindow window = enrolment.window();
+        return new EnrolmentDTO(enrolment.getId(),
+                enrolment.getStudent() == null ? null : enrolment.getStudent().getId(),
+                group.getId(), group.getName(),
+                group.getSchoolYear() == null ? null : group.getSchoolYear().getId(),
+                window.arrival(), window.departure(), Boolean.TRUE.equals(enrolment.getActive()));
     }
 
     /**
@@ -238,19 +279,4 @@ public class StudentGroupService {
         return group.getSchoolYear() != null
                 && schoolYearId.equals(group.getSchoolYear().getId());
     }
-
-    public List<StudentDTO> getStudentsForSession(Long groupId, Date sessionStartDate) {
-        List<StudentGroupEntity> studentGroups = studentGroupRepository
-                .findByGroupIdAndDateAssignedBefore(groupId, sessionStartDate);
-
-        return studentGroups.stream()
-                .map(sg -> StudentDTO.builder()
-                        .id(sg.getStudent().getId())
-                        .gender(sg.getStudent().getGender())
-                        .lastName(sg.getStudent().getLastName())
-                        .firstName(sg.getStudent().getFirstName())
-                        .build())
-                .collect(Collectors.toList());
-    }
-
 }

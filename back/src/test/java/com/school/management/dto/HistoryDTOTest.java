@@ -13,24 +13,23 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Tests unitaires des DTO d'historique enrichis pour le rendu de la légende.
  *
  * <p>Vérifie les nouveaux champs : indicateur de rattrapage ({@code catchUpSession}),
- * exemption ({@code isExempted}) et montants remboursés en {@link BigDecimal}
- * ({@code refundedAmount} / {@code totalRefunded}).</p>
+ * exemption ({@code isExempted}) et total remboursé de la série en {@link BigDecimal}
+ * ({@code totalRefunded}). Il n'y a pas de montant remboursé par séance : un remboursement porte
+ * sur le versement d'une série.</p>
  */
 class HistoryDTOTest {
 
     @Test
-    void sessionHistory_carriesCatchUpExemptionAndRefundFields() {
+    void sessionHistory_carriesCatchUpAndExemptionFields() {
         SessionHistoryDTO dto = SessionHistoryDTO.builder()
                 .sessionId(1L)
                 .sessionName("Séance 1")
                 .catchUpSession(true)
                 .isExempted(true)
-                .refundedAmount(new BigDecimal("15.50"))
                 .build();
 
         assertThat(dto.getCatchUpSession()).isTrue();
         assertThat(dto.getIsExempted()).isTrue();
-        assertThat(dto.getRefundedAmount()).isEqualByComparingTo("15.50");
     }
 
     @Test
@@ -40,7 +39,6 @@ class HistoryDTOTest {
                 .build();
 
         assertThat(dto.getIsExempted()).isNull();
-        assertThat(dto.getRefundedAmount()).isNull();
         assertThat(dto.getCatchUpSession()).isNull();
     }
 

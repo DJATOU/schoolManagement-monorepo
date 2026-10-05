@@ -1,5 +1,6 @@
 package com.school.management.service.payment;
 
+import com.school.management.config.security.SecurityAuditorAware;
 import com.school.management.dto.payment.PaymentQuoteDTO;
 import com.school.management.dto.revenue.GroupRevenueDTO;
 import com.school.management.persistance.GroupEntity;
@@ -72,7 +73,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 })
 @Import({ BillableSessionsResolverImpl.class, CatchUpBillingQualifierImpl.class, DiscountService.class, PaymentCostResolver.class,
         PaymentQuoteService.class, PaymentAllocationService.class, PaymentDistributionService.class,
-        PaymentCarryOverService.class, PaymentProcessingService.class, PaymentIdempotencyService.class, GroupRevenueService.class })
+        PaymentCarryOverService.class, PaymentProcessingService.class, PaymentIdempotencyService.class,
+        EncashmentService.class, ReceiptNumberService.class, SecurityAuditorAware.class, GroupRevenueService.class })
 class LateEnrolmentFullSeriesPaymentIntegrationTest {
 
     // Les groupes de ce jeu de données ne portent pas d'année scolaire : la garde d'année close

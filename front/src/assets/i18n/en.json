@@ -304,12 +304,6 @@
     "CANCEL": "Cancel",
     "YES": "Yes",
     "NO": "No",
-    "UNVALIDATE_SESSION": {
-      "TITLE": "Unvalidate session",
-      "MESSAGE": "Do you really want to unvalidate this session? The recorded attendances will be deactivated.",
-      "CONFIRM": "Yes, unvalidate",
-      "CANCEL": "Cancel"
-    },
     "DISABLE_STUDENT": {
       "TITLE": "Deactivate a student",
       "MESSAGE": "Do you really want to deactivate this student? They will be hidden from current lists but their history will be kept.",
@@ -372,6 +366,53 @@
     "EDIT": "Edit session",
     "VALIDATE": "Validate session",
     "UNVALIDATE": "Unvalidate session",
+    "UNVALIDATE_TITLE": "Unvalidate the session",
+    "UNVALIDATE_SUBJECT": "Session of {{day}} ({{group}}): all its attendance lines will be removed, and it will need validating again.",
+    "UNVALIDATE_SUCCESS": "Session unvalidated ({{count}} attendance line(s) removed): it needs validating again.",
+    "UNVALIDATE_ERROR": "Unvalidation reasons could not be loaded.",
+    "SESSION_LABEL": "Session of {{day}} ({{group}})",
+    "CORRECTION": {
+      "MENU": "Correct",
+      "MENU_ARIA": "Correct the line of {{student}}",
+      "ADD_STUDENT": "Add a student (correction of the validated session)",
+      "NOTE_ABSENT": "Mark absent",
+      "NOTE_JUSTIFIED": "Mark absent (justified)",
+      "NOTE_PRESENT": "Mark present",
+      "JUSTIFICATION": "Edit the justification…",
+      "REMOVE": "Remove the line",
+      "REMOVE_CATCH_UP": "Remove the catch-up",
+      "ADD": {
+        "PRESENT": "Add: present",
+        "ABSENT": "Add: absent",
+        "JUSTIFIED": "Add: absent (justified)"
+      },
+      "NO_LINE": "No line",
+      "NO_LINE_HINT": "The session was validated without a line for this student: \"Correct\" lets you add it.",
+      "TITLE_CHANGE": "Correct an attendance",
+      "TITLE_REMOVE": "Remove an attendance line",
+      "TITLE_CATCH_UP": "Remove a catch-up",
+      "TITLE_ADD": "Add an attendance line",
+      "SUBJECT": "{{session}} — {{student}}: {{change}}",
+      "LINE_REMOVED": "{{state}} → line removed",
+      "CATCH_UP_REMOVED": "catch-up removed, the missed session can be caught up again",
+      "LINE_ADDED": "added, {{state}}",
+      "STATE_INLINE": {
+        "PRESENT": "present",
+        "ABSENT": "absent",
+        "JUSTIFIED": "absent (justified)"
+      },
+      "STATE": {
+        "PRESENT": "Present",
+        "ABSENT": "Absent",
+        "JUSTIFIED": "Absent (justified)"
+      },
+      "STATE_TITLE": "Add {{student}}",
+      "STATE_LABEL": "State of the line",
+      "STATE_HINT": "The session is validated: adding is a correction. The preview shows what changes on the amount due before you confirm.",
+      "STATE_NEXT": "Continue",
+      "DONE": "Correction saved: the attendance sheet was reloaded.",
+      "REASONS_ERROR": "Correction reasons could not be loaded."
+    },
     "PRINT": "Print attendance",
     "DELETE": "Delete",
     "DELETE_TITLE": "Delete session",
@@ -383,7 +424,18 @@
     "CATCH_UP_PENDING": "To be decided",
     "CATCH_UP_PENDING_HINT": "Catch-up awaiting a decision: indicate which session was missed and whether it was already paid. Nothing is billed until the decision is made. You can validate the session right away.",
     "CATCH_UP_HOST_BILLED": "Billed here",
-    "CATCH_UP_HOST_BILLED_HINT": "The student belongs to no group of the same level and subject: no seat is reserved elsewhere, so the session is billed in this group."
+    "CATCH_UP_HOST_BILLED_HINT": "The student belongs to no group of the same level and subject: no seat is reserved elsewhere, so the session is billed in this group.",
+    "LEFT_ON": "Left on {{day}}",
+    "LEFT_ON_HINT": "The student left the group, but this session is within their enrolment period: they remain expected up to and including their departure day.",
+    "ROLL_CALL_ERROR": "The roll call could not be loaded. Close the session and open it again.",
+    "ROLL_CALL_EMPTY_NO_ENROLMENT": "No student is enrolled in this group.",
+    "ROLL_CALL_EMPTY_NOT_CONCERNED": "No student is enrolled in the group on {{day}}. This session does not concern:",
+    "WINDOW_FROM": "enrolled from {{from}}",
+    "WINDOW_FROM_TO": "enrolled from {{from}} to {{to}}",
+    "WINDOW_UNDATED": "enrolment without an arrival date",
+    "REJECTED_TITLE": "Validation refused: {{count}} absence(s) outside the students' period.",
+    "REJECTED_HINT": "These students are not concerned by the session: they must not be marked absent. Remove these lines, then validate again.",
+    "REMOVE_REJECTED": "Remove these {{count}} line(s)"
   },
   "STUDENT_FORM": {
     "TITLE": "Student registration",
@@ -754,62 +806,18 @@
   },
   "payment": {
     "admin": {
-      "edit": {
-        "title": "Edit payment",
-        "subtitle": "Payment #{{id}}",
-        "context": {
-          "student": "Student",
-          "group": "Group",
-          "series": "Series",
-          "session": "Session"
-        },
-        "amount": "Amount",
-        "amountPlaceholder": "0",
-        "amountRequired": "The amount is required.",
-        "amountMin": "The amount must be positive.",
-        "amountChanged": "Original amount: {{original}} → new: {{updated}}",
-        "status": "Status",
-        "statusActive": "Active",
-        "statusInactive": "Inactive",
-        "reason": "Reason for the change",
-        "reasonTooltip": "The reason is recorded in the payment audit history.",
-        "reasonPlaceholder": "E.g. amount entered by mistake",
-        "reasonRequired": "The reason is required.",
-        "requiredNote": "Fill in the amount and the reason to save.",
-        "save": "Save",
-        "saving": "Saving…",
-        "error": "Error while updating the payment. Please try again."
-      },
       "messages": {
-        "updated": "Payment updated successfully",
-        "reactivated": "Payment reactivated successfully",
-        "permanentlyDeleted": "This payment has been permanently deleted and cannot be reactivated.",
-        "reactivateError": "Error while reactivating the payment",
         "filtersCleared": "Filters cleared successfully",
-        "deleted": "Payment permanently deleted. This session can be paid again.",
         "loadError": "Unable to load payments. Please try again.",
-        "deleteError": "Deleting the payment failed. Nothing was changed.",
         "filterOptionsError": "Some filter lists could not be loaded.",
         "csvExported": "{{count}} row(s) exported to CSV"
-      },
-      "reasonDialog": {
-        "label": "Reason",
-        "defaultPlaceholder": "Specify the reason for this action",
-        "required": "The reason is required.",
-        "reactivateTitle": "Reactivate payment",
-        "reactivateMessage": "This payment will be counted again in the student's balances. The reason is kept in the audit history.",
-        "reactivateConfirm": "Reactivate",
-        "reactivatePlaceholder": "E.g. deactivated by mistake",
-        "deleteTitle": "Permanently delete the payment",
-        "deleteMessage": "This payment will be permanently deleted and cannot be reactivated. The session will be payable again. The reason is kept in the audit history.",
-        "deleteConfirm": "Delete permanently",
-        "deletePlaceholder": "E.g. wrong amount entered, payment cancelled by the family"
       },
       "page": {
         "title": "Payment management",
         "subtitle": "Search and administration of payments",
         "export": "Export",
-        "exportTooltip": "Export the displayed rows as CSV"
+        "exportTooltip": "Export the displayed rows as CSV",
+        "correctionNotice": "A payment is corrected from its receipt (cancel or correct), on the student's page. The rows below show how it is split across sessions."
       },
       "filters": {
         "title": "Search filters",
@@ -852,7 +860,10 @@
         "openStudent": "Open student profile",
         "openGroup": "Open group profile",
         "loading": "Loading payments…",
-        "empty": "No payment matches the filters."
+        "empty": "No payment matches the filters.",
+        "refundedShare": "{{amount}} DA refunded",
+        "refunded": "Refunded",
+        "netAmount": "Net amount"
       },
       "rowStatus": {
         "active": "Active",
@@ -865,16 +876,15 @@
         "IN_PROGRESS": "In progress",
         "COMPLETED": "Settled",
         "CANCELLED": "Cancelled",
-        "cancelledHint": "The parent payment is cancelled: this entry no longer counts towards balances."
+        "cancelledHint": "The parent payment is cancelled: this entry no longer counts towards balances.",
+        "REFUNDED": "Refunded",
+        "refundedHint": "{{amount}} DA refunded on this payment: status computed net of refunds."
       },
       "actions": {
-        "edit": "Edit payment",
-        "history": "View audit history",
-        "delete": "Delete permanently",
-        "reactivate": "Reactivate payment"
+        "history": "View audit history"
       },
       "audit": {
-        "title": "Action history",
+        "title": "Payment history",
         "by": "by {{actor}}",
         "reason": "Reason",
         "change": "Before: {{from}} → after: {{to}}",
@@ -884,6 +894,16 @@
           "MODIFIED": "Amount or state changed",
           "DELETED": "Permanently deleted",
           "REACTIVATED": "Reactivated"
+        },
+        "changesTitle": "Line changes",
+        "refunds": {
+          "title": "Refunds on this payment",
+          "empty": "No refund on this payment.",
+          "error": "Refunds could not be loaded.",
+          "noReason": "No reason recorded",
+          "reprint": "Reprint receipt",
+          "reprintAria": "Reprint refund receipt {{number}}",
+          "reprintError": "The refund receipt could not be printed. Please try again."
         }
       }
     },
@@ -978,9 +998,29 @@
       "carriedOverTotal": "Total carried over",
       "studentSignature": "Student signature",
       "adminSignature": "Received by",
-      "unknownAdmin": "Administration",
       "footerNote": "This receipt covers only the payment shown above.",
-      "error": "Payment recorded, but the receipt could not be generated."
+      "error": "Payment recorded, but the receipt could not be generated.",
+      "cancelledStamp": "CANCELLED",
+      "cancelledOn": "Receipt cancelled on {{date}}: it is no longer valid proof of payment.",
+      "replacedBy": "Replaced by receipt {{number}}."
+    },
+    "encashments": {
+      "title": "Payments received",
+      "empty": "No payment recorded for this student.",
+      "loadError": "Payments could not be loaded.",
+      "status": {
+        "ACTIVE": "Valid",
+        "CANCELLED": "Cancelled"
+      },
+      "catchUp": "Catch-up",
+      "receivedBy": "received by {{user}}",
+      "carriedOverTo": "Carried over to \"{{series}}\": {{amount}} DA",
+      "cancelledOn": "Cancelled on {{date}} by {{user}}",
+      "replaces": "Replaces receipt {{number}}",
+      "replacedBy": "Replaced by receipt {{number}}",
+      "reprint": "Reprint receipt",
+      "reprintAria": "Reprint receipt {{number}}",
+      "reprintError": "The receipt could not be reprinted."
     },
     "history": {
       "fields": {
@@ -1251,7 +1291,8 @@
     },
     "seriesStatus": {
       "FULL": "Settled",
-      "PARTIAL": "Partial"
+      "PARTIAL": "Partial",
+      "UNPAID": "Unpaid"
     },
     "series": "Series: {{name}}",
     "catchUpSeries": "Catch-up session: {{name}}",
@@ -1269,7 +1310,8 @@
     "badge": {
       "FULL": "Settled",
       "PARTIAL": "Partial",
-      "EXEMPTED": "Exempt"
+      "EXEMPTED": "Exempt",
+      "UNPAID": "Unpaid"
     },
     "amounts": {
       "due": "Owed",
@@ -1278,7 +1320,8 @@
       "dueBreakdown": "{{count}} session(s) × {{price}} DA = {{total}} DA",
       "dueSessions": "{{count}} billed session(s)",
       "paidSessions": "{{count}} session(s) settled",
-      "remainingSessions": "{{count}} session(s) to settle"
+      "remainingSessions": "{{count}} session(s) to settle",
+      "paidNetOfRefunds": "Net of {{amount}} DA refunded"
     },
     "exempted": "Exempt",
     "refunded": "Refunded",
@@ -1292,7 +1335,6 @@
       "justified": "Justified",
       "payment": "Payment",
       "amountPaid": "Amount allocated",
-      "refunded": "Refunded",
       "description": "Description",
       "paymentDate": "Payment date"
     },
@@ -1357,7 +1399,9 @@
         "pendingDecisionSession": "Catch-up awaiting a decision — no billing decided yet"
       },
       "amountAllocatedAndOverpaid": "Allocated: {{allocated}} DA — Overpaid: {{overpaid}} DA",
-      "pendingDecisionSession": "To be decided: {{name}}"
+      "pendingDecisionSession": "To be decided: {{name}}",
+      "amountPaidNetOfTotal": "Total paid, net of refunds: {{paid}} DA / {{total}} DA due",
+      "refundLine": "Document {{number}} of {{date}}: {{amount}} DA — {{reason}}"
     },
     "seriesLabel": "Series",
     "totalPaid": "Total paid",
@@ -1365,7 +1409,14 @@
     "overpaid": "Overpaid",
     "pendingDecisionTag": "To be decided",
     "pendingDecisionHint": "Catch-up awaiting a decision: neither a debt nor a waiver. The missed session and the billing decision still need to be indicated.",
-    "billedAtHostGroup": "billed here"
+    "billedAtHostGroup": "billed here",
+    "refunds": {
+      "noReason": "No reason recorded",
+      "reprint": "Reprint receipt",
+      "reprintAria": "Reprint refund receipt {{number}}",
+      "reprintError": "The refund receipt could not be printed. Please try again.",
+      "unavailable": "Refund details could not be loaded."
+    }
   },
   "pricing": {
     "table": {
@@ -1434,7 +1485,10 @@
       "savedAmount": "{{amount}} DA returned to the beneficiary.",
       "printReceipt": "Print receipt",
       "downloadReceipt": "Download receipt",
-      "receiptFailed": "The refund is recorded, but its receipt could not be produced. It remains printable from the history."
+      "receiptFailed": "The refund is recorded, but its receipt could not be produced. It remains printable from the student's full history.",
+      "amountPlaceholder": "e.g. 2000",
+      "reasonNote": "The reason is printed on the refund receipt given to the family.",
+      "back": "Edit"
     },
     "receipt": {
       "title": "Refund receipt",
@@ -1538,5 +1592,180 @@
     "ERRORS": {
       "MISSING_CONTEXT": "This catch-up is linked to neither a student nor a group: no missed session can be offered."
     }
+  },
+  "correction": {
+    "subject": "Receipt {{number}} of {{amount}} DA — {{series}} ({{group}})",
+    "reason": {
+      "DATA_ENTRY_ERROR": "Data entry error",
+      "DOCUMENT_RECEIVED": "Supporting document received",
+      "ARRIVAL_DATE_CORRECTED": "Arrival date corrected",
+      "STUDENT_LEFT": "Student left",
+      "WRONG_STUDENT": "Payment recorded for the wrong student",
+      "WRONG_AMOUNT": "Wrong amount",
+      "OTHER": "Other"
+    },
+    "dialog": {
+      "reason": "Reason",
+      "reasonRequired": "Choose the reason for the correction.",
+      "reasonText": "Details (optional)",
+      "reasonTextRequired": "Explain in a few words",
+      "preview": "See preview",
+      "previewTitle": "What will change",
+      "confirm": "Confirm",
+      "back": "Edit",
+      "stale": "The data changed since the preview: here is the new preview. Read it again before confirming.",
+      "blockingRefund": "Refund {{number}} of {{date}}: {{amount}} DA on \"{{series}}\"",
+      "error": "The correction could not be completed. Try again.",
+      "mark": {
+        "label": "Student's attendance",
+        "none": "No attendance (billed)",
+        "present": "Present",
+        "absent": "Absent",
+        "hint": "Sessions already validated enter the period without attendance for the student. Left as is, they are billed: the place was reserved. You can mark the student present or absent: the preview updates."
+      }
+    },
+    "preview": {
+      "amountsUnchanged": "No amount changes.",
+      "before": "Before",
+      "after": "After",
+      "cost": "Series cost",
+      "dueSoFar": "Due so far",
+      "paid": "Paid",
+      "remaining": "Remaining",
+      "status": "Status",
+      "upToDate": "Up to date",
+      "late": "Late",
+      "effects": "Other effects"
+    },
+    "cancel": {
+      "action": "Cancel",
+      "aria": "Cancel payment {{number}}",
+      "title": "Cancel the payment",
+      "done": "Receipt {{number}} is cancelled."
+    },
+    "correct": {
+      "action": "Correct",
+      "aria": "Correct payment {{number}}",
+      "title": "Correct the payment",
+      "detailsDone": "Receipt {{number}} is corrected.",
+      "replaced": "Receipt {{original}} is replaced by receipt {{replacement}}.",
+      "print": "Print the new receipt"
+    },
+    "edit": {
+      "title": "Correct receipt {{number}}",
+      "hint": "Enter the payment as it should have been recorded. Changing the amount, student, group or series replaces the receipt; the payment method and note are corrected without a new receipt.",
+      "loadError": "Some lists could not be loaded.",
+      "amount": "Amount received",
+      "amountRequired": "A strictly positive amount is expected.",
+      "group": "Group",
+      "student": "Student",
+      "studentRequired": "Choose the student who paid.",
+      "series": "Target series",
+      "seriesRequired": "Choose the target series.",
+      "method": "Payment method",
+      "noMethod": "Not specified",
+      "notes": "Note",
+      "unchanged": "Nothing has been changed yet.",
+      "next": "Continue"
+    }
+  },
+  "enrolment": {
+    "list": {
+      "title": "Enrolments: arrivals and departures",
+      "empty": "No enrolment for this year.",
+      "loadError": "Enrolments could not be loaded.",
+      "open": "Ongoing",
+      "closed": "Ended",
+      "arrival": "Arrival: {{date}}",
+      "departure": "Departure: {{date}}",
+      "correctArrival": "Correct arrival",
+      "recordDeparture": "Record departure",
+      "correctDeparture": "Correct departure",
+      "reopen": "Reopen",
+      "arrivalAria": "Correct the arrival date in \"{{group}}\"",
+      "departureAria": "Record the departure from \"{{group}}\"",
+      "correctDepartureAria": "Correct the departure date from \"{{group}}\"",
+      "reopenAria": "Reopen the enrolment in \"{{group}}\""
+    },
+    "period": {
+      "open": "from {{arrival}}",
+      "closed": "from {{arrival}} to {{departure}}"
+    },
+    "correction": {
+      "subject": "{{student}} — \"{{group}}\", {{period}}",
+      "dateRequired": "Enter a valid date.",
+      "unchanged": "This is already the recorded date: nothing to correct.",
+      "next": "See preview",
+      "ARRIVAL": {
+        "title": "Correct the arrival date",
+        "date": "New arrival date",
+        "done": "Arrival in \"{{group}}\" corrected."
+      },
+      "DEPARTURE": {
+        "title": "Record the departure",
+        "correctTitle": "Correct the departure date",
+        "date": "Departure date",
+        "dateHint": "Last day the student is expected: sessions on that day still concern them.",
+        "removePresencesAfter": "Also remove their attendances after this date",
+        "removePresencesHint": "Otherwise they stay and are billed as attended sessions. Absences after the departure are always removed.",
+        "done": "Departure from \"{{group}}\" recorded."
+      },
+      "REOPEN": {
+        "title": "Reopen the enrolment",
+        "done": "Enrolment in \"{{group}}\" reopened."
+      }
+    },
+    "add": {
+      "groupsTitle": "Enrol in groups",
+      "addGroups": "Enrol",
+      "selectGroups": "Groups",
+      "arrival": "Arrival date",
+      "arrivalHint": "First day the student is expected; today by default.",
+      "alreadyEnrolled": "Already enrolled: {{names}}. No enrolment recorded.",
+      "unreachable": "Server unreachable",
+      "error": "The enrolment could not be recorded."
+    },
+    "departure": {
+      "notEnrolled": "This student no longer has an open enrolment in this group: the list was reloaded."
+    }
+  },
+  "journal": {
+    "title": "Correction log",
+    "count": "{{count}} correction(s)",
+    "from": "From",
+    "to": "To",
+    "apply": "Show",
+    "reset": "Any period",
+    "print": "Print",
+    "printAria": "Print the correction log for the period shown",
+    "empty": "No correction in this period.",
+    "loadError": "The correction log could not be loaded.",
+    "printError": "The correction log could not be printed.",
+    "periodInvalid": "The end date is before the start date.",
+    "noEffect": "No effect on the amount due",
+    "by": "by {{user}}",
+    "period": {
+      "between": "From {{from}} to {{to}}",
+      "from": "Since {{from}}",
+      "to": "Until {{to}}",
+      "all": "Any period"
+    },
+    "columns": {
+      "date": "Date",
+      "correction": "Correction",
+      "effect": "Effect on the amount due",
+      "reason": "Reason",
+      "by": "By"
+    },
+    "category": {
+      "ENCASHMENT": "Payment",
+      "ENROLMENT": "Enrolment",
+      "ATTENDANCE": "Attendance",
+      "JUSTIFICATION": "Justification",
+      "CATCH_UP": "Catch-up"
+    },
+    "generatedOn": "Printed on {{date}}",
+    "page": "Page {{current}} / {{total}}",
+    "fileName": "correction_log"
   }
 }

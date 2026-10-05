@@ -42,4 +42,16 @@ describe('StudentService', () => {
     expect(req.request.params.get('includeInactive')).toBe('true');
     req.flush([]);
   });
+
+  it('addGroupsToStudent transmet la date d\'arrivée, et l\'omet sans date (le jour même côté serveur)', () => {
+    service.addGroupsToStudent(42, [5, 6], '2029-10-15').subscribe();
+    service.addGroupsToStudent(42, [7]).subscribe();
+
+    const [dated, undated] = httpMock.match(`${API_BASE_URL}/api/student-groups/42/addGroups`);
+    expect(dated.request.method).toBe('POST');
+    expect(dated.request.body).toEqual({ groupIds: [5, 6], dateAssigned: '2029-10-15' });
+    expect(undated.request.body).toEqual({ groupIds: [7] });
+    dated.flush({ message: 'ok' });
+    undated.flush({ message: 'ok' });
+  });
 });

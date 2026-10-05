@@ -304,12 +304,6 @@
     "CANCEL": "Annuler",
     "YES": "Oui",
     "NO": "Non",
-    "UNVALIDATE_SESSION": {
-      "TITLE": "Dévalider la session",
-      "MESSAGE": "Voulez-vous vraiment dévalider cette session ? Les présences enregistrées seront désactivées.",
-      "CONFIRM": "Oui, dévalider",
-      "CANCEL": "Annuler"
-    },
     "DISABLE_STUDENT": {
       "TITLE": "Désactivation d'un étudiant",
       "MESSAGE": "Voulez-vous vraiment désactiver cet étudiant ? Il sera masqué des listes courantes mais son historique sera conservé.",
@@ -372,6 +366,53 @@
     "EDIT": "Modifier la séance",
     "VALIDATE": "Valider la séance",
     "UNVALIDATE": "Dévalider la séance",
+    "UNVALIDATE_TITLE": "Dévalider la séance",
+    "UNVALIDATE_SUBJECT": "Séance du {{day}} ({{group}}) : toutes ses lignes de présence seront retirées, et elle sera de nouveau à valider.",
+    "UNVALIDATE_SUCCESS": "Séance dévalidée ({{count}} ligne(s) de présence retirée(s)) : elle est de nouveau à valider.",
+    "UNVALIDATE_ERROR": "Les motifs de dévalidation n'ont pas pu être chargés.",
+    "SESSION_LABEL": "Séance du {{day}} ({{group}})",
+    "CORRECTION": {
+      "MENU": "Corriger",
+      "MENU_ARIA": "Corriger la ligne de {{student}}",
+      "ADD_STUDENT": "Ajouter un élève (correction de la séance validée)",
+      "NOTE_ABSENT": "Noter absent",
+      "NOTE_JUSTIFIED": "Noter absent (justifié)",
+      "NOTE_PRESENT": "Noter présent",
+      "JUSTIFICATION": "Modifier la justification…",
+      "REMOVE": "Retirer la ligne",
+      "REMOVE_CATCH_UP": "Retirer le rattrapage",
+      "ADD": {
+        "PRESENT": "Ajouter : présent",
+        "ABSENT": "Ajouter : absent",
+        "JUSTIFIED": "Ajouter : absent (justifié)"
+      },
+      "NO_LINE": "Aucune ligne",
+      "NO_LINE_HINT": "La séance est validée sans ligne pour cet élève : « Corriger » permet de l'ajouter.",
+      "TITLE_CHANGE": "Corriger une présence",
+      "TITLE_REMOVE": "Retirer une ligne de présence",
+      "TITLE_CATCH_UP": "Retirer un rattrapage",
+      "TITLE_ADD": "Ajouter une ligne de présence",
+      "SUBJECT": "{{session}} — {{student}} : {{change}}",
+      "LINE_REMOVED": "{{state}} → ligne retirée",
+      "CATCH_UP_REMOVED": "rattrapage retiré, la séance manquée redevient à rattraper",
+      "LINE_ADDED": "ajout, {{state}}",
+      "STATE_INLINE": {
+        "PRESENT": "présent",
+        "ABSENT": "absent",
+        "JUSTIFIED": "absent (justifié)"
+      },
+      "STATE": {
+        "PRESENT": "Présent",
+        "ABSENT": "Absent",
+        "JUSTIFIED": "Absent (justifié)"
+      },
+      "STATE_TITLE": "Ajouter {{student}}",
+      "STATE_LABEL": "État de la ligne",
+      "STATE_HINT": "La séance est validée : l'ajout est une correction. L'aperçu montre ce qui change sur le dû avant de confirmer.",
+      "STATE_NEXT": "Continuer",
+      "DONE": "Correction enregistrée : la feuille a été relue.",
+      "REASONS_ERROR": "Les motifs de correction n'ont pas pu être chargés."
+    },
     "PRINT": "Imprimer la présence",
     "DELETE": "Supprimer",
     "DELETE_TITLE": "Supprimer la séance",
@@ -383,7 +424,18 @@
     "CATCH_UP_PENDING": "À préciser",
     "CATCH_UP_PENDING_HINT": "Rattrapage à préciser : indiquez la séance manquée et si elle était déjà payée. Rien n'est facturé tant que la décision n'est pas prise. Vous pouvez valider la séance sans attendre.",
     "CATCH_UP_HOST_BILLED": "Facturée sur place",
-    "CATCH_UP_HOST_BILLED_HINT": "L'étudiant n'appartient à aucun groupe du même niveau et de la même matière : aucune place ne lui est réservée ailleurs, la séance lui est donc facturée dans ce groupe."
+    "CATCH_UP_HOST_BILLED_HINT": "L'étudiant n'appartient à aucun groupe du même niveau et de la même matière : aucune place ne lui est réservée ailleurs, la séance lui est donc facturée dans ce groupe.",
+    "LEFT_ON": "Parti le {{day}}",
+    "LEFT_ON_HINT": "L'étudiant a quitté le groupe, mais cette séance fait partie de sa période d'inscription : il reste attendu jusqu'à son départ inclus.",
+    "ROLL_CALL_ERROR": "La feuille d'appel n'a pas pu être chargée. Fermez la séance et rouvrez-la.",
+    "ROLL_CALL_EMPTY_NO_ENROLMENT": "Aucun étudiant n'est inscrit à ce groupe.",
+    "ROLL_CALL_EMPTY_NOT_CONCERNED": "Aucun étudiant n'est inscrit au groupe le {{day}}. La séance ne concerne pas :",
+    "WINDOW_FROM": "inscrit à partir du {{from}}",
+    "WINDOW_FROM_TO": "inscrit du {{from}} au {{to}}",
+    "WINDOW_UNDATED": "inscription sans date d'arrivée",
+    "REJECTED_TITLE": "Validation refusée : {{count}} absence(s) hors de la période des élèves.",
+    "REJECTED_HINT": "Ces élèves ne sont pas concernés par la séance : ils n'ont pas à y être notés absents. Retirez ces lignes, puis validez de nouveau.",
+    "REMOVE_REJECTED": "Retirer ces {{count}} ligne(s)"
   },
   "STUDENT_FORM": {
     "TITLE": "Inscription d'un étudiant",
@@ -754,62 +806,18 @@
   },
   "payment": {
     "admin": {
-      "edit": {
-        "title": "Modifier le paiement",
-        "subtitle": "Paiement n° {{id}}",
-        "context": {
-          "student": "Étudiant",
-          "group": "Groupe",
-          "series": "Série",
-          "session": "Séance"
-        },
-        "amount": "Montant",
-        "amountPlaceholder": "0",
-        "amountRequired": "Le montant est obligatoire.",
-        "amountMin": "Le montant doit être positif.",
-        "amountChanged": "Montant d'origine : {{original}} → nouveau : {{updated}}",
-        "status": "Statut",
-        "statusActive": "Actif",
-        "statusInactive": "Inactif",
-        "reason": "Motif de la modification",
-        "reasonTooltip": "Le motif est enregistré dans l'historique d'audit du paiement.",
-        "reasonPlaceholder": "Ex. : erreur de saisie du montant",
-        "reasonRequired": "Le motif est obligatoire.",
-        "requiredNote": "Renseignez le montant et le motif pour enregistrer.",
-        "save": "Enregistrer",
-        "saving": "Enregistrement…",
-        "error": "Erreur lors de la modification du paiement. Veuillez réessayer."
-      },
       "messages": {
-        "updated": "Paiement modifié avec succès",
-        "reactivated": "Paiement réactivé avec succès",
-        "permanentlyDeleted": "Ce paiement a été définitivement supprimé et ne peut pas être réactivé.",
-        "reactivateError": "Erreur lors de la réactivation du paiement",
         "filtersCleared": "Filtres effacés avec succès",
-        "deleted": "Versement supprimé définitivement. Cette séance peut de nouveau être payée.",
         "loadError": "Impossible de charger les paiements. Veuillez réessayer.",
-        "deleteError": "La suppression du versement a échoué. Aucune modification n'a été enregistrée.",
         "filterOptionsError": "Certaines listes de filtres n'ont pas pu être chargées.",
         "csvExported": "{{count}} ligne(s) exportée(s) en CSV"
-      },
-      "reasonDialog": {
-        "label": "Motif",
-        "defaultPlaceholder": "Précisez la raison de cette action",
-        "required": "Le motif est obligatoire.",
-        "reactivateTitle": "Réactiver le paiement",
-        "reactivateMessage": "Ce paiement sera de nouveau pris en compte dans les soldes de l'étudiant. Le motif est conservé dans l'historique d'audit.",
-        "reactivateConfirm": "Réactiver",
-        "reactivatePlaceholder": "Ex. : désactivation par erreur",
-        "deleteTitle": "Supprimer définitivement le versement",
-        "deleteMessage": "Ce versement sera supprimé définitivement et ne pourra pas être réactivé. La séance pourra de nouveau être payée. Le motif est conservé dans l'historique d'audit.",
-        "deleteConfirm": "Supprimer définitivement",
-        "deletePlaceholder": "Ex. : erreur de saisie, paiement annulé par la famille"
       },
       "page": {
         "title": "Gestion des paiements",
         "subtitle": "Recherche et administration des versements",
         "export": "Exporter",
-        "exportTooltip": "Exporter les lignes affichées au format CSV"
+        "exportTooltip": "Exporter les lignes affichées au format CSV",
+        "correctionNotice": "Un versement se corrige depuis son reçu (annuler ou corriger), sur la fiche de l'élève. Les lignes ci-dessous en montrent la répartition par séance."
       },
       "filters": {
         "title": "Filtres de recherche",
@@ -852,7 +860,10 @@
         "openStudent": "Ouvrir la fiche étudiant",
         "openGroup": "Ouvrir la fiche groupe",
         "loading": "Chargement des paiements…",
-        "empty": "Aucun versement ne correspond aux filtres."
+        "empty": "Aucun versement ne correspond aux filtres.",
+        "refundedShare": "{{amount}} DA remboursés",
+        "refunded": "Remboursé",
+        "netAmount": "Montant net"
       },
       "rowStatus": {
         "active": "Actif",
@@ -865,16 +876,15 @@
         "IN_PROGRESS": "En cours",
         "COMPLETED": "Soldé",
         "CANCELLED": "Annulé",
-        "cancelledHint": "Le paiement parent est annulé : ce versement n'entre plus dans les soldes."
+        "cancelledHint": "Le paiement parent est annulé : ce versement n'entre plus dans les soldes.",
+        "REFUNDED": "Remboursé",
+        "refundedHint": "{{amount}} DA remboursés sur ce versement : statut calculé net des remboursements."
       },
       "actions": {
-        "edit": "Modifier le versement",
-        "history": "Voir l'historique d'audit",
-        "delete": "Supprimer définitivement",
-        "reactivate": "Réactiver le versement"
+        "history": "Voir l'historique d'audit"
       },
       "audit": {
-        "title": "Historique des actions",
+        "title": "Historique du versement",
         "by": "par {{actor}}",
         "reason": "Motif",
         "change": "Avant : {{from}} → après : {{to}}",
@@ -884,6 +894,16 @@
           "MODIFIED": "Montant ou état modifié",
           "DELETED": "Supprimé définitivement",
           "REACTIVATED": "Réactivé"
+        },
+        "changesTitle": "Modifications de la ligne",
+        "refunds": {
+          "title": "Remboursements de ce versement",
+          "empty": "Aucun remboursement sur ce versement.",
+          "error": "Les remboursements n'ont pas pu être chargés.",
+          "noReason": "Motif non renseigné",
+          "reprint": "Réimprimer le reçu",
+          "reprintAria": "Réimprimer le reçu de remboursement {{number}}",
+          "reprintError": "Le reçu de remboursement n'a pas pu être imprimé. Réessayez."
         }
       }
     },
@@ -978,9 +998,29 @@
       "carriedOverTotal": "Total reporté",
       "studentSignature": "Signature de l'étudiant",
       "adminSignature": "Encaissé par",
-      "unknownAdmin": "Administration",
       "footerNote": "Ce reçu ne couvre que le versement mentionné ci-dessus.",
-      "error": "Paiement enregistré, mais le reçu n'a pas pu être généré."
+      "error": "Paiement enregistré, mais le reçu n'a pas pu être généré.",
+      "cancelledStamp": "ANNULÉ",
+      "cancelledOn": "Reçu annulé le {{date}} : il ne vaut plus justificatif.",
+      "replacedBy": "Remplacé par le reçu {{number}}."
+    },
+    "encashments": {
+      "title": "Versements",
+      "empty": "Aucun versement enregistré pour cet élève.",
+      "loadError": "Les versements n'ont pas pu être chargés.",
+      "status": {
+        "ACTIVE": "Valide",
+        "CANCELLED": "Annulé"
+      },
+      "catchUp": "Rattrapage",
+      "receivedBy": "encaissé par {{user}}",
+      "carriedOverTo": "Reporté sur « {{series}} » : {{amount}} DA",
+      "cancelledOn": "Annulé le {{date}} par {{user}}",
+      "replaces": "Remplace le reçu {{number}}",
+      "replacedBy": "Remplacé par le reçu {{number}}",
+      "reprint": "Réimprimer le reçu",
+      "reprintAria": "Réimprimer le reçu {{number}}",
+      "reprintError": "Le reçu n'a pas pu être réimprimé."
     },
     "history": {
       "fields": {
@@ -1251,7 +1291,8 @@
     },
     "seriesStatus": {
       "FULL": "Complet",
-      "PARTIAL": "Partiel"
+      "PARTIAL": "Partiel",
+      "UNPAID": "Non payé"
     },
     "series": "Série : {{name}}",
     "catchUpSeries": "Séance de rattrapage : {{name}}",
@@ -1269,7 +1310,8 @@
     "badge": {
       "FULL": "Soldé",
       "PARTIAL": "Partiel",
-      "EXEMPTED": "Exempté"
+      "EXEMPTED": "Exempté",
+      "UNPAID": "Non payé"
     },
     "amounts": {
       "due": "Dû",
@@ -1278,7 +1320,8 @@
       "dueBreakdown": "{{count}} séance(s) × {{price}} DA = {{total}} DA",
       "dueSessions": "{{count}} séance(s) facturée(s)",
       "paidSessions": "{{count}} séance(s) réglée(s)",
-      "remainingSessions": "{{count}} séance(s) à régler"
+      "remainingSessions": "{{count}} séance(s) à régler",
+      "paidNetOfRefunds": "Net de {{amount}} DA remboursés"
     },
     "exempted": "Exempté",
     "refunded": "Remboursé",
@@ -1292,7 +1335,6 @@
       "justified": "Justifiée",
       "payment": "Paiement",
       "amountPaid": "Montant affecté",
-      "refunded": "Remboursé",
       "description": "Description",
       "paymentDate": "Date de paiement"
     },
@@ -1357,7 +1399,9 @@
         "pendingDecisionSession": "Rattrapage à préciser — aucune facturation décidée à ce jour"
       },
       "amountAllocatedAndOverpaid": "Affecté : {{allocated}} DA — Trop-perçu : {{overpaid}} DA",
-      "pendingDecisionSession": "À préciser : {{name}}"
+      "pendingDecisionSession": "À préciser : {{name}}",
+      "amountPaidNetOfTotal": "Total versé, net des remboursements : {{paid}} DA / {{total}} DA dus",
+      "refundLine": "Pièce {{number}} du {{date}} : {{amount}} DA — {{reason}}"
     },
     "seriesLabel": "Série",
     "totalPaid": "Total versé",
@@ -1365,7 +1409,14 @@
     "overpaid": "Trop-perçu",
     "pendingDecisionTag": "À préciser",
     "pendingDecisionHint": "Rattrapage à préciser : ni dette, ni gratuité. La séance manquée et la décision de facturation restent à indiquer.",
-    "billedAtHostGroup": "facturée sur place"
+    "billedAtHostGroup": "facturée sur place",
+    "refunds": {
+      "noReason": "Motif non renseigné",
+      "reprint": "Réimprimer le reçu",
+      "reprintAria": "Réimprimer le reçu de remboursement {{number}}",
+      "reprintError": "Le reçu de remboursement n'a pas pu être imprimé. Réessayez.",
+      "unavailable": "Le détail des remboursements n'a pas pu être chargé."
+    }
   },
   "pricing": {
     "table": {
@@ -1434,7 +1485,10 @@
       "savedAmount": "{{amount}} DA rendus au bénéficiaire.",
       "printReceipt": "Imprimer le reçu",
       "downloadReceipt": "Télécharger le reçu",
-      "receiptFailed": "Le remboursement est enregistré, mais son reçu n'a pas pu être produit. Il reste imprimable depuis l'historique."
+      "receiptFailed": "Le remboursement est enregistré, mais son reçu n'a pas pu être produit. Il reste imprimable depuis l'historique complet de l'étudiant.",
+      "amountPlaceholder": "Ex. : 2000",
+      "reasonNote": "Le motif figure sur le reçu de remboursement remis à la famille.",
+      "back": "Modifier"
     },
     "receipt": {
       "title": "Reçu de remboursement",
@@ -1538,5 +1592,180 @@
     "ERRORS": {
       "MISSING_CONTEXT": "Ce rattrapage n'est rattaché ni à un étudiant ni à un groupe : impossible de proposer une séance manquée."
     }
+  },
+  "correction": {
+    "subject": "Reçu {{number}} de {{amount}} DA — {{series}} ({{group}})",
+    "reason": {
+      "DATA_ENTRY_ERROR": "Erreur de saisie",
+      "DOCUMENT_RECEIVED": "Justificatif reçu",
+      "ARRIVAL_DATE_CORRECTED": "Date d'arrivée corrigée",
+      "STUDENT_LEFT": "Départ de l'étudiant",
+      "WRONG_STUDENT": "Encaissement sur le mauvais élève",
+      "WRONG_AMOUNT": "Montant mal saisi",
+      "OTHER": "Autre"
+    },
+    "dialog": {
+      "reason": "Motif",
+      "reasonRequired": "Choisissez le motif de la correction.",
+      "reasonText": "Précision (facultative)",
+      "reasonTextRequired": "Expliquez en quelques mots",
+      "preview": "Voir l'aperçu",
+      "previewTitle": "Ce qui va changer",
+      "confirm": "Confirmer",
+      "back": "Modifier",
+      "stale": "Les données ont changé depuis l'aperçu : voici le nouvel aperçu. Relisez-le avant de confirmer.",
+      "blockingRefund": "Remboursement {{number}} du {{date}} : {{amount}} DA sur « {{series}} »",
+      "error": "La correction n'a pas pu être menée. Réessayez.",
+      "mark": {
+        "label": "Présence de l'élève",
+        "none": "Sans présence (facturée)",
+        "present": "Présent",
+        "absent": "Absent",
+        "hint": "Des séances déjà validées entrent dans la période sans présence de l'élève. Laissées ainsi, elles sont facturées : sa place était réservée. Vous pouvez le noter présent ou absent : l'aperçu se met à jour."
+      }
+    },
+    "preview": {
+      "amountsUnchanged": "Aucun montant ne change.",
+      "before": "Avant",
+      "after": "Après",
+      "cost": "Coût de la série",
+      "dueSoFar": "Dû à ce jour",
+      "paid": "Versé",
+      "remaining": "Reste à payer",
+      "status": "Statut",
+      "upToDate": "À jour",
+      "late": "En retard",
+      "effects": "Autres effets"
+    },
+    "cancel": {
+      "action": "Annuler",
+      "aria": "Annuler le versement {{number}}",
+      "title": "Annuler le versement",
+      "done": "Le reçu {{number}} est annulé."
+    },
+    "correct": {
+      "action": "Corriger",
+      "aria": "Corriger le versement {{number}}",
+      "title": "Corriger le versement",
+      "detailsDone": "Le reçu {{number}} est corrigé.",
+      "replaced": "Le reçu {{original}} est remplacé par le reçu {{replacement}}.",
+      "print": "Imprimer le nouveau reçu"
+    },
+    "edit": {
+      "title": "Corriger le reçu {{number}}",
+      "hint": "Saisissez le versement tel qu'il aurait dû être enregistré. Un changement de montant, d'élève, de groupe ou de série remplace le reçu ; le mode et la note se corrigent sans nouveau reçu.",
+      "loadError": "Une partie des listes n'a pas pu être chargée.",
+      "amount": "Montant reçu",
+      "amountRequired": "Montant strictement positif attendu.",
+      "group": "Groupe",
+      "student": "Élève",
+      "studentRequired": "Choisissez l'élève qui a versé.",
+      "series": "Série visée",
+      "seriesRequired": "Choisissez la série visée.",
+      "method": "Mode de paiement",
+      "noMethod": "Non précisé",
+      "notes": "Note",
+      "unchanged": "Rien n'est modifié pour l'instant.",
+      "next": "Continuer"
+    }
+  },
+  "enrolment": {
+    "list": {
+      "title": "Inscriptions : arrivées et départs",
+      "empty": "Aucune inscription pour cette année.",
+      "loadError": "Les inscriptions n'ont pas pu être chargées.",
+      "open": "En cours",
+      "closed": "Terminée",
+      "arrival": "Arrivée : {{date}}",
+      "departure": "Départ : {{date}}",
+      "correctArrival": "Corriger l'arrivée",
+      "recordDeparture": "Enregistrer le départ",
+      "correctDeparture": "Corriger le départ",
+      "reopen": "Rouvrir",
+      "arrivalAria": "Corriger la date d'arrivée dans « {{group}} »",
+      "departureAria": "Enregistrer le départ de « {{group}} »",
+      "correctDepartureAria": "Corriger la date de départ de « {{group}} »",
+      "reopenAria": "Rouvrir l'inscription à « {{group}} »"
+    },
+    "period": {
+      "open": "à partir du {{arrival}}",
+      "closed": "du {{arrival}} au {{departure}}"
+    },
+    "correction": {
+      "subject": "{{student}} — « {{group}} », {{period}}",
+      "dateRequired": "Saisissez une date valide.",
+      "unchanged": "C'est déjà la date enregistrée : rien à corriger.",
+      "next": "Voir l'aperçu",
+      "ARRIVAL": {
+        "title": "Corriger la date d'arrivée",
+        "date": "Nouvelle date d'arrivée",
+        "done": "Arrivée dans « {{group}} » corrigée."
+      },
+      "DEPARTURE": {
+        "title": "Enregistrer le départ",
+        "correctTitle": "Corriger la date de départ",
+        "date": "Date de départ",
+        "dateHint": "Dernier jour où l'élève est attendu : les séances de ce jour le concernent encore.",
+        "removePresencesAfter": "Retirer aussi ses présences après cette date",
+        "removePresencesHint": "Sinon, elles restent et sont facturées comme séances suivies. Ses absences après le départ sont toujours retirées.",
+        "done": "Départ de « {{group}} » enregistré."
+      },
+      "REOPEN": {
+        "title": "Rouvrir l'inscription",
+        "done": "Inscription à « {{group}} » rouverte."
+      }
+    },
+    "add": {
+      "groupsTitle": "Inscrire à des groupes",
+      "addGroups": "Inscrire",
+      "selectGroups": "Groupes",
+      "arrival": "Date d'arrivée",
+      "arrivalHint": "Premier jour où l'élève est attendu ; aujourd'hui par défaut.",
+      "alreadyEnrolled": "Déjà inscrit : {{names}}. Aucune inscription enregistrée.",
+      "unreachable": "Serveur injoignable",
+      "error": "L'inscription n'a pas pu être enregistrée."
+    },
+    "departure": {
+      "notEnrolled": "Cet élève n'a plus d'inscription ouverte dans ce groupe : la liste a été rechargée."
+    }
+  },
+  "journal": {
+    "title": "Journal des corrections",
+    "count": "{{count}} correction(s)",
+    "from": "Du",
+    "to": "Au",
+    "apply": "Afficher",
+    "reset": "Toute période",
+    "print": "Imprimer",
+    "printAria": "Imprimer le journal des corrections de la période affichée",
+    "empty": "Aucune correction sur cette période.",
+    "loadError": "Le journal n'a pas pu être chargé.",
+    "printError": "Le journal n'a pas pu être imprimé.",
+    "periodInvalid": "La date de fin précède la date de début.",
+    "noEffect": "Sans effet sur le dû",
+    "by": "par {{user}}",
+    "period": {
+      "between": "Du {{from}} au {{to}}",
+      "from": "Depuis le {{from}}",
+      "to": "Jusqu'au {{to}}",
+      "all": "Toute période"
+    },
+    "columns": {
+      "date": "Date",
+      "correction": "Correction",
+      "effect": "Effet sur le dû",
+      "reason": "Motif",
+      "by": "Par"
+    },
+    "category": {
+      "ENCASHMENT": "Versement",
+      "ENROLMENT": "Inscription",
+      "ATTENDANCE": "Présence",
+      "JUSTIFICATION": "Justification",
+      "CATCH_UP": "Rattrapage"
+    },
+    "generatedOn": "Édité le {{date}}",
+    "page": "Page {{current}} / {{total}}",
+    "fileName": "journal"
   }
 }

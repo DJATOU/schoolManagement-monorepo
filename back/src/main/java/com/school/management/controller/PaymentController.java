@@ -68,6 +68,9 @@ public class PaymentController {
     private final SessionMapper sessionMapper;
     private final PaymentMapper paymentMapper;
 
+    /** Relit l'Encaissement enregistré : numéro de reçu, date et auteur à imprimer. */
+    private final com.school.management.service.payment.EncashmentQueryService encashmentQueryService;
+
     @Autowired
     public PaymentController(
             PaymentCrudService paymentCrudService,
@@ -75,45 +78,22 @@ public class PaymentController {
             PaymentStatusService paymentStatusService,
             PaymentHistoryService paymentHistoryService,
             SessionMapper sessionMapper,
-            PaymentMapper paymentMapper) {
+            PaymentMapper paymentMapper,
+            com.school.management.service.payment.EncashmentQueryService encashmentQueryService) {
         this.paymentCrudService = paymentCrudService;
         this.paymentProcessingService = paymentProcessingService;
         this.paymentStatusService = paymentStatusService;
         this.paymentHistoryService = paymentHistoryService;
         this.sessionMapper = sessionMapper;
         this.paymentMapper = paymentMapper;
+        this.encashmentQueryService = encashmentQueryService;
     }
 
-    /**
-     * Crée un nouveau paiement de base.
-     *
-     * <p>Note libre facultative (requirement 11) : l'endpoint d'enregistrement de paiement
-     * {@code POST /api/payments} porte le champ optionnel {@code notes}. Ce champ transite
-     * par {@link PaymentMapper} qui le mappe dans les deux sens
-     * ({@code PaymentDTO.notes ↔ PaymentEntity.notes}). Une note fournie est persistée avec
-     * le paiement ; en son absence, {@code null} est persisté (requirement 11.1, 11.3), et
-     * la note est renvoyée dans la réponse (requirement 11.2). Le chemin {@code /process}
-     * (via {@code PaymentProcessingService} avec des arguments primitifs) ne porte pas de
-     * note et reste inchangé, tout comme les endpoints multipart d'upload.</p>
-     *
-     * @param paymentDto les données du paiement
-     * @return le paiement créé
-     */
-    @PostMapping
-    public ResponseEntity<PaymentDTO> createPayment(@Valid @RequestBody PaymentDTO paymentDto) {
-        LOGGER.info("Creating payment for student: {}", paymentDto.getStudentId());
-
-        // Note: Pour utiliser PaymentMapper.toEntity, il faut un MappingContext
-        // Pour l'instant, on utilise directement le service qui ne nécessite pas de
-        // mapper
-        // TODO: Créer un MappingContext dans PaymentCrudService si nécessaire
-
-        PaymentEntity savedPayment = paymentCrudService.createPayment(
-                paymentMapper.toEntity(paymentDto, null) // TODO: passer le mapping context
-        );
-
-        return new ResponseEntity<>(paymentMapper.toDto(savedPayment), HttpStatus.CREATED);
-    }
+    // POST / (création d'une ligne de paiement « de base ») retiré avec A.6 (spec
+    // admin-corrections) : il enregistrait un cumul pris tel quel dans la requête, sans
+    // Encaissement ni Imputation. Le cumul d'une série est la somme des Imputations actives
+    // (exigence 1.4) ; un versement entre par /process ou /process/catch-up, et nulle part
+    // ailleurs. Aucun écran ne l'appelait.
 
     // PATCH /{id} générique retiré : il projetait une Map arbitraire du client sur l'entité
     // (ModelMapper), permettant d'écraser n'importe quel champ d'un paiement — dont le montant,
@@ -207,12 +187,28 @@ public class PaymentController {
                 paymentDto.getGroupId(),
                 paymentDto.getSessionSeriesId(),
                 paymentDto.getAmountPaid(),
-                idempotencyKey);
+                idempotencyKey,
+                meansOf(paymentDto));
 
         return ResponseEntity.ok(toDto(result));
     }
 
-    /** Traduit le résultat d'encaissement en contrat d'API, la ligne de paiement comprise. */
+    /**
+     * Mode de paiement et note saisis, conservés sur l'Encaissement. L'écran envoie la note dans
+     * {@code paymentDescription} ; {@code notes} reste accepté pour les autres clients.
+     */
+    private static PaymentProcessingService.PaymentMeans meansOf(PaymentDTO paymentDto) {
+        String note = paymentDto.getPaymentDescription();
+        if (note == null || note.isBlank()) {
+            note = paymentDto.getNotes();
+        }
+        return new PaymentProcessingService.PaymentMeans(paymentDto.getPaymentMethod(), note);
+    }
+
+    /**
+     * Traduit le résultat d'encaissement en contrat d'API : la répartition, la ligne de paiement,
+     * et l'Encaissement relu après validation, porteur du numéro de reçu à imprimer.
+     */
     private PaymentAllocationResultDTO toDto(PaymentAllocationResult result) {
         return new PaymentAllocationResultDTO(
                 result.studentId(),
@@ -225,7 +221,8 @@ public class PaymentController {
                         .map(carryOver -> new PaymentAllocationResultDTO.CarriedOverAmountDTO(
                                 carryOver.seriesId(), carryOver.seriesName(), carryOver.amount()))
                         .toList(),
-                paymentMapper.toDto(result.payment()));
+                paymentMapper.toDto(result.payment()),
+                encashmentQueryService.get(result.encashment().getId()));
     }
 
     /**
@@ -233,22 +230,27 @@ public class PaymentController {
      *
      * PHASE 2: Utilise PaymentProcessingService.processCatchUpPayment.
      *
-     * @param paymentDto les informations du paiement (studentId, sessionId,
-     *                   amountPaid)
-     * @return le paiement traité
+     * @param paymentDto     les informations du paiement (studentId, sessionId,
+     *                       amountPaid)
+     * @param idempotencyKey clé de la soumission, même règle que {@code /process}
+     *                       (spec admin-corrections, exigence 1.7)
+     * @return la répartition, la ligne de paiement et l'Encaissement, comme {@code /process}
      */
     @PostMapping("/process/catch-up")
-    public ResponseEntity<PaymentDTO> processCatchUpPayment(@Valid @RequestBody PaymentDTO paymentDto) {
+    public ResponseEntity<PaymentAllocationResultDTO> processCatchUpPayment(
+            @Valid @RequestBody PaymentDTO paymentDto,
+            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
         LOGGER.info("Processing catch-up payment - student: {}, session: {}, amount: {}",
                 paymentDto.getStudentId(), paymentDto.getSessionId(), paymentDto.getAmountPaid());
 
-        PaymentEntity processedPayment = paymentProcessingService.processCatchUpPayment(
+        PaymentAllocationResult result = paymentProcessingService.processCatchUpPayment(
                 paymentDto.getStudentId(),
                 paymentDto.getSessionId(),
-                paymentDto.getAmountPaid());
+                paymentDto.getAmountPaid(),
+                idempotencyKey,
+                meansOf(paymentDto));
 
-        PaymentDTO responseDto = paymentMapper.toDto(processedPayment);
-        return ResponseEntity.ok(responseDto);
+        return ResponseEntity.ok(toDto(result));
     }
 
     /**

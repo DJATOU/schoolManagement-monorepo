@@ -13,9 +13,19 @@ import java.util.List;
 public class SeriesHistoryDTO {
     private Long seriesId;
     private String seriesName;
+    /**
+     * Statut de la série : {@code FULL} (versé net ≥ coût), {@code UNPAID} (versé net nul alors
+     * qu'un montant est dû) ou {@code PARTIAL}. Sans {@code UNPAID}, une série sans aucun versement
+     * s'annonçait « partielle ».
+     */
     private String paymentStatus;
     // TODO(tâche 16) : migrer ces champs monétaires vers BigDecimal en même temps que
     // StudentHistoryService, pour rester cohérent avec le PaymentCostCalculator.
+    /**
+     * Versé <strong>net</strong> : versements non annulés diminués des remboursements actifs, borné
+     * à zéro. Même définition que le devis et le statut de retard ({@code PaymentCostResolver}) :
+     * un remboursement rouvre ce qui reste à payer, l'historique doit le montrer aussi.
+     */
     private Double totalAmountPaid;
     private Double totalCost;
     /**
@@ -25,7 +35,7 @@ public class SeriesHistoryDTO {
      * versement que le détail des séances ne pouvait pas justifier.
      */
     private Double totalAllocated;
-    /** Trop-perçu : part versée au-delà du coût de la série ({@code versé − coût}), ou 0. */
+    /** Trop-perçu : part du versé net non affectée aux séances ({@code versé net − affecté}), ou 0. */
     private Double totalOverpaid;
     private List<SessionHistoryDTO> sessions;
     // Exemption : vrai lorsque l'étudiant est exempté (réduction 100 %) pour cette série ;

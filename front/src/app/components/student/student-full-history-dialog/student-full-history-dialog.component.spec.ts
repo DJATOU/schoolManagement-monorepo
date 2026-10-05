@@ -1,9 +1,11 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { of, throwError } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import frTranslations from '../../../../assets/i18n/fr.json';
+
+import { MatSnackBar } from '@angular/material/snack-bar';
 
 import { StudentFullHistoryDialogComponent } from './student-full-history-dialog.component';
 import { StudentService } from '../services/student.service';
@@ -11,6 +13,13 @@ import { PdfGeneratorService } from '../services/pdf-generator.service';
 import { StudentFullHistoryDTO } from '../domain/StudentFullHistoryDTO';
 import { SeriesHistoryDTO } from '../../../models/sessionSerie/SeriesHistoryDTO';
 import { SessionHistoryDTO } from '../../../models/session/SessionHistoryDTO';
+import { RefundService } from '../../../services/refund.service';
+import { RefundReceiptPdfService } from '../../../services/refund-receipt-pdf.service';
+import { AuthService } from '../../../services/auth.service';
+import { RefundReceipt, StudentRefund } from '../../../models/refund/refund';
+
+/** Espaces de groupement des montants (U+202F en français) ramenées à une espace ordinaire. */
+const plain = (text: string | null | undefined): string => (text ?? '').replace(/\s+/g, ' ');
 
 /**
  * Tests du StudentFullHistoryDialogComponent (tâche 18.1).
@@ -60,7 +69,7 @@ describe('StudentFullHistoryDialogComponent', () => {
               // Une séance ordinaire + une de rattrapage : la série n'est donc pas une
               // « série de rattrapage », son récapitulatif de paiement est affiché.
               session({ sessionId: 99, sessionName: 'Séance ordinaire' }),
-              session({ sessionId: 100, sessionName: 'Rattrapage 1', catchUpSession: true, isExempted: true, refundedAmount: 30 })
+              session({ sessionId: 100, sessionName: 'Rattrapage 1', catchUpSession: true, isExempted: true })
             ]
           }
         ]
@@ -68,16 +77,36 @@ describe('StudentFullHistoryDialogComponent', () => {
     ]
   };
 
-  async function configure(): Promise<void> {
+  let refundService: jasmine.SpyObj<RefundService>;
+  let refundReceiptPdf: jasmine.SpyObj<RefundReceiptPdfService>;
+  let authService: jasmine.SpyObj<AuthService>;
+  let snackBar: jasmine.SpyObj<MatSnackBar>;
+
+  /**
+   * @param role rôle de l'utilisateur connecté : le détail des remboursements est réservé à ADMIN.
+   *             Par défaut VIEWER, pour que les tests qui ne parlent pas de remboursements
+   *             n'appellent pas une route qu'ils ne stubbent pas.
+   */
+  async function configure(role: 'ADMIN' | 'VIEWER' = 'VIEWER'): Promise<void> {
     studentService = jasmine.createSpyObj('StudentService', ['getStudentFullHistory']);
     pdfService = jasmine.createSpyObj('PdfGeneratorService', ['generateFullHistoryPdf']);
     dialogRef = jasmine.createSpyObj('MatDialogRef', ['close']);
+    refundService = jasmine.createSpyObj('RefundService', ['getStudentRefunds', 'issueReceipt']);
+    refundReceiptPdf = jasmine.createSpyObj('RefundReceiptPdfService', ['generateAndPrint']);
+    authService = jasmine.createSpyObj('AuthService', ['hasRole']);
+    authService.hasRole.and.callFake(required => required === role);
+    snackBar = jasmine.createSpyObj('MatSnackBar', ['open']);
+    refundService.getStudentRefunds.and.returnValue(of([]));
 
     await TestBed.configureTestingModule({
       imports: [StudentFullHistoryDialogComponent, NoopAnimationsModule, TranslateModule.forRoot()],
       providers: [
         { provide: StudentService, useValue: studentService },
         { provide: PdfGeneratorService, useValue: pdfService },
+        { provide: RefundService, useValue: refundService },
+        { provide: RefundReceiptPdfService, useValue: refundReceiptPdf },
+        { provide: AuthService, useValue: authService },
+        { provide: MatSnackBar, useValue: snackBar },
         { provide: MatDialogRef, useValue: dialogRef },
         { provide: MAT_DIALOG_DATA, useValue: { studentId: 1 } }
       ]
@@ -86,7 +115,7 @@ describe('StudentFullHistoryDialogComponent', () => {
     // Le gabarit affiche des libellés traduits : on charge les vraies traductions FR
     // pour que les assertions portent sur le rendu réel.
     const translate = TestBed.inject(TranslateService);
-    translate.setTranslation('fr', frTranslations as any);
+    translate.setTranslation('fr', frTranslations);
     translate.use('fr');
   }
 
@@ -118,7 +147,9 @@ describe('StudentFullHistoryDialogComponent', () => {
       expect(el.textContent).toContain('Dû');
       expect(el.textContent).toContain('Versé');
       expect(el.textContent).toContain('Reste');
-      expect(el.textContent).toContain('240.00');
+      // Format français, comme les PDF : « 240,00 », jamais « 240.00 ».
+      expect(el.textContent).toContain('240,00');
+      expect(el.textContent).not.toContain('240.00');
       expect(el.querySelectorAll('.fh-amount').length).toBe(3);
     });
 
@@ -151,22 +182,31 @@ describe('StudentFullHistoryDialogComponent', () => {
       expect(fixture.nativeElement.textContent).not.toContain('Justifiée');
     });
 
-    it('keeps the « Remboursé » column visible when money was returned', () => {
-      // De l'argent rendu ne se masque jamais : la colonne n'est repliée que si elle est vide.
-      const series = fullHistory.groups[0].series[0];
-      expect(component.showRefundColumn(series)).toBeTrue();
-      expect(fixture.nativeElement.querySelector('.fh-refund-cell')).toBeTruthy();
+    it('renders the refunded total of the series, without a per-session refund column', () => {
+      // Un remboursement porte sur le versement de la série, jamais sur une séance : il est
+      // nommé sous la série, et le tableau n'a plus de colonne « Remboursé » toujours vide.
+      const el: HTMLElement = fixture.nativeElement;
+      expect(plain(el.querySelector('.fh-refund')?.textContent)).toContain('Remboursé : 30,00 DA');
+      expect(el.querySelector('.fh-refund-cell')).toBeNull();
     });
 
-    it('renders the refund amount for a series and a session', () => {
-      const el: HTMLElement = fixture.nativeElement;
-      expect(el.textContent).toContain('Remboursé');
-      expect(el.querySelector('.fh-refund-cell')).toBeTruthy();
+    it('says that the paid amount is net of the refund', () => {
+      // 30 DA rendus : sans la mention, la famille lirait un versé inférieur à ce qu'elle a remis.
+      expect(plain(fixture.nativeElement.querySelector('.fh-amount-net')?.textContent))
+        .toContain('Net de 30,00 DA remboursés');
+    });
+
+    it('does not load the refund details for a VIEWER', () => {
+      // Pièces de caisse : route réservée à ADMIN. L'appeler pour un VIEWER produirait un 403.
+      expect(refundService.getStudentRefunds).not.toHaveBeenCalled();
+      expect(fixture.nativeElement.querySelector('.fh-refund-list')).toBeNull();
+      expect(component.canSeeRefunds).toBeFalse();
     });
 
     it('delegates PDF generation to the PdfGeneratorService', () => {
       component.generatePdf();
-      expect(pdfService.generateFullHistoryPdf).toHaveBeenCalledWith(fullHistory, 'assets/succes_assistance.png');
+      expect(pdfService.generateFullHistoryPdf)
+        .toHaveBeenCalledWith(fullHistory, 'assets/succes_assistance.png', []);
     });
   });
 
@@ -218,6 +258,13 @@ describe('StudentFullHistoryDialogComponent', () => {
       const base = { seriesId: 1, seriesName: 'S', totalAmountPaid: 0, totalCost: 0, sessions: [] };
       expect(component.seriesBadge({ ...base, paymentStatus: 'FULL' })).toBe('FULL');
       expect(component.seriesBadge({ ...base, paymentStatus: 'PARTIAL' })).toBe('PARTIAL');
+      // Rien de versé : « Non payé », et non « Partiel », qui se lisait comme un règlement entamé.
+      expect(component.seriesBadge({ ...base, paymentStatus: 'UNPAID' })).toBe('UNPAID');
+      expect(component.seriesBadgeIcon({ ...base, paymentStatus: 'UNPAID' })).toBe('error_outline');
+      expect(component.seriesBadgeIcon({ ...base, paymentStatus: 'FULL' })).toBe('check_circle');
+      expect(component.seriesBadgeIcon({ ...base, paymentStatus: 'PARTIAL' })).toBe('schedule');
+      expect(component.seriesBadgeIcon({ ...base, paymentStatus: 'FULL', isExempted: true }))
+        .toBe('volunteer_activism');
       // Une série exemptée a un coût nul, donc un versé nul, que le serveur rapporte « FULL ».
       // Afficher « Soldé » attribuerait à la famille un règlement qu'elle n'a jamais fait.
       expect(component.seriesBadge({ ...base, paymentStatus: 'FULL', isExempted: true }))
@@ -365,8 +412,8 @@ describe('StudentFullHistoryDialogComponent', () => {
       const priceFixture = TestBed.createComponent(StudentFullHistoryDialogComponent);
       priceFixture.detectChanges();
 
-      const text = priceFixture.nativeElement.textContent as string;
-      expect(text).toContain('2 séance(s) × 6,000.00 DA = 12,000.00 DA');
+      const text = plain(priceFixture.nativeElement.textContent);
+      expect(text).toContain('2 séance(s) × 6 000,00 DA = 12 000,00 DA');
       expect(text.toLowerCase()).not.toContain('prorata');
     });
 
@@ -389,6 +436,148 @@ describe('StudentFullHistoryDialogComponent', () => {
       // à une ligne précise pour comprendre pourquoi la séance n'est pas due.
       expect(el.textContent).toContain('Avant inscription');
       expect(el.textContent).toContain('Ce n\'est pas une dette.');
+    });
+  });
+
+  /**
+   * Remboursements nommés sous leur série et réimpression du reçu (décision du propriétaire
+   * produit : le versé est net, et la pièce qui l'explique doit être retrouvable).
+   */
+  describe('refunds for an ADMIN', () => {
+    const october: SeriesHistoryDTO = {
+      seriesId: 10, seriesName: 'Octobre', paymentStatus: 'PARTIAL',
+      totalAmountPaid: 2000, totalCost: 2400, totalRefunded: 400,
+      sessions: [session({ sessionId: 1, amountRemaining: 0 })]
+    };
+    const november: SeriesHistoryDTO = {
+      seriesId: 11, seriesName: 'Novembre', paymentStatus: 'UNPAID',
+      totalAmountPaid: 0, totalCost: 2400, totalRefunded: 0,
+      sessions: [session({ sessionId: 2, paymentStatus: 'UNPAID', amountPaid: 0, amountDue: 300, amountRemaining: 300 })]
+    };
+    const history: StudentFullHistoryDTO = {
+      studentId: 1, studentName: 'Camille Amrani', catchUp: false,
+      groups: [{ groupId: 1, groupName: 'Maths 4 AM A', catchUp: false, series: [october, november] }]
+    };
+    const refund = (overrides: Partial<StudentRefund> = {}): StudentRefund => ({
+      refundId: 7, refundNumber: 'REMB-2026-0007', refundDate: '2026-10-05T10:00:00',
+      amount: 400, reason: 'Trop-perçu', seriesId: 10, seriesName: 'Octobre',
+      groupId: 1, groupName: 'Maths 4 AM A', ...overrides
+    });
+    const receipt = { refundId: 7, refundNumber: 'REMB-2026-0007', issuanceRank: 2 } as RefundReceipt;
+
+    async function open(refunds: StudentRefund[]): Promise<void> {
+      await configure('ADMIN');
+      studentService.getStudentFullHistory.and.returnValue(of(history));
+      refundService.getStudentRefunds.and.returnValue(of(refunds));
+      fixture = TestBed.createComponent(StudentFullHistoryDialogComponent);
+      component = fixture.componentInstance;
+      fixture.detectChanges();
+    }
+
+    const seriesCards = (): HTMLElement[] =>
+      Array.from(fixture.nativeElement.querySelectorAll('.fh-series')) as HTMLElement[];
+
+    it('lists each refund under its own series: number, date, amount, reason', async () => {
+      await open([refund()]);
+
+      expect(refundService.getStudentRefunds).toHaveBeenCalledWith(1);
+      const [octoberCard, novemberCard] = seriesCards();
+      const item = plain(octoberCard.querySelector('.fh-refund-item')?.textContent);
+      expect(item).toContain('REMB-2026-0007');
+      expect(item).toContain('05/10/2026');
+      expect(item).toContain('400,00 DA');
+      expect(item).toContain('Trop-perçu');
+      // Aucun remboursement sur novembre : rien n'y est listé, et son versé n'est pas dit « net ».
+      expect(novemberCard.querySelector('.fh-refund-item')).toBeNull();
+      expect(novemberCard.querySelector('.fh-refunds')).toBeNull();
+      expect(novemberCard.querySelector('.fh-amount-net')).toBeNull();
+    });
+
+    it('names a missing reason instead of leaving a blank', async () => {
+      await open([refund({ reason: null })]);
+
+      expect(plain(seriesCards()[0].querySelector('.fh-refund-reason')?.textContent))
+        .toContain('Motif non renseigné');
+    });
+
+    it('shows « Non payé » on a series with nothing paid', async () => {
+      await open([]);
+
+      const badge = seriesCards()[1].querySelector('.fh-badge-UNPAID');
+      expect(badge).toBeTruthy();
+      expect(badge?.textContent).toContain('Non payé');
+      expect(seriesCards()[0].querySelector('.fh-badge-PARTIAL')).toBeTruthy();
+    });
+
+    it('says so when the refund details cannot be loaded, and keeps the total', async () => {
+      await configure('ADMIN');
+      studentService.getStudentFullHistory.and.returnValue(of(history));
+      refundService.getStudentRefunds.and.returnValue(throwError(() => new Error('boom')));
+      fixture = TestBed.createComponent(StudentFullHistoryDialogComponent);
+      fixture.detectChanges();
+
+      const card = seriesCards()[0];
+      expect(plain(card.querySelector('.fh-refund')?.textContent)).toContain('400,00 DA');
+      expect(card.querySelector('.fh-refund-unavailable')?.textContent)
+        .toContain('Le détail des remboursements n\'a pas pu être chargé.');
+    });
+
+    it('reprints the receipt: the server issues it, the PDF service prints it', async () => {
+      await open([refund()]);
+      refundService.issueReceipt.and.returnValue(of(receipt));
+      refundReceiptPdf.generateAndPrint.and.returnValue(Promise.resolve());
+
+      (seriesCards()[0].querySelector('.fh-refund-reprint') as HTMLButtonElement).click();
+
+      expect(refundService.issueReceipt).toHaveBeenCalledWith(7);
+      expect(refundReceiptPdf.generateAndPrint).toHaveBeenCalledWith(receipt);
+      expect(component.reprintingRefundId).toBeNull();
+    });
+
+    it('ignores a second click while a reprint is in progress', async () => {
+      await open([refund()]);
+      // Réponse en attente : la réimpression reste en cours.
+      refundService.issueReceipt.and.returnValue(new Subject<RefundReceipt>());
+
+      component.reprintRefund(refund());
+      component.reprintRefund(refund());
+
+      expect(refundService.issueReceipt).toHaveBeenCalledTimes(1);
+      expect(component.reprintingRefundId).toBe(7);
+    });
+
+    it('reports a refused reprint with the server message, and allows a new attempt', async () => {
+      await open([refund()]);
+      refundService.issueReceipt.and.returnValue(throwError(() => new Error('Remboursement introuvable ou inactif')));
+
+      component.reprintRefund(refund());
+
+      expect(snackBar.open).toHaveBeenCalledWith('Remboursement introuvable ou inactif', 'Fermer', jasmine.any(Object));
+      expect(refundReceiptPdf.generateAndPrint).not.toHaveBeenCalled();
+      expect(component.reprintingRefundId).toBeNull();
+    });
+
+    it('reports a failed printing', async () => {
+      await open([refund()]);
+      refundService.issueReceipt.and.returnValue(of(receipt));
+      refundReceiptPdf.generateAndPrint.and.returnValue(Promise.reject(new Error('iframe')));
+      spyOn(console, 'error');
+
+      component.reprintRefund(refund());
+      await fixture.whenStable();
+
+      expect(snackBar.open).toHaveBeenCalledWith(
+        'Le reçu de remboursement n\'a pas pu être imprimé. Réessayez.', 'Fermer', jasmine.any(Object));
+    });
+
+    it('passes the loaded refunds to the PDF', async () => {
+      const refunds = [refund()];
+      await open(refunds);
+
+      component.generatePdf();
+
+      expect(pdfService.generateFullHistoryPdf)
+        .toHaveBeenCalledWith(history, 'assets/succes_assistance.png', refunds);
     });
   });
 

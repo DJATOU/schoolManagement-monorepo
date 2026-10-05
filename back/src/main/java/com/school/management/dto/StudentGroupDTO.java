@@ -1,10 +1,10 @@
 package com.school.management.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.*;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.PastOrPresent;
 import jakarta.validation.constraints.Size;
-import java.util.Date;
+import java.time.LocalDate;
 import java.util.List;
 
 @Getter
@@ -20,8 +20,13 @@ public class StudentGroupDTO {
     private Long groupId;
     private List<Long> studentIds;
 
-    @PastOrPresent(message = "Date assigned cannot be in the future.")
-    private Date dateAssigned;
+    /**
+     * Date_Inscription : un jour, sans heure ni fuseau (exigence 5.4). Facultative : sans elle,
+     * l'arrivée est le jour même. Une date future est admise dans l'année scolaire du groupe
+     * (exigence 5.2) : le contrôle est fait par le service, qui seul connaît cette année.
+     */
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
+    private LocalDate dateAssigned;
 
     @NotNull(message = "Assigned by cannot be null.")
     @Size(min = 1, message = "Assigned by cannot be empty.")

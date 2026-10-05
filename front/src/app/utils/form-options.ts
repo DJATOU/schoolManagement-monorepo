@@ -14,6 +14,25 @@ export const COMMUNICATION_OPTIONS: CommunicationOption[] = [
   { value: 'email', labelKey: 'COMMON.EMAIL' }
 ];
 
+/** Mode de règlement d'un versement : code stocké par le serveur et clé de son libellé. */
+export interface PaymentMethodOption {
+  value: string;
+  labelKey: string;
+}
+
+/**
+ * Modes de règlement proposés à l'encaissement.
+ *
+ * <p>Partagés par le dialogue de versement et l'historique des versements : un reçu réimprimé
+ * doit nommer le mode exactement comme le reçu d'origine.</p>
+ */
+export const PAYMENT_METHOD_OPTIONS: PaymentMethodOption[] = [
+  { value: 'cash', labelKey: 'payment.dialog.methods.cash' },
+  { value: 'cheque', labelKey: 'payment.dialog.methods.cheque' },
+  { value: 'carte_bancaire', labelKey: 'payment.dialog.methods.card' },
+  { value: 'autre', labelKey: 'payment.dialog.methods.other' }
+];
+
 /**
  * Liste des nationalités. L'Algérie est placée en premier et utilisée comme
  * valeur par défaut dans les formulaires.

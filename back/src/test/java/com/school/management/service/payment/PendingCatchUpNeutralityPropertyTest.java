@@ -169,11 +169,12 @@ class PendingCatchUpNeutralityPropertyTest {
             StudentGroupEntity enrolment = new StudentGroupEntity();
             enrolment.setGroup(group);
             enrolment.setDateAssigned(ENROLMENT_DATE);
-            Mockito.when(studentGroupRepository.findByGroupIdAndStudentIdAndActiveTrue(GROUP_ID, STUDENT_ID))
-                    .thenReturn(Optional.of(enrolment));
+            enrolment.setActive(true);
+            Mockito.when(studentGroupRepository.findByGroupIdAndStudentId(GROUP_ID, STUDENT_ID))
+                    .thenReturn(List.of(enrolment));
         } else {
-            Mockito.when(studentGroupRepository.findByGroupIdAndStudentIdAndActiveTrue(GROUP_ID, STUDENT_ID))
-                    .thenReturn(Optional.empty());
+            Mockito.when(studentGroupRepository.findByGroupIdAndStudentId(GROUP_ID, STUDENT_ID))
+                    .thenReturn(List.of());
         }
 
         BillableSessionsResolverImpl resolver = new BillableSessionsResolverImpl(

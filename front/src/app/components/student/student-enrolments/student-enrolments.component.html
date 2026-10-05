@@ -1,0 +1,68 @@
+<mat-accordion class="pf-accordion">
+  <mat-expansion-panel [expanded]="true">
+    <mat-expansion-panel-header>
+      <mat-panel-title>
+        <mat-icon>event_available</mat-icon>
+        {{ 'enrolment.list.title' | translate }} ({{ enrolments.length }})
+      </mat-panel-title>
+    </mat-expansion-panel-header>
+
+    <div class="en-loading" *ngIf="loading">
+      <mat-spinner diameter="32"></mat-spinner>
+    </div>
+
+    <p class="en-error" role="alert" *ngIf="!loading && errorMessage">{{ errorMessage }}</p>
+
+    <ng-container *ngIf="!loading && !errorMessage">
+      <div class="pf-empty" *ngIf="enrolments.length === 0">
+        <mat-icon>event_busy</mat-icon>
+        <span>{{ 'enrolment.list.empty' | translate }}</span>
+      </div>
+
+      <ul class="en-list" *ngIf="enrolments.length > 0">
+        <li class="en-item" *ngFor="let enrolment of enrolments; trackBy: trackById"
+          [class.en-item--closed]="!enrolment.active">
+          <div class="en-head">
+            <span class="en-group">{{ enrolment.groupName }}</span>
+            <!-- Statut en toutes lettres, pas par la seule couleur. -->
+            <span class="en-status" [class.en-status--closed]="!enrolment.active">
+              {{ (enrolment.active ? 'enrolment.list.open' : 'enrolment.list.closed') | translate }}
+            </span>
+          </div>
+
+          <p class="en-period">
+            <span>{{ 'enrolment.list.arrival' | translate: { date: formatDay(enrolment.arrival) } }}</span>
+            <span *ngIf="enrolment.departure">
+              · {{ 'enrolment.list.departure' | translate: { date: formatDay(enrolment.departure) } }}
+            </span>
+          </p>
+
+          <div class="en-actions" *ngIf="canCorrect">
+            <button mat-stroked-button type="button" class="en-action en-arrival"
+              [disabled]="correctingId !== null" (click)="correct('ARRIVAL', enrolment)"
+              [attr.aria-label]="'enrolment.list.arrivalAria' | translate: { group: enrolment.groupName }">
+              <mat-icon>edit_calendar</mat-icon>{{ 'enrolment.list.correctArrival' | translate }}
+            </button>
+            <button *ngIf="enrolment.active" mat-stroked-button type="button" class="en-action en-departure"
+              [disabled]="correctingId !== null" (click)="correct('DEPARTURE', enrolment)"
+              [attr.aria-label]="'enrolment.list.departureAria' | translate: { group: enrolment.groupName }">
+              <mat-icon>logout</mat-icon>{{ 'enrolment.list.recordDeparture' | translate }}
+            </button>
+            <ng-container *ngIf="!enrolment.active">
+              <button mat-stroked-button type="button" class="en-action en-departure"
+                [disabled]="correctingId !== null" (click)="correct('DEPARTURE', enrolment)"
+                [attr.aria-label]="'enrolment.list.correctDepartureAria' | translate: { group: enrolment.groupName }">
+                <mat-icon>edit_calendar</mat-icon>{{ 'enrolment.list.correctDeparture' | translate }}
+              </button>
+              <button mat-stroked-button type="button" class="en-action en-reopen"
+                [disabled]="correctingId !== null" (click)="correct('REOPEN', enrolment)"
+                [attr.aria-label]="'enrolment.list.reopenAria' | translate: { group: enrolment.groupName }">
+                <mat-icon>undo</mat-icon>{{ 'enrolment.list.reopen' | translate }}
+              </button>
+            </ng-container>
+          </div>
+        </li>
+      </ul>
+    </ng-container>
+  </mat-expansion-panel>
+</mat-accordion>

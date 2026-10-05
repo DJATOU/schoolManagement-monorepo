@@ -5,9 +5,16 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { finalize } from 'rxjs';
 import { StudentService } from '../services/student.service';
 import { PdfGeneratorService } from '../services/pdf-generator.service';
+import { RefundService } from '../../../services/refund.service';
+import { RefundReceiptPdfService } from '../../../services/refund-receipt-pdf.service';
+import { AuthService } from '../../../services/auth.service';
+import { StudentRefund } from '../../../models/refund/refund';
+import { AmountPipe } from '../../../pipes/amount.pipe';
 import { StudentFullHistoryDTO } from '../domain/StudentFullHistoryDTO';
 import { SeriesHistoryDTO } from '../../../models/sessionSerie/SeriesHistoryDTO';
 import { SessionHistoryDTO } from '../../../models/session/SessionHistoryDTO';
@@ -40,7 +47,8 @@ import {
     MatIconModule,
     MatExpansionModule,
     MatProgressSpinnerModule,
-    TranslateModule
+    TranslateModule,
+    AmountPipe
   ]
 })
 export class StudentFullHistoryDialogComponent implements OnInit {
@@ -48,9 +56,24 @@ export class StudentFullHistoryDialogComponent implements OnInit {
   loading = true;
   errorMessage = '';
 
+  /**
+   * Remboursements de l'étudiant (pièce, date, montant, motif), chargés pour un ADMIN seulement :
+   * ce sont des pièces de caisse, réservées à ce rôle comme les reçus de versement. Le total par
+   * série reste affiché pour tous, il vient de l'historique.
+   */
+  refunds: StudentRefund[] = [];
+  /** La liste des remboursements n'a pas pu être chargée : le dire, plutôt que d'afficher rien. */
+  refundsUnavailable = false;
+  /** Remboursement dont le reçu est en cours de réimpression : un second clic ne relance rien. */
+  reprintingRefundId: number | null = null;
+
   constructor(
     private studentService: StudentService,
     private pdfGeneratorService: PdfGeneratorService,
+    private refundService: RefundService,
+    private refundReceiptPdf: RefundReceiptPdfService,
+    private authService: AuthService,
+    private snackBar: MatSnackBar,
     public dialogRef: MatDialogRef<StudentFullHistoryDialogComponent>,
     private translate: TranslateService,
     @Inject(MAT_DIALOG_DATA) public data: { studentId: number }
@@ -58,6 +81,61 @@ export class StudentFullHistoryDialogComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadFullHistory();
+    this.loadRefunds();
+  }
+
+  /** Vrai pour un ADMIN : lui seul voit le détail des remboursements et peut réimprimer un reçu. */
+  get canSeeRefunds(): boolean {
+    return this.authService.hasRole('ADMIN');
+  }
+
+  private loadRefunds(): void {
+    if (!this.canSeeRefunds) {
+      return;
+    }
+    this.refundService.getStudentRefunds(this.data.studentId).subscribe({
+      next: refunds => {
+        this.refunds = refunds;
+        this.refundsUnavailable = false;
+      },
+      // L'historique reste lisible sans le détail : son total par série suffit à l'essentiel.
+      error: () => this.refundsUnavailable = true
+    });
+  }
+
+  /** Remboursements rattachés à une série, dans l'ordre où le serveur les a datés. */
+  refundsOf(series: SeriesHistoryDTO): StudentRefund[] {
+    return this.refunds.filter(refund => refund.seriesId === series.seriesId);
+  }
+
+  /** Vrai lorsqu'un montant a été rendu sur la série : le versé affiché en est diminué. */
+  hasRefund(series: SeriesHistoryDTO): boolean {
+    return (series.totalRefunded ?? 0) > 0;
+  }
+
+  /**
+   * Réimprime le reçu d'un remboursement. Chaque émission est enregistrée par le serveur, qui
+   * renvoie un rang : à partir du deuxième, le reçu porte la mention « DUPLICATA ».
+   */
+  reprintRefund(refund: StudentRefund): void {
+    if (this.reprintingRefundId !== null) {
+      return;
+    }
+    this.reprintingRefundId = refund.refundId;
+    this.refundService.issueReceipt(refund.refundId)
+      .pipe(finalize(() => this.reprintingRefundId = null))
+      .subscribe({
+        next: receipt => this.refundReceiptPdf.generateAndPrint(receipt).catch((err: unknown) => {
+          console.error('Erreur lors de l\'impression du reçu de remboursement :', err);
+          this.notify(this.translate.instant('studentHistory.refunds.reprintError'));
+        }),
+        error: (err: Error) =>
+          this.notify(err.message || this.translate.instant('studentHistory.refunds.reprintError'))
+      });
+  }
+
+  private notify(message: string): void {
+    this.snackBar.open(message, this.translate.instant('common.close'), { duration: 6000 });
   }
 
   private loadFullHistory(): void {
@@ -207,11 +285,34 @@ export class StudentFullHistoryDialogComponent implements OnInit {
    * <p>« Exempté » et non « À jour » : « à jour » signifie « pas en retard » partout ailleurs
    * dans l'application, et un statut `EXEMPT` distinct existe déjà sur les cartes étudiant.</p>
    */
-  seriesBadge(series: SeriesHistoryDTO): 'EXEMPTED' | 'FULL' | 'PARTIAL' {
+  seriesBadge(series: SeriesHistoryDTO): 'EXEMPTED' | 'FULL' | 'UNPAID' | 'PARTIAL' {
     if (series.isExempted === true) {
       return 'EXEMPTED';
     }
-    return series.paymentStatus === 'FULL' ? 'FULL' : 'PARTIAL';
+    switch (series.paymentStatus) {
+      case 'FULL':
+        return 'FULL';
+      // « Non payé » et non « Partiel » quand rien n'est versé : « partiel » se lisait comme un
+      // règlement entamé. Le verdict vient du serveur, qui le compare au versé net.
+      case 'UNPAID':
+        return 'UNPAID';
+      default:
+        return 'PARTIAL';
+    }
+  }
+
+  /** Icône du badge : elle double le libellé, la couleur ne porte pas seule l'information. */
+  seriesBadgeIcon(series: SeriesHistoryDTO): string {
+    switch (this.seriesBadge(series)) {
+      case 'FULL':
+        return 'check_circle';
+      case 'EXEMPTED':
+        return 'volunteer_activism';
+      case 'UNPAID':
+        return 'error_outline';
+      default:
+        return 'schedule';
+    }
   }
 
   /** Coût de la série pour cet étudiant : séances facturables × prix net. */
@@ -219,7 +320,10 @@ export class StudentFullHistoryDialogComponent implements OnInit {
     return series.totalCost ?? 0;
   }
 
-  /** Montant déjà versé sur la série. */
+  /**
+   * Montant versé sur la série, <strong>net des remboursements</strong> : le serveur déduit ce qui a
+   * été rendu (décision du propriétaire produit), et le reste à payer suit.
+   */
   seriesPaid(series: SeriesHistoryDTO): number {
     return series.totalAmountPaid ?? 0;
   }
@@ -280,15 +384,6 @@ export class StudentFullHistoryDialogComponent implements OnInit {
     return this.getActiveSessions(series).some(s => s.attendanceStatus === 'ABSENT');
   }
 
-  /**
-   * Colonne « Remboursé » : masquée tant qu'aucun remboursement n'existe.
-   *
-   * <p>Masquée seulement lorsqu'elle est vide, jamais inconditionnellement : de l'argent rendu
-   * doit rester visible.</p>
-   */
-  showRefundColumn(series: SeriesHistoryDTO): boolean {
-    return this.getActiveSessions(series).some(s => (s.refundedAmount ?? 0) > 0);
-  }
 
   // ------------------------------------------------------------------
   // Ligne de séance : un seul état visuel par ligne
@@ -336,7 +431,10 @@ export class StudentFullHistoryDialogComponent implements OnInit {
   /** Génère le PDF de l'historique complet (réutilise le service PDF existant). */
   generatePdf(): void {
     if (this.fullHistory) {
-      this.pdfGeneratorService.generateFullHistoryPdf(this.fullHistory, 'assets/succes_assistance.png');
+      // Les remboursements déjà chargés passent au PDF : un administrateur imprime le même détail
+      // que celui qu'il lit à l'écran.
+      this.pdfGeneratorService.generateFullHistoryPdf(
+        this.fullHistory, 'assets/succes_assistance.png', this.refunds);
     }
   }
 }

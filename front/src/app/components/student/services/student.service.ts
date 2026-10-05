@@ -7,6 +7,7 @@ import { Group } from '../../../models/group/group';
 import { StudentFullHistoryDTO } from '../domain/StudentFullHistoryDTO';
 import { Parcours } from '../../../models/parcours/parcours';
 import { GroupChange } from '../../../models/group/group-change';
+import { ApiResponse } from '../../../models/response';
 
 @Injectable({
   providedIn: 'root'
@@ -97,8 +98,14 @@ export class StudentService {
     });
   }
 
-  addGroupsToStudent(studentId: number, groupIds: number[]): Observable<any> {
-    return this.http.post(`${this.apiUrl2}/${studentId}/addGroups`, { groupIds });
+  /**
+   * Inscrit l'étudiant aux groupes, à la date d'arrivée donnée (`yyyy-MM-dd`) ; sans date, le
+   * serveur retient le jour même. L'erreur HTTP est rendue telle quelle : son corps nomme ce qui
+   * bloque (année et bornes, départ recouvert, groupes déjà suivis).
+   */
+  addGroupsToStudent(studentId: number, groupIds: number[], dateAssigned?: string | null): Observable<ApiResponse> {
+    const body = dateAssigned ? { groupIds, dateAssigned } : { groupIds };
+    return this.http.post<ApiResponse>(`${this.apiUrl2}/${studentId}/addGroups`, body);
   }
   
   disableStudent(id: number): Observable<boolean> {
@@ -133,13 +140,8 @@ export class StudentService {
     return this.http.get<Student[]>(`${this.apiUrl}/levels/${levelId}`);
   }
 
-  removeStudentFromGroup(groupId: number | undefined, studentId: number | undefined): Observable<any> {
-    if (groupId === undefined || studentId === undefined) {
-      throw new Error('Group ID and Student ID must be defined');
-    }
-    return this.http.delete(`${this.apiUrl2}/${groupId}/students/${studentId}`);
-  }
-  
+  // Le retrait d'un étudiant d'un groupe (DELETE) n'existe plus : un départ se date, se motive et
+  // s'aperçoit (EnrolmentService.setDeparture, via EnrolmentCorrectionFlow).
 
 
   getStudentFullHistory(studentId: number): Observable<StudentFullHistoryDTO> {

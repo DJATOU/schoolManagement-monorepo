@@ -1,0 +1,51 @@
+<!-- Aucun montant ne change : dit en toutes lettres (exigence 4.4), jamais un tableau vide. -->
+<p class="cp-unchanged" *ngIf="preview.amountsUnchanged">
+  <mat-icon aria-hidden="true">info</mat-icon>
+  {{ 'correction.preview.amountsUnchanged' | translate }}
+</p>
+
+<section class="cp-series" *ngFor="let change of preview.series; trackBy: trackBySeries">
+  <h3 class="cp-series-title">{{ title(change) }}</h3>
+  <table class="cp-table">
+    <caption class="cp-sr-only">{{ title(change) }}</caption>
+    <thead>
+      <tr>
+        <th scope="col"></th>
+        <th scope="col">{{ 'correction.preview.before' | translate }}</th>
+        <th scope="col">{{ 'correction.preview.after' | translate }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let row of rows(change)" [class.cp-changed]="changed(row)">
+        <th scope="row">{{ row.labelKey | translate }}</th>
+        <td>{{ row.before | number:'1.2-2' }} {{ currencySuffix }}</td>
+        <td>
+          <span *ngIf="changed(row)" class="cp-arrow" aria-hidden="true">→</span>
+          {{ row.after | number:'1.2-2' }} {{ currencySuffix }}
+        </td>
+      </tr>
+      <tr [class.cp-changed]="change.before.late !== change.after.late">
+        <th scope="row">{{ 'correction.preview.status' | translate }}</th>
+        <td [class.cp-late]="change.before.late">{{ statusKey(change.before.late) | translate }}</td>
+        <td [class.cp-late]="change.after.late">
+          <span *ngIf="change.before.late !== change.after.late" class="cp-arrow" aria-hidden="true">→</span>
+          {{ statusKey(change.after.late) | translate }}
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<section class="cp-effects" *ngIf="preview.effects.length > 0">
+  <h3 class="cp-series-title">{{ 'correction.preview.effects' | translate }}</h3>
+  <ul>
+    <li *ngFor="let effect of preview.effects">
+      <span class="cp-effect-text">{{ effect.description }}</span>
+      <!-- Ce que l'hôte propose sur cet effet (noter une séance présent ou absent) : l'Aperçu
+           l'affiche à côté de l'effet, sans rien en décider lui-même. -->
+      <ng-container *ngIf="effectAction">
+        <ng-container *ngTemplateOutlet="effectAction; context: { $implicit: effect }"></ng-container>
+      </ng-container>
+    </li>
+  </ul>
+</section>

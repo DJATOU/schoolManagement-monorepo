@@ -1,13 +1,13 @@
 import { SharedModule } from '../../../shared/shared/shared.module';
 import { GroupCardComponent } from '../../group/group-card/group-card.component';
 import { PaymentDialogComponent } from '../../payment/payment-dialog/payment-dialog.component';
-import { GroupDialogComponent } from '../../group/group-dialog/group-dialog.component';
+import { GroupDialogComponent, GroupDialogData, GroupSelection } from '../../group/group-dialog/group-dialog.component';
 import { EditStudentDialogComponent } from '../edit-student-dialog/edit-student-dialog.component';
 import { StudentService } from '../services/student.service';
 import { GroupService } from '../../../services/group.service';
 import { LevelService } from '../../../services/level.service';
 import { GroupTypeService } from '../../../services/GroupTypeService';
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import { Student } from '../domain/student';
 import { Group } from '../../../models/group/group';
 import { GroupType } from '../../../models/GroupType/groupType';
@@ -39,6 +39,11 @@ import { AuthService } from '../../../services/auth.service';
 import { LinkTutorDialogComponent } from '../../tutor/link-tutor-dialog/link-tutor-dialog.component';
 import { SecureImageDirective } from '../../../shared/secure-image.directive';
 import { GroupChangeNoticeComponent } from '../../shared/group-change-notice/group-change-notice.component';
+import { HasRoleDirective } from '../../../shared/has-role.directive';
+import { StudentEncashmentsComponent } from '../student-encashments/student-encashments.component';
+import { StudentEnrolmentsComponent } from '../student-enrolments/student-enrolments.component';
+import { StudentJournalComponent } from '../student-journal/student-journal.component';
+import { enrolmentRefusalMessage } from '../../../utils/enrolment-refusal';
 
 const errorMessages = {
   PAYMENT_EXCEEDS_SESSIONS: "Le paiement ne peut pas être effectué car il dépasse le coût des sessions actuellement créées.",
@@ -60,7 +65,11 @@ const errorMessages = {
     AdminOnlyDirective
   ,
     SecureImageDirective,
-    GroupChangeNoticeComponent
+    GroupChangeNoticeComponent,
+    HasRoleDirective,
+    StudentEncashmentsComponent,
+    StudentEnrolmentsComponent,
+    StudentJournalComponent
   ],
   templateUrl: './student-profile.component.html',
   styleUrls: ['./student-profile.component.scss'],
@@ -87,6 +96,12 @@ export class StudentProfileComponent implements OnInit {
   avatarColor: string = '#6366f1';
   tutor: Tutor | null = null;
   parcours: Parcours | null = null;
+
+  /** Historique des versements, absent pour un rôle autre qu'ADMIN. */
+  @ViewChild(StudentEncashmentsComponent) encashmentsPanel?: StudentEncashmentsComponent;
+
+  /** Inscriptions de l'élève, arrivées et départs : rechargées après une inscription. */
+  @ViewChild(StudentEnrolmentsComponent) enrolmentsPanel?: StudentEnrolmentsComponent;
 
   /**
    * Vue en lecture seule (Read_Only_History) lorsque l'année scolaire
@@ -131,7 +146,9 @@ export class StudentProfileComponent implements OnInit {
       this.authService.currentUser$,
     ]).pipe(map(([readOnly]) => readOnly || !this.authService.hasRole('ADMIN')));
     this.groupForm = this.fb.group({
-      groupIds: [[]]
+      groupIds: [[]],
+      // Date d'arrivée choisie dans le dialogue ; sans elle, le serveur retient le jour même.
+      arrival: [null]
     });
   }
 
@@ -475,8 +492,9 @@ export class StudentProfileComponent implements OnInit {
   onSubmitGroups(): void {
     if (this.groupForm.valid) {
       const groupIds: number[] = this.groupForm.value.groupIds;
+      const arrival: string | null = this.groupForm.value.arrival ?? null;
       if (this.student?.id !== undefined) {
-        this.studentService.addGroupsToStudent(this.student.id, groupIds).subscribe({
+        this.studentService.addGroupsToStudent(this.student.id, groupIds, arrival).subscribe({
           next: (response: ApiResponse) => {
             this.snackBar.open(response.message, 'Close', {
               duration: 3000,
@@ -484,8 +502,9 @@ export class StudentProfileComponent implements OnInit {
             });
 
             this.updateStudentGroups(groupIds);
+            this.enrolmentsPanel?.reload();
 
-            this.groupForm.reset({ groupIds: [] });
+            this.groupForm.reset({ groupIds: [], arrival: null });
           },
           error: (error: ApiError) => {
             this.handleGroupSubmissionError(error);
@@ -502,15 +521,30 @@ export class StudentProfileComponent implements OnInit {
     this.studentGroups = [...this.studentGroups, ...newGroups];
   }
 
+  /**
+   * Le refus tel que le serveur le rédige : année et bornes, départ recouvert, niveau, groupes
+   * déjà suivis. Le message générique d'avant laissait deviner la cause.
+   */
   private handleGroupSubmissionError(error: ApiError): void {
-    if (error.status === 409) {
-      const alreadyAssociatedGroups = error.error.alreadyAssociatedGroups || [];
-      this.showError(`${errorMessages.GROUP_ALREADY_ASSOCIATED}: ${alreadyAssociatedGroups.join(', ')}`);
-    } else if (error.status === 404) {
-      this.showError(errorMessages.GROUP_NOT_FOUND);
-    } else {
-      this.showError(errorMessages.GENERIC_ERROR);
-    }
+    this.showError(enrolmentRefusalMessage(error, this.translate));
+  }
+
+  /** Année affichée : la liste des inscriptions la suit, comme celle des groupes. */
+  get selectedSchoolYearId(): number | null {
+    return this.schoolYearContext.getSelectedSchoolYear()?.id ?? null;
+  }
+
+  get studentFullName(): string {
+    return `${this.student?.firstName ?? ''} ${this.student?.lastName ?? ''}`.trim();
+  }
+
+  /**
+   * Une arrivée, un départ ou une réouverture corrigés : les groupes suivis, et les montants des
+   * versements, ont pu changer.
+   */
+  onEnrolmentCorrected(): void {
+    this.loadStudentGroups();
+    this.encashmentsPanel?.reload();
   }
 
   private showError(message: string): void {
@@ -550,9 +584,11 @@ export class StudentProfileComponent implements OnInit {
           }
         });
 
+        // Le dialogue se ferme sur la réponse d'encaissement : le versement est enregistré,
+        // l'historique des versements doit le montrer sans recharger la page.
         dialogRef.afterClosed().subscribe(result => {
           if (result) {
-            this.submitPayment(result);
+            this.encashmentsPanel?.reload();
           }
         });
       },
@@ -589,26 +625,25 @@ export class StudentProfileComponent implements OnInit {
 
     console.log('Possible groups for level:', possibleGroups);
 
-    // Ouvrir un dialogue pour sélectionner les groupes
-    const dialogRef = this.dialog.open(GroupDialogComponent, {
+    // Ouvrir un dialogue pour sélectionner les groupes et la date d'arrivée
+    const year = this.schoolYearContext.getSelectedSchoolYear();
+    const dialogRef = this.dialog.open<GroupDialogComponent, GroupDialogData, GroupSelection>(GroupDialogComponent, {
       width: '400px',
       data: {
         allGroups: possibleGroups,  // Passer les groupes filtrés qui ne sont pas déjà ajoutés
-        selectedGroups: this.groupForm.value.groupIds  // Groupes déjà sélectionnés dans le formulaire
+        selectedGroups: this.groupForm.value.groupIds,  // Groupes déjà sélectionnés dans le formulaire
+        yearStart: year?.startDate ?? null,
+        yearEnd: year?.endDate ?? null
       }
     });
 
     // Mettre à jour le formulaire avec les groupes sélectionnés
     dialogRef.afterClosed().subscribe(result => {
       if (result) {
-        this.groupForm.patchValue({ groupIds: result });
+        this.groupForm.patchValue({ groupIds: result.groupIds, arrival: result.arrival });
         this.onSubmitGroups();
       }
     });
-  }
-
-  submitPayment(paymentData: any): void {
-    console.log('Submitting payment data:', paymentData);
   }
 
   onEdit(): void {

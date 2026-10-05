@@ -7,8 +7,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import java.util.Collection;
 import java.util.List;
-import java.util.Optional;
 
 /**
  * Repository pour gérer les PaymentDetails.
@@ -22,7 +22,21 @@ public interface PaymentDetailRepository
 
         // ========== MÉTHODES EXISTANTES (NE PAS TOUCHER) ==========
 
-        Optional<PaymentDetailEntity> findByPaymentIdAndSessionId(Long id, Long id1);
+        /**
+         * Part déjà ventilée sur une séance pour une ligne de paiement, tous Encaissements
+         * confondus : la somme de ses lignes actives (spec admin-corrections, exigence 1.6).
+         *
+         * <p>Remplace {@code findByPaymentIdAndSessionId}, qui supposait une ligne au plus par
+         * séance. Une séance porte désormais une ligne par Encaissement ; une ligne inactive,
+         * désactivée ou supprimée définitivement, ne compte plus et ne bloque plus rien.</p>
+         */
+        @Query("SELECT COALESCE(SUM(pd.amountPaid), 0) FROM PaymentDetailEntity pd "
+                        + "WHERE pd.payment.id = :paymentId AND pd.session.id = :sessionId AND pd.active = true")
+        Double sumActiveAmountForPaymentAndSession(@Param("paymentId") Long paymentId,
+                        @Param("sessionId") Long sessionId);
+
+        /** Lignes de ventilation d'une Imputation, neutralisées avec son encaissement. */
+        List<PaymentDetailEntity> findByEncashmentAllocationId(Long encashmentAllocationId);
 
         List<PaymentDetailEntity> findByPayment_StudentId(Long studentId);
 
@@ -250,14 +264,21 @@ public interface PaymentDetailRepository
         @Query("SELECT pd FROM PaymentDetailEntity pd WHERE pd.payment.sessionSeries.id = :sessionSeriesId")
         List<PaymentDetailEntity> findBySessionSeriesId(@Param("sessionSeriesId") Long sessionSeriesId);
 
-        @Query("SELECT COALESCE(SUM(pd.amountPaid), 0) FROM PaymentDetailEntity pd " +
-                        "WHERE pd.payment.student.id = :studentId AND pd.payment.group.id = :groupId")
-        Double sumAmountByStudentAndGroup(@Param("studentId") Long studentId, @Param("groupId") Long groupId);
-
-        @Query("SELECT COALESCE(SUM(pd.amountPaid), 0) FROM PaymentDetailEntity pd " +
-                        "WHERE pd.payment.student.id = :studentId AND pd.payment.sessionSeries.id = :sessionSeriesId")
-        Double sumAmountByStudentAndSeries(@Param("studentId") Long studentId,
-                        @Param("sessionSeriesId") Long sessionSeriesId);
+        /**
+         * Lignes actives de plusieurs versements : celles qui portent encore de l'argent, et donc
+         * celles auxquelles un remboursement s'impute (écran « Gestion des paiements »). Une ligne
+         * désactivée ou supprimée définitivement ne porte plus rien.
+         *
+         * <p>Aucun tri ici : il est fait en Java, avec le comparateur de l'historique de
+         * l'étudiant. PostgreSQL et H2 ne classent pas les dates nulles au même endroit, et l'ordre
+         * d'imputation ne doit pas dépendre de la base.</p>
+         *
+         * @return des lignes {@code [paymentId, lineId, montant, date de versement]}
+         */
+        @Query("SELECT pd.payment.id, pd.id, pd.amountPaid, pd.paymentDate FROM PaymentDetailEntity pd "
+                        + "WHERE pd.payment.id IN :paymentIds AND pd.active = true "
+                        + "AND (pd.permanentlyDeleted IS NULL OR pd.permanentlyDeleted = false)")
+        List<Object[]> findActiveLinesOfPayments(@Param("paymentIds") Collection<Long> paymentIds);
 
         /**
          * Search query with complete data for Payment Management UI

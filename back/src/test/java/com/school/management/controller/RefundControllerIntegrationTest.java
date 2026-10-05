@@ -108,8 +108,8 @@ class RefundControllerIntegrationTest {
     @Test
     @DisplayName("dépassement du plafond : 400, message nommant les montants")
     void createRefund_whenAmountExceedsCap_returns400WithFrenchMessage() throws Exception {
-        String message = "Remboursement impossible : montant demandé 999.00 €, mais le versement a "
-                + "rapporté 100.00 € dont 40.00 € déjà remboursé(s). Plafond restant : 60.00 €.";
+        String message = "Remboursement impossible : montant demandé 999.00 DA, mais le versement a "
+                + "rapporté 100.00 DA dont 40.00 DA déjà remboursé(s). Plafond restant : 60.00 DA.";
         when(refundService.create(any(RefundRequestDTO.class)))
                 .thenThrow(new CustomServiceException(message, HttpStatus.BAD_REQUEST));
 

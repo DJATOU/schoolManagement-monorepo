@@ -134,17 +134,49 @@ class StudentHistoryServiceTest {
 
             return quote(seriesId, billable.billableCount(), billable.excludedCount(),
                     billable.attendedCount(), gross, rate, netPrice,
-                    calculator.monthTotalCost(), calculator.amountDueSoFar());
+                    calculator.monthTotalCost(), calculator.amountDueSoFar(),
+                    netPaid(studentId, seriesId));
         });
+    }
+
+    /**
+     * Versé net tel que le devis le relaie : versements non annulés diminués des remboursements
+     * actifs, borné à zéro ({@code PaymentCostResolver.resolve}).
+     *
+     * <p>La production somme les en-têtes de paiement ; ici, les lignes stubbées en tiennent lieu,
+     * les deux étant égales hors anomalie. Le remboursement vient du même dépôt que celui que lit
+     * l'historique, donc un test qui stubbe un remboursement le voit déduit des deux côtés.</p>
+     */
+    private BigDecimal netPaid(Long studentId, Long seriesId) {
+        BigDecimal paid = paymentDetailRepository
+                .findByPayment_StudentIdAndSession_SessionSeriesId(studentId, seriesId).stream()
+                .filter(pd -> Boolean.TRUE.equals(pd.getActive()))
+                .filter(pd -> pd.getPayment() == null || !"CANCELLED".equals(pd.getPayment().getStatus()))
+                .map(PaymentDetailEntity::getAmountPaid)
+                .filter(java.util.Objects::nonNull)
+                .map(BigDecimal::valueOf)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal refunds = Optional.ofNullable(
+                refundRepository.sumRefundsForStudentAndSeries(studentId, seriesId)).orElse(BigDecimal.ZERO);
+        return paid.subtract(refunds).max(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP);
     }
 
     private PaymentQuoteDTO quote(Long seriesId, int billableSessions, int excludedSessions,
             int attendedSessions, BigDecimal gross, BigDecimal rate, BigDecimal netPrice,
             BigDecimal monthTotalCost, BigDecimal amountDueSoFar) {
+        return quote(seriesId, billableSessions, excludedSessions, attendedSessions, gross, rate,
+                netPrice, monthTotalCost, amountDueSoFar, BigDecimal.ZERO.setScale(2));
+    }
+
+    private PaymentQuoteDTO quote(Long seriesId, int billableSessions, int excludedSessions,
+            int attendedSessions, BigDecimal gross, BigDecimal rate, BigDecimal netPrice,
+            BigDecimal monthTotalCost, BigDecimal amountDueSoFar, BigDecimal amountPaid) {
         BigDecimal zero = BigDecimal.ZERO.setScale(2);
+        BigDecimal remaining = monthTotalCost.subtract(amountPaid).max(zero);
         return new PaymentQuoteDTO(STUDENT_ID, seriesId, billableSessions, billableSessions,
                 excludedSessions, attendedSessions, gross, rate, netPrice, monthTotalCost,
-                amountDueSoFar, zero, monthTotalCost, monthTotalCost, zero,
+                amountDueSoFar, amountPaid, remaining, remaining,
+                amountPaid.subtract(monthTotalCost).max(zero),
                 rate.compareTo(BigDecimal.ONE) == 0, false);
     }
 
@@ -178,12 +210,16 @@ class StudentHistoryServiceTest {
 
             List<SessionEntity> billable = new ArrayList<>();
             List<SessionEntity> excluded = new ArrayList<>();
+            java.util.Set<Long> withinEnrolment = new java.util.HashSet<>();
             int attendedCount = 0;
             for (SessionEntity session : chronologicalSessions(series)) {
                 AttendanceEntity attendance = activeAttendance(session, studentId);
                 boolean onOrAfterEnrolment = enrollmentDate != null
                         && session.getSessionTimeStart() != null
                         && !session.getSessionTimeStart().before(enrollmentDate);
+                if (onOrAfterEnrolment) {
+                    withinEnrolment.add(session.getId());
+                }
                 if (attendance != null || onOrAfterEnrolment) {
                     billable.add(session);
                     if (attendance != null && Boolean.TRUE.equals(attendance.getIsPresent())) {
@@ -194,7 +230,7 @@ class StudentHistoryServiceTest {
                 }
             }
             return new BillableSessions(List.copyOf(billable), List.copyOf(excluded),
-                    attendedCount, enrolment.isPresent(), enrollmentDate);
+                    attendedCount, enrolment.isPresent(), withinEnrolment);
         });
     }
 
@@ -542,6 +578,190 @@ class StudentHistoryServiceTest {
         assertThat(firstSeries(dto).getTotalRefunded()).isEqualByComparingTo(BigDecimal.ZERO);
     }
 
+    /** Quatre séances à 700 DA net (tarif 2000, réduction 65 %), réglées par un versement unique. */
+    private StudentEntity fourSessionsPaidOnce(double amount) {
+        StudentEntity student = officialStudentWithFourSessions(2000.0, 4);
+        when(studentRepository.findById(STUDENT_ID)).thenReturn(Optional.of(student));
+        when(discountService.resolveRate(STUDENT_ID, SERIES_ID)).thenReturn(new BigDecimal("0.65"));
+        if (amount > 0) {
+            when(paymentDetailRepository.findByPayment_StudentIdAndSession_SessionSeriesId(STUDENT_ID, SERIES_ID))
+                    .thenReturn(List.of(paymentDetail(600L, student, sessionById(student, SESSION_ID),
+                            amount, day(10))));
+        }
+        return student;
+    }
+
+    @Test
+    void getStudentFullHistory_refund_isDeductedFromPaidAndUncoversTheLatestSessions() {
+        // Décision du propriétaire produit : après un remboursement, on déduit ce qui a été rendu.
+        // L'historique annonçait auparavant « soldé » sur 2 800 DA versés, alors que le devis, net
+        // des 400 DA rendus, voyait 400 DA à payer.
+        fourSessionsPaidOnce(2800.0);
+        when(refundRepository.sumRefundsForStudentAndSeries(STUDENT_ID, SERIES_ID))
+                .thenReturn(new BigDecimal("400.00"));
+
+        StudentFullHistoryDTO dto = service.getStudentFullHistory(STUDENT_ID);
+
+        SeriesHistoryDTO series = firstSeries(dto);
+        assertThat(series.getTotalCost()).isEqualTo(2800.0);
+        assertThat(series.getTotalAmountPaid()).isEqualTo(2400.0);
+        assertThat(series.getTotalRefunded()).isEqualByComparingTo("400.00");
+        assertThat(series.getPaymentStatus()).isEqualTo("PARTIAL");
+        // L'argent rendu ne couvre plus rien : c'est la dernière séance qui se découvre.
+        assertThat(sessionsOrdered(dto)).extracting(SessionHistoryDTO::getAmountPaid)
+                .containsExactly(700.0, 700.0, 700.0, 300.0);
+        assertThat(sessionsOrdered(dto)).extracting(SessionHistoryDTO::getPaymentStatus)
+                .containsExactly("PAID", "PAID", "PAID", "PARTIAL");
+        assertThat(series.getTotalAllocated()).isEqualTo(2400.0);
+        assertThat(series.getTotalOverpaid()).isZero();
+    }
+
+    @Test
+    void getStudentFullHistory_refundAcrossTwoPaymentLines_capsTheirSumNotEachLine() {
+        // Deux versements de 1 400 DA, 400 DA rendus : le plafond porte sur leur somme. Plafonner
+        // chaque ligne séparément au versé net laisserait les 2 800 DA couvrir toute la série.
+        StudentEntity student = officialStudentWithFourSessions(2000.0, 4);
+        when(studentRepository.findById(STUDENT_ID)).thenReturn(Optional.of(student));
+        when(discountService.resolveRate(STUDENT_ID, SERIES_ID)).thenReturn(new BigDecimal("0.65"));
+        when(paymentDetailRepository.findByPayment_StudentIdAndSession_SessionSeriesId(STUDENT_ID, SERIES_ID))
+                .thenReturn(List.of(
+                        paymentDetail(600L, student, sessionById(student, SESSION_ID), 1400.0, day(10)),
+                        paymentDetail(601L, student, sessionById(student, SESSION_ID + 2), 1400.0, day(11))));
+        when(refundRepository.sumRefundsForStudentAndSeries(STUDENT_ID, SERIES_ID))
+                .thenReturn(new BigDecimal("400.00"));
+
+        StudentFullHistoryDTO dto = service.getStudentFullHistory(STUDENT_ID);
+
+        assertThat(sessionsOrdered(dto)).extracting(SessionHistoryDTO::getAmountPaid)
+                .containsExactly(700.0, 700.0, 700.0, 300.0);
+        assertThat(firstSeries(dto).getTotalAllocated()).isEqualTo(2400.0);
+    }
+
+    @Test
+    void getStudentFullHistory_negativePaidFromTheQuote_isShownAsZero() {
+        // Le devis borne déjà le versé net à zéro. Si ce contrat venait à céder, l'historique ne
+        // doit pas afficher un versé négatif, qui se lirait comme une dette de l'école.
+        StudentEntity student = officialStudentWithOneSession(true, false);
+        when(studentRepository.findById(STUDENT_ID)).thenReturn(Optional.of(student));
+        when(paymentQuoteService.quote(STUDENT_ID, SERIES_ID)).thenReturn(
+                quote(SERIES_ID, 1, 0, 1,
+                        new BigDecimal("30.00"), new BigDecimal("0.00"), new BigDecimal("30.00"),
+                        new BigDecimal("30.00"), new BigDecimal("30.00"), new BigDecimal("-10.00")));
+
+        SeriesHistoryDTO series = firstSeries(service.getStudentFullHistory(STUDENT_ID));
+
+        assertThat(series.getTotalAmountPaid()).isZero();
+        assertThat(series.getPaymentStatus()).isEqualTo("UNPAID");
+    }
+
+    @Test
+    void getStudentFullHistory_refundOfAnOverpayment_leavesTheSeriesSettled() {
+        // Le cas courant : on rend un trop-perçu. 3 000 versés pour 2 800 dus, 200 rendus : la
+        // série reste soldée, et il n'y a plus de trop-perçu à afficher.
+        fourSessionsPaidOnce(3000.0);
+        when(refundRepository.sumRefundsForStudentAndSeries(STUDENT_ID, SERIES_ID))
+                .thenReturn(new BigDecimal("200.00"));
+
+        StudentFullHistoryDTO dto = service.getStudentFullHistory(STUDENT_ID);
+
+        SeriesHistoryDTO series = firstSeries(dto);
+        assertThat(series.getTotalAmountPaid()).isEqualTo(2800.0);
+        assertThat(series.getPaymentStatus()).isEqualTo("FULL");
+        assertThat(series.getTotalAllocated()).isEqualTo(2800.0);
+        assertThat(series.getTotalOverpaid()).isZero();
+        assertThat(sessionsOrdered(dto)).extracting(SessionHistoryDTO::getPaymentStatus)
+                .containsExactly("PAID", "PAID", "PAID", "PAID");
+    }
+
+    @Test
+    void getStudentFullHistory_refundBelowAnOverpayment_keepsTheRestAsOverpaid() {
+        // 3 000 versés, 100 rendus : il reste 100 de trop-perçu, et non 200.
+        fourSessionsPaidOnce(3000.0);
+        when(refundRepository.sumRefundsForStudentAndSeries(STUDENT_ID, SERIES_ID))
+                .thenReturn(new BigDecimal("100.00"));
+
+        SeriesHistoryDTO series = firstSeries(service.getStudentFullHistory(STUDENT_ID));
+
+        assertThat(series.getTotalAmountPaid()).isEqualTo(2900.0);
+        assertThat(series.getTotalAllocated()).isEqualTo(2800.0);
+        assertThat(series.getTotalOverpaid()).isEqualTo(100.0);
+    }
+
+    @Test
+    void getStudentFullHistory_nothingPaid_seriesIsUnpaidNotPartial() {
+        // « Partiel » sans aucun versement se lisait comme un règlement entamé.
+        fourSessionsPaidOnce(0.0);
+
+        SeriesHistoryDTO series = firstSeries(service.getStudentFullHistory(STUDENT_ID));
+
+        assertThat(series.getTotalAmountPaid()).isZero();
+        assertThat(series.getPaymentStatus()).isEqualTo("UNPAID");
+    }
+
+    @Test
+    void getStudentFullHistory_fullyRefunded_seriesIsUnpaidAndNoSessionIsCovered() {
+        fourSessionsPaidOnce(700.0);
+        when(refundRepository.sumRefundsForStudentAndSeries(STUDENT_ID, SERIES_ID))
+                .thenReturn(new BigDecimal("700.00"));
+
+        StudentFullHistoryDTO dto = service.getStudentFullHistory(STUDENT_ID);
+
+        SeriesHistoryDTO series = firstSeries(dto);
+        assertThat(series.getTotalAmountPaid()).isZero();
+        assertThat(series.getPaymentStatus()).isEqualTo("UNPAID");
+        assertThat(series.getTotalAllocated()).isZero();
+        assertThat(sessionsOrdered(dto)).extracting(SessionHistoryDTO::getPaymentStatus)
+                .containsOnly("UNPAID");
+    }
+
+    @Test
+    void getStudentFullHistory_somethingPaid_seriesIsPartialNotUnpaid() {
+        // Borne basse de « partiel » : un seul dinar versé suffit à ne plus être « non payé ».
+        fourSessionsPaidOnce(1.0);
+
+        assertThat(firstSeries(service.getStudentFullHistory(STUDENT_ID)).getPaymentStatus())
+                .isEqualTo("PARTIAL");
+    }
+
+    @Test
+    void getStudentFullHistory_paidAsMuchAsTheCost_seriesIsFull() {
+        // Borne de « soldé » : versé égal au coût, pas seulement supérieur.
+        fourSessionsPaidOnce(2800.0);
+
+        assertThat(firstSeries(service.getStudentFullHistory(STUDENT_ID)).getPaymentStatus())
+                .isEqualTo("FULL");
+    }
+
+    @Test
+    void getStudentFullHistory_nothingDueNothingPaid_seriesIsFullNotUnpaid() {
+        // Exemption totale : coût nul, rien versé. « Non payé » annoncerait une dette inexistante.
+        StudentEntity student = officialStudentWithOneSession(true, false);
+        when(studentRepository.findById(STUDENT_ID)).thenReturn(Optional.of(student));
+        when(discountService.resolveRate(STUDENT_ID, SERIES_ID)).thenReturn(new BigDecimal("1.00"));
+
+        SeriesHistoryDTO series = firstSeries(service.getStudentFullHistory(STUDENT_ID));
+
+        assertThat(series.getTotalCost()).isZero();
+        assertThat(series.getPaymentStatus()).isEqualTo("FULL");
+    }
+
+    @Test
+    void getStudentFullHistory_paidAmountComesFromTheSharedQuote() {
+        // Source unique du versé : si le devis annonce un versé net, c'est lui qui fait foi, y
+        // compris quand il s'écarte de la somme des lignes (aucune ligne ici).
+        StudentEntity student = officialStudentWithOneSession(true, false);
+        when(studentRepository.findById(STUDENT_ID)).thenReturn(Optional.of(student));
+        when(paymentQuoteService.quote(STUDENT_ID, SERIES_ID)).thenReturn(
+                quote(SERIES_ID, 1, 0, 1,
+                        new BigDecimal("30.00"), new BigDecimal("0.00"), new BigDecimal("30.00"),
+                        new BigDecimal("30.00"), new BigDecimal("30.00"), new BigDecimal("30.00")));
+
+        SeriesHistoryDTO series = firstSeries(service.getStudentFullHistory(STUDENT_ID));
+
+        assertThat(series.getTotalAmountPaid()).isEqualTo(30.0);
+        assertThat(series.getPaymentStatus()).isEqualTo("FULL");
+    }
+
     // ------------------------------------------------------------------
     // Séance dévalidée (inactive) + paiement
     // ------------------------------------------------------------------
@@ -843,6 +1063,31 @@ class StudentHistoryServiceTest {
         // Les trois séances antérieures restent visibles, mais ne sont pas des dettes.
         assertThat(sessionsOrdered(dto)).extracting(SessionHistoryDTO::getPaymentStatus)
                 .containsExactly("UNPAID", "UNPAID", "UNPAID", "PAID");
+    }
+
+    @Test
+    void getStudentFullHistory_nonBillableSessionWithTwoLines_showsTheirSumAndLastDate() {
+        // Une séance porte une ligne par Encaissement (spec admin-corrections, D3). Sur une séance
+        // non facturable, l'historique ne gardait que la première ligne : 500 DA affichés sur
+        // 1 200 DA réellement rattachés.
+        StudentEntity student = studentJoiningOnLastOfFourSessions(2000.0);
+        when(studentRepository.findById(STUDENT_ID)).thenReturn(Optional.of(student));
+
+        StudentGroupEntity enrollment = new StudentGroupEntity();
+        enrollment.setDateAssigned(day(4));
+        when(studentGroupRepository.findByGroupIdAndStudentIdAndActiveTrue(GROUP_ID, STUDENT_ID))
+                .thenReturn(Optional.of(enrollment));
+
+        SessionEntity firstSession = sessionById(student, SESSION_ID);
+        when(paymentDetailRepository.findByPayment_StudentIdAndSession_SessionSeriesId(STUDENT_ID, SERIES_ID))
+                .thenReturn(List.of(
+                        paymentDetail(600L, student, firstSession, 500.0, day(2)),
+                        paymentDetail(601L, student, firstSession, 700.0, day(3))));
+
+        SessionHistoryDTO first = sessionsOrdered(service.getStudentFullHistory(STUDENT_ID)).get(0);
+
+        assertThat(first.getAmountPaid()).isEqualTo(1200.0);
+        assertThat(first.getPaymentDate()).isEqualTo(day(3));
     }
 
     @Test

@@ -1,10 +1,11 @@
 package com.school.management.service.payment;
 
-import com.school.management.persistance.PaymentCarryOverEntity;
+import com.school.management.persistance.EncashmentAllocationEntity;
+import com.school.management.persistance.EncashmentEntity;
 import com.school.management.persistance.PaymentEntity;
 import com.school.management.persistance.PaymentIdempotencyEntity;
 import com.school.management.persistance.SessionSeriesEntity;
-import com.school.management.repository.PaymentCarryOverRepository;
+import com.school.management.repository.EncashmentAllocationRepository;
 import com.school.management.repository.PaymentIdempotencyRepository;
 import com.school.management.service.exception.CustomServiceException;
 import org.junit.jupiter.api.DisplayName;
@@ -25,7 +26,6 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -38,6 +38,9 @@ import static org.mockito.Mockito.when;
  * même montant le même jour produisent une requête rigoureusement identique. Accepter les deux
  * inscrit au registre de l'argent jamais entré en caisse ; refuser les deux perd un versement
  * réel. Seule la clé, engendrée à l'ouverture du formulaire, les sépare.</p>
+ *
+ * <p>Le chemin rattrapage suit la même règle (spec admin-corrections, exigence 1.7), avec la séance
+ * dans l'empreinte.</p>
  */
 @ExtendWith(MockitoExtension.class)
 @DisplayName("Idempotence des encaissements")
@@ -46,10 +49,13 @@ class PaymentIdempotencyServiceTest {
     private static final Long STUDENT_ID = 7L;
     private static final Long GROUP_ID = 3L;
     private static final Long SERIES_ID = 10L;
+    private static final Long SESSION_ID = 40L;
+    private static final Long ENCASHMENT_ID = 500L;
     private static final String KEY = "a3f1c0de-4b2e-4d8a-9f10-77c2b5e6a001";
+    private static final Date RECEIVED_AT = new Date(1_700_000_000_000L);
 
     @Mock private PaymentIdempotencyRepository idempotencyRepository;
-    @Mock private PaymentCarryOverRepository carryOverRepository;
+    @Mock private EncashmentAllocationRepository allocationRepository;
 
     @InjectMocks private PaymentIdempotencyService service;
 
@@ -57,7 +63,34 @@ class PaymentIdempotencyServiceTest {
         return new BigDecimal(amount);
     }
 
-    private PaymentIdempotencyEntity record(String allocated) {
+    private static SessionSeriesEntity series(Long id, String name) {
+        SessionSeriesEntity series = new SessionSeriesEntity();
+        series.setId(id);
+        series.setName(name);
+        return series;
+    }
+
+    private static EncashmentEntity encashment() {
+        return EncashmentEntity.builder()
+                .id(ENCASHMENT_ID)
+                .receiptNumber("RECU-2030-0001")
+                .amountReceived(money("6000.00"))
+                .receivedAt(RECEIVED_AT)
+                .build();
+    }
+
+    private static EncashmentAllocationEntity allocation(Long seriesId, String name, String amount,
+                                                         boolean carriedOver, boolean active) {
+        return EncashmentAllocationEntity.builder()
+                .series(series(seriesId, name))
+                .amount(money(amount))
+                .carriedOver(carriedOver)
+                .active(active)
+                .build();
+    }
+
+    /** Empreinte d'un versement de série de 6 000 DA. */
+    private PaymentIdempotencyEntity record() {
         PaymentEntity payment = new PaymentEntity();
         payment.setId(55L);
         return PaymentIdempotencyEntity.builder()
@@ -66,10 +99,32 @@ class PaymentIdempotencyServiceTest {
                 .groupId(GROUP_ID)
                 .sessionSeriesId(SERIES_ID)
                 .amountReceived(money("6000.00"))
-                .amountAllocated(money(allocated))
+                .amountAllocated(money("4000.00"))
                 .payment(payment)
-                .originPaymentDate(new Date(1_700_000_000_000L))
+                .originPaymentDate(RECEIVED_AT)
+                .encashment(encashment())
                 .build();
+    }
+
+    /** Empreinte d'un rattrapage de 2 000 DA sur la séance {@link #SESSION_ID}. */
+    private PaymentIdempotencyEntity catchUpRecord() {
+        PaymentIdempotencyEntity record = record();
+        record.setSessionId(SESSION_ID);
+        record.setAmountReceived(money("2000.00"));
+        record.setAmountAllocated(money("2000.00"));
+        return record;
+    }
+
+    private void givenRecord(PaymentIdempotencyEntity record) {
+        when(idempotencyRepository.findByIdempotencyKey(KEY)).thenReturn(Optional.of(record));
+    }
+
+    private void givenAllocations(EncashmentAllocationEntity... allocations) {
+        when(allocationRepository.findByEncashmentIdOrderByIdAsc(ENCASHMENT_ID)).thenReturn(List.of(allocations));
+    }
+
+    private static HttpStatus statusOf(Throwable e) {
+        return ((CustomServiceException) e).getStatus();
     }
 
     // ------------------------------------------------------------------
@@ -86,13 +141,15 @@ class PaymentIdempotencyServiceTest {
             assertThat(service.normalizeKey(null)).isNull();
             assertThat(service.findReplay(null, STUDENT_ID, GROUP_ID, SERIES_ID, money("6000.00")))
                     .isEmpty();
-            verifyNoInteractions(idempotencyRepository, carryOverRepository);
+            assertThat(service.findCatchUpReplay(null, STUDENT_ID, SESSION_ID, money("2000.00")))
+                    .isEmpty();
+            verifyNoInteractions(idempotencyRepository, allocationRepository);
         }
 
         @Test
         @DisplayName("clé nulle : rien n'est conservé, donc rien ne bloquera un versement ultérieur")
         void rienConserve() {
-            service.remember(null, null, new Date());
+            service.remember(null, null, null);
             verify(idempotencyRepository, never()).save(any());
         }
     }
@@ -119,8 +176,7 @@ class PaymentIdempotencyServiceTest {
             assertThatThrownBy(() -> service.normalizeKey("   "))
                     .isInstanceOf(CustomServiceException.class)
                     .hasMessageContaining("vide")
-                    .extracting(e -> ((CustomServiceException) e).getStatus())
-                    .isEqualTo(HttpStatus.BAD_REQUEST);
+                    .satisfies(e -> assertThat(statusOf(e)).isEqualTo(HttpStatus.BAD_REQUEST));
         }
 
         @Test
@@ -128,8 +184,7 @@ class PaymentIdempotencyServiceTest {
         void cleTropLongue() {
             assertThatThrownBy(() -> service.normalizeKey("x".repeat(101)))
                     .isInstanceOf(CustomServiceException.class)
-                    .extracting(e -> ((CustomServiceException) e).getStatus())
-                    .isEqualTo(HttpStatus.BAD_REQUEST);
+                    .satisfies(e -> assertThat(statusOf(e)).isEqualTo(HttpStatus.BAD_REQUEST));
             verifyNoInteractions(idempotencyRepository);
         }
     }
@@ -149,19 +204,19 @@ class PaymentIdempotencyServiceTest {
 
             assertThat(service.findReplay(KEY, STUDENT_ID, GROUP_ID, SERIES_ID, money("6000.00")))
                     .isEmpty();
-            verifyNoInteractions(carryOverRepository);
+            verifyNoInteractions(allocationRepository);
         }
 
         @Test
-        @DisplayName("empreinte conservée avec la requête et son résultat")
+        @DisplayName("empreinte conservée avec la requête, son résultat et son Encaissement")
         void empreinteConservee() {
             PaymentEntity payment = new PaymentEntity();
             payment.setId(55L);
-            Date paymentDate = new Date(1_700_000_000_000L);
+            EncashmentEntity encashment = encashment();
             PaymentAllocationResult result = new PaymentAllocationResult(STUDENT_ID, GROUP_ID,
-                    SERIES_ID, money("6000.00"), money("4000.00"), List.of(), payment);
+                    SERIES_ID, money("6000.00"), money("4000.00"), List.of(), payment, encashment);
 
-            service.remember(KEY, result, paymentDate);
+            service.remember(KEY, result, null);
 
             ArgumentCaptor<PaymentIdempotencyEntity> captor =
                     ArgumentCaptor.forClass(PaymentIdempotencyEntity.class);
@@ -170,11 +225,27 @@ class PaymentIdempotencyServiceTest {
             assertThat(saved.getIdempotencyKey()).isEqualTo(KEY);
             assertThat(saved.getStudentId()).isEqualTo(STUDENT_ID);
             assertThat(saved.getSessionSeriesId()).isEqualTo(SERIES_ID);
+            assertThat(saved.getSessionId()).as("versement de série : pas de séance").isNull();
             assertThat(saved.getAmountReceived()).isEqualByComparingTo("6000.00");
             assertThat(saved.getAmountAllocated()).isEqualByComparingTo("4000.00");
             assertThat(saved.getPayment()).isSameAs(payment);
-            // L'horodatage est celui du serveur, seule clé de relecture des reports.
-            assertThat(saved.getOriginPaymentDate()).isEqualTo(paymentDate);
+            // L'empreinte désigne l'Encaissement, et en reprend l'horodatage serveur.
+            assertThat(saved.getEncashment()).isSameAs(encashment);
+            assertThat(saved.getOriginPaymentDate()).isEqualTo(RECEIVED_AT);
+        }
+
+        @Test
+        @DisplayName("rattrapage : la séance payée entre dans l'empreinte")
+        void empreinteDuRattrapage() {
+            PaymentAllocationResult result = new PaymentAllocationResult(STUDENT_ID, GROUP_ID,
+                    SERIES_ID, money("2000.00"), money("2000.00"), List.of(), new PaymentEntity(), encashment());
+
+            service.remember(KEY, result, SESSION_ID);
+
+            ArgumentCaptor<PaymentIdempotencyEntity> captor =
+                    ArgumentCaptor.forClass(PaymentIdempotencyEntity.class);
+            verify(idempotencyRepository).save(captor.capture());
+            assertThat(captor.getValue().getSessionId()).isEqualTo(SESSION_ID);
         }
     }
 
@@ -189,46 +260,33 @@ class PaymentIdempotencyServiceTest {
         @Test
         @DisplayName("même clé et même requête : le résultat original est restitué, sans nouveau versement")
         void memeRequete() {
-            when(idempotencyRepository.findByIdempotencyKey(KEY)).thenReturn(Optional.of(record("4000.00")));
-            when(carryOverRepository
-                    .findByStudentIdAndSourceSeriesIdAndOriginPaymentDateAndActiveTrueOrderByIdAsc(
-                            anyLong(), anyLong(), any()))
-                    .thenReturn(List.of());
+            givenRecord(record());
+            givenAllocations(allocation(SERIES_ID, "Sept 2025", "4000.00", false, true));
 
-            Optional<PaymentAllocationResult> replay = service.findReplay(
-                    KEY, STUDENT_ID, GROUP_ID, SERIES_ID, money("6000.00"));
+            PaymentAllocationResult result = service.findReplay(
+                    KEY, STUDENT_ID, GROUP_ID, SERIES_ID, money("6000.00")).orElseThrow();
 
-            assertThat(replay).isPresent();
-            PaymentAllocationResult result = replay.orElseThrow();
             assertThat(result.amountReceived()).isEqualByComparingTo("6000.00");
             assertThat(result.amountAllocated()).isEqualByComparingTo("4000.00");
             assertThat(result.payment().getId()).isEqualTo(55L);
+            assertThat(result.encashment().getReceiptNumber())
+                    .as("le rejeu rend le même reçu").isEqualTo("RECU-2030-0001");
             // Aucune écriture : c'est tout l'objet du mécanisme.
             verify(idempotencyRepository, never()).save(any());
         }
 
         @Test
-        @DisplayName("le rejeu restitue les reports depuis la table qui fait foi, pas depuis une copie")
-        void reportsRelus() {
-            // Recopier le détail des reports le ferait diverger de payment_carry_over, que
-            // consultent les relevés et l'historique de l'étudiant.
-            SessionSeriesEntity target = new SessionSeriesEntity();
-            target.setId(11L);
-            target.setName("Oct 2025");
-            PaymentCarryOverEntity carryOver = PaymentCarryOverEntity.builder()
-                    .targetSeries(target)
-                    .amount(money("2000.00"))
-                    .build();
-
-            when(idempotencyRepository.findByIdempotencyKey(KEY)).thenReturn(Optional.of(record("4000.00")));
-            when(carryOverRepository
-                    .findByStudentIdAndSourceSeriesIdAndOriginPaymentDateAndActiveTrueOrderByIdAsc(
-                            anyLong(), anyLong(), any()))
-                    .thenReturn(List.of(carryOver));
+        @DisplayName("la répartition est relue depuis les Imputations de l'Encaissement, reports compris")
+        void repartitionRelue() {
+            givenRecord(record());
+            givenAllocations(
+                    allocation(SERIES_ID, "Sept 2025", "4000.00", false, true),
+                    allocation(11L, "Oct 2025", "2000.00", true, true));
 
             PaymentAllocationResult result = service.findReplay(
                     KEY, STUDENT_ID, GROUP_ID, SERIES_ID, money("6000.00")).orElseThrow();
 
+            assertThat(result.amountAllocated()).isEqualByComparingTo("4000.00");
             assertThat(result.carryOvers()).singleElement().satisfies(restored -> {
                 assertThat(restored.seriesId()).isEqualTo(11L);
                 assertThat(restored.seriesName()).isEqualTo("Oct 2025");
@@ -240,18 +298,42 @@ class PaymentIdempotencyServiceTest {
         }
 
         @Test
+        @DisplayName("Encaissement annulé depuis : le rejeu rend la réponse originale, pas une répartition vide")
+        void encaissementAnnuleDepuis() {
+            // Ses Imputations sont inactives. Ne relire que les actives rendrait 0 DA imputé et
+            // aucun report : une réponse que l'original n'a jamais donnée.
+            givenRecord(record());
+            givenAllocations(
+                    allocation(SERIES_ID, "Sept 2025", "4000.00", false, false),
+                    allocation(11L, "Oct 2025", "2000.00", true, false));
+
+            PaymentAllocationResult result = service.findReplay(
+                    KEY, STUDENT_ID, GROUP_ID, SERIES_ID, money("6000.00")).orElseThrow();
+
+            assertThat(result.amountAllocated()).isEqualByComparingTo("4000.00");
+            assertThat(result.amountCarriedOver()).isEqualByComparingTo("2000.00");
+        }
+
+        @Test
         @DisplayName("montant identique d'échelle différente : reconnu comme le même versement")
         void echelleDifferente() {
             // 6000 et 6000.00 sont le même montant. Comparer par equals ferait échouer le rejeu et
             // produirait un second encaissement, exactement ce qu'il faut empêcher.
-            when(idempotencyRepository.findByIdempotencyKey(KEY)).thenReturn(Optional.of(record("4000.00")));
-            when(carryOverRepository
-                    .findByStudentIdAndSourceSeriesIdAndOriginPaymentDateAndActiveTrueOrderByIdAsc(
-                            anyLong(), anyLong(), any()))
-                    .thenReturn(List.of());
+            givenRecord(record());
+            givenAllocations(allocation(SERIES_ID, "Sept 2025", "4000.00", false, true));
 
             assertThat(service.findReplay(KEY, STUDENT_ID, GROUP_ID, SERIES_ID, money("6000")))
                     .isPresent();
+        }
+
+        @Test
+        @DisplayName("rattrapage rejoué : même étudiant, même séance, même montant")
+        void rattrapageRejoue() {
+            givenRecord(catchUpRecord());
+            givenAllocations(allocation(SERIES_ID, "Sept 2025", "2000.00", false, true));
+
+            assertThat(service.findCatchUpReplay(KEY, STUDENT_ID, SESSION_ID, money("2000")))
+                    .hasValueSatisfying(result -> assertThat(result.amountAllocated()).isEqualByComparingTo("2000.00"));
         }
     }
 
@@ -266,55 +348,56 @@ class PaymentIdempotencyServiceTest {
         @Test
         @DisplayName("montant différent : 409, et le message nomme l'encaissement déjà enregistré")
         void montantDifferent() {
-            when(idempotencyRepository.findByIdempotencyKey(KEY)).thenReturn(Optional.of(record("4000.00")));
+            givenRecord(record());
 
             assertThatThrownBy(() -> service.findReplay(
                     KEY, STUDENT_ID, GROUP_ID, SERIES_ID, money("2000.00")))
                     .isInstanceOf(CustomServiceException.class)
                     .hasMessageContaining("6000.00")
-                    .extracting(e -> ((CustomServiceException) e).getStatus())
-                    .isEqualTo(HttpStatus.CONFLICT);
+                    .satisfies(e -> assertThat(statusOf(e)).isEqualTo(HttpStatus.CONFLICT));
 
             // Ni rejeu silencieux, ni versement : renvoyer le résultat d'un autre encaissement
             // produirait un reçu portant un montant que personne n'a versé.
             verify(idempotencyRepository, never()).save(any());
-            verifyNoInteractions(carryOverRepository);
+            verifyNoInteractions(allocationRepository);
         }
 
         @Test
-        @DisplayName("étudiant différent : 409")
-        void etudiantDifferent() {
-            when(idempotencyRepository.findByIdempotencyKey(KEY)).thenReturn(Optional.of(record("4000.00")));
+        @DisplayName("étudiant, série ou groupe différent : 409")
+        void autreEtudiantSerieOuGroupe() {
+            givenRecord(record());
 
-            assertThatThrownBy(() -> service.findReplay(
-                    KEY, 999L, GROUP_ID, SERIES_ID, money("6000.00")))
-                    .isInstanceOf(CustomServiceException.class)
-                    .extracting(e -> ((CustomServiceException) e).getStatus())
-                    .isEqualTo(HttpStatus.CONFLICT);
+            assertThatThrownBy(() -> service.findReplay(KEY, 999L, GROUP_ID, SERIES_ID, money("6000.00")))
+                    .satisfies(e -> assertThat(statusOf(e)).isEqualTo(HttpStatus.CONFLICT));
+            assertThatThrownBy(() -> service.findReplay(KEY, STUDENT_ID, GROUP_ID, 999L, money("6000.00")))
+                    .satisfies(e -> assertThat(statusOf(e)).isEqualTo(HttpStatus.CONFLICT));
+            assertThatThrownBy(() -> service.findReplay(KEY, STUDENT_ID, 999L, SERIES_ID, money("6000.00")))
+                    .satisfies(e -> assertThat(statusOf(e)).isEqualTo(HttpStatus.CONFLICT));
         }
 
         @Test
-        @DisplayName("série différente : 409")
-        void serieDifferente() {
-            when(idempotencyRepository.findByIdempotencyKey(KEY)).thenReturn(Optional.of(record("4000.00")));
+        @DisplayName("rattrapage d'une autre séance, même montant : 409, jamais le rejeu du premier")
+        void rattrapageAutreSeance() {
+            givenRecord(catchUpRecord());
 
-            assertThatThrownBy(() -> service.findReplay(
-                    KEY, STUDENT_ID, GROUP_ID, 999L, money("6000.00")))
+            assertThatThrownBy(() -> service.findCatchUpReplay(KEY, STUDENT_ID, 41L, money("2000.00")))
                     .isInstanceOf(CustomServiceException.class)
-                    .extracting(e -> ((CustomServiceException) e).getStatus())
-                    .isEqualTo(HttpStatus.CONFLICT);
+                    .hasMessageContaining("rattrapage de la séance " + SESSION_ID)
+                    .satisfies(e -> assertThat(statusOf(e)).isEqualTo(HttpStatus.CONFLICT));
         }
 
         @Test
-        @DisplayName("groupe différent : 409")
-        void groupeDifferent() {
-            when(idempotencyRepository.findByIdempotencyKey(KEY)).thenReturn(Optional.of(record("4000.00")));
+        @DisplayName("clé d'un rattrapage présentée comme versement de série, et l'inverse : 409")
+        void cleChangeDeChemin() {
+            // Même étudiant, même série, même montant : sans la séance dans l'empreinte, le
+            // versement de série rejouerait le rattrapage et n'encaisserait rien.
+            givenRecord(catchUpRecord());
+            assertThatThrownBy(() -> service.findReplay(KEY, STUDENT_ID, GROUP_ID, SERIES_ID, money("2000.00")))
+                    .satisfies(e -> assertThat(statusOf(e)).isEqualTo(HttpStatus.CONFLICT));
 
-            assertThatThrownBy(() -> service.findReplay(
-                    KEY, STUDENT_ID, 999L, SERIES_ID, money("6000.00")))
-                    .isInstanceOf(CustomServiceException.class)
-                    .extracting(e -> ((CustomServiceException) e).getStatus())
-                    .isEqualTo(HttpStatus.CONFLICT);
+            givenRecord(record());
+            assertThatThrownBy(() -> service.findCatchUpReplay(KEY, STUDENT_ID, SESSION_ID, money("6000.00")))
+                    .satisfies(e -> assertThat(statusOf(e)).isEqualTo(HttpStatus.CONFLICT));
         }
     }
 }

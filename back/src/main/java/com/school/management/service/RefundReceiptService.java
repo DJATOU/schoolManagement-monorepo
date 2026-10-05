@@ -152,8 +152,11 @@ public class RefundReceiptService {
      *
      * <p>L'identifiant technique {@code system} est remplacé par une mention lisible : imprimer
      * « system » sur un reçu remis à une famille laisserait croire à un nom d'agent.</p>
+     *
+     * <p>Partagé avec {@link RefundQueryService} : l'historique et le reçu nomment le même auteur,
+     * mention de repli comprise.</p>
      */
-    private String recordedBy(RefundEntity refund) {
+    static String recordedBy(RefundEntity refund) {
         String createdBy = refund.getCreatedBy();
         if (isBlank(createdBy) || SYSTEM_AUDITOR.equals(createdBy)) {
             return UNKNOWN_ADMIN;
@@ -201,7 +204,7 @@ public class RefundReceiptService {
         return result.setScale(MONEY_SCALE, MONEY_ROUNDING);
     }
 
-    private boolean isBlank(String value) {
+    private static boolean isBlank(String value) {
         return value == null || value.isBlank();
     }
 

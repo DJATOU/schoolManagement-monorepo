@@ -1,5 +1,6 @@
 package com.school.management.service.group;
 
+import com.school.management.config.security.SecurityAuditorAware;
 import com.school.management.dto.group.GroupChangeDTO;
 import com.school.management.dto.payment.PaymentQuoteDTO;
 import com.school.management.persistance.AttendanceEntity;
@@ -19,7 +20,9 @@ import com.school.management.service.payment.PaymentCarryOverService;
 import com.school.management.service.payment.PaymentCostResolver;
 import com.school.management.service.payment.PaymentDistributionService;
 import com.school.management.service.payment.PaymentIdempotencyService;
+import com.school.management.service.payment.EncashmentService;
 import com.school.management.service.payment.PaymentProcessingService;
+import com.school.management.service.payment.ReceiptNumberService;
 import com.school.management.service.payment.PaymentQuoteService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -70,7 +73,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 @Import({ GroupChangeDetector.class, BillableSessionsResolverImpl.class, CatchUpBillingQualifierImpl.class, DiscountService.class,
         PaymentCostResolver.class, PaymentQuoteService.class, PaymentAllocationService.class,
         PaymentDistributionService.class, PaymentCarryOverService.class,
-        PaymentProcessingService.class, PaymentIdempotencyService.class })
+        PaymentProcessingService.class, PaymentIdempotencyService.class,
+        EncashmentService.class, ReceiptNumberService.class, SecurityAuditorAware.class })
 class GroupChangeIsInformationalOnlyIntegrationTest {
 
     // Les groupes de ce jeu de données ne portent pas d'année scolaire : la garde d'année close
@@ -93,7 +97,7 @@ class GroupChangeIsInformationalOnlyIntegrationTest {
     @Autowired
     private PaymentProcessingService paymentProcessingService;
 
-    /** Mois courant : les deux événements d'inscription sont horodatés par JPA. */
+    /** Mois courant : arrivées du jour même, départ des maths daté d'aujourd'hui. */
     private final YearMonth currentMonth = YearMonth.now();
 
     private GroupEntity maths;
@@ -135,8 +139,10 @@ class GroupChangeIsInformationalOnlyIntegrationTest {
 
         // Nour : inscription en maths clôturée ce mois-ci, inscription en physique ouverte le même
         // mois. C'est exactement le changement de groupe que l'exigence 10.1 décrit.
+        // La clôture est datée, comme en production : une inscription close porte sa Date_Sortie.
         StudentGroupEntity mathsEnrolment = enrol(nour, maths);
         mathsEnrolment.setActive(false);
+        mathsEnrolment.setDateLeft(toDate(today));
         em.flush();
         enrol(nour, physique);
 

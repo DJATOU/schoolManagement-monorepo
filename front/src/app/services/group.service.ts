@@ -5,6 +5,7 @@ import { API_BASE_URL } from '../api-base-url';
 import { Group } from '../models/group/group';
 import { Student } from '../components/student/domain/student';
 import { SessionSeries } from '../models/sessionSerie/sessionSerie';
+import { ApiResponse } from '../models/response';
 
 
 @Injectable({
@@ -114,9 +115,14 @@ export class GroupService {
     return this.http.post(`${this.apiUrl2}/${groupId}/addStudents`, { studentIds: [studentId] });
   }
 
-  /** Ajoute plusieurs étudiants à un groupe en une seule requête. */
-  addStudentsToGroup(groupId: number, studentIds: number[]): Observable<any> {
-    return this.http.post(`${this.apiUrl2}/${groupId}/addStudents`, { studentIds });
+  /**
+   * Ajoute plusieurs étudiants à un groupe en une seule requête, à la date d'arrivée donnée
+   * (`yyyy-MM-dd`) ; sans date, le serveur retient le jour même. L'erreur HTTP est rendue telle
+   * quelle : son corps nomme ce qui bloque (année et bornes, départ recouvert, niveau).
+   */
+  addStudentsToGroup(groupId: number, studentIds: number[], dateAssigned?: string | null): Observable<ApiResponse> {
+    const body = dateAssigned ? { studentIds, dateAssigned } : { studentIds };
+    return this.http.post<ApiResponse>(`${this.apiUrl2}/${groupId}/addStudents`, body);
   }
 
   getGroupsForPayment(studentId: number): Observable<Group[]> {

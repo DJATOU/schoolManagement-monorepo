@@ -1,15 +1,25 @@
-<h1 mat-dialog-title>Manage Groups</h1>
+<h1 mat-dialog-title>{{ 'enrolment.add.groupsTitle' | translate }}</h1>
 <div mat-dialog-actions class="group-dialog-actions">
-  <button mat-raised-button color="primary" (click)="onSubmit()">Add Groups</button>
-  <button mat-button (click)="onCancel()">Cancel</button>
+  <button mat-raised-button color="primary" (click)="onSubmit()" [disabled]="groupForm.invalid">
+    {{ 'enrolment.add.addGroups' | translate }}
+  </button>
+  <button mat-button (click)="onCancel()">{{ 'common.cancel' | translate }}</button>
 </div>
 <div mat-dialog-content class="group-dialog-content">
   <form [formGroup]="groupForm">
     <mat-form-field appearance="fill" class="full-width">
-      <mat-label>Select Groups</mat-label>
+      <mat-label>{{ 'enrolment.add.selectGroups' | translate }}</mat-label>
       <mat-select formControlName="groupIds" multiple>
         <mat-option *ngFor="let group of allGroups" [value]="group.id">{{ group.name }}</mat-option>
       </mat-select>
+    </mat-form-field>
+    <!-- Date d'arrivée réelle (exigence 5.1) : un jour, saisi sans conversion en Date. -->
+    <mat-form-field appearance="fill" class="full-width">
+      <mat-label>{{ 'enrolment.add.arrival' | translate }}</mat-label>
+      <input matInput type="date" formControlName="arrival" required
+        [attr.min]="data.yearStart ?? null" [attr.max]="data.yearEnd ?? null">
+      <mat-hint>{{ 'enrolment.add.arrivalHint' | translate }}</mat-hint>
+      <mat-error>{{ 'enrolment.correction.dateRequired' | translate }}</mat-error>
     </mat-form-field>
   </form>
 </div>

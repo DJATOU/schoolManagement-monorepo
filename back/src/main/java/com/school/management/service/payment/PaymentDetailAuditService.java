@@ -7,7 +7,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -20,22 +19,9 @@ public class PaymentDetailAuditService {
         this.paymentDetailAuditRepository = paymentDetailAuditRepository;
     }
 
-    public void logAction(Long paymentDetailId,
-            String action,
-            String performedBy,
-            String oldValue,
-            String newValue,
-            String reason) {
-        PaymentDetailAuditEntity audit = PaymentDetailAuditEntity.builder()
-                .paymentDetailId(paymentDetailId)
-                .action(action)
-                .performedBy(performedBy)
-                .oldValue(oldValue)
-                .newValue(newValue)
-                .reason(reason)
-                .build();
-        paymentDetailAuditRepository.save(Objects.requireNonNull(audit));
-    }
+    // logAction retiré avec A.6 (spec admin-corrections) : les lignes de ventilation ne se
+    // corrigent plus à l'unité, il n'y a plus rien à tracer ici. L'historique déjà écrit reste
+    // consultable, et les corrections d'Encaissement sont tracées dans correction_audit (lot B).
 
     public List<PaymentDetailAuditDTO> getAuditHistory(Long paymentDetailId) {
         return paymentDetailAuditRepository.findByPaymentDetailIdOrderByTimestampDesc(paymentDetailId)

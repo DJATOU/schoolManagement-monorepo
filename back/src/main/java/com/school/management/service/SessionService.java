@@ -1,5 +1,6 @@
 package com.school.management.service;
 
+import com.school.management.domain.valueobject.EnrolmentWindow;
 import com.school.management.dto.session.SessionDTO;
 import com.school.management.dto.session.SessionSearchCriteriaDTO;
 import com.school.management.mapper.SessionMapper;
@@ -24,6 +25,7 @@ import org.springframework.stereotype.Service;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.function.Consumer;
@@ -187,10 +189,21 @@ public class SessionService {
         readOnlyYearGuard.assertSessionMutable(session);
 
         GroupEntity groupBefore = session.getGroup();
+        Long groupIdBefore = groupBefore == null ? null : groupBefore.getId();
+        LocalDate dayBefore = EnrolmentWindow.dayOf(session.getSessionTimeStart());
 
         updateEntityRelations(session, updates);
         updateSessionTimes(session, updates);
         updateSimpleFields(session, updates);
+
+        // Changer le jour ou le groupe d'une séance pointée change aussi qui elle concerne : ses
+        // absences ne doivent pas en sortir (exigence 7.3, propriété P5). La séance est contrôlée
+        // telle que modifiée, avant toute écriture ; un refus annule la transaction.
+        Long groupIdAfter = session.getGroup() == null ? null : session.getGroup().getId();
+        if (!Objects.equals(groupIdBefore, groupIdAfter)
+                || !Objects.equals(dayBefore, EnrolmentWindow.dayOf(session.getSessionTimeStart()))) {
+            attendanceService.assertAbsencesStayConcerned(session.getId());
+        }
 
         SessionEntity saved = sessionRepository.save(Objects.requireNonNull(session));
 
@@ -365,20 +378,19 @@ public class SessionService {
         return onlyActive(sessionRepository.findAll(spec));
     }
 
+    /** Valide une séance ; refusé sur une année close (exigence 10.2). */
     @Transactional
     public SessionEntity markSessionAsFinished(Long sessionId) {
         SessionEntity session = sessionRepository.findById(Objects.requireNonNull(sessionId))
                 .orElseThrow(() -> new CustomServiceException(SESSION_NOT_FOUND_MESSAGE + sessionId));
+        readOnlyYearGuard.assertSessionMutable(session);
         session.setIsFinished(true);
         return sessionRepository.save(session);
     }
 
-    public SessionEntity markSessionAsUnfinished(Long sessionId) {
-        SessionEntity session = sessionRepository.findById(Objects.requireNonNull(sessionId))
-                .orElseThrow(() -> new CustomServiceException(SESSION_NOT_FOUND_MESSAGE + sessionId));
-        session.setIsFinished(false);
-        return sessionRepository.save(session);
-    }
+    // markSessionAsUnfinished(Long) retiré (D.3) : il dévalidait sans Motif, sans Aperçu ni Trace, et
+    // laissait les présences actives. La dévalidation passe par AttendanceCorrectionService.unvalidate
+    // (exigence 10.1).
 
     public List<SessionEntity> getSessionsBySeriesId(Long sessionSeriesId) {
         return onlyActive(sessionRepository.findBySessionSeriesId(sessionSeriesId));

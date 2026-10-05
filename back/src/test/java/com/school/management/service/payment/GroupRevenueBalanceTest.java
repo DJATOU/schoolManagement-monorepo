@@ -39,13 +39,14 @@ class GroupRevenueBalanceTest {
     private static final long LATE_STUDENT_ID = 200L;
 
     private PaymentCostResolver paymentCostResolver;
+    private StudentGroupRepository studentGroupRepository;
     private GroupRevenueService service;
 
     @BeforeEach
     void setUp() {
         GroupRepository groupRepository = mock(GroupRepository.class);
         SessionSeriesRepository sessionSeriesRepository = mock(SessionSeriesRepository.class);
-        StudentGroupRepository studentGroupRepository = mock(StudentGroupRepository.class);
+        studentGroupRepository = mock(StudentGroupRepository.class);
         PaymentRepository paymentRepository = mock(PaymentRepository.class);
         PaymentDetailRepository paymentDetailRepository = mock(PaymentDetailRepository.class);
         RefundRepository refundRepository = mock(RefundRepository.class);
@@ -66,7 +67,7 @@ class GroupRevenueBalanceTest {
         series.setGroup(group);
         when(sessionSeriesRepository.findByGroupId(GROUP_ID)).thenReturn(List.of(series));
 
-        when(studentGroupRepository.findByGroupIdAndActiveTrue(GROUP_ID))
+        when(studentGroupRepository.findByGroupId(GROUP_ID))
                 .thenReturn(List.of(enrollment(OVERPAYER_ID), enrollment(LATE_STUDENT_ID)));
 
         when(paymentDetailRepository.sumCollectedByGroupGroupedBySeries(GROUP_ID)).thenReturn(List.of());
@@ -110,6 +111,24 @@ class GroupRevenueBalanceTest {
             assertThat(series.remaining()).isEqualByComparingTo("2800.00");
             assertThat(series.overpaid()).isEqualByComparingTo("900.00");
         });
+    }
+
+    @Test
+    void getGroupRevenue_departedAndReturnedStudentsCountOnce() {
+        // C.5 : l'étudiant parti doit encore sa fenêtre, et son trop-perçu reste au relevé ;
+        // l'étudiant revenu a deux inscriptions, mais une seule situation par série.
+        StudentGroupEntity departed = enrollment(OVERPAYER_ID);
+        departed.setActive(false);
+        when(studentGroupRepository.findByGroupId(GROUP_ID)).thenReturn(List.of(
+                departed, enrollment(LATE_STUDENT_ID), enrollment(LATE_STUDENT_ID)));
+        givenStatus(OVERPAYER_ID, "2100.00", "3000.00");
+        givenStatus(LATE_STUDENT_ID, "2800.00", "0.00");
+
+        GroupRevenueDTO dto = service.getGroupRevenue(GROUP_ID);
+
+        assertThat(dto.expected()).isEqualByComparingTo("4900.00");
+        assertThat(dto.remaining()).isEqualByComparingTo("2800.00");
+        assertThat(dto.overpaid()).isEqualByComparingTo("900.00");
     }
 
     @Test
