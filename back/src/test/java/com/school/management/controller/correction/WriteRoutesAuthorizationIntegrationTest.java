@@ -50,7 +50,9 @@ class WriteRoutesAuthorizationIntegrationTest extends CorrectionIntegrationTestS
     /** Lectures financières : ADMIN seul, VIEWER compris en lecture. */
     private static final List<String> FINANCIAL_READS = List.of(
             "/api/encashments/1", "/api/students/1/encashments", "/api/students/1/journal",
-            "/api/students/1/refunds", "/api/refunds/payment/1", "/api/groups/1/revenue");
+            "/api/students/1/refunds", "/api/refunds/payment/1", "/api/groups/1/revenue",
+            "/api/teacher-pay-rates", "/api/teacher-payouts", "/api/teacher-payouts/payable",
+            "/api/teacher-payouts/1", "/api/teachers/1/payouts");
 
     /** Seul point d'écriture ouvert à tous : on s'y connecte. */
     private static final String LOGIN = "/api/v1/auth/login";

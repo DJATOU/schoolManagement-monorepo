@@ -1,8 +1,30 @@
 package com.school.management.migration;
 
+import com.school.management.config.security.SecurityAuditorAware;
+import com.school.management.dto.payroll.PayRequest;
+import com.school.management.dto.payroll.PayoutDTO;
+import com.school.management.dto.payroll.PayoutPreviewDTO;
 import com.school.management.persistance.ReceiptCounterEntity;
+import com.school.management.repository.GroupRepository;
+import com.school.management.repository.PaymentRepository;
+import com.school.management.repository.PayoutCounterRepository;
 import com.school.management.repository.ReceiptCounterRepository;
+import com.school.management.repository.RefundRepository;
+import com.school.management.repository.SchoolYearRepository;
+import com.school.management.repository.SessionRepository;
+import com.school.management.repository.SessionSeriesRepository;
+import com.school.management.repository.TeacherPayRateRepository;
+import com.school.management.repository.TeacherPayoutRepository;
+import com.school.management.repository.TeacherRepository;
+import com.school.management.service.CurrentSchoolYearService;
+import com.school.management.service.exception.CustomServiceException;
 import com.school.management.service.payment.ReceiptNumberService;
+import com.school.management.service.payment.SeriesCollectionService;
+import com.school.management.service.payroll.PayoutNumberService;
+import com.school.management.service.payroll.SeriesCompletionService;
+import com.school.management.service.payroll.StalePayoutPreviewException;
+import com.school.management.service.payroll.TeacherPayRateService;
+import com.school.management.service.payroll.TeacherPayoutService;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
@@ -36,6 +58,7 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Date;
@@ -86,6 +109,8 @@ class MigrationSchemaPostgresIntegrationTest {
     private final AtomicInteger receiptCounter = new AtomicInteger();
     /** Sur la classe englobante : une classe imbriquée est recréée à chaque test, la base non. */
     private final AtomicInteger payoutRank = new AtomicInteger();
+    /** Rang de départ du compteur des paies pour chaque test du service : jamais deux fois le même. */
+    private final AtomicInteger counterBase = new AtomicInteger(500);
 
     private ConfigurableApplicationContext context;
     private JdbcTemplate jdbc;
@@ -553,25 +578,25 @@ class MigrationSchemaPostgresIntegrationTest {
             String next = transactions.execute(status -> numbers.next(in2030));
             assertThat(next).isEqualTo("RECU-2030-0006");
         }
+    }
 
-        private static void await(CountDownLatch latch) {
-            try {
-                if (!latch.await(30, TimeUnit.SECONDS)) {
-                    throw new IllegalStateException("Attente expirée : l'autre transaction ne s'est pas présentée");
-                }
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                throw new IllegalStateException(e);
+    private static void await(CountDownLatch latch) {
+        try {
+            if (!latch.await(30, TimeUnit.SECONDS)) {
+                throw new IllegalStateException("Attente expirée : l'autre transaction ne s'est pas présentée");
             }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException(e);
         }
+    }
 
-        private static void sleep(Duration duration) {
-            try {
-                Thread.sleep(duration.toMillis());
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                throw new IllegalStateException(e);
-            }
+    private static void sleep(Duration duration) {
+        try {
+            Thread.sleep(duration.toMillis());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException(e);
         }
     }
 
@@ -827,6 +852,128 @@ class MigrationSchemaPostgresIntegrationTest {
     }
 
     @Nested
+    @DisplayName("Paie concurrente (P2, P4)")
+    class PaieConcurrente {
+
+        private final String year = String.valueOf(LocalDate.now(ZoneId.systemDefault()).getYear());
+
+        private TeacherPayoutService payouts;
+        private TransactionTemplate transactions;
+        private long series;
+        private long rateId;
+        private int base;
+
+        /**
+         * Série terminée d'un groupe à enseignant, 10 000 DA encaissés, taux de 60 %. Le compteur
+         * est posé à un rang neuf de l'année en cours (501, 511…) : les paies insérées à la main par
+         * les autres tests portent des numéros de 2030 et de petits rangs, et celles d'un test précédent
+         * de cette classe restent en base.
+         */
+        @BeforeEach
+        void finishedSeries() {
+            payouts = context.getBean(TeacherPayoutService.class);
+            transactions = new TransactionTemplate(context.getBean(PlatformTransactionManager.class));
+
+            long teacher = insertReturningId("INSERT INTO teacher (first_name, last_name) VALUES ('Karim', 'Haddad')");
+            // Colonnes lues par des champs primitifs : non nulles, sinon Hibernate refuse de charger.
+            long group = insertReturningId("INSERT INTO groups (name, teacher_id, session_per_serie) "
+                    + "VALUES ('Physique 2 AS', ?, 1)", teacher);
+            series = insertReturningId("INSERT INTO session_series (name, group_id, total_sessions, "
+                    + "sessions_completed) VALUES ('Octobre', ?, 1, 0)", group);
+            insertReturningId("INSERT INTO session (title, group_id, session_series_id, is_finished, active) "
+                    + "VALUES ('Séance 1', ?, ?, true, true)", group, series);
+            insertReturningId("INSERT INTO payments (amount_paid, student_id, group_id, session_series_id) "
+                    + "VALUES (10000, ?, ?, ?)", studentId, group, series);
+            rateId = insertReturningId("INSERT INTO teacher_pay_rate (label, teacher_percent, active) "
+                    + "VALUES (?, 60.00, true)", "Concurrence " + series);
+            base = counterBase.getAndAdd(10);
+            jdbc.update("UPDATE payout_counter SET counter_year = ?, last_rank = ?", Integer.parseInt(year), base);
+        }
+
+        /** Numéro attendu de la prochaine paie. */
+        private String nextNumber() {
+            return String.format("PAIE-%s-%04d", year, base + 1);
+        }
+
+        private PayRequest confirmation() {
+            PayoutPreviewDTO preview = payouts.previewPay(series, new PayRequest(rateId, null, null));
+            return new PayRequest(rateId, null, preview.previewToken());
+        }
+
+        private int activeInitialPayouts() {
+            return jdbc.queryForObject("SELECT COUNT(*) FROM teacher_payout WHERE series_id = ? "
+                    + "AND kind = 'INITIAL' AND status = 'ACTIVE'", Integer.class, series);
+        }
+
+        private int lastRank() {
+            return jdbc.queryForObject("SELECT last_rank FROM payout_counter", Integer.class);
+        }
+
+        @Test
+        @DisplayName("deux confirmations simultanées du même aperçu : une seule paie, la seconde attend et est refusée")
+        void concurrentConfirmationsGiveOnePayout() throws Exception {
+            PayRequest request = confirmation();
+            CountDownLatch firstHoldsTheSeries = new CountDownLatch(1);
+            CountDownLatch secondIsWaiting = new CountDownLatch(1);
+            AtomicLong firstReleasesAt = new AtomicLong();
+            AtomicLong secondRefusedAt = new AtomicLong();
+
+            ExecutorService pool = Executors.newFixedThreadPool(2);
+            try {
+                Future<PayoutDTO> first = pool.submit(() -> transactions.execute(status -> {
+                    PayoutDTO paid = payouts.confirmPay(series, request);
+                    firstHoldsTheSeries.countDown();
+                    await(secondIsWaiting);
+                    // Laisser au second le temps d'arriver sur le verrou de la série avant de valider.
+                    sleep(Duration.ofMillis(500));
+                    firstReleasesAt.set(System.nanoTime());
+                    return paid;
+                }));
+                Future<Throwable> second = pool.submit(() -> {
+                    await(firstHoldsTheSeries);
+                    secondIsWaiting.countDown();
+                    try {
+                        payouts.confirmPay(series, request);
+                        return null;
+                    } catch (CustomServiceException e) {
+                        secondRefusedAt.set(System.nanoTime());
+                        return e;
+                    }
+                });
+
+                String number = nextNumber();
+                assertThat(first.get(30, TimeUnit.SECONDS).payoutNumber()).isEqualTo(number);
+                // Refus par le verrou, qui fait relire la paie validée : pas par l'index unique, filet
+                // de sécurité qui répondrait « vient d'être payée par ailleurs ».
+                assertThat(second.get(30, TimeUnit.SECONDS))
+                        .isInstanceOf(CustomServiceException.class)
+                        .hasMessageContaining("déjà payée (" + number + ")");
+                assertThat(secondRefusedAt.get()).isGreaterThan(firstReleasesAt.get());
+            } finally {
+                pool.shutdownNow();
+            }
+            assertThat(activeInitialPayouts()).isEqualTo(1);
+            assertThat(lastRank()).isEqualTo(base + 1);
+        }
+
+        @Test
+        @DisplayName("aperçu, puis confirmation périmée : aucune paie écrite, aucun numéro consommé")
+        void staleConfirmationConsumesNoNumber() {
+            PayRequest request = confirmation();
+            assertThat(lastRank()).isEqualTo(base);
+            jdbc.update("UPDATE payments SET amount_paid = 12000 WHERE session_series_id = ?", series);
+
+            assertThatThrownBy(() -> payouts.confirmPay(series, request))
+                    .isInstanceOf(StalePayoutPreviewException.class);
+            assertThat(activeInitialPayouts()).isZero();
+            assertThat(lastRank()).isEqualTo(base);
+
+            PayRequest fresh = confirmation();
+            assertThat(payouts.confirmPay(series, fresh).payoutNumber()).isEqualTo(nextNumber());
+        }
+    }
+
+    @Nested
     @DisplayName("Trace de correction")
     class Trace {
 
@@ -864,8 +1011,9 @@ class MigrationSchemaPostgresIntegrationTest {
     // ------------------------------------------------------------------
 
     /**
-     * Seul le dépôt du compteur est activé, avec le service qui le verrouille : c'est le seul code
-     * dont le comportement dépend de PostgreSQL (verrou de ligne, annulation de transaction).
+     * Seuls les dépôts et services dont le comportement dépend de PostgreSQL sont activés : le
+     * compteur des reçus, et la paie d'un enseignant (verrou de la série, compteur des paies, index
+     * unique des paies initiales actives) avec ce qu'elle lit.
      */
     @Configuration
     @ImportAutoConfiguration({
@@ -877,9 +1025,14 @@ class MigrationSchemaPostgresIntegrationTest {
     })
     @EntityScan("com.school.management.persistance")
     @EnableJpaRepositories(basePackageClasses = ReceiptCounterRepository.class,
-            includeFilters = @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE,
-                    classes = ReceiptCounterRepository.class))
-    @Import(ReceiptNumberService.class)
+            includeFilters = @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = {
+                    ReceiptCounterRepository.class, PayoutCounterRepository.class, TeacherPayoutRepository.class,
+                    TeacherPayRateRepository.class, SessionSeriesRepository.class, SessionRepository.class,
+                    GroupRepository.class, TeacherRepository.class, PaymentRepository.class,
+                    RefundRepository.class, SchoolYearRepository.class }))
+    @Import({ ReceiptNumberService.class, PayoutNumberService.class, TeacherPayoutService.class,
+            TeacherPayRateService.class, SeriesCollectionService.class, SeriesCompletionService.class,
+            CurrentSchoolYearService.class, SecurityAuditorAware.class })
     static class SchemaCheckContext {
     }
 }

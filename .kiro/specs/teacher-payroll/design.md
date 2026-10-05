@@ -47,13 +47,16 @@ Régularisation laisserait une Régularisation calculée sur une base qui n'exis
 remboursements actifs de la Série. `GroupRevenueService` passe par lui pour sa ventilation par Série.
 Un test vérifie l'égalité des deux écrans (exigence 3.3).
 
-**D5. Série_Terminée en une requête.** `SessionRepository.countForCompletion(seriesId)` → séances
-actives, séances actives validées. Terminée ⇔ actives > 0 et validées = actives.
+**D5. Série_Terminée en une requête.** `SessionRepository.countCompletionBySeries(seriesIds)` →
+par Série, séances actives et séances actives validées. Terminée ⇔ actives > 0 et validées = actives.
 `session_series.sessions_completed` n'est jamais tenu à jour : il n'est pas lu.
 
 **D6. Payer n'est pas une Correction.** Payer suit le même protocole Aperçu / confirmation à jeton,
-mais dans `TeacherPayoutService` : le jeton est l'empreinte (Série, Encaissé_Net, taux, pourcentage,
-dernière Paie active, statut de la Série). Une confirmation périmée renvoie 409 avec le nouvel Aperçu.
+mais dans `TeacherPayoutService` : le jeton est l'empreinte SHA-256 de `payout-preview-v1 | type |
+Série | Enseignant | taux | pourcentage | brut | remboursé | net | net couvert | base | part
+enseignant | part école | déjà versé | dernière Paie active`, montants sans zéros de queue. Un
+changement d'état de la Série (non terminée, sans enseignant) est un refus nommé, pas un jeton
+périmé. Une confirmation périmée renvoie 409 `STALE_PREVIEW` avec le nouvel Aperçu et son jeton.
 La ligne `session_series` est verrouillée (`PESSIMISTIC_WRITE`) pendant la confirmation : deux
 confirmations simultanées se sérialisent, l'index unique reste le filet de sécurité.
 
@@ -73,6 +76,18 @@ dévalidation (`AttendanceCorrectionService`), la suppression et la désactivati
 
 **D10. Année close.** Les écritures de Paie n'appellent pas `ReadOnlyYearGuard` (exigence 10.1).
 La garde D9 s'ajoute à celle de l'année, elle ne la remplace pas.
+
+**D11. Périmètre de « À payer ».** Sans filtre de groupe : toutes les Séries des groupes actifs de
+l'année courante, et, des autres années (groupe sans année compris), seulement celles qui appellent
+un paiement (`PAYABLE`, `TO_REGULARIZE`). Limiter la liste à l'année courante ferait disparaître la
+dernière Série d'une année close dès la bascule, alors que la payer est voulu (exigence 10.1) ; tout
+lister ferait remonter chaque Série inachevée des années passées. Avec un filtre de groupe, tout est
+listé. Une Série sans séance active, ou payée et à jour, n'est jamais listée.
+
+**D12. Violation de contrainte à l'enregistrement.** Seule la violation de
+`uk_teacher_payout_initial_active` se traduit en 409 « payée par ailleurs ». Toute autre violation
+remonte telle quelle : la traduire maquillerait un défaut de calcul (ou de numérotation) en conflit
+d'utilisateur.
 
 ## Modèle de données — migration V9
 

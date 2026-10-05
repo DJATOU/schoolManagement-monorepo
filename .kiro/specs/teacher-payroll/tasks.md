@@ -29,14 +29,25 @@ d'argent est vérifiée par mutation, puis le code est restauré.
 
 ## Lot Q — Catalogue et paie
 
-- [ ] Q.1 `TeacherPayRateService` + contrôleur : création, libellé, désactivation, unicité, bornes
+- [x] Q.1 `TeacherPayRateService` + `TeacherPayRateController` (`/api/teacher-pay-rates`) : création,
+  libellé nettoyé et borné, pourcentage refusé hors ]0 ; 100[ ou à trois décimales, unicité parmi les
+  actifs, modification refusée sur un taux désactivé, désactivation sans effet si répétée ; une paie
+  garde sa copie quand le taux change
   _Exigence 1_
-- [ ] Q.2 `PayoutNumberService` (compteur verrouillé) ; aucun numéro consommé par un Aperçu (P4)
+- [x] Q.2 `PayoutNumberService` (compteur verrouillé, transaction obligatoire, rang remis à 1 chaque
+  année, horloge arrière refusée) ; aucun numéro consommé par un Aperçu, un refus ou une confirmation
+  périmée (P4, sur H2 et PostgreSQL)
   _Exigence 4.6 — D8_
-- [ ] Q.3 `TeacherPayoutService` : Séries à payer et à régulariser ; payer et régulariser en Aperçu /
-  confirmation à jeton ; verrou de Série ; refus nommés. Propriété P2 sur PostgreSQL
-  _Exigences 2, 3.4, 4, 6 — D2, D6, D10_
-- [ ] Q.4 `PayoutSlipService` : données du Bordereau, rang du duplicata
+- [x] Q.3 `TeacherPayoutService` + `TeacherPayoutController` : Séries à payer et à régulariser (D11) ;
+  payer et régulariser en Aperçu / confirmation à jeton, 409 `STALE_PREVIEW` avec le nouvel Aperçu ;
+  verrou de Série ; refus nommés ; consultation filtrée avec totaux des seules paies actives.
+  Propriété P2 sur PostgreSQL : deux confirmations simultanées, la seconde attend le verrou et est
+  refusée « déjà payée », un seul numéro consommé. Routes de lecture ajoutées aux lectures financières
+  réservées ADMIN
+  _Exigences 2, 3.4, 4, 6, 9 — D2, D6, D10, D11, D12_
+- [x] Q.4 `PayoutSlipService` : données du Bordereau, rang du duplicata, nom de fichier stable ; une
+  paie annulée reste imprimable. Seuil JaCoCo 100 % étendu au calcul, aux taux, à l'avancement, au
+  numéro et au bordereau. 40 mutations du lot tuées
   _Exigence 5_
 
 ## Lot U — Corrections et cohérence
