@@ -40,6 +40,10 @@ class GroupRevenueBalanceTest {
 
     private PaymentCostResolver paymentCostResolver;
     private StudentGroupRepository studentGroupRepository;
+    private PaymentRepository paymentRepository;
+    private RefundRepository refundRepository;
+    private SeriesCollectionService seriesCollectionService;
+    private SessionSeriesEntity series;
     private GroupRevenueService service;
 
     @BeforeEach
@@ -47,21 +51,22 @@ class GroupRevenueBalanceTest {
         GroupRepository groupRepository = mock(GroupRepository.class);
         SessionSeriesRepository sessionSeriesRepository = mock(SessionSeriesRepository.class);
         studentGroupRepository = mock(StudentGroupRepository.class);
-        PaymentRepository paymentRepository = mock(PaymentRepository.class);
+        paymentRepository = mock(PaymentRepository.class);
         PaymentDetailRepository paymentDetailRepository = mock(PaymentDetailRepository.class);
-        RefundRepository refundRepository = mock(RefundRepository.class);
+        refundRepository = mock(RefundRepository.class);
         paymentCostResolver = mock(PaymentCostResolver.class);
+        seriesCollectionService = new SeriesCollectionService(paymentRepository, refundRepository);
 
         service = new GroupRevenueService(groupRepository, sessionSeriesRepository,
                 studentGroupRepository, paymentRepository, paymentDetailRepository, refundRepository,
-                paymentCostResolver);
+                paymentCostResolver, seriesCollectionService);
 
         GroupEntity group = new GroupEntity();
         group.setId(GROUP_ID);
         group.setName("Math 1ère A");
         when(groupRepository.findById(GROUP_ID)).thenReturn(Optional.of(group));
 
-        SessionSeriesEntity series = new SessionSeriesEntity();
+        series = new SessionSeriesEntity();
         series.setId(SERIES_ID);
         series.setName("Septembre 2025");
         series.setGroup(group);
@@ -155,13 +160,33 @@ class GroupRevenueBalanceTest {
     }
 
     @Test
+    void getGroupRevenue_seriesCollectedIsTheSharedSource_P3() {
+        // Spec teacher-payroll, P3 : la paie de l'enseignant et le relevé du groupe lisent le même
+        // encaissé net. 74 000 versés, 2 000 rendus : 72 000 des deux côtés.
+        givenStatus(OVERPAYER_ID, "0.00", "0.00");
+        givenStatus(LATE_STUDENT_ID, "0.00", "0.00");
+        when(paymentRepository.sumPaidByGroupGroupedBySeries(GROUP_ID))
+                .thenReturn(new java.util.ArrayList<>(List.<Object[]>of(new Object[]{SERIES_ID, 74000.0})));
+        when(refundRepository.sumRefundsByGroupGroupedBySeries(GROUP_ID))
+                .thenReturn(new java.util.ArrayList<>(List.<Object[]>of(new Object[]{SERIES_ID, new BigDecimal("2000")})));
+
+        GroupRevenueDTO dto = service.getGroupRevenue(GROUP_ID);
+
+        assertThat(dto.series()).singleElement().satisfies(line -> {
+            assertThat(line.collected()).isEqualByComparingTo("72000.00");
+            assertThat(line.refunded()).isEqualByComparingTo("2000.00");
+            assertThat(line.collected()).isEqualByComparingTo(seriesCollectionService.of(series).net());
+        });
+    }
+
+    @Test
     void getGroupRevenue_unknownGroup_throws() {
         GroupRepository emptyRepository = mock(GroupRepository.class);
         when(emptyRepository.findById(anyLong())).thenReturn(Optional.empty());
         GroupRevenueService isolated = new GroupRevenueService(emptyRepository,
                 mock(SessionSeriesRepository.class), mock(StudentGroupRepository.class),
                 mock(PaymentRepository.class), mock(PaymentDetailRepository.class), mock(RefundRepository.class),
-                mock(PaymentCostResolver.class));
+                mock(PaymentCostResolver.class), mock(SeriesCollectionService.class));
 
         assertThat(org.assertj.core.api.Assertions.catchThrowable(() -> isolated.getGroupRevenue(99L)))
                 .isNotNull();

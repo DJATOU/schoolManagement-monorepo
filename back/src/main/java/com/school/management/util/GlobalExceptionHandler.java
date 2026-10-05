@@ -3,6 +3,7 @@ package com.school.management.util;
 import com.school.management.service.correction.RefundFloorException;
 import com.school.management.service.correction.StalePreviewException;
 import com.school.management.service.exception.CustomServiceException;
+import com.school.management.service.payroll.StalePayoutPreviewException;
 import com.school.management.service.session.AbsenceOutsideWindowException;
 import com.school.management.shared.exception.ResourceNotFoundException;
 import jakarta.persistence.EntityNotFoundException;
@@ -40,6 +41,19 @@ public class GlobalExceptionHandler {
         logger.warn("Stale correction preview: {}", e.getMessage());
         return ResponseEntity.status(HttpStatus.CONFLICT).body(new StalePreviewErrorResponse(
                 HttpStatus.CONFLICT, e.getMessage(), "STALE_PREVIEW", e.getPreview(), e.getPreviewToken()));
+    }
+
+    /**
+     * Paie d'enseignant confirmée sur un aperçu périmé : 409 avec le nouveau calcul (spec
+     * teacher-payroll, exigence 4.3).
+     */
+    @ExceptionHandler(StalePayoutPreviewException.class)
+    public ResponseEntity<StalePayoutPreviewErrorResponse> handleStalePayoutPreviewException(
+            StalePayoutPreviewException e) {
+        logger.warn("Stale payout preview: {}", e.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(new StalePayoutPreviewErrorResponse(
+                HttpStatus.CONFLICT, e.getMessage(), "STALE_PREVIEW", e.getPreview(),
+                e.getPreview().previewToken()));
     }
 
     /**

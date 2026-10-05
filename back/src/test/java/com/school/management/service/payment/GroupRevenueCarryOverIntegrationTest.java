@@ -63,7 +63,7 @@ import static org.assertj.core.api.Assertions.assertThat;
         PaymentQuoteService.class, PaymentAllocationService.class, PaymentDistributionService.class,
         PaymentCarryOverService.class, PaymentProcessingService.class, PaymentIdempotencyService.class,
         EncashmentService.class, ReceiptNumberService.class, SecurityAuditorAware.class, GroupRevenueService.class,
-        PaymentHistoryService.class })
+        SeriesCollectionService.class, PaymentHistoryService.class })
 class GroupRevenueCarryOverIntegrationTest {
 
     // Les groupes de ce jeu de données ne portent pas d'année scolaire : la garde d'année close

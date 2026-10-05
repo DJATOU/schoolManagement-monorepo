@@ -7,10 +7,12 @@ import com.school.management.mapper.SessionMapper;
 import com.school.management.persistance.GroupEntity;
 import com.school.management.persistance.RoomEntity;
 import com.school.management.persistance.SessionEntity;
+import com.school.management.persistance.SessionSeriesEntity;
 import com.school.management.persistance.TeacherEntity;
 import com.school.management.repository.*;
 import com.school.management.service.exception.CustomServiceException;
 import com.school.management.service.payment.PaymentDetailDeactivationService; // ← AJOUTÉ
+import com.school.management.service.payroll.PaidSeriesGuard;
 import com.school.management.service.util.CommonSpecifications;
 import com.school.management.shared.mapper.MappingContext;
 import jakarta.annotation.PostConstruct;
@@ -52,6 +54,8 @@ public class SessionService {
     private final ReadOnlyYearGuard readOnlyYearGuard; // Garde lecture seule des années passées
     // Décide de la série d'accueil d'une séance et crée la suivante quand la courante est pleine
     private final SeriesRolloverService seriesRolloverService;
+    // Une série payée à l'enseignant ne perd ni ne regagne de séance sans que sa paie soit annulée
+    private final PaidSeriesGuard paidSeriesGuard;
 
     // MappingContext pour SessionMapper
     private MappingContext mappingContext;
@@ -67,7 +71,8 @@ public class SessionService {
             PaymentDetailDeactivationService paymentDetailDeactivationService, // ← AJOUTÉ
             AttendanceService attendanceService, // ← AJOUTÉ
             ReadOnlyYearGuard readOnlyYearGuard,
-            SeriesRolloverService seriesRolloverService) {
+            SeriesRolloverService seriesRolloverService,
+            PaidSeriesGuard paidSeriesGuard) {
         this.sessionRepository = sessionRepository;
         this.groupRepository = groupRepository;
         this.sessionMapper = sessionMapper;
@@ -78,6 +83,7 @@ public class SessionService {
         this.attendanceService = attendanceService; // ← AJOUTÉ
         this.readOnlyYearGuard = readOnlyYearGuard;
         this.seriesRolloverService = seriesRolloverService;
+        this.paidSeriesGuard = paidSeriesGuard;
     }
 
     /**
@@ -191,10 +197,22 @@ public class SessionService {
         GroupEntity groupBefore = session.getGroup();
         Long groupIdBefore = groupBefore == null ? null : groupBefore.getId();
         LocalDate dayBefore = EnrolmentWindow.dayOf(session.getSessionTimeStart());
+        SessionSeriesEntity seriesBefore = session.getSessionSeries();
+        boolean finishedBefore = Boolean.TRUE.equals(session.getIsFinished());
 
         updateEntityRelations(session, updates);
         updateSessionTimes(session, updates);
         updateSimpleFields(session, updates);
+
+        // Dévalider, ou sortir la séance de sa série en changeant de groupe : la série payée à
+        // l'enseignant changerait sous sa paie (teacher-payroll, exigence 8). Le client renvoie la
+        // séance entière : seule une transition effective est refusée, pas un titre corrigé.
+        if (finishedBefore && !Boolean.TRUE.equals(session.getIsFinished())) {
+            paidSeriesGuard.assertNoActivePayout(seriesBefore, "dévalider une de ses séances");
+        }
+        if (groupChanged(groupBefore, session.getGroup())) {
+            paidSeriesGuard.assertNoActivePayout(seriesBefore, "déplacer une de ses séances vers un autre groupe");
+        }
 
         // Changer le jour ou le groupe d'une séance pointée change aussi qui elle concerne : ses
         // absences ne doivent pas en sortir (exigence 7.3, propriété P5). La séance est contrôlée
@@ -333,6 +351,7 @@ public class SessionService {
         sessionRepository.findById(id).ifPresent(session -> {
             // Refuse la suppression d'une séance rattachée à une année passée (Exigence 9.2).
             readOnlyYearGuard.assertSessionMutable(session);
+            paidSeriesGuard.assertNoActivePayout(session.getSessionSeries(), "supprimer une de ses séances");
             // Même règle que la désactivation : présences validées → suppression refusée.
             assertAttendanceNotValidated(session);
         });
@@ -447,6 +466,7 @@ public class SessionService {
         // Ce garde-fou existait déjà sur la création, la modification et la suppression :
         // sans lui, la désactivation offrait un contournement de la lecture seule.
         readOnlyYearGuard.assertSessionMutable(session);
+        paidSeriesGuard.assertNoActivePayout(session.getSessionSeries(), "désactiver une de ses séances");
 
         // Règle métier : une séance dont les présences sont validées ne peut pas être
         // supprimée. Les présences alimentent le nombre de séances suivies, donc le montant
@@ -483,6 +503,8 @@ public class SessionService {
         // 1. Réactiver la session
         SessionEntity session = sessionRepository.findById(Objects.requireNonNull(sessionId))
                 .orElseThrow(() -> new CustomServiceException(SESSION_NOT_FOUND_MESSAGE + sessionId));
+        // Une séance remise dans une série payée la rendrait non terminée (teacher-payroll, exigence 8).
+        paidSeriesGuard.assertNoActivePayout(session.getSessionSeries(), "réactiver une de ses séances");
 
         session.setActive(true);
         sessionRepository.save(session);

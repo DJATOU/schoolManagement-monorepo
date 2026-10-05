@@ -136,10 +136,17 @@ public abstract class CorrectionIntegrationTestSupport {
         receiptCounterRepository.deleteAll();
         paymentRepository.deleteAll();
         attendanceRepository.deleteAll();
+        // Paie des enseignants : ses paies désignent séries, groupes et enseignants.
+        jdbc.update("DELETE FROM payout_slip_issuance");
+        jdbc.update("UPDATE teacher_payout SET replaced_by_id = NULL, replaces_id = NULL, initial_payout_id = NULL");
+        jdbc.update("DELETE FROM teacher_payout");
+        jdbc.update("DELETE FROM teacher_pay_rate");
+        jdbc.update("DELETE FROM payout_counter");
         sessionRepository.deleteAll();
         seriesRepository.deleteAll();
         studentGroupRepository.deleteAll();
         groupRepository.deleteAll();
+        jdbc.update("DELETE FROM teacher");
         studentRepository.deleteAll();
         pricingRepository.deleteAll();
         schoolYearRepository.deleteAll();

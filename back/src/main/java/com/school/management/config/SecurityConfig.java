@@ -106,6 +106,11 @@ public class SecurityConfig {
                         // Remboursements d'un versement (historique d'une ligne). Un seul segment :
                         // le plafond, /api/refunds/payment/{id}/cap, reste ouvert aux deux rôles.
                         .requestMatchers(HttpMethod.GET, "/api/refunds/payment/*").hasRole("ADMIN")
+                        // Paie des enseignants : pièces de caisse, taux compris (spec teacher-payroll).
+                        .requestMatchers(HttpMethod.GET, "/api/teacher-pay-rates/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/teacher-payouts/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/teacher-payouts").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/teachers/*/payouts").hasRole("ADMIN")
                         // Lecture : les deux rôles
                         .requestMatchers(HttpMethod.GET, "/api/**").hasAnyRole("ADMIN", "VIEWER")
                         // Écriture : ADMIN uniquement

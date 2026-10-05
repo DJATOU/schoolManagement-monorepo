@@ -57,6 +57,12 @@
           <mat-icon class="item-icon">savings</mat-icon>
           <span class="item-text">{{ 'SIDE_MENU.REVENUE' | translate }}</span>
         </button>
+        <!-- Paie des enseignants : pièces de caisse, masquées pour un VIEWER comme les recettes. -->
+        <button *appHasRole="'ADMIN'" mat-list-item class="nav-item" routerLinkActive="active-link"
+          [routerLink]="['/admin/teacher-payroll']">
+          <mat-icon class="item-icon">account_balance_wallet</mat-icon>
+          <span class="item-text">{{ 'SIDE_MENU.TEACHER_PAYROLL' | translate }}</span>
+        </button>
       </div>
     </mat-expansion-panel>
 

@@ -27,6 +27,7 @@ import { CatchUpBillingListComponent } from './components/catch-up/catch-up-bill
 import { DiscountListComponent } from './components/discount/discount-list/discount-list.component';
 import { PaymentManagementComponent } from './components/admin/payment-management/payment-management.component';
 import { RevenueReportComponent } from './components/admin/revenue/revenue-report.component';
+import { TeacherPayrollComponent } from './components/admin/teacher-payroll/teacher-payroll.component';
 import { SeriesDetailComponent } from './components/serie/series-detail/series-detail.component';
 import { YearEndWorkflowComponent } from './components/year-end-workflow/year-end-workflow.component';
 import { ImportComponent } from './components/import/import.component';
@@ -77,6 +78,8 @@ export const routes: Routes = [
   { path: 'admin/payment-management', component: PaymentManagementComponent, canActivate: [roleGuard('ADMIN')] },
   // Recettes : données financières, ADMIN uniquement (l'API l'exige aussi).
   { path: 'admin/revenue', component: RevenueReportComponent, canActivate: [roleGuard('ADMIN')] },
+  // Paie des enseignants : pièces de caisse, ADMIN uniquement, lecture comprise (l'API l'exige aussi).
+  { path: 'admin/teacher-payroll', component: TeacherPayrollComponent, canActivate: [roleGuard('ADMIN')] },
   { path: 'admin/users', component: UserManagementComponent, canActivate: [roleGuard('ADMIN')] },
   { path: 'year-end', component: YearEndWorkflowComponent, canActivate: [authGuard] },
   { path: 'import', component: ImportComponent, canActivate: [authGuard] },

@@ -1,0 +1,81 @@
+<form [formGroup]="form" class="rt-form" (ngSubmit)="save()">
+  <h3 class="rt-title">{{ (editing ? 'teacherPayroll.rates.editTitle' : 'teacherPayroll.rates.createTitle') | translate }}</h3>
+  <div class="rt-fields">
+    <mat-form-field appearance="outline" class="rt-label">
+      <mat-label>{{ 'teacherPayroll.rates.label' | translate }}</mat-label>
+      <input matInput formControlName="label" [attr.maxlength]="maxLabelLength" required>
+      <mat-error>{{ 'teacherPayroll.rates.labelRequired' | translate }}</mat-error>
+    </mat-form-field>
+    <mat-form-field appearance="outline" class="rt-percent">
+      <mat-label>{{ 'teacherPayroll.rates.teacherPercent' | translate }}</mat-label>
+      <input matInput formControlName="teacherPercent" inputmode="decimal" required>
+      <span matTextSuffix>%</span>
+      <mat-hint *ngIf="schoolPercentPreview !== null">
+        {{ 'teacherPayroll.rates.schoolShare' | translate: { percent: schoolPercentPreview } }}
+      </mat-hint>
+      <mat-error>{{ 'teacherPayroll.rates.percentInvalid' | translate }}</mat-error>
+    </mat-form-field>
+    <div class="rt-buttons">
+      <button mat-flat-button color="primary" type="submit" class="rt-save" [disabled]="saving">
+        {{ (editing ? 'teacherPayroll.rates.save' : 'teacherPayroll.rates.create') | translate }}
+      </button>
+      <button mat-button type="button" *ngIf="editing" (click)="cancelEdit()">{{ 'common.cancel' | translate }}</button>
+    </div>
+  </div>
+  <p class="tp-error" role="alert" *ngIf="errorMessage">{{ errorMessage }}</p>
+  <p class="tp-hint">{{ 'teacherPayroll.rates.frozenHint' | translate }}</p>
+</form>
+
+<div class="tp-loading" *ngIf="isLoading">
+  <mat-progress-spinner mode="indeterminate" diameter="40"></mat-progress-spinner>
+</div>
+
+<div class="tp-empty" *ngIf="!isLoading && rates.length === 0">
+  <mat-icon>percent</mat-icon>
+  <span>{{ 'teacherPayroll.rates.empty' | translate }}</span>
+</div>
+
+<div class="tp-table-wrapper" *ngIf="!isLoading && rates.length > 0">
+  <table mat-table [dataSource]="rates" [trackBy]="trackById" class="mat-elevation-z1 tp-table">
+    <ng-container matColumnDef="label">
+      <th mat-header-cell *matHeaderCellDef>{{ 'teacherPayroll.rates.label' | translate }}</th>
+      <td mat-cell *matCellDef="let rate">{{ rate.label }}</td>
+    </ng-container>
+    <ng-container matColumnDef="teacherPercent">
+      <th mat-header-cell *matHeaderCellDef>{{ 'teacherPayroll.rates.teacherPercent' | translate }}</th>
+      <td mat-cell *matCellDef="let rate" class="tp-num">{{ rate.teacherPercent }} %</td>
+    </ng-container>
+    <ng-container matColumnDef="schoolPercent">
+      <th mat-header-cell *matHeaderCellDef>{{ 'teacherPayroll.rates.schoolPercent' | translate }}</th>
+      <td mat-cell *matCellDef="let rate" class="tp-num">{{ rate.schoolPercent }} %</td>
+    </ng-container>
+    <ng-container matColumnDef="status">
+      <th mat-header-cell *matHeaderCellDef>{{ 'teacherPayroll.columns.status' | translate }}</th>
+      <td mat-cell *matCellDef="let rate">
+        <span class="tp-chip" [ngClass]="rate.active ? 'tp-chip--ACTIVE' : 'tp-chip--CANCELLED'">
+          {{ (rate.active ? 'teacherPayroll.rates.active' : 'teacherPayroll.rates.inactive') | translate }}
+        </span>
+      </td>
+    </ng-container>
+    <ng-container matColumnDef="actions">
+      <th mat-header-cell *matHeaderCellDef></th>
+      <td mat-cell *matCellDef="let rate" class="tp-actions">
+        <ng-container *ngIf="rate.active">
+          <button mat-icon-button type="button" class="rt-edit" (click)="edit(rate)"
+            [matTooltip]="'teacherPayroll.rates.edit' | translate"
+            [attr.aria-label]="'teacherPayroll.rates.editAria' | translate: { label: rate.label }">
+            <mat-icon>edit</mat-icon>
+          </button>
+          <button mat-icon-button type="button" color="warn" class="rt-disable" (click)="disable(rate)" [disabled]="saving"
+            [matTooltip]="'teacherPayroll.rates.disable' | translate"
+            [attr.aria-label]="'teacherPayroll.rates.disableAria' | translate: { label: rate.label }">
+            <mat-icon>block</mat-icon>
+          </button>
+        </ng-container>
+      </td>
+    </ng-container>
+
+    <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+    <tr mat-row *matRowDef="let rate; columns: displayedColumns" [class.tp-row--muted]="!rate.active"></tr>
+  </table>
+</div>

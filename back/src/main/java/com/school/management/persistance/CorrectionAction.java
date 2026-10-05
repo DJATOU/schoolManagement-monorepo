@@ -31,5 +31,10 @@ public enum CorrectionAction {
     CATCH_UP_REMOVED,
 
     /** Exigence 10 : séance dévalidée. */
-    SESSION_UNVALIDATED
+    SESSION_UNVALIDATED,
+
+    /** Spec teacher-payroll, exigence 7.1 : paie d'enseignant annulée. */
+    PAYOUT_CANCELLED,
+    /** Spec teacher-payroll, exigence 7.2 : paie initiale remplacée par une paie à un autre taux. */
+    PAYOUT_REPLACED
 }

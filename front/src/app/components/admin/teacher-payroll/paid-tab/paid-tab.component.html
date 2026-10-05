@@ -1,0 +1,165 @@
+<form [formGroup]="filterForm" class="tp-filters">
+  <mat-form-field appearance="outline" class="tp-filter">
+    <mat-label>{{ 'teacherPayroll.filters.teacher' | translate }}</mat-label>
+    <mat-select formControlName="teacherId">
+      <mat-option [value]="null">{{ 'teacherPayroll.filters.all' | translate }}</mat-option>
+      <mat-option *ngFor="let teacher of teachers" [value]="teacher.id">{{ teacher.firstName }} {{ teacher.lastName }}</mat-option>
+    </mat-select>
+  </mat-form-field>
+  <mat-form-field appearance="outline" class="tp-filter">
+    <mat-label>{{ 'teacherPayroll.filters.group' | translate }}</mat-label>
+    <mat-select formControlName="groupId">
+      <mat-option [value]="null">{{ 'teacherPayroll.filters.allGroups' | translate }}</mat-option>
+      <mat-option *ngFor="let group of groups" [value]="group.id">{{ group.name }}</mat-option>
+    </mat-select>
+  </mat-form-field>
+  <mat-form-field appearance="outline" class="tp-filter">
+    <mat-label>{{ 'teacherPayroll.filters.status' | translate }}</mat-label>
+    <mat-select formControlName="status">
+      <mat-option [value]="null">{{ 'teacherPayroll.filters.allStatuses' | translate }}</mat-option>
+      <mat-option *ngFor="let status of statuses" [value]="status">{{ ('teacherPayroll.status.' + status) | translate }}</mat-option>
+    </mat-select>
+  </mat-form-field>
+  <mat-form-field appearance="outline" class="tp-filter">
+    <mat-label>{{ 'teacherPayroll.filters.from' | translate }}</mat-label>
+    <input matInput [matDatepicker]="fromPicker" formControlName="from">
+    <mat-datepicker-toggle matIconSuffix [for]="fromPicker"></mat-datepicker-toggle>
+    <mat-datepicker #fromPicker></mat-datepicker>
+  </mat-form-field>
+  <mat-form-field appearance="outline" class="tp-filter">
+    <mat-label>{{ 'teacherPayroll.filters.to' | translate }}</mat-label>
+    <input matInput [matDatepicker]="toPicker" formControlName="to">
+    <mat-datepicker-toggle matIconSuffix [for]="toPicker"></mat-datepicker-toggle>
+    <mat-datepicker #toPicker></mat-datepicker>
+  </mat-form-field>
+  <button mat-button type="button" class="tp-reset" (click)="resetFilters()">
+    <mat-icon>filter_alt_off</mat-icon>{{ 'teacherPayroll.filters.reset' | translate }}
+  </button>
+</form>
+
+<div class="tp-loading" *ngIf="isLoading">
+  <mat-progress-spinner mode="indeterminate" diameter="40"></mat-progress-spinner>
+</div>
+<p class="tp-error" role="alert" *ngIf="!isLoading && errorMessage">{{ errorMessage }}</p>
+
+<div class="tp-empty" *ngIf="!isLoading && !errorMessage && list && payouts.length === 0">
+  <mat-icon>receipt_long</mat-icon>
+  <span>{{ 'teacherPayroll.paid.empty' | translate }}</span>
+</div>
+
+<ng-container *ngIf="!isLoading && list && payouts.length > 0">
+  <div class="tp-table-wrapper">
+    <table mat-table [dataSource]="payouts" [trackBy]="trackById" class="mat-elevation-z1 tp-table">
+      <ng-container matColumnDef="number">
+        <th mat-header-cell *matHeaderCellDef>{{ 'teacherPayroll.columns.number' | translate }}</th>
+        <td mat-cell *matCellDef="let payout" class="tp-num">
+          <strong [class.tp-strike]="payout.status === 'CANCELLED'">{{ payout.payoutNumber }}</strong>
+          <div class="tp-sub" *ngIf="payout.initialPayoutNumber">
+            {{ 'teacherPayroll.paid.ofInitial' | translate: { number: payout.initialPayoutNumber } }}
+          </div>
+          <div class="tp-sub" *ngIf="payout.replacesNumber">
+            {{ 'teacherPayroll.paid.replaces' | translate: { number: payout.replacesNumber } }}
+          </div>
+        </td>
+      </ng-container>
+      <ng-container matColumnDef="paidAt">
+        <th mat-header-cell *matHeaderCellDef>{{ 'teacherPayroll.columns.paidAt' | translate }}</th>
+        <td mat-cell *matCellDef="let payout" class="tp-num">
+          {{ payout.paidAt | date:'dd/MM/yyyy HH:mm' }}
+          <div class="tp-sub">{{ 'teacherPayroll.paid.by' | translate: { user: payout.paidBy } }}</div>
+        </td>
+      </ng-container>
+      <ng-container matColumnDef="teacher">
+        <th mat-header-cell *matHeaderCellDef>{{ 'teacherPayroll.columns.teacher' | translate }}</th>
+        <td mat-cell *matCellDef="let payout">{{ payout.teacherName }}</td>
+      </ng-container>
+      <ng-container matColumnDef="series">
+        <th mat-header-cell *matHeaderCellDef>{{ 'teacherPayroll.columns.groupSeries' | translate }}</th>
+        <td mat-cell *matCellDef="let payout">
+          {{ payout.groupName }}
+          <div class="tp-sub">{{ payout.seriesName }}</div>
+        </td>
+      </ng-container>
+      <ng-container matColumnDef="nature">
+        <th mat-header-cell *matHeaderCellDef>{{ 'teacherPayroll.columns.nature' | translate }}</th>
+        <td mat-cell *matCellDef="let payout">
+          <span class="tp-chip" [ngClass]="'tp-chip--' + nature(payout)">{{ ('teacherPayroll.nature.' + nature(payout)) | translate }}</span>
+        </td>
+      </ng-container>
+      <ng-container matColumnDef="rate">
+        <th mat-header-cell *matHeaderCellDef>{{ 'teacherPayroll.columns.rate' | translate }}</th>
+        <td mat-cell *matCellDef="let payout">
+          {{ 'teacherPayroll.dialog.rateOption' | translate: { label: payout.rateLabel, percent: payout.teacherPercent } }}
+        </td>
+      </ng-container>
+      <ng-container matColumnDef="base">
+        <th mat-header-cell *matHeaderCellDef>{{ 'teacherPayroll.columns.base' | translate }}</th>
+        <td mat-cell *matCellDef="let payout" class="tp-num">
+          {{ payout.baseDelta | amount }} {{ currencySuffix }}
+          <div class="tp-sub" *ngIf="payout.kind === 'REGULARIZATION'">
+            {{ 'teacherPayroll.paid.netNow' | translate: { amount: (payout.collectedNet | amount) } }}
+          </div>
+        </td>
+      </ng-container>
+      <ng-container matColumnDef="teacherAmount">
+        <th mat-header-cell *matHeaderCellDef>{{ 'teacherPayroll.columns.teacherAmount' | translate }}</th>
+        <td mat-cell *matCellDef="let payout" class="tp-num">
+          <strong [class.tp-strike]="payout.status === 'CANCELLED'">{{ payout.teacherAmount | amount }} {{ currencySuffix }}</strong>
+        </td>
+      </ng-container>
+      <ng-container matColumnDef="schoolAmount">
+        <th mat-header-cell *matHeaderCellDef>{{ 'teacherPayroll.columns.schoolAmount' | translate }}</th>
+        <td mat-cell *matCellDef="let payout" class="tp-num">
+          <span [class.tp-strike]="payout.status === 'CANCELLED'">{{ payout.schoolAmount | amount }} {{ currencySuffix }}</span>
+        </td>
+      </ng-container>
+      <ng-container matColumnDef="status">
+        <th mat-header-cell *matHeaderCellDef>{{ 'teacherPayroll.columns.status' | translate }}</th>
+        <td mat-cell *matCellDef="let payout">
+          <span class="tp-chip" [ngClass]="'tp-chip--' + payout.status">{{ ('teacherPayroll.status.' + payout.status) | translate }}</span>
+          <div class="tp-sub" *ngIf="payout.status === 'CANCELLED'">
+            {{ 'teacherPayroll.paid.cancelledOn' | translate: {
+                 date: (payout.cancelledAt | date:'dd/MM/yyyy'), user: payout.cancelledBy
+               } }}
+            <ng-container *ngIf="payout.cancelReasonType">
+              · {{ ('correction.reason.' + payout.cancelReasonType) | translate }}
+            </ng-container>
+            <ng-container *ngIf="payout.replacedByNumber">
+              · {{ 'teacherPayroll.paid.replacedBy' | translate: { number: payout.replacedByNumber } }}
+            </ng-container>
+          </div>
+        </td>
+      </ng-container>
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef></th>
+        <td mat-cell *matCellDef="let payout" class="tp-actions">
+          <button mat-icon-button type="button" class="tp-reprint" (click)="reprint(payout)" [disabled]="printingId !== null"
+            [matTooltip]="'teacherPayroll.slip.reprint' | translate"
+            [attr.aria-label]="'teacherPayroll.slip.reprintAria' | translate: { number: payout.payoutNumber }">
+            <mat-icon>print</mat-icon>
+          </button>
+          <ng-container *ngIf="payout.status === 'ACTIVE'">
+            <button *ngIf="payout.kind === 'INITIAL'" mat-icon-button type="button" class="tp-replace" (click)="replace(payout)"
+              [matTooltip]="'teacherPayroll.correction.replaceAction' | translate"
+              [attr.aria-label]="'teacherPayroll.correction.replaceAria' | translate: { number: payout.payoutNumber }">
+              <mat-icon>swap_horiz</mat-icon>
+            </button>
+            <button mat-icon-button type="button" color="warn" class="tp-cancel" (click)="cancel(payout)"
+              [matTooltip]="'teacherPayroll.correction.cancelAction' | translate"
+              [attr.aria-label]="'teacherPayroll.correction.cancelAria' | translate: { number: payout.payoutNumber }">
+              <mat-icon>block</mat-icon>
+            </button>
+          </ng-container>
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumns; sticky: true"></tr>
+      <tr mat-row *matRowDef="let payout; columns: displayedColumns" [class.tp-row--cancelled]="payout.status === 'CANCELLED'"></tr>
+    </table>
+  </div>
+  <div class="tp-totals" aria-live="polite">
+    <span>{{ 'teacherPayroll.paid.teacherTotal' | translate: { amount: (list.teacherTotal | amount) } }}</span>
+    <span>{{ 'teacherPayroll.paid.schoolTotal' | translate: { amount: (list.schoolTotal | amount) } }}</span>
+  </div>
+  <p class="tp-hint">{{ 'teacherPayroll.paid.totalsHint' | translate }}</p>
+</ng-container>

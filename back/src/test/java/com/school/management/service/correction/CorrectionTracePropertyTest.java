@@ -790,7 +790,8 @@ class CorrectionTracePropertyTest {
             EncashmentQueryService.class, RefundService.class, RefundNumberService.class,
             CorrectionAuditService.class, CorrectionRunner.class, EncashmentCorrectionService.class,
             EnrolmentCorrectionService.class, AttendanceCorrectionService.class, VentilationMover.class,
-            SeriesSettlement.class, AbsenceWindowGuard.class, RollCallService.class, CatchUpRoutingService.class })
+            SeriesSettlement.class, AbsenceWindowGuard.class, RollCallService.class, CatchUpRoutingService.class,
+            com.school.management.service.payroll.PaidSeriesGuard.class })
     static class TraceTestContext {
 
         @Bean

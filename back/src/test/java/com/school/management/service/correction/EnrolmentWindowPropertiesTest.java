@@ -811,7 +811,8 @@ class EnrolmentWindowPropertiesTest {
                                       AttendanceService attendanceService, ReadOnlyYearGuard guard) {
             return new SessionService(sessions, groups, Mockito.mock(SessionMapper.class), rooms, teachers, series,
                     Mockito.mock(PaymentDetailDeactivationService.class), attendanceService, guard,
-                    Mockito.mock(SeriesRolloverService.class));
+                    Mockito.mock(SeriesRolloverService.class),
+                    Mockito.mock(com.school.management.service.payroll.PaidSeriesGuard.class));
         }
     }
 }

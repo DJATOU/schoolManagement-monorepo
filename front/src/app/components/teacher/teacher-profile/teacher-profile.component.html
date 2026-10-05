@@ -78,6 +78,9 @@
       </div>
     </mat-expansion-panel>
   </mat-accordion>
+
+  <!-- Paies versées : pièces de caisse, réservées au rôle ADMIN comme l'API (teacher-payroll, 9.3). -->
+  <app-teacher-payouts *appHasRole="'ADMIN'" [teacherId]="teacher?.id"></app-teacher-payouts>
 </div>
 
 <ng-template #loadingSpinner>

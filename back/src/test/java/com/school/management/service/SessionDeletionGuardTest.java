@@ -60,7 +60,8 @@ class SessionDeletionGuardTest {
                 paymentDetailDeactivationService,
                 attendanceService,
                 readOnlyYearGuard,
-                mock(SeriesRolloverService.class));
+                mock(SeriesRolloverService.class),
+                mock(com.school.management.service.payroll.PaidSeriesGuard.class));
     }
 
     private SessionEntity session(boolean finished) {

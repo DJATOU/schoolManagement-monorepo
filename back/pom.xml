@@ -454,6 +454,21 @@
                                         <!-- D.4 : le Journal est ce qu'on montre à un parent qui
                                              conteste ; chaque source doit être lue en clair. -->
                                         <include>com.school.management.service.correction.*Journal*</include>
+                                        <!-- Spec teacher-payroll : le partage de l'encaissé, le
+                                             catalogue des taux, l'avancement d'une série, le
+                                             numéro et le bordereau d'une paie. TeacherPayoutService
+                                             reste hors seuil : le filet de l'index unique et une JVM
+                                             sans SHA-256 ne se provoquent pas en test. Ses règles
+                                             sont éprouvées par mutation, et la concurrence sur
+                                             PostgreSQL. -->
+                                        <include>com.school.management.service.payroll.PayoutCalculator*</include>
+                                        <include>com.school.management.service.payroll.TeacherPayRateService</include>
+                                        <include>com.school.management.service.payroll.SeriesCompletionService*</include>
+                                        <include>com.school.management.service.payroll.PayoutNumberService</include>
+                                        <include>com.school.management.service.payroll.PayoutSlipService</include>
+                                        <!-- Lot U : corriger une paie, et la garde des séries payées. -->
+                                        <include>com.school.management.service.correction.PayoutCorrectionService*</include>
+                                        <include>com.school.management.service.payroll.PaidSeriesGuard</include>
                                     </includes>
                                     <limits>
                                         <limit>
