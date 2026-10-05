@@ -91,4 +91,7 @@ d'argent est vérifiée par mutation, puis le code est restauré.
 
 ## Livraison
 
-- [ ] L.1 Suites complètes, mutations, `business-rules.md` relu, mode d'emploi d'une page
+- [x] L.1 Suites complètes (backend 1429 dont PostgreSQL, Karma 704), 107 mutations tuées sur les
+  quatre lots, `business-rules.md` relu et complété (remplacement, garde des séries payées), mode
+  d'emploi d'une page : `docs/guides/paie-des-enseignants.md` (sans captures : elles demandent
+  l'application lancée sur le poste de l'école)
