@@ -45,6 +45,23 @@ public interface GroupRepository extends JpaRepository<GroupEntity, Long> {
     long countActiveBySchoolYearId(@Param("schoolYearId") Long schoolYearId);
 
     /**
+     * Groupes en activité : non désactivés, et comptant au moins une inscription active
+     * (statistiques dashboard).
+     *
+     * <p>Un groupe créé, par import par exemple, mais sans élève n'est pas en activité : sans ce
+     * second chiffre, « 16 groupes » laissait croire à 16 classes ouvertes quand une seule l'était.</p>
+     */
+    @Query("SELECT COUNT(g) FROM GroupEntity g WHERE (g.active IS NULL OR g.active = true) "
+            + "AND EXISTS (SELECT sg.id FROM StudentGroupEntity sg WHERE sg.group = g AND sg.active = true)")
+    long countWithActiveEnrolment();
+
+    /** Idem, restreint à une année scolaire. */
+    @Query("SELECT COUNT(g) FROM GroupEntity g WHERE g.schoolYear.id = :schoolYearId "
+            + "AND (g.active IS NULL OR g.active = true) "
+            + "AND EXISTS (SELECT sg.id FROM StudentGroupEntity sg WHERE sg.group = g AND sg.active = true)")
+    long countWithActiveEnrolmentBySchoolYearId(@Param("schoolYearId") Long schoolYearId);
+
+    /**
      * Groupes non désactivés, toutes années confondues.
      *
      * <p>Utilisé par les listes : un groupe désactivé doit disparaître de l'interface, sinon

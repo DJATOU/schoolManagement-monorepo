@@ -3,6 +3,7 @@ import { HttpTestingController } from '@angular/common/http/testing';
 
 import { DashboardComponent } from './dashboard.component';
 import { DashboardStats } from '../../models/dashboard/dashboard-stats';
+import { TranslateService } from '@ngx-translate/core';
 import { API_BASE_URL } from '../../api-base-url';
 import { setupComponentTestBed } from '../../../testing/setup';
 
@@ -21,6 +22,7 @@ describe('DashboardComponent', () => {
     femaleStudents: 60,
     totalTeachers: 9,
     totalGroups: 14,
+    activeGroups: 4,
     sessionsValidated: 40,
     sessionsScheduled: 10,
     sessionsDeactivated: 2,
@@ -67,6 +69,25 @@ describe('DashboardComponent', () => {
     expect(component.kpis.length).toBe(6);
     expect(component.kpis.map(k => k.value))
       .toEqual([120, 9, 14, 18, 3, 5]);
+  });
+
+  it('précise sous la carte Groupes combien ont des élèves, sans toucher au total', () => {
+    // Le total compte aussi les groupes créés sans élèves (16 groupes dont 1 seul avec des
+    // inscrits sur la base de démonstration) : sans la précision, la carte se lisait comme
+    // 16 classes qui tournent.
+    const translate = TestBed.inject(TranslateService);
+    translate.setTranslation('fr', { dashboard: { kpi: { groupsActive: 'dont {{count}} avec des élèves' } } }, true);
+    translate.use('fr');
+
+    flushStats();
+
+    const groups = component.kpis[2];
+    expect(groups.value).toBe(14);
+    expect(groups.detail).toBe('dont 4 avec des élèves');
+
+    const details = Array.from(fixture.nativeElement.querySelectorAll('.kpi-detail') as NodeListOf<HTMLElement>)
+      .map(el => el.textContent?.trim());
+    expect(details).toEqual(['dont 4 avec des élèves']);
   });
 
   it('pct() et maleRate() ne divisent jamais par zéro', () => {

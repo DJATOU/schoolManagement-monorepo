@@ -17,6 +17,17 @@ public interface TeacherRepository extends JpaRepository<TeacherEntity, Long> {
 
     List<TeacherEntity> findByFirstNameAndLastName(String firstName, String lastName);
 
+    /**
+     * Un enseignant de ce prénom et de ce nom existe-t-il déjà, casse et espaces de bord ignorés ?
+     *
+     * <p>Garde de l'import CSV : réimporter le fichier des enseignants créait une seconde fiche par
+     * personne, comptée par le tableau de bord et proposée en double dans chaque liste.</p>
+     */
+    @Query("SELECT COUNT(t) > 0 FROM TeacherEntity t "
+            + "WHERE lower(trim(t.firstName)) = lower(trim(:firstName)) "
+            + "AND lower(trim(t.lastName)) = lower(trim(:lastName))")
+    boolean existsByFullName(@Param("firstName") String firstName, @Param("lastName") String lastName);
+
     // Method to find teachers associated with a specific group
     List<TeacherEntity> findByGroups_Id(Long groupId);
 

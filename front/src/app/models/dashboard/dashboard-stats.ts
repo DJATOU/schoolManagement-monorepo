@@ -10,6 +10,8 @@ export interface DashboardStats {
 
   totalTeachers: number;
   totalGroups: number;
+  /** Groupes actifs ayant au moins une inscription active (sous-ensemble de totalGroups). */
+  activeGroups: number;
 
   sessionsValidated: number;
   sessionsScheduled: number;

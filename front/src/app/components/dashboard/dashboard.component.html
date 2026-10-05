@@ -52,6 +52,7 @@
         <div class="kpi-body">
           <span class="kpi-value">{{ kpi.value }}</span>
           <span class="kpi-label">{{ kpi.label }}</span>
+          <span class="kpi-detail" *ngIf="kpi.detail">{{ kpi.detail }}</span>
         </div>
       </article>
     </section>

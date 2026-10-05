@@ -142,6 +142,7 @@ $muted: #64748b;
   .kpi-body { position: relative; display: flex; flex-direction: column; }
   .kpi-value { font-size: 1.9rem; font-weight: 800; line-height: 1; }
   .kpi-label { margin-top: 6px; font-size: 0.88rem; font-weight: 600; opacity: 0.9; }
+  .kpi-detail { margin-top: 2px; font-size: 0.78rem; font-weight: 500; opacity: 0.85; }
 }
 
 .kpi--indigo  { background: linear-gradient(135deg, #6366f1 0%, #818cf8 100%); }

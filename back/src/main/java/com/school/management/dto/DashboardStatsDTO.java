@@ -26,6 +26,7 @@ public class DashboardStatsDTO {
     // Effectifs généraux
     private long totalTeachers;
     private long totalGroups;
+    private long activeGroups;         // dont au moins un élève inscrit
 
     // Sessions (sur la période, par statut)
     private long sessionsValidated;    // terminées (isFinished = true, actives)

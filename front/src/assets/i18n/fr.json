@@ -509,6 +509,7 @@
       "activeStudents": "Étudiants actifs",
       "teachers": "Enseignants",
       "groups": "Groupes",
+      "groupsActive": "dont {{count}} avec des élèves",
       "newStudents": "Nouveaux inscrits",
       "leaving": "Sortants (total)",
       "catchUps": "Rattrapages"
