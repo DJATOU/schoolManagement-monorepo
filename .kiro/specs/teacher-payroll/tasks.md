@@ -69,18 +69,25 @@ d'argent est vérifiée par mutation, puis le code est restauré.
 
 ## Lot S — Écrans
 
-- [ ] S.1 Services Angular `TeacherPayRateService`, `TeacherPayoutService` ; modèles
-- [ ] S.2 Page `admin/teacher-payroll`, onglet Taux ; entrée de menu
+- [x] S.1 Services Angular `TeacherPayRateService`, `TeacherPayoutService` (refus de paie en
+  `PayoutError` portant le nouvel Aperçu, corrections en `CorrectionError`) ; modèles
+  `models/payroll/payroll.ts`
+- [x] S.2 Page `admin/teacher-payroll` (`roleGuard('ADMIN')`, onglets recréés à l'ouverture), onglet
+  Taux (création, modification, désactivation, part de l'école annoncée) ; entrée de menu ADMIN
   _Exigences 1, 9.1_
-- [ ] S.3 Onglet À payer, dialogue de paie (taux, Aperçu en clair, confirmation), Régularisation
+- [x] S.3 Onglet À payer (état et raison de chaque série), dialogue de paie : taux sans défaut,
+  calcul en clair, confirmation, nouvel Aperçu sur 409 ; régularisation complément ou retenue
   _Exigences 2, 3, 4, 6_
-- [ ] S.4 Bordereau PDF (duplicata, annulée, retenue) et réimpression
+- [x] S.4 Bordereau PDF (`PayoutSlipPdfService.buildDocument`) : duplicata et rang, tampon ANNULÉE
+  et remplaçante, retenue lue comme une somme due ; proposé après chaque paie, réimprimable
   _Exigence 5_
-- [ ] S.5 Onglet Paies versées : filtres, totaux, annuler / remplacer par `CorrectionDialogComponent`
+- [x] S.5 Onglet Paies versées : filtres, totaux des paies actives, annuler / refaire à un autre
+  taux par `CorrectionDialogComponent` (« Modifier » ramène au choix du taux)
   _Exigences 7, 9.2_
-- [ ] S.6 Fiche Enseignant : panneau Paies
+- [x] S.6 Fiche Enseignant : panneau Paies (ADMIN), total versé, réimpression
   _Exigence 9.3_
-- [ ] S.7 Clés i18n FR / EN, parité ; build de production
+- [x] S.7 Clés i18n FR / EN listées dans la parité ; build de production. Karma 701 verts,
+  14 mutations du lot tuées
 
 ## Livraison
 

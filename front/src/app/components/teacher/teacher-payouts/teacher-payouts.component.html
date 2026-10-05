@@ -1,0 +1,52 @@
+<mat-accordion class="pf-accordion">
+  <mat-expansion-panel [expanded]="true">
+    <mat-expansion-panel-header>
+      <mat-panel-title>
+        <mat-icon>account_balance_wallet</mat-icon>
+        {{ 'teacherPayroll.profile.title' | translate }} ({{ payouts.length }})
+      </mat-panel-title>
+    </mat-expansion-panel-header>
+    <div class="tpo-loading" *ngIf="loading">
+      <mat-spinner diameter="32"></mat-spinner>
+    </div>
+    <p class="tpo-error" role="alert" *ngIf="!loading && errorMessage">{{ errorMessage }}</p>
+    <ng-container *ngIf="!loading && !errorMessage && list">
+      <div class="pf-empty" *ngIf="payouts.length === 0">
+        <mat-icon>account_balance_wallet</mat-icon>
+        <span>{{ 'teacherPayroll.profile.empty' | translate }}</span>
+      </div>
+      <p class="tpo-total" *ngIf="payouts.length > 0">
+        {{ 'teacherPayroll.profile.total' | translate: { amount: (list.teacherTotal | amount) } }}
+      </p>
+      <ul class="tpo-list" *ngIf="payouts.length > 0">
+        <li class="tpo-item" *ngFor="let payout of payouts; trackBy: trackById"
+          [class.tpo-item--cancelled]="payout.status === 'CANCELLED'">
+          <div class="tpo-head">
+            <span class="tpo-number">{{ payout.payoutNumber }}</span>
+            <span class="tpo-nature" [ngClass]="'tpo-nature--' + nature(payout)">
+              {{ ('teacherPayroll.nature.' + nature(payout)) | translate }}
+            </span>
+            <span class="tpo-status" *ngIf="payout.status === 'CANCELLED'">
+              {{ 'teacherPayroll.status.CANCELLED' | translate }}
+            </span>
+            <span class="tpo-amount">{{ payout.teacherAmount | amount }} {{ currencySuffix }}</span>
+          </div>
+          <p class="tpo-meta">
+            {{ payout.paidAt | date:'dd/MM/yyyy' }} · {{ payout.groupName }} · {{ payout.seriesName }}
+            · {{ 'teacherPayroll.dialog.rateOption' | translate: { label: payout.rateLabel, percent: payout.teacherPercent } }}
+          </p>
+          <p class="tpo-meta" *ngIf="payout.replacedByNumber">
+            {{ 'teacherPayroll.paid.replacedBy' | translate: { number: payout.replacedByNumber } }}
+          </p>
+          <div class="tpo-actions">
+            <button mat-stroked-button type="button" class="tpo-reprint" (click)="reprint(payout)"
+              [disabled]="printingId !== null"
+              [attr.aria-label]="'teacherPayroll.slip.reprintAria' | translate: { number: payout.payoutNumber }">
+              <mat-icon>print</mat-icon>{{ 'teacherPayroll.slip.reprint' | translate }}
+            </button>
+          </div>
+        </li>
+      </ul>
+    </ng-container>
+  </mat-expansion-panel>
+</mat-accordion>

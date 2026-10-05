@@ -1,0 +1,102 @@
+<h2 mat-dialog-title>{{ (paying ? 'teacherPayroll.dialog.payTitle' : 'teacherPayroll.dialog.regularizeTitle') | translate }}</h2>
+<mat-dialog-content class="pd-content">
+  <p class="pd-subject">
+    {{ 'teacherPayroll.dialog.subject' | translate: {
+         series: data.series.seriesName, group: data.series.groupName, teacher: data.series.teacherName
+       } }}
+  </p>
+  <p class="pd-meta">
+    {{ 'teacherPayroll.dialog.sessions' | translate: {
+         validated: data.series.validatedSessions, active: data.series.activeSessions
+       } }}
+    <ng-container *ngIf="data.series.initialPayoutNumber">
+      · {{ 'teacherPayroll.dialog.initialPayout' | translate: { number: data.series.initialPayoutNumber } }}
+    </ng-container>
+  </p>
+
+  <form [formGroup]="form" class="pd-form" (ngSubmit)="requestPreview()">
+    <mat-form-field appearance="outline" class="pd-field" *ngIf="paying">
+      <mat-label>{{ 'teacherPayroll.dialog.rate' | translate }}</mat-label>
+      <mat-select formControlName="rateId" required>
+        <mat-option *ngFor="let rate of data.rates" [value]="rate.id">
+          {{ 'teacherPayroll.dialog.rateOption' | translate: { label: rate.label, percent: rate.teacherPercent } }}
+        </mat-option>
+      </mat-select>
+      <mat-hint *ngIf="data.rates.length === 0">{{ 'teacherPayroll.dialog.noRate' | translate }}</mat-hint>
+      <mat-error>{{ 'teacherPayroll.dialog.rateRequired' | translate }}</mat-error>
+    </mat-form-field>
+    <mat-form-field appearance="outline" class="pd-field">
+      <mat-label>{{ 'teacherPayroll.dialog.note' | translate }}</mat-label>
+      <textarea matInput formControlName="note" rows="2" [attr.maxlength]="maxNoteLength"></textarea>
+      <mat-hint align="end">{{ (form.get('note')!.value || '').length }} / {{ maxNoteLength }}</mat-hint>
+    </mat-form-field>
+  </form>
+
+  <div class="pd-busy" *ngIf="busy">
+    <mat-spinner diameter="28"></mat-spinner>
+  </div>
+
+  <div class="pd-error" role="alert" *ngIf="errorMessage">
+    <mat-icon aria-hidden="true">error_outline</mat-icon>
+    <p>{{ errorMessage }}</p>
+  </div>
+
+  <div class="pd-stale" role="alert" *ngIf="staleNotice">
+    <mat-icon aria-hidden="true">update</mat-icon>
+    <p>{{ 'teacherPayroll.dialog.stale' | translate }}</p>
+  </div>
+
+  <!-- Le calcul en clair, tel qu'on l'expliquera à l'enseignant (exigence 3.2). -->
+  <section class="pd-preview" *ngIf="preview" aria-live="polite">
+    <h3 class="pd-preview-title">{{ 'teacherPayroll.dialog.previewTitle' | translate }}</h3>
+    <p class="pd-line">
+      {{ 'teacherPayroll.dialog.composition' | translate: {
+           gross: (preview.collectedGross | amount), refunded: (preview.refunded | amount), net: (preview.collectedNet | amount)
+         } }}
+    </p>
+    <ng-container *ngIf="paying; else regularization">
+      <p class="pd-line pd-line--main">
+        {{ 'teacherPayroll.dialog.calculation' | translate: {
+             base: (preview.baseDelta | amount), percent: preview.teacherPercent,
+             teacher: (preview.teacherAmount | amount), name: preview.teacherName
+           } }}
+      </p>
+    </ng-container>
+    <ng-template #regularization>
+      <p class="pd-line">
+        {{ 'teacherPayroll.dialog.regularizationBase' | translate: {
+             net: (preview.collectedNet | amount), covered: (preview.netCovered | amount), base: (preview.baseDelta | amount)
+           } }}
+      </p>
+      <p class="pd-line">
+        {{ 'teacherPayroll.dialog.regularizationShare' | translate: {
+             percent: preview.teacherPercent, due: (teacherDue | amount), paid: (preview.teacherPaid | amount)
+           } }}
+      </p>
+      <p class="pd-line pd-line--main" [class.pd-line--deduction]="deduction">
+        <ng-container *ngIf="!deduction">
+          {{ 'teacherPayroll.dialog.complement' | translate: { amount: (preview.teacherAmount | amount), name: preview.teacherName } }}
+        </ng-container>
+        <ng-container *ngIf="deduction">
+          {{ 'teacherPayroll.dialog.deduction' | translate: { amount: (deductionAmount | amount), name: preview.teacherName } }}
+        </ng-container>
+      </p>
+    </ng-template>
+    <p class="pd-line">
+      {{ 'teacherPayroll.dialog.school' | translate: { school: (preview.schoolAmount | amount) } }}
+    </p>
+    <p class="pd-hint">{{ 'teacherPayroll.dialog.frozen' | translate: { label: preview.rateLabel } }}</p>
+  </section>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button type="button" (click)="cancel()">{{ 'common.cancel' | translate }}</button>
+  <button mat-stroked-button type="button" class="pd-preview-button" *ngIf="!preview"
+    (click)="requestPreview()" [disabled]="!canPreview">
+    {{ 'teacherPayroll.dialog.preview' | translate }}
+  </button>
+  <button mat-flat-button color="primary" type="button" class="pd-confirm-button" *ngIf="preview"
+    (click)="confirm()" [disabled]="busy">
+    {{ (deduction ? 'teacherPayroll.dialog.confirmDeduction' : 'teacherPayroll.dialog.confirm') | translate }}
+  </button>
+</mat-dialog-actions>

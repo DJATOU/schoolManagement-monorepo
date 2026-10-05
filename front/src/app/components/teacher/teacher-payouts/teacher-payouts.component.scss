@@ -1,0 +1,101 @@
+/*
+  Paies d'un enseignant. Le panneau reprend l'accordéon de la fiche (pf-accordion, global) ; seules
+  les lignes sont stylées ici, avec les teintes de l'historique des versements d'un élève.
+*/
+.tpo-loading {
+  display: flex;
+  justify-content: center;
+  padding: 24px;
+}
+
+.tpo-error {
+  margin: 8px 4px;
+  color: #b91c1c;
+}
+
+.tpo-total {
+  margin: 4px 4px 8px;
+  font-weight: 700;
+  color: #1e293b;
+  font-variant-numeric: tabular-nums;
+}
+
+.tpo-list {
+  list-style: none;
+  margin: 0;
+  padding: 6px 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tpo-item {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 10px 14px;
+  background: #fff;
+}
+
+.tpo-item--cancelled {
+  background: #f8fafc;
+
+  .tpo-number,
+  .tpo-amount {
+    text-decoration: line-through;
+    color: #64748b;
+  }
+}
+
+.tpo-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tpo-number {
+  font-weight: 700;
+  color: #1e293b;
+  font-variant-numeric: tabular-nums;
+}
+
+.tpo-nature,
+.tpo-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 9px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: #dcfce7;
+  color: #166534;
+}
+
+.tpo-nature--COMPLEMENT {
+  background: #eef2ff;
+  color: #4338ca;
+}
+
+.tpo-nature--DEDUCTION,
+.tpo-status {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.tpo-amount {
+  margin-left: auto;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.tpo-meta {
+  margin: 4px 0 0;
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
+.tpo-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 6px;
+}

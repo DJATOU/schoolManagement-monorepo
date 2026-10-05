@@ -24,6 +24,8 @@ import { ProfilePdfService } from '../../../services/profile-pdf.service';
 import { TranslateService } from '@ngx-translate/core';
 import { AdminOnlyDirective } from '../../../shared/admin-only.directive';
 import { SecureImageDirective } from '../../../shared/secure-image.directive';
+import { HasRoleDirective } from '../../../shared/has-role.directive';
+import { TeacherPayoutsComponent } from '../teacher-payouts/teacher-payouts.component';
 @Component({
   selector: 'app-teacher-profile',
   standalone: true,
@@ -42,7 +44,9 @@ import { SecureImageDirective } from '../../../shared/secure-image.directive';
     GroupCardComponent,
     AdminOnlyDirective
   ,
-    SecureImageDirective
+    SecureImageDirective,
+    HasRoleDirective,
+    TeacherPayoutsComponent
   ],
   templateUrl: './teacher-profile.component.html',
   styleUrls: ['./teacher-profile.component.scss']

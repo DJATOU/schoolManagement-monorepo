@@ -184,6 +184,58 @@ describe('i18n FR/EN key parity', () => {
       .toEqual([]);
   });
 
+  /**
+   * Clés de la Paie des enseignants (spec teacher-payroll, S.7), y compris celles composées à
+   * l'exécution : état d'une série, statut et nature d'une paie, sujet d'une correction, titre du
+   * bordereau. Une clé oubliée dans les deux fichiers s'afficherait brute.
+   */
+  const teacherPayrollKeys = [
+    'SIDE_MENU.TEACHER_PAYROLL',
+    ...['title', 'subtitle', 'tabs.payable', 'tabs.paid', 'tabs.rates'].map(key => `teacherPayroll.${key}`),
+    ...['PAYABLE', 'NOT_FINISHED', 'NO_TEACHER', 'NOTHING_COLLECTED', 'TO_REGULARIZE'].map(key => `teacherPayroll.state.${key}`),
+    ...['ACTIVE', 'CANCELLED'].map(key => `teacherPayroll.status.${key}`),
+    ...['INITIAL', 'COMPLEMENT', 'DEDUCTION'].flatMap(key => [
+      `teacherPayroll.nature.${key}`, `teacherPayroll.correction.subject.${key}`, `teacherPayroll.slip.title.${key}`]),
+    ...['teacher', 'group', 'all', 'allGroups', 'status', 'allStatuses', 'from', 'to', 'reset']
+      .map(key => `teacherPayroll.filters.${key}`),
+    ...['group', 'series', 'teacher', 'sessions', 'collectedNet', 'state', 'number', 'paidAt', 'groupSeries', 'nature',
+      'rate', 'base', 'teacherAmount', 'schoolAmount', 'status'].map(key => `teacherPayroll.columns.${key}`),
+    ...['hint', 'empty', 'noTeacher', 'grossMinusRefunded', 'remaining', 'noTeacherHint', 'nothingHint', 'deductionHint',
+      'complementHint', 'pay', 'payAria', 'regularize', 'regularizeAria', 'recorded'].map(key => `teacherPayroll.payable.${key}`),
+    ...['empty', 'ofInitial', 'replaces', 'by', 'netNow', 'cancelledOn', 'replacedBy', 'teacherTotal', 'schoolTotal',
+      'totalsHint'].map(key => `teacherPayroll.paid.${key}`),
+    ...['payTitle', 'regularizeTitle', 'subject', 'sessions', 'initialPayout', 'rate', 'rateOption', 'noRate', 'rateRequired',
+      'note', 'stale', 'previewTitle', 'composition', 'calculation', 'regularizationBase', 'regularizationShare', 'complement',
+      'deduction', 'school', 'frozen', 'preview', 'confirm', 'confirmDeduction', 'error'].map(key => `teacherPayroll.dialog.${key}`),
+    ...['cancelTitle', 'replaceTitle', 'replaceSubject', 'replaceHint', 'newRate', 'noOtherRate', 'noteKept', 'next',
+      'cancelled', 'replaced', 'replaceAction', 'replaceAria', 'cancelAction', 'cancelAria']
+      .map(key => `teacherPayroll.correction.${key}`),
+    ...['createTitle', 'editTitle', 'label', 'labelRequired', 'teacherPercent', 'schoolPercent', 'schoolShare',
+      'percentInvalid', 'save', 'create', 'frozenHint', 'empty', 'active', 'inactive', 'edit', 'editAria', 'disable',
+      'disableAria', 'created', 'updated', 'disabled'].map(key => `teacherPayroll.rates.${key}`),
+    ...['print', 'printError', 'reprint', 'reprintAria', 'cancelledStamp', 'number', 'paidOn', 'duplicate', 'cancelledOn',
+      'replacedBy', 'partiesHeading', 'calculationHeading', 'recordedBy', 'footer', 'teacher', 'group', 'series', 'rate',
+      'rateValue', 'initialPayout', 'replaces', 'collectedGross', 'refunded', 'collectedNet', 'calculation',
+      'calculationValue', 'baseDelta', 'deductionAmount', 'teacherAmount', 'schoolAmount', 'signatureTeacher',
+      'signatureSchool', 'money'].map(key => `teacherPayroll.slip.${key}`),
+    ...['title', 'empty', 'total'].map(key => `teacherPayroll.profile.${key}`)
+  ];
+
+  it('should define every teacher payroll key in both files', () => {
+    const missing = teacherPayrollKeys.filter((key) => !frKeys.has(key) || !enKeys.has(key));
+    expect(missing)
+      .withContext(`Teacher payroll keys missing from fr.json or en.json: ${JSON.stringify(missing)}`)
+      .toEqual([]);
+  });
+
+  it('should print DUPLICATA with its rank and mark a cancelled slip', () => {
+    // Exigence 5.3 et 5.4 : la réimpression porte son rang, la paie annulée son tampon.
+    expect(readKey(frTranslations, 'teacherPayroll.slip.duplicate')).toContain('DUPLICATA');
+    expect(readKey(frTranslations, 'teacherPayroll.slip.duplicate')).toContain('{{rank}}');
+    expect(readKey(enTranslations, 'teacherPayroll.slip.duplicate')).toContain('{{rank}}');
+    expect(readKey(frTranslations, 'teacherPayroll.slip.cancelledStamp')).toBe('ANNULÉE');
+  });
+
   it('should include the school-year feature keys in both files', () => {
     const featurePrefixes = ['schoolYear.', 'parcours.', 'yearEnd.'];
     const frFeatureKeys = [...frKeys].filter((key) =>

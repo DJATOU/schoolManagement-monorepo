@@ -176,9 +176,15 @@ SecurityConfig : GET /api/teacher-pay-rates/**, /api/teacher-payouts/**, /api/te
 | Taux | tableau, création, modification du libellé, désactivation |
 | Fiche Enseignant | panneau « Paies » : liste, total versé, réimpression |
 
-Services : `TeacherPayRateService`, `TeacherPayoutService` (HTTP seul, erreurs centralisées).
-Bordereau : `PayoutSlipPdfService.buildDocument` pur, impression par `PdfOutputService`. Correction :
-`CorrectionDialogComponent` existant. Montants : pipe `amount`.
+Services : `TeacherPayRateService`, `TeacherPayoutService` (HTTP seul, erreurs centralisées ; une
+confirmation de paie périmée rend une `PayoutError` portant le nouvel Aperçu, une correction refusée
+une `CorrectionError`). Bordereau : `PayoutSlipPdfService.buildDocument` pur, impression par
+`PdfOutputService`. Correction : `CorrectionDialogComponent` existant ; « refaire à un autre taux »
+choisit d'abord le taux (`ReplaceRateDialogComponent`), puis Motif et Aperçu. Montants : pipe `amount`.
+
+Composants autonomes (`standalone`), comme le reste de l'application :
+`components/admin/teacher-payroll/` (page, `payable-tab`, `paid-tab`, `rates-tab`, `payout-dialog`,
+`replace-rate-dialog`) et `components/teacher/teacher-payouts/` (panneau de la fiche).
 
 ## Propriétés vérifiées
 
