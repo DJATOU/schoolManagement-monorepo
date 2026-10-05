@@ -28,6 +28,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.AuditorAware;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -263,12 +264,7 @@ public class TeacherPayoutService {
         TeacherPayRateEntity rate = rateService.requireActive(request.rateId());
 
         SeriesCollection collection = collectionService.of(series);
-        Shares shares;
-        try {
-            shares = PayoutCalculator.initial(collection.net(), rate.getTeacherPercent());
-        } catch (IllegalArgumentException e) {
-            throw new CustomServiceException(e.getMessage(), HttpStatus.CONFLICT);
-        }
+        Shares shares = initialShares(collection, rate);
         return preview(series, group, teacher, PayoutKind.INITIAL, rate.getId(), rate.getLabel(),
                 rate.getTeacherPercent(), collection, zero(), shares, zero(), null);
     }
@@ -409,6 +405,61 @@ public class TeacherPayoutService {
                 .paidBy(currentAuditor())
                 .status(PayoutStatus.ACTIVE)
                 .build();
+        return persist(series, payout);
+    }
+
+    /**
+     * Paie de remplacement d'une paie initiale que la correction vient d'annuler (exigence 7.2) :
+     * même enseignant, même groupe, même série, encaissé actuel, au taux choisi. Changer d'enseignant
+     * n'est pas un remplacement : on annule, puis on paie à nouveau.
+     *
+     * <p>Appelée par {@code PayoutCorrectionService} dans la transaction du {@code CorrectionRunner},
+     * l'original déjà annulé et écrit : l'index des paies initiales actives n'en tolère qu'une. Le
+     * numéro pris pendant un Aperçu est rendu avec la transaction.</p>
+     *
+     * @throws CustomServiceException 409 si l'encaissé net de la série n'est plus positif
+     */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public TeacherPayoutEntity recordReplacement(TeacherPayoutEntity original, TeacherPayRateEntity rate,
+                                                 String note) {
+        SessionSeriesEntity series = original.getSeries();
+        SeriesCollection collection = collectionService.of(series);
+        Shares shares = initialShares(collection, rate);
+        Date now = new Date();
+        TeacherPayoutEntity replacement = TeacherPayoutEntity.builder()
+                .payoutNumber(numberService.next(now))
+                .kind(PayoutKind.INITIAL)
+                .replaces(original)
+                .teacher(original.getTeacher())
+                .group(original.getGroup())
+                .series(series)
+                .rate(rate)
+                .rateLabel(rate.getLabel())
+                .teacherPercent(rate.getTeacherPercent())
+                .collectedGross(collection.gross())
+                .refunded(collection.refunded())
+                .collectedNet(collection.net())
+                .baseDelta(shares.baseDelta())
+                .teacherAmount(shares.teacherAmount())
+                .schoolAmount(shares.schoolAmount())
+                .note(cleanNote(note))
+                .paidAt(now)
+                .paidBy(currentAuditor())
+                .status(PayoutStatus.ACTIVE)
+                .build();
+        return persist(series, replacement);
+    }
+
+    /** Partage de tout l'encaissé, refusé s'il n'y a rien à partager. */
+    private static Shares initialShares(SeriesCollection collection, TeacherPayRateEntity rate) {
+        try {
+            return PayoutCalculator.initial(collection.net(), rate.getTeacherPercent());
+        } catch (IllegalArgumentException e) {
+            throw new CustomServiceException(e.getMessage(), HttpStatus.CONFLICT);
+        }
+    }
+
+    private TeacherPayoutEntity persist(SessionSeriesEntity series, TeacherPayoutEntity payout) {
         try {
             return payoutRepository.saveAndFlush(payout);
         } catch (DataIntegrityViolationException e) {
@@ -511,11 +562,12 @@ public class TeacherPayoutService {
         return payouts.stream().filter(payout -> payout.getKind() == PayoutKind.INITIAL).findFirst().orElse(null);
     }
 
-    static BigDecimal teacherPaid(List<TeacherPayoutEntity> payouts) {
+    /** Somme des parts enseignant de ces paies : ce que la série lui a versé. */
+    public static BigDecimal teacherPaid(List<TeacherPayoutEntity> payouts) {
         return payouts.stream().map(TeacherPayoutEntity::getTeacherAmount).reduce(zero(), BigDecimal::add);
     }
 
-    static PayoutDTO toDto(TeacherPayoutEntity payout) {
+    public static PayoutDTO toDto(TeacherPayoutEntity payout) {
         TeacherPayoutEntity initial = payout.getInitialPayout();
         TeacherPayoutEntity replaces = payout.getReplaces();
         TeacherPayoutEntity replacedBy = payout.getReplacedBy();
@@ -534,7 +586,7 @@ public class TeacherPayoutService {
                 replacedBy == null ? null : replacedBy.getPayoutNumber());
     }
 
-    static String fullName(TeacherEntity teacher) {
+    public static String fullName(TeacherEntity teacher) {
         String first = teacher.getFirstName() == null ? "" : teacher.getFirstName();
         String last = teacher.getLastName() == null ? "" : teacher.getLastName();
         return (first + " " + last).strip();

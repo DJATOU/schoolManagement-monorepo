@@ -466,6 +466,9 @@
                                         <include>com.school.management.service.payroll.SeriesCompletionService*</include>
                                         <include>com.school.management.service.payroll.PayoutNumberService</include>
                                         <include>com.school.management.service.payroll.PayoutSlipService</include>
+                                        <!-- Lot U : corriger une paie, et la garde des séries payées. -->
+                                        <include>com.school.management.service.correction.PayoutCorrectionService*</include>
+                                        <include>com.school.management.service.payroll.PaidSeriesGuard</include>
                                     </includes>
                                     <limits>
                                         <limit>

@@ -60,19 +60,35 @@ périmé. Une confirmation périmée renvoie 409 `STALE_PREVIEW` avec le nouvel 
 La ligne `session_series` est verrouillée (`PESSIMISTIC_WRITE`) pendant la confirmation : deux
 confirmations simultanées se sérialisent, l'index unique reste le filet de sécurité.
 
-**D7. Corriger passe par `CorrectionRunner`.** Annuler et remplacer sont des `CorrectionCommand`,
-domaine `TEACHER_PAYOUT`, actions `PAYOUT_CANCELLED` et `PAYOUT_REPLACED`, portée vide (aucun montant
-d'élève ne change) : les effets énoncent les deux parts avant / après, ce qui rend l'Aperçu périmable.
-Traces dans `correction_audit` (`entity_id` = Paie, `group_id`, `series_id`, `student_id` nul).
-Motifs : `DATA_ENTRY_ERROR`, `WRONG_AMOUNT`, `OTHER`.
+**D7. Corriger passe par `CorrectionRunner`.** Annuler et remplacer sont des `CorrectionCommand`
+(`service/correction/PayoutCorrectionService`, à côté des autres corrections), domaine
+`TEACHER_PAYOUT`, actions `PAYOUT_CANCELLED` et `PAYOUT_REPLACED`, portée vide (aucun montant
+d'élève ne change). Effets `PAYOUT_CANCELLED`, `PAYOUT_CREATED`, `PAYOUT_SHARES_CHANGED` : ce que la
+Série a versé à l'enseignant et gardé pour l'école, avant / après, ce qui rend l'Aperçu périmable.
+Traces dans `correction_audit` (`entity_id` = Paie, `group_id`, `series_id`, `student_id` nul ;
+valeurs avant / après avec les cumuls de la Série). Motifs : `DATA_ENTRY_ERROR`, `WRONG_AMOUNT`,
+`OTHER`. La Série est verrouillée avant de lire la Paie : une paie ou une autre correction de la
+même Série attend.
+
+**D7 bis. Ce qu'un remplacement garde.** Paie initiale seulement, taux actif et différent :
+même enseignant, même groupe, même Série que l'originale, Encaissé_Net relu. L'originale est annulée
+et écrite **avant** l'insertion de la remplaçante (l'index n'admet qu'une Paie_Initiale active), puis
+reliée à elle. Payer un autre enseignant passe par annuler, puis payer.
 
 **D8. Numéro de Paie.** Compteur verrouillé à une ligne, `payout_counter`, sur le modèle de
 `receipt_counter` (le rejeu sur collision du modèle `REMB` échoue sur PostgreSQL). Un Aperçu ou un
 refus ne consomme aucun numéro (transaction annulée).
 
-**D9. Garde sur les séances.** `PaidSeriesGuard.assertNoActivePayout(seriesId)` est appelé par la
-dévalidation (`AttendanceCorrectionService`), la suppression et la désactivation d'une Séance. Refus
-409 nommant la Paie (exigence 8).
+**D9. Garde sur les séances.** `PaidSeriesGuard.assertNoActivePayout(series, opération)` est appelé
+par la dévalidation (`AttendanceCorrectionService`, dès l'Aperçu), la suppression, la désactivation
+et la réactivation d'une Séance, et par `PATCH /api/sessions/{id}` quand il dévalide réellement
+(validée avant, plus après) ou change le groupe de la Séance. Refus 409 nommant les Paies actives,
+la plus récente d'abord à annuler (exigence 8). Un `PATCH` qui renvoie la séance entière sans
+changer sa validation passe : le client envoie toujours l'objet complet.
+
+Non gardé, délibérément : le rattachement d'une **nouvelle** Séance à une Série payée mais pas
+pleine (`SeriesRolloverService`, création ou génération récurrente). Le refuser bloquerait la
+planification ordinaire ; l'argent qu'elle apportera passe par une Régularisation.
 
 **D10. Année close.** Les écritures de Paie n'appellent pas `ReadOnlyYearGuard` (exigence 10.1).
 La garde D9 s'ajoute à celle de l'année, elle ne la remplace pas.
@@ -130,7 +146,7 @@ service/payroll/
   PayoutCalculator             parts et écart, BigDecimal pur, sans dépôt (D2)
   TeacherPayRateService        catalogue (exigence 1)
   TeacherPayoutService         à payer, Aperçu / confirmation, Régularisation (exigences 2 à 4, 6)
-  PayoutCorrectionService      annuler, remplacer via CorrectionRunner (exigence 7, D7)
+  (service/correction/) PayoutCorrectionService   annuler, remplacer via CorrectionRunner (exigence 7, D7)
   PayoutNumberService          PAIE-AAAA-NNNN (D8)
   PayoutSlipService            données du Bordereau, rang du duplicata (exigence 5)
   PaidSeriesGuard              (exigence 8, D9)

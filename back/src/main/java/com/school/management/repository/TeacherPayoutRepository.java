@@ -10,6 +10,7 @@ import org.springframework.stereotype.Repository;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface TeacherPayoutRepository extends JpaRepository<TeacherPayoutEntity, Long> {
@@ -21,6 +22,13 @@ public interface TeacherPayoutRepository extends JpaRepository<TeacherPayoutEnti
     @Query("SELECT p FROM TeacherPayoutEntity p WHERE p.series.id = :seriesId AND p.status = 'ACTIVE' "
             + "ORDER BY p.paidAt ASC, p.id ASC")
     List<TeacherPayoutEntity> findActiveForSeries(@Param("seriesId") Long seriesId);
+
+    /**
+     * Série d'une paie, sans charger la paie : une correction verrouille la série d'abord, puis lit
+     * la paie, pour la lire telle que l'a laissée la dernière transaction validée.
+     */
+    @Query("SELECT p.series.id FROM TeacherPayoutEntity p WHERE p.id = :payoutId")
+    Optional<Long> findSeriesIdById(@Param("payoutId") Long payoutId);
 
     /** Paies actives de plusieurs séries, pour annoter une liste en une requête. */
     @Query("SELECT p FROM TeacherPayoutEntity p WHERE p.series.id IN :seriesIds AND p.status = 'ACTIVE' "

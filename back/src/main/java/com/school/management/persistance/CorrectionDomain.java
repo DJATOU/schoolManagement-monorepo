@@ -5,5 +5,7 @@ public enum CorrectionDomain {
     ENCASHMENT,
     ENROLMENT,
     ATTENDANCE,
-    SESSION
+    SESSION,
+    /** Paie d'un enseignant (spec teacher-payroll, exigence 7) : aucun étudiant, la trace porte la série. */
+    TEACHER_PAYOUT
 }

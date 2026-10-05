@@ -151,9 +151,14 @@ Part_École      = Encaissé_Net − Part_Enseignant
   une **régularisation** (complément, ou retenue si de l'argent a été rendu), au pourcentage de la
   paie initiale, enregistrée par l'administrateur.
 - **Les erreurs restent corrigeables** par une correction tracée (annuler, remplacer), avec motif,
-  aperçu et trace immuable.
+  aperçu et trace immuable. Seule la **paie active la plus récente** d'une série se corrige.
+  **Remplacer** = refaire la paie initiale à un **autre taux**, pour le **même enseignant**, sur
+  l'encaissé actuel. Payer un autre enseignant n'est pas un remplacement : on annule, puis on paie.
+  Une régularisation ne se remplace pas : on l'annule, et l'écart réapparaît « à régulariser ».
 - **Les remplaçants sont ignorés pour l'instant** : l'enseignant du groupe reçoit toute la part.
-- Une séance d'une série payée ne se dévalide pas tant que la paie n'est pas annulée.
+- **Une série payée ne change pas sous sa paie** : dévalider, supprimer, désactiver ou réactiver une
+  de ses séances, ou l'en sortir par un changement de groupe, est refusé tant que ses paies actives
+  ne sont pas annulées.
 
 ## La justification d'absence est documentaire — TRANCHÉ
 

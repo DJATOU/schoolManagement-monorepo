@@ -61,5 +61,14 @@ public enum CorrectionEffectType {
     VENTILATION_MOVED,
 
     /** Le mode de paiement ou la note d'un Encaissement changent, sans Remplacement. */
-    ENCASHMENT_DETAILS_EDITED
+    ENCASHMENT_DETAILS_EDITED,
+
+    /** Une Paie d'enseignant est annulée : elle reste lisible, mais ne compte plus. */
+    PAYOUT_CANCELLED,
+
+    /** Une Paie d'enseignant est enregistrée en remplacement d'une autre. */
+    PAYOUT_CREATED,
+
+    /** Ce que la Série a versé à l'enseignant et gardé pour l'école change. */
+    PAYOUT_SHARES_CHANGED
 }

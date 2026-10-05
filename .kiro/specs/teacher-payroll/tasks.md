@@ -52,12 +52,19 @@ d'argent est vérifiée par mutation, puis le code est restauré.
 
 ## Lot U — Corrections et cohérence
 
-- [ ] U.1 `PayoutCorrectionService` : annuler, remplacer ; plus récente seulement ; Traces
-  _Exigence 7 — D3, D7_
-- [ ] U.2 `PaidSeriesGuard` branché sur dévalidation, suppression, désactivation de Séance
+- [x] U.1 `PayoutCorrectionService` (par `CorrectionRunner`) : annuler, remplacer une paie initiale
+  par une paie à un autre taux, même enseignant ; plus récente seulement, série verrouillée ; refus
+  nommés (déjà annulée et remplaçante, régularisation, même taux, rien à partager) ; Traces avec les
+  cumuls de la série ; la série redevient à payer ; aucun numéro consommé par un Aperçu
+  _Exigence 7 — D3, D7, D7 bis_
+- [x] U.2 `PaidSeriesGuard` branché sur dévalidation (dès l'Aperçu), suppression, désactivation,
+  réactivation, et `PATCH` de séance qui dévalide ou change de groupe ; refus nommant les paies, la
+  plus récente d'abord
   _Exigence 8 — D9_
-- [ ] U.3 Routes, `SecurityConfig`, `WriteRoutesAuthorizationIntegrationTest` (lectures financières,
-  corrections)
+- [x] U.3 `PayoutCorrectionController` (`/api/teacher-payouts/correction-reasons`,
+  `/{id}/cancel|replace/{preview|confirm}`) ; paie, régularisation et corrections nommées dans
+  `WriteRoutesAuthorizationIntegrationTest`, motifs parmi les lectures financières. Seuil JaCoCo
+  étendu à la correction et à la garde. 31 mutations du lot tuées
   _Exigence 9.4_
 
 ## Lot S — Écrans

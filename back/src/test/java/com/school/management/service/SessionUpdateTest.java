@@ -53,7 +53,8 @@ class SessionUpdateTest {
                 mock(PaymentDetailDeactivationService.class),
                 mock(AttendanceService.class),
                 mock(ReadOnlyYearGuard.class),
-                mock(SeriesRolloverService.class));
+                mock(SeriesRolloverService.class),
+                mock(com.school.management.service.payroll.PaidSeriesGuard.class));
 
         when(sessionRepository.save(any(SessionEntity.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));

@@ -18,6 +18,7 @@ import com.school.management.repository.SessionSeriesRepository;
 import com.school.management.repository.StudentGroupRepository;
 import com.school.management.repository.StudentRepository;
 import com.school.management.service.ReadOnlyYearGuard;
+import com.school.management.service.payroll.PaidSeriesGuard;
 import com.school.management.service.exception.CustomServiceException;
 import com.school.management.service.session.AbsenceWindowGuard;
 import com.school.management.service.session.RollCallService;
@@ -88,6 +89,7 @@ public class AttendanceCorrectionService {
     private final AbsenceWindowGuard absenceWindowGuard;
     private final ReadOnlyYearGuard readOnlyYearGuard;
     private final SeriesSettlement settlement;
+    private final PaidSeriesGuard paidSeriesGuard;
 
     public AttendanceCorrectionService(CorrectionRunner runner,
                                        AttendanceRepository attendanceRepository,
@@ -98,7 +100,8 @@ public class AttendanceCorrectionService {
                                        CatchUpRequestRepository catchUpRequestRepository,
                                        AbsenceWindowGuard absenceWindowGuard,
                                        ReadOnlyYearGuard readOnlyYearGuard,
-                                       SeriesSettlement settlement) {
+                                       SeriesSettlement settlement,
+                                       PaidSeriesGuard paidSeriesGuard) {
         this.runner = runner;
         this.attendanceRepository = attendanceRepository;
         this.sessionRepository = sessionRepository;
@@ -109,6 +112,7 @@ public class AttendanceCorrectionService {
         this.absenceWindowGuard = absenceWindowGuard;
         this.readOnlyYearGuard = readOnlyYearGuard;
         this.settlement = settlement;
+        this.paidSeriesGuard = paidSeriesGuard;
     }
 
     /**
@@ -593,6 +597,8 @@ public class AttendanceCorrectionService {
             SessionEntity session = loadSession(sessionId);
             GroupEntity group = groupOf(session);
             assertOpen(session);
+            // Une série payée à l'enseignant redeviendrait non terminée (teacher-payroll, exigence 8.1).
+            paidSeriesGuard.assertNoActivePayout(session.getSessionSeries(), "dévalider une de ses séances");
             if (!Boolean.TRUE.equals(session.getIsFinished())) {
                 throw new CustomServiceException("La séance du " + day(session) + " n'est pas validée : rien à "
                         + "dévalider.", HttpStatus.CONFLICT);
