@@ -85,6 +85,50 @@ describe('Guide d\'utilisation — contenu réel', () => {
     }
   });
 
+  it('arabe : tout texte arabe de l\'écran est dans une police arabe, en romain ou en gras', async () => {
+    // Le titre et les boutons tombaient sur la pile « Roboto, sans-serif » du thème Material
+    // (`.mat-typography`, posé sur <body> par index.html) : sur un poste dont la police sans
+    // empattement de Chrome ne dessine pas l'arabe, chaque mot s'affichait en carré.
+    document.body.classList.add('mat-typography');
+    const { book } = await readBook('ar');
+    await setupComponentTestBed(UserGuideComponent);
+    const fixture = TestBed.createComponent(UserGuideComponent);
+    const host = fixture.nativeElement as HTMLElement;
+    document.body.appendChild(host);
+    const component = fixture.componentInstance;
+    component.animate = false;
+    fixture.detectChanges();
+    component.lang = 'ar';
+    component.setBook(book);
+    component.single = true;
+
+    const wrong = new Set<string>();
+    const check = () => {
+      const walker = document.createTreeWalker(host, NodeFilter.SHOW_TEXT);
+      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+        const text = node.textContent ?? '';
+        if (!/[\u0600-\u06FF]/.test(text)) {
+          continue;
+        }
+        const style = getComputedStyle(node.parentElement!);
+        const weight = Number(style.fontWeight);
+        if (!style.fontFamily.startsWith('"Noto Naskh Arabic"') || (weight !== 400 && weight !== 700)) {
+          wrong.add(`${node.parentElement!.className || node.parentElement!.tagName} « ${text.trim().slice(0, 20)} » : `
+            + `${style.fontFamily.split(',')[0]} ${weight}`);
+        }
+      }
+    };
+    for (const page of book.pages) {
+      component.position = page.index;
+      fixture.detectChanges();
+      check();
+    }
+    expect([...wrong]).toEqual([]);
+
+    host.remove();
+    document.body.classList.remove('mat-typography');
+  });
+
   for (const lang of GUIDE_LANGS) {
     it(`chaque page tient dans le format du livre (${lang})`, async () => {
       const { book } = await readBook(lang);

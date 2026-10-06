@@ -396,13 +396,41 @@
 
   // ------------------------------------------------------------------ arabe
   &.user-guide--rtl {
+    // Toute la page en police arabe, titres et encadrés compris (ils fixent sinon leur propre
+    // police latine), en romain ou en gras seulement : voir _user-guide.vars.scss.
     .guide-prose,
+    .guide-prose h1,
+    .guide-prose h2,
+    .guide-prose h3,
+    .guide-prose table,
     .guide-contents__link,
+    .guide-contents__page,
     .guide-cover__title,
+    .guide-cover__brand,
+    .guide-cover__audience,
     .guide-contents h2,
     .guide-callout,
-    .guide-page__running {
+    .guide-page__running,
+    .guide-page__number {
       font-family: $arabic-font;
+    }
+
+    .guide-prose h1,
+    .guide-cover__title,
+    .guide-contents h2,
+    .guide-callout__title,
+    .guide-page__running,
+    .guide-page__number,
+    .guide-contents__page {
+      font-weight: 700;
+    }
+
+    // Lettres espacées et capitales n'ont pas de sens en arabe, et l'espacement casse la liaison.
+    .guide-page__running,
+    .guide-callout__title,
+    .guide-cover__brand {
+      letter-spacing: normal;
+      text-transform: none;
     }
 
     .guide-prose {

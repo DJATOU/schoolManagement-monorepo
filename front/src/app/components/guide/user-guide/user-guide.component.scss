@@ -328,8 +328,35 @@
   }
 
   // ------------------------------------------------------------------ arabe
-  // Les dégradés ne connaissent pas les directions logiques : on les inverse.
   &.user-guide--rtl {
+    // Tout le texte arabe de l'écran dans une police arabe, en romain ou en gras seulement :
+    // titre, boutons de mode, numéro de page, aide. Le titre et les boutons Material (police
+    // Roboto, graisses 500 et 800) s'affichaient en carrés sur certaines machines.
+    font-family: $arabic-font;
+
+    .ug-title h1,
+    .ug-segment:not([lang='fr']):not([lang='en']),
+    .ug-page-label,
+    .ug-hint {
+      font-family: $arabic-font;
+    }
+
+    .ug-title h1,
+    .ug-segment,
+    .ug-page-label {
+      font-weight: 700;
+    }
+
+    // Boutons Material : leur police et leur espacement des lettres viennent du thème ; un
+    // espacement entre les lettres casse la liaison des lettres arabes.
+    .mdc-button,
+    .mdc-button__label {
+      font-family: $arabic-font;
+      font-weight: 700;
+      letter-spacing: normal;
+    }
+
+    // Les dégradés ne connaissent pas les directions logiques : on les inverse.
     .ug-book--turning .guide-slot::after {
       background: linear-gradient(to left, rgba(15, 23, 42, 0.22), rgba(15, 23, 42, 0) 70%);
     }
