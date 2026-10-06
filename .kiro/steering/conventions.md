@@ -12,6 +12,9 @@
 ## Frontend
 - One service per entity, HTTP calls only.
 - Centralized HTTP error handling (see payment.service.ts handleError pattern).
+- User guide (`front/src/assets/guides/{fr,en,ar}/`, shown at `/guide`): a change visible on screen
+  (label, button, flow, rule) updates the matching guide page in the same PR, in all three languages.
+  Pages are separated by `<!-- page -->` and must fit the page format (`user-guide-content.spec.ts`).
 
 ## Don't
 - Don't rename the `persistance` folder (intentional, used everywhere).

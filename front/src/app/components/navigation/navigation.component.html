@@ -52,6 +52,12 @@
     </div>
   </div>
 
+  <!-- Guide d'utilisation : à portée de clic depuis n'importe quel écran. -->
+  <button mat-icon-button type="button" class="guide-button" [routerLink]="['/guide']"
+    [matTooltip]="'NAV.GUIDE' | translate" [attr.aria-label]="'NAV.GUIDE' | translate">
+    <mat-icon>menu_book</mat-icon>
+  </button>
+
   <app-school-year-selector></app-school-year-selector>
 
   <div class="user-profile-pill" [matMenuTriggerFor]="userMenu">

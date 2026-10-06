@@ -83,6 +83,13 @@ export const routes: Routes = [
   { path: 'admin/users', component: UserManagementComponent, canActivate: [roleGuard('ADMIN')] },
   { path: 'year-end', component: YearEndWorkflowComponent, canActivate: [authGuard] },
   { path: 'import', component: ImportComponent, canActivate: [authGuard] },
+  // Guide d'utilisation : `?chapitre=paiements` l'ouvre sur un chapitre. Chargé à la demande : son
+  // moteur Markdown n'alourdit pas le démarrage de l'application.
+  {
+    path: 'guide',
+    loadComponent: () => import('./components/guide/user-guide/user-guide.component').then(m => m.UserGuideComponent),
+    canActivate: [authGuard]
+  },
 
   // Toute route inconnue → login (le guard redirigera vers dashboard si déjà connecté).
   { path: '**', redirectTo: '/login' },

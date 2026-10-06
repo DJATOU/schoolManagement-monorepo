@@ -1,0 +1,151 @@
+<div class="user-guide" [attr.dir]="book?.dir ?? 'ltr'" [attr.lang]="lang" [class.user-guide--rtl]="rtl">
+
+  <!-- Barre du guide : titre, langue, mode de lecture -->
+  <header class="ug-toolbar">
+    <div class="ug-title">
+      <mat-icon aria-hidden="true">auto_stories</mat-icon>
+      <h1>{{ book?.title }}</h1>
+    </div>
+
+    <div class="ug-segmented" role="group" [attr.aria-label]="book?.labels?.language">
+      <button type="button" *ngFor="let code of langs" class="ug-segment"
+              [class.ug-segment--active]="code === lang" [attr.aria-pressed]="code === lang"
+              [attr.lang]="code" (click)="setLang(code)">
+        {{ langNames[code] }}
+      </button>
+    </div>
+
+    <div class="ug-segmented" role="group" *ngIf="book">
+      <button type="button" class="ug-segment ug-mode-book" [class.ug-segment--active]="mode === 'book'"
+              [attr.aria-pressed]="mode === 'book'" (click)="setMode('book')">
+        <mat-icon aria-hidden="true">menu_book</mat-icon>{{ book.labels.bookMode }}
+      </button>
+      <button type="button" class="ug-segment ug-mode-scroll" [class.ug-segment--active]="mode === 'scroll'"
+              [attr.aria-pressed]="mode === 'scroll'" (click)="setMode('scroll')">
+        <mat-icon aria-hidden="true">article</mat-icon>{{ book.labels.scrollMode }}
+      </button>
+    </div>
+  </header>
+
+  <div class="ug-state" *ngIf="loading && !book">
+    <mat-progress-spinner mode="indeterminate" diameter="40"></mat-progress-spinner>
+  </div>
+
+  <div class="ug-state ug-error" role="alert" *ngIf="failed">
+    <mat-icon aria-hidden="true">cloud_off</mat-icon>
+    <p>{{ errorText.message }}</p>
+    <button mat-stroked-button color="primary" type="button" (click)="retry()">{{ errorText.retry }}</button>
+  </div>
+
+  <!-- ============================ LIVRE ============================ -->
+  <ng-container *ngIf="book && !failed && mode === 'book'">
+    <div class="ug-stage" #stage>
+      <div class="ug-book-frame" [style.width.px]="bookWidth * scale" [style.height.px]="pageHeight * scale"
+           [style.transform]="'translateX(' + bookShift + '%)'">
+        <div #bookEl class="ug-book" role="region" [attr.aria-label]="book.labels.bookAria"
+             [class.ug-book--single]="single" [class.ug-book--turning]="!!flip"
+             [style.width.px]="bookWidth" [style.height.px]="pageHeight"
+             [style.transform]="'scale(' + scale + ')'"
+             (pointerdown)="onPointerDown($event)" (pointermove)="onPointerMove($event)"
+             (pointerup)="onPointerUp($event)" (pointercancel)="onPointerUp($event)">
+
+          <!-- Pages posées. Pendant qu'une feuille tourne, on montre déjà ce qu'elle découvre. -->
+          <ng-container *ngIf="!single">
+            <div class="guide-slot guide-slot--first">
+              <ng-container *ngTemplateOutlet="pageTpl; context: { $implicit: flip ? flip.underFirst : visible[0], side: 'first' }"></ng-container>
+            </div>
+            <div class="guide-slot guide-slot--second">
+              <ng-container *ngTemplateOutlet="pageTpl; context: { $implicit: flip ? flip.underSecond : visible[1], side: 'second' }"></ng-container>
+            </div>
+          </ng-container>
+          <div class="guide-slot guide-slot--single" *ngIf="single">
+            <ng-container *ngTemplateOutlet="pageTpl; context: { $implicit: flip ? flip.underFirst : visible[0], side: 'single' }"></ng-container>
+          </div>
+
+          <!-- La feuille qui tourne : recto, verso -->
+          <div #sheet class="ug-sheet" *ngIf="flip" aria-hidden="true"
+               [ngClass]="'ug-sheet--' + flip.slot" [style.transform-origin]="flip.origin + ' center'">
+            <div class="ug-face ug-face--front" [ngClass]="'ug-face--spine-' + flip.origin">
+              <ng-container *ngTemplateOutlet="pageTpl; context: { $implicit: flip.front, blank: true, side: flip.slot }"></ng-container>
+            </div>
+            <!-- Le verso se pose sur l'autre moitié du livre : sa reliure est de l'autre côté. -->
+            <div class="ug-face ug-face--back" [ngClass]="'ug-face--spine-' + (flip.origin === 'left' ? 'right' : 'left')">
+              <ng-container *ngTemplateOutlet="pageTpl; context: { $implicit: flip.back, blank: true, side: backSide(flip) }"></ng-container>
+            </div>
+          </div>
+
+          <!-- Coins cornés : un clic tourne la page -->
+          <button type="button" class="ug-corner ug-corner--next" *ngIf="canNext && !flip"
+                  [attr.aria-label]="book.labels.next" (click)="next()"></button>
+          <button type="button" class="ug-corner ug-corner--previous" *ngIf="canPrevious && !flip && !single"
+                  [attr.aria-label]="book.labels.previous" (click)="previous()"></button>
+        </div>
+      </div>
+    </div>
+
+    <nav class="ug-pager">
+      <button mat-stroked-button type="button" class="ug-previous" [disabled]="!canPrevious || !!flip" (click)="previous()">
+        <mat-icon aria-hidden="true">{{ previousIcon }}</mat-icon>{{ book.labels.previous }}
+      </button>
+      <span class="ug-page-label" aria-live="polite">{{ pageLabel }}</span>
+      <button mat-stroked-button type="button" class="ug-next" [disabled]="!canNext || !!flip" (click)="next()">
+        {{ book.labels.next }}<mat-icon aria-hidden="true">{{ nextIcon }}</mat-icon>
+      </button>
+    </nav>
+    <p class="ug-hint">{{ book.labels.keyboardHint }}</p>
+  </ng-container>
+
+  <!-- ======================= LECTURE CONTINUE ======================= -->
+  <div class="ug-scroll" *ngIf="book && !failed && mode === 'scroll'">
+    <aside class="ug-scroll-toc">
+      <p class="ug-scroll-toc__title">{{ book.labels.contents }}</p>
+      <button type="button" *ngFor="let chapter of book.chapters; let i = index" class="ug-scroll-toc__item"
+              (click)="scrollToChapter(chapter.id)">
+        <span class="ug-num">{{ i + 1 }}</span>{{ chapter.title }}
+      </button>
+    </aside>
+    <div class="ug-scroll-body">
+      <section *ngFor="let chapter of book.chapters" class="guide-prose ug-scroll-chapter"
+               [id]="'guide-chapter-' + chapter.id" [innerHTML]="chapter.html"></section>
+    </div>
+  </div>
+</div>
+
+<!-- Une page du livre. Sans page : rien (avant la couverture, après la dernière), ou une page
+     blanche pour le verso d'une feuille. -->
+<ng-template #pageTpl let-page let-blank="blank" let-side="side">
+  <article class="guide-page" [ngClass]="'guide-page--' + (page ? page.kind : (blank ? 'blank' : 'empty')) + ' guide-page--side-' + side">
+    <ng-container *ngIf="page && book" [ngSwitch]="page.kind">
+
+      <div *ngSwitchCase="'cover'" class="guide-cover">
+        <div class="guide-cover__ornament" aria-hidden="true"><mat-icon>auto_stories</mat-icon></div>
+        <p class="guide-cover__brand">School Manager</p>
+        <h2 class="guide-cover__title">{{ book.title }}</h2>
+        <p class="guide-cover__audience">{{ book.labels.audience }}</p>
+        <p class="guide-cover__hint">{{ book.labels.turnHint }}</p>
+      </div>
+
+      <ng-container *ngSwitchCase="'contents'">
+        <div class="guide-page__body guide-contents">
+          <h2>{{ book.labels.contents }}</h2>
+          <ol>
+            <li *ngFor="let chapter of book.chapters">
+              <button type="button" class="guide-contents__link" (click)="goToPage(chapter.firstPage)">
+                <span class="guide-contents__name">{{ chapter.title }}</span>
+                <span class="guide-contents__dots" aria-hidden="true"></span>
+                <span class="guide-contents__page">{{ chapter.firstPage + 1 }}</span>
+              </button>
+            </li>
+          </ol>
+        </div>
+        <footer class="guide-page__number">{{ page.index + 1 }}</footer>
+      </ng-container>
+
+      <ng-container *ngSwitchDefault>
+        <header class="guide-page__running">{{ page.chapterTitle }}</header>
+        <div class="guide-page__body guide-prose" [innerHTML]="page.html"></div>
+        <footer class="guide-page__number">{{ page.index + 1 }}</footer>
+      </ng-container>
+    </ng-container>
+  </article>
+</ng-template>

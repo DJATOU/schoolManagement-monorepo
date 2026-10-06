@@ -1,0 +1,31 @@
+{
+  "lang": "ar",
+  "dir": "rtl",
+  "languageName": "العربية",
+  "title": "دليل الاستخدام",
+  "labels": {
+    "audience": "دليل موجَّه لمسؤول المدرسة",
+    "contents": "الفهرس",
+    "previous": "الصفحة السابقة",
+    "next": "الصفحة التالية",
+    "pageOf": "الصفحة {{n}} من {{total}}",
+    "bookMode": "كتاب",
+    "scrollMode": "قراءة متواصلة",
+    "language": "لغة الدليل",
+    "example": "مثال",
+    "note": "للعلم",
+    "warning": "تنبيه",
+    "loading": "جارٍ تحميل الدليل…",
+    "error": "تعذّر تحميل الدليل.",
+    "retry": "إعادة المحاولة",
+    "turnHint": "اقلب الصفحة ←",
+    "keyboardHint": "لقلب الصفحات: أسهم لوحة المفاتيح، أو زاوية الصفحة، أو اسحب الصفحة.",
+    "bookAria": "دليل الاستخدام في شكل كتاب"
+  },
+  "chapters": [
+    { "id": "demarrer", "file": "01-demarrer.md" },
+    { "id": "seances", "file": "02-seances.md" },
+    { "id": "paiements", "file": "03-paiements.md" },
+    { "id": "paie-enseignants", "file": "04-paie-enseignants.md" }
+  ]
+}
