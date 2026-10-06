@@ -1,0 +1,398 @@
+// Guide d'utilisation : la mécanique du livre (cadre, feuille qui tourne, coins, barres).
+// Le papier et la typographie des pages sont dans user-guide-pages.scss.
+//
+// Encapsulation désactivée (le contenu des pages est du HTML injecté) : tout est préfixé par
+// .user-guide. Les positions utilisent les propriétés logiques (inset-inline-*) : en arabe, avec
+// dir="rtl", le livre s'ouvre de lui-même dans l'autre sens.
+
+@use 'user-guide.vars' as *;
+
+.user-guide {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  padding: 14px 24px 10px;
+  overflow: auto;
+  background:
+    radial-gradient(circle at 20% 0%, rgba(102, 126, 234, 0.10), transparent 45%),
+    radial-gradient(circle at 90% 100%, rgba(118, 75, 162, 0.10), transparent 40%),
+    #eef1f7;
+  font-family: $ui-font;
+  color: $ink;
+
+  // ------------------------------------------------------------------ barre
+  // Au-dessus du livre : une page qui tourne s'avance vers le lecteur sans masquer les boutons.
+  .ug-toolbar {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px 16px;
+    margin-bottom: 10px;
+  }
+
+  .ug-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-inline-end: auto;
+    color: $accent-dark;
+
+    h1 {
+      margin: 0;
+      font-size: 1.35rem;
+      font-weight: 800;
+    }
+  }
+
+  .ug-segmented {
+    display: inline-flex;
+    padding: 3px;
+    border-radius: 999px;
+    background: #ffffff;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.10);
+  }
+
+  .ug-segment {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 0;
+    background: transparent;
+    padding: 6px 14px;
+    border-radius: 999px;
+    font: 600 0.85rem $ui-font;
+    color: $muted;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease;
+
+    mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+    }
+
+    &:hover {
+      color: $accent;
+    }
+
+    &:focus-visible {
+      outline: 2px solid $accent;
+      outline-offset: 2px;
+    }
+
+    &[lang='ar'] {
+      font-family: $arabic-font;
+      font-size: 0.95rem;
+    }
+  }
+
+  .ug-segment--active,
+  .ug-segment--active:hover {
+    background: linear-gradient(135deg, $brand-from, $brand-to);
+    color: #ffffff;
+  }
+
+  .ug-state {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    color: $muted;
+  }
+
+  // ------------------------------------------------------------------ livre
+  .ug-stage {
+    flex: 1;
+    min-height: 320px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    // De la place autour du livre : la page qui tourne s'avance vers le lecteur et déborde un peu.
+    padding: 22px 0;
+    box-sizing: border-box;
+  }
+
+  .ug-book-frame {
+    position: relative;
+    transition: transform 0.7s cubic-bezier(0.45, 0, 0.25, 1);
+  }
+
+  .ug-book {
+    position: absolute;
+    top: 0;
+    left: 0;
+    transform-origin: top left;
+    // Perspective lointaine : la feuille reste lisible et déborde peu en tournant.
+    perspective: 3800px;
+    touch-action: pan-y;
+    user-select: none;
+  }
+
+  .guide-slot,
+  .ug-sheet {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+  }
+
+  .guide-slot--first,
+  .ug-sheet--first {
+    inset-inline-start: 0;
+    width: 50%;
+  }
+
+  .guide-slot--second,
+  .ug-sheet--second {
+    inset-inline-start: 50%;
+    width: 50%;
+  }
+
+  .guide-slot--single,
+  .ug-sheet--single {
+    inset-inline-start: 0;
+    width: 100%;
+  }
+
+  // Ombre portée par la feuille levée sur la page qu'elle découvre.
+  .ug-book--turning .guide-slot::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(to right, rgba(15, 23, 42, 0.22), rgba(15, 23, 42, 0) 70%);
+    opacity: calc(var(--lift, 0) * 0.9);
+  }
+
+  .ug-book--turning .guide-slot--first::after {
+    background: linear-gradient(to left, rgba(15, 23, 42, 0.22), rgba(15, 23, 42, 0) 70%);
+  }
+
+  // ------------------------------------------------------------------ feuille
+  .ug-sheet {
+    z-index: 5;
+    transform-style: preserve-3d;
+    will-change: transform;
+    box-shadow: 0 0 calc(var(--lift, 0) * 34px) rgba(15, 23, 42, calc(var(--lift, 0) * 0.35));
+  }
+
+  .ug-face {
+    position: absolute;
+    inset: 0;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+
+    // Lumière : la face qui s'éloigne s'assombrit, plus fort près de la reliure.
+    &::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+  }
+
+  .ug-face--back {
+    transform: rotateY(180deg);
+  }
+
+  .ug-face--spine-left::after {
+    background: linear-gradient(to right, rgba(15, 23, 42, 0.34), rgba(15, 23, 42, 0.06) 55%, rgba(15, 23, 42, 0.18));
+  }
+
+  .ug-face--spine-right::after {
+    background: linear-gradient(to left, rgba(15, 23, 42, 0.34), rgba(15, 23, 42, 0.06) 55%, rgba(15, 23, 42, 0.18));
+  }
+
+  .ug-face--front::after {
+    opacity: calc(var(--turn, 0) * 1.9);
+  }
+
+  .ug-face--back::after {
+    opacity: calc((1 - var(--turn, 0)) * 1.9);
+  }
+
+  // ------------------------------------------------------------------ coins cornés
+  .ug-corner {
+    position: absolute;
+    bottom: 0;
+    z-index: 4;
+    width: 46px;
+    height: 46px;
+    padding: 0;
+    border: 0;
+    cursor: pointer;
+    transition: width 0.18s ease, height 0.18s ease;
+
+    &:hover,
+    &:focus-visible {
+      width: 64px;
+      height: 64px;
+      outline: none;
+    }
+  }
+
+  .ug-corner--next {
+    inset-inline-end: 0;
+    background: linear-gradient(to top left, rgba(0, 0, 0, 0) 50%, #ddd5c4 50%, #fbf8f1 82%);
+    box-shadow: -2px -2px 5px rgba(15, 23, 42, 0.12);
+    border-start-start-radius: 4px;
+  }
+
+  .ug-corner--previous {
+    inset-inline-start: 0;
+    background: linear-gradient(to top right, rgba(0, 0, 0, 0) 50%, #ddd5c4 50%, #fbf8f1 82%);
+    box-shadow: 2px -2px 5px rgba(15, 23, 42, 0.12);
+    border-start-end-radius: 4px;
+  }
+
+  // ------------------------------------------------------------------ bas de page
+  .ug-pager {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    margin-top: 12px;
+
+    button mat-icon {
+      margin: 0 2px;
+    }
+  }
+
+  .ug-page-label {
+    min-width: 130px;
+    text-align: center;
+    font-weight: 600;
+    color: $muted;
+  }
+
+  .ug-hint {
+    margin: 6px 0 0;
+    text-align: center;
+    font-size: 0.78rem;
+    color: #94a3b8;
+  }
+
+  // ------------------------------------------------------------------ lecture continue
+  .ug-scroll {
+    display: grid;
+    grid-template-columns: 240px minmax(0, 760px);
+    justify-content: center;
+    gap: 24px;
+    align-items: start;
+  }
+
+  .ug-scroll-toc {
+    position: sticky;
+    top: 0;
+    padding: 14px;
+    border-radius: 12px;
+    background: #ffffff;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+  }
+
+  .ug-scroll-toc__title {
+    margin: 0 0 8px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: $muted;
+  }
+
+  .ug-scroll-toc__item {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+    padding: 7px 6px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    font: 600 0.88rem $ui-font;
+    color: $ink;
+    text-align: start;
+    cursor: pointer;
+
+    &:hover,
+    &:focus-visible {
+      background: #eef2ff;
+      outline: none;
+    }
+  }
+
+  .ug-num {
+    color: $accent;
+  }
+
+  // ------------------------------------------------------------------ arabe
+  &.user-guide--rtl {
+    // Tout le texte arabe de l'écran dans une police arabe, en romain ou en gras seulement :
+    // titre, boutons de mode, numéro de page, aide. Le titre et les boutons Material (police
+    // Roboto, graisses 500 et 800) s'affichaient en carrés sur certaines machines.
+    font-family: $arabic-font;
+
+    .ug-title h1,
+    .ug-segment:not([lang='fr']):not([lang='en']),
+    .ug-page-label,
+    .ug-hint {
+      font-family: $arabic-font;
+    }
+
+    .ug-title h1,
+    .ug-segment,
+    .ug-page-label {
+      font-weight: 700;
+    }
+
+    // Boutons Material : leur police et leur espacement des lettres viennent du thème ; un
+    // espacement entre les lettres casse la liaison des lettres arabes.
+    .mdc-button,
+    .mdc-button__label {
+      font-family: $arabic-font;
+      font-weight: 700;
+      letter-spacing: normal;
+    }
+
+    // Les dégradés ne connaissent pas les directions logiques : on les inverse.
+    .ug-book--turning .guide-slot::after {
+      background: linear-gradient(to left, rgba(15, 23, 42, 0.22), rgba(15, 23, 42, 0) 70%);
+    }
+
+    .ug-book--turning .guide-slot--first::after {
+      background: linear-gradient(to right, rgba(15, 23, 42, 0.22), rgba(15, 23, 42, 0) 70%);
+    }
+
+    .ug-corner--next {
+      background: linear-gradient(to top right, rgba(0, 0, 0, 0) 50%, #ddd5c4 50%, #fbf8f1 82%);
+      box-shadow: 2px -2px 5px rgba(15, 23, 42, 0.12);
+    }
+
+    .ug-corner--previous {
+      background: linear-gradient(to top left, rgba(0, 0, 0, 0) 50%, #ddd5c4 50%, #fbf8f1 82%);
+      box-shadow: -2px -2px 5px rgba(15, 23, 42, 0.12);
+    }
+  }
+
+  @media (max-width: 900px) {
+    padding: 10px 12px;
+
+    .ug-scroll {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .ug-scroll-toc {
+      position: static;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ug-corner,
+    .ug-segment,
+    .ug-book-frame {
+      transition: none;
+    }
+  }
+}

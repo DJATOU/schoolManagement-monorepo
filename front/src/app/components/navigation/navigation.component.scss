@@ -186,6 +186,18 @@
     }
   }
 
+  // Guide d'utilisation : même pastille translucide que le profil.
+  .guide-button {
+    flex-shrink: 0;
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.15);
+    margin-inline-end: 8px;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.25);
+    }
+  }
+
   // User profile pill - Clean, aligned design
   .user-profile-pill {
     display: flex;

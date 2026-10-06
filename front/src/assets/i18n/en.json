@@ -200,6 +200,7 @@
   },
   "NAV": {
     "MENU": "Menu",
+    "GUIDE": "User guide",
     "TABS": {
       "STUDENTS": "Students",
       "GROUPS": "Groups",

@@ -1,0 +1,17 @@
+// Couleurs et polices du guide, partagées par la mécanique du livre et la typographie des pages.
+
+$ink: #1e293b;
+$muted: #64748b;
+$accent: #4f46e5;
+$accent-dark: #312e81;
+$paper: #fffdf8;
+$paper-edge: #e7e2d6;
+$brand-from: #667eea;
+$brand-to: #764ba2;
+$prose-font: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, 'Times New Roman', serif;
+$ui-font: Roboto, 'Segoe UI', Arial, sans-serif;
+// Arabe : polices qui ont réellement les lettres arabes, en romain et en gras (Geeza Pro sur Mac,
+// Segoe UI et Tahoma sur Windows). Le guide arabe n'utilise que ces deux graisses : une graisse
+// intermédiaire (500, 800) laissait le navigateur chercher une variante qui n'existe pas, et
+// certaines machines dessinaient alors des carrés à la place des lettres.
+$arabic-font: 'Noto Naskh Arabic', 'Geeza Pro', 'Segoe UI', Tahoma, 'Traditional Arabic', Arial, sans-serif;

@@ -1,0 +1,31 @@
+{
+  "lang": "en",
+  "dir": "ltr",
+  "languageName": "English",
+  "title": "User guide",
+  "labels": {
+    "audience": "For the school administrator",
+    "contents": "Contents",
+    "previous": "Previous page",
+    "next": "Next page",
+    "pageOf": "Page {{n}} of {{total}}",
+    "bookMode": "Book",
+    "scrollMode": "Continuous reading",
+    "language": "Guide language",
+    "example": "Example",
+    "note": "Good to know",
+    "warning": "Careful",
+    "loading": "Loading the guide…",
+    "error": "The guide could not be loaded.",
+    "retry": "Try again",
+    "turnHint": "Turn the page →",
+    "keyboardHint": "To turn the pages: keyboard arrows, the page corner, or drag the page.",
+    "bookAria": "User guide, presented as a book"
+  },
+  "chapters": [
+    { "id": "demarrer", "file": "01-getting-started.md" },
+    { "id": "seances", "file": "02-sessions-and-attendance.md" },
+    { "id": "paiements", "file": "03-payments.md" },
+    { "id": "paie-enseignants", "file": "04-teacher-payroll.md" }
+  ]
+}

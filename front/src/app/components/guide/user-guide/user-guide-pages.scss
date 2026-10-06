@@ -1,0 +1,467 @@
+// Guide d'utilisation : le papier et la typographie des pages (couverture, sommaire, texte, encadrés).
+// La mécanique du livre (feuille qui tourne, cadre, barre) est dans user-guide.component.scss.
+//
+// Encapsulation désactivée : le contenu des pages est du HTML injecté. Tout est préfixé par .user-guide.
+
+@use 'user-guide.vars' as *;
+
+.user-guide {
+  // ------------------------------------------------------------------ page
+  .guide-page {
+    position: absolute;
+    inset: 0;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    padding: 30px 34px 18px;
+    background:
+      linear-gradient(rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0)),
+      $paper;
+    color: $ink;
+    overflow: hidden;
+  }
+
+  // Creux de la reliure, côté intérieur de chaque page.
+  .guide-page--side-first::before,
+  .guide-page--side-second::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 34px;
+    pointer-events: none;
+  }
+
+  .guide-page--side-first::before {
+    inset-inline-end: 0;
+    background: linear-gradient(to left, rgba(120, 100, 60, 0.18), rgba(120, 100, 60, 0));
+  }
+
+  .guide-page--side-second::before {
+    inset-inline-start: 0;
+    background: linear-gradient(to right, rgba(120, 100, 60, 0.20), rgba(120, 100, 60, 0));
+  }
+
+  // Tranches : quelques feuilles empilées sur le bord extérieur.
+  .guide-slot--first .guide-page:not(.guide-page--empty) {
+    box-shadow: -1px 0 0 $paper-edge, -3px 1px 0 #fbf9f3, -4px 1px 0 $paper-edge, -6px 2px 0 #f8f5ee,
+      -7px 2px 0 #dcd5c6, -10px 6px 18px rgba(15, 23, 42, 0.18);
+  }
+
+  .guide-slot--second .guide-page:not(.guide-page--empty),
+  .guide-slot--single .guide-page:not(.guide-page--empty) {
+    box-shadow: 1px 0 0 $paper-edge, 3px 1px 0 #fbf9f3, 4px 1px 0 $paper-edge, 6px 2px 0 #f8f5ee,
+      7px 2px 0 #dcd5c6, 10px 6px 18px rgba(15, 23, 42, 0.18);
+  }
+
+  .guide-page--empty {
+    background: transparent;
+    box-shadow: none;
+  }
+
+  // Ni creux de reliure à côté du livre fermé, ni sur la couverture rigide.
+  .guide-page--empty::before,
+  .guide-page--cover::before {
+    display: none;
+  }
+
+  .guide-page__running {
+    flex: none;
+    padding-bottom: 6px;
+    margin-bottom: 12px;
+    border-bottom: 1px solid #ece6d8;
+    font: 600 0.68rem $ui-font;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #a1907a;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .guide-page__body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+  }
+
+  .guide-page__number {
+    flex: none;
+    padding-top: 8px;
+    text-align: center;
+    font: 600 0.75rem $ui-font;
+    color: #a1907a;
+  }
+
+  // ------------------------------------------------------------------ couverture
+  .guide-page--cover {
+    padding: 0;
+    background: linear-gradient(150deg, $brand-from 0%, $brand-to 100%);
+    color: #ffffff;
+  }
+
+  .guide-cover {
+    position: relative;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 40px;
+    gap: 6px;
+
+    // Filet du livre relié.
+    &::before {
+      content: '';
+      position: absolute;
+      inset: 18px;
+      border: 1px solid rgba(255, 255, 255, 0.45);
+      border-radius: 4px;
+      pointer-events: none;
+    }
+  }
+
+  .guide-cover__ornament {
+    display: grid;
+    place-items: center;
+    width: 84px;
+    height: 84px;
+    margin-bottom: 14px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.16);
+
+    mat-icon {
+      font-size: 44px;
+      width: 44px;
+      height: 44px;
+    }
+  }
+
+  .guide-cover__brand {
+    margin: 0;
+    font: 600 0.8rem $ui-font;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    opacity: 0.85;
+  }
+
+  .guide-cover__title {
+    margin: 4px 0 6px;
+    font: 800 2rem/1.15 $prose-font;
+  }
+
+  .guide-cover__audience {
+    margin: 0;
+    font-size: 0.95rem;
+    opacity: 0.9;
+  }
+
+  .guide-cover__hint {
+    position: absolute;
+    bottom: 40px;
+    margin: 0;
+    font-size: 0.8rem;
+    opacity: 0.8;
+  }
+
+  // ------------------------------------------------------------------ sommaire
+  .guide-contents {
+    h2 {
+      margin: 6px 0 18px;
+      font: 800 1.5rem $prose-font;
+      color: $accent-dark;
+    }
+
+    ol {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      counter-reset: chapter;
+    }
+
+    li {
+      counter-increment: chapter;
+      margin-bottom: 4px;
+    }
+  }
+
+  .guide-contents__link {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    width: 100%;
+    padding: 9px 6px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    font: 1rem $prose-font;
+    color: $ink;
+    text-align: start;
+    cursor: pointer;
+
+    &::before {
+      content: counter(chapter);
+      flex: none;
+      display: grid;
+      place-items: center;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #eef2ff;
+      color: $accent;
+      font: 700 0.75rem $ui-font;
+    }
+
+    &:hover,
+    &:focus-visible {
+      background: #f3f0e8;
+      outline: none;
+    }
+  }
+
+  .guide-contents__dots {
+    flex: 1;
+    border-bottom: 1px dotted #c9bfa9;
+    transform: translateY(-4px);
+  }
+
+  .guide-contents__page {
+    font: 600 0.85rem $ui-font;
+    color: $muted;
+  }
+
+  // ------------------------------------------------------------------ texte
+  .guide-prose {
+    font: 0.93rem/1.5 $prose-font;
+
+    h1 {
+      margin: 0 0 12px;
+      font: 800 1.45rem/1.2 $prose-font;
+      color: $accent-dark;
+    }
+
+    h2 {
+      margin: 0 0 8px;
+      font: 700 1.08rem/1.3 $ui-font;
+      color: $accent-dark;
+    }
+
+    h3 {
+      margin: 12px 0 6px;
+      font: 700 0.9rem $ui-font;
+    }
+
+    p {
+      margin: 0 0 8px;
+    }
+
+    strong {
+      color: #0f172a;
+    }
+
+    ul,
+    ol {
+      margin: 0 0 8px;
+      padding-inline-start: 20px;
+    }
+
+    li {
+      margin-bottom: 3px;
+    }
+
+    // Étapes numérotées : des pastilles, comme sur les écrans.
+    ol {
+      list-style: none;
+      padding-inline-start: 0;
+      counter-reset: step;
+
+      > li {
+        position: relative;
+        counter-increment: step;
+        padding-inline-start: 30px;
+        margin-bottom: 6px;
+
+        &::before {
+          content: counter(step);
+          position: absolute;
+          inset-inline-start: 0;
+          top: 1px;
+          display: grid;
+          place-items: center;
+          width: 21px;
+          height: 21px;
+          border-radius: 50%;
+          background: $accent;
+          color: #ffffff;
+          font: 700 0.72rem $ui-font;
+        }
+      }
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 0 0 10px;
+      font: 0.8rem/1.35 $ui-font;
+    }
+
+    th,
+    td {
+      padding: 5px 6px;
+      border-bottom: 1px solid #ece6d8;
+      text-align: start;
+      vertical-align: top;
+    }
+
+    th {
+      color: $muted;
+    }
+
+    img {
+      max-width: 100%;
+      border-radius: 6px;
+    }
+
+    a {
+      color: $accent;
+    }
+
+    // Citation d'un message de l'écran.
+    blockquote:not(.guide-callout) {
+      margin: 8px 0 10px;
+      padding: 6px 12px;
+      border-inline-start: 3px solid #c9bfa9;
+      background: #f7f3ea;
+      border-radius: 4px;
+      color: #44403c;
+      font-style: italic;
+
+      p {
+        margin: 0;
+      }
+    }
+  }
+
+  // Encadrés : exemple (vert), à savoir (bleu), attention (ambre).
+  .guide-callout {
+    margin: 10px 0;
+    padding: 8px 12px;
+    border-inline-start: 4px solid;
+    border-radius: 6px;
+    font: 0.84rem/1.45 $ui-font;
+
+    p {
+      margin: 0 0 4px;
+    }
+
+    p:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  .guide-callout__title {
+    font-weight: 800;
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .guide-callout--tip {
+    border-color: #16a34a;
+    background: #f0fdf4;
+    color: #14532d;
+  }
+
+  .guide-callout--note {
+    border-color: $accent;
+    background: #eef2ff;
+    color: $accent-dark;
+  }
+
+  .guide-callout--warning {
+    border-color: #d97706;
+    background: #fffbeb;
+    color: #78350f;
+  }
+
+  .ug-scroll-chapter {
+    margin-bottom: 20px;
+    padding: 28px 34px;
+    border-radius: 10px;
+    background: $paper;
+    box-shadow: 0 2px 10px rgba(15, 23, 42, 0.08);
+    font-size: 1rem;
+  }
+
+  // ------------------------------------------------------------------ arabe
+  &.user-guide--rtl {
+    // Toute la page en police arabe, titres et encadrés compris (ils fixent sinon leur propre
+    // police latine), en romain ou en gras seulement : voir _user-guide.vars.scss.
+    .guide-prose,
+    .guide-prose h1,
+    .guide-prose h2,
+    .guide-prose h3,
+    .guide-prose table,
+    .guide-contents__link,
+    .guide-contents__page,
+    .guide-cover__title,
+    .guide-cover__brand,
+    .guide-cover__audience,
+    .guide-contents h2,
+    .guide-callout,
+    .guide-page__running,
+    .guide-page__number {
+      font-family: $arabic-font;
+    }
+
+    .guide-prose h1,
+    .guide-cover__title,
+    .guide-contents h2,
+    .guide-callout__title,
+    .guide-page__running,
+    .guide-page__number,
+    .guide-contents__page {
+      font-weight: 700;
+    }
+
+    // Lettres espacées et capitales n'ont pas de sens en arabe, et l'espacement casse la liaison.
+    .guide-page__running,
+    .guide-callout__title,
+    .guide-cover__brand {
+      letter-spacing: normal;
+      text-transform: none;
+    }
+
+    .guide-prose {
+      font-size: 1rem;
+      line-height: 1.6;
+    }
+
+    // Les libellés de l'écran restent en français dans le texte arabe : on les isole, pour que leur
+    // ponctuation et leurs chiffres ne se mêlent pas au sens de lecture arabe.
+    .guide-prose strong {
+      unicode-bidi: isolate;
+    }
+
+    // Les dégradés et les ombres ne connaissent pas les directions logiques : on les inverse.
+    .guide-page--side-first::before {
+      background: linear-gradient(to right, rgba(120, 100, 60, 0.18), rgba(120, 100, 60, 0));
+    }
+
+    .guide-page--side-second::before {
+      background: linear-gradient(to left, rgba(120, 100, 60, 0.20), rgba(120, 100, 60, 0));
+    }
+
+    .guide-slot--first .guide-page:not(.guide-page--empty) {
+      box-shadow: 1px 0 0 $paper-edge, 3px 1px 0 #fbf9f3, 4px 1px 0 $paper-edge, 6px 2px 0 #f8f5ee,
+        7px 2px 0 #dcd5c6, 10px 6px 18px rgba(15, 23, 42, 0.18);
+    }
+
+    .guide-slot--second .guide-page:not(.guide-page--empty),
+    .guide-slot--single .guide-page:not(.guide-page--empty) {
+      box-shadow: -1px 0 0 $paper-edge, -3px 1px 0 #fbf9f3, -4px 1px 0 $paper-edge, -6px 2px 0 #f8f5ee,
+        -7px 2px 0 #dcd5c6, -10px 6px 18px rgba(15, 23, 42, 0.18);
+    }
+  }
+}

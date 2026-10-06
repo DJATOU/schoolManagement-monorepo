@@ -1,0 +1,31 @@
+{
+  "lang": "fr",
+  "dir": "ltr",
+  "languageName": "Français",
+  "title": "Guide d'utilisation",
+  "labels": {
+    "audience": "Pour l'administrateur de l'école",
+    "contents": "Sommaire",
+    "previous": "Page précédente",
+    "next": "Page suivante",
+    "pageOf": "Page {{n}} sur {{total}}",
+    "bookMode": "Livre",
+    "scrollMode": "Lecture continue",
+    "language": "Langue du guide",
+    "example": "Exemple",
+    "note": "À savoir",
+    "warning": "Attention",
+    "loading": "Chargement du guide…",
+    "error": "Le guide n'a pas pu être chargé.",
+    "retry": "Réessayer",
+    "turnHint": "Tournez la page →",
+    "keyboardHint": "Pour tourner les pages : flèches du clavier, coin de la page, ou tirez la page.",
+    "bookAria": "Guide d'utilisation, présenté comme un livre"
+  },
+  "chapters": [
+    { "id": "demarrer", "file": "01-demarrer.md" },
+    { "id": "seances", "file": "02-seances-et-presences.md" },
+    { "id": "paiements", "file": "03-paiements.md" },
+    { "id": "paie-enseignants", "file": "04-paie-des-enseignants.md" }
+  ]
+}
