@@ -1,0 +1,17 @@
+name,groupType,level,subject,teacherFirstName,teacherLastName,sessionNumberPerSerie,price
+Maths 4 AM A,Moyen groupe,4 AM,Mathématiques,Mohamed,Benali,4,500
+Maths 4 AM B,Moyen groupe,4 AM,Mathématiques,Nadia,Aït Ahmed,4,500
+Physique 4 AM,Moyen groupe,4 AM,Physique,Karim,Bouchareb,4,500
+Français 4 AM,Grand groupe,4 AM,Français,Céline,Mahiout,4,500
+Maths 1 AS,Moyen groupe,1 AS,Mathématiques,Mohamed,Benali,4,800
+Physique 1 AS,Moyen groupe,1 AS,Physique,Karim,Bouchareb,4,800
+Anglais 1 AS,Grand groupe,1 AS,Anglais,Yasmine,Belaïd,4,800
+Maths 2 AS Sciences exp.,Moyen groupe,2 AS,Mathématiques,Nadia,Aït Ahmed,4,800
+Sciences naturelles 2 AS,Moyen groupe,2 AS,Sciences naturelles,Samia,Boudiaf,4,800
+Maths 3 AS A,Moyen groupe,3 AS,Mathématiques,Mohamed,Benali,8,1000
+Maths 3 AS B,Petit groupe,3 AS,Mathématiques,Nadia,Aït Ahmed,8,1500
+Physique 3 AS,Moyen groupe,3 AS,Physique,Karim,Bouchareb,4,1000
+Philosophie 3 AS,Grand groupe,3 AS,Philosophie,Omar,Bendjedid,4,1000
+Arabe 3 AS,Grand groupe,3 AS,Arabe,Rachid,Mokrani,4,1000
+Histoire-Géographie 3 AS,Grand groupe,3 AS,Histoire-Géographie,Farid,Bouhired,4,1000
+Maths 3 AS individuel,Individuel,3 AS,Mathématiques,Mohamed,Benali,4,2000
