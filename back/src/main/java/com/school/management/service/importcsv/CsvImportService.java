@@ -597,12 +597,17 @@ public class CsvImportService {
         try (BufferedReader reader = new BufferedReader(
                 new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8))) {
             String headerLine = reader.readLine();
+            // BOM éventuel en début de fichier (UTF-8 avec BOM : Excel sous Windows en a besoin pour
+            // afficher les accents). Le décodeur UTF-8 de Java le laisse dans le texte : non retiré,
+            // il colle à la première colonne (« \uFEFFfirstName ») et chaque ligne est refusée.
+            // Retiré AVANT le contrôle de l'en-tête : un fichier réduit à son BOM est vide.
+            if (headerLine != null) {
+                headerLine = headerLine.replace("\uFEFF", "");
+            }
             if (headerLine == null || headerLine.isBlank()) {
                 result.addError(0, "En-tête CSV manquant.");
                 return rows;
             }
-            // BOM éventuel en début de fichier.
-            headerLine = headerLine.replace("\uFEFF", "");
             char separator = headerLine.contains(";") ? ';' : ',';
 
             rows.add(split(headerLine, separator));

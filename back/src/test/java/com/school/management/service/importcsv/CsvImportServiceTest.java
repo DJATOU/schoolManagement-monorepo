@@ -352,5 +352,54 @@ class CsvImportServiceTest {
             assertThat(result.getImported()).isEqualTo(1);
             assertThat(result.getErrors()).isEmpty();
         }
+
+        @Test
+        @DisplayName("BOM UTF-8 devant « firstName » : la colonne est reconnue, accents compris")
+        void bomDevantLePrenom() {
+            // Le défaut à éviter : « \uFEFFfirstName » n'est plus la colonne firstName, et chaque
+            // élève est refusé (« Prénom et nom obligatoires. »).
+            when(levelRepository.findByName("1er année")).thenReturn(Optional.of(level));
+
+            ImportResultDTO result = service.importStudents(csv(
+                    "\uFEFFfirstName,lastName,gender,level,establishment\nLéa,Haddad,F,1er année,Lycée Émir Abdelkader\n"));
+
+            assertThat(result.getErrors()).isEmpty();
+            assertThat(result.getImported()).isEqualTo(1);
+            ArgumentCaptor<com.school.management.persistance.StudentEntity> saved =
+                    ArgumentCaptor.forClass(com.school.management.persistance.StudentEntity.class);
+            verify(studentRepository).save(saved.capture());
+            assertThat(saved.getValue().getFirstName()).isEqualTo("Léa");
+            assertThat(saved.getValue().getEstablishment()).isEqualTo("Lycée Émir Abdelkader");
+            assertThat(saved.getValue().getLevel()).isSameAs(level);
+        }
+
+        @Test
+        @DisplayName("BOM et point-virgule (Excel réglé en français, « CSV UTF-8 ») : importé")
+        void bomEtPointVirgule() {
+            ImportResultDTO result = service.importTeachers(csv(
+                    "\uFEFFfirstName;lastName;specialization\r\nCéline;Mahiout;Français\r\n"));
+
+            assertThat(result.getErrors()).isEmpty();
+            assertThat(result.getImported()).isEqualTo(1);
+            ArgumentCaptor<TeacherEntity> saved = ArgumentCaptor.forClass(TeacherEntity.class);
+            verify(teacherRepository).save(saved.capture());
+            assertThat(saved.getValue().getFirstName()).isEqualTo("Céline");
+            assertThat(saved.getValue().getSpecialization()).isEqualTo("Français");
+        }
+
+        @Test
+        @DisplayName("fichier réduit à un BOM (feuille vide enregistrée par Excel) : en-tête manquant")
+        void bomSeul() {
+            // Trois octets, aucun texte : sans retrait du BOM avant le contrôle, l'en-tête passait
+            // pour non vide et l'import annonçait « 0 importé, 0 erreur », sans rien expliquer.
+            ImportResultDTO result = service.importStudents(csv("\uFEFF"));
+
+            assertThat(result.getImported()).isZero();
+            assertThat(result.getErrors()).singleElement().satisfies(error -> {
+                assertThat(error.getLine()).isZero();
+                assertThat(error.getMessage()).isEqualTo("En-tête CSV manquant.");
+            });
+            verify(studentRepository, never()).save(any());
+        }
     }
 }
