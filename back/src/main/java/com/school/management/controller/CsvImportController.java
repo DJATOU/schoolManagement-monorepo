@@ -17,6 +17,9 @@ import org.springframework.web.multipart.MultipartFile;
  * <p>Chaque endpoint reçoit un fichier {@code multipart/form-data} (paramètre {@code file}) et
  * délègue au {@link CsvImportService}, qui renvoie un résumé (nombre importés + erreurs par
  * ligne). Conforme aux conventions : upload en multipart, contrôleur mince.</p>
+ *
+ * <p>Également : niveaux, matières, salles, types de groupe, tarifs et inscriptions. Toutes ces
+ * routes sont des {@code POST /api/**}, réservées au rôle ADMIN par {@code SecurityConfig}.</p>
  */
 @RestController
 @RequestMapping("/api/import")
@@ -67,5 +70,14 @@ public class CsvImportController {
     @PostMapping(value = "/pricing", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ImportResultDTO> importPricing(@RequestParam("file") MultipartFile file) {
         return ResponseEntity.ok(csvImportService.importPricing(file));
+    }
+
+    /**
+     * Inscriptions (élève → groupe, à une date d'arrivée). La date est une cellule du fichier, au
+     * format {@code yyyy-MM-dd}, lue par le service : la requête ne porte que le fichier.
+     */
+    @PostMapping(value = "/enrolments", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ImportResultDTO> importEnrolments(@RequestParam("file") MultipartFile file) {
+        return ResponseEntity.ok(csvImportService.importEnrolments(file));
     }
 }

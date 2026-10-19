@@ -2,14 +2,19 @@ package com.school.management.controller;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.school.management.domain.valueobject.EnrolmentWindow;
 import com.school.management.persistance.GroupEntity;
 import com.school.management.persistance.StudentEntity;
+import com.school.management.persistance.StudentGroupEntity;
 import com.school.management.persistance.TeacherEntity;
+import com.school.management.repository.AttendanceRepository;
 import com.school.management.repository.GroupRepository;
 import com.school.management.repository.GroupTypeRepository;
 import com.school.management.repository.LevelRepository;
+import com.school.management.repository.PaymentRepository;
 import com.school.management.repository.PricingRepository;
 import com.school.management.repository.RoomRepository;
+import com.school.management.repository.StudentGroupRepository;
 import com.school.management.repository.StudentRepository;
 import com.school.management.repository.SubjectRepository;
 import com.school.management.repository.TeacherRepository;
@@ -30,6 +35,7 @@ import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -63,7 +69,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "spring.datasource.password=",
         "spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.H2Dialect",
         "spring.jpa.hibernate.ddl-auto=create-drop",
-        "spring.jpa.show-sql=false"
+        "spring.jpa.show-sql=false",
+        // Année courante du jeu d'essai, fixée : dérivée de l'horloge système, elle changerait en
+        // septembre 2027 et les dates d'arrivée de 9-inscriptions.csv sortiraient de l'année.
+        "school.year.initial-label=2026-2027"
 })
 @DisplayName("Jeu d'essai CSV (UTF-8 avec BOM) importé de bout en bout")
 class SampleCsvImportIntegrationTest {
@@ -83,9 +92,12 @@ class SampleCsvImportIntegrationTest {
     @Autowired private TeacherRepository teachers;
     @Autowired private StudentRepository students;
     @Autowired private GroupRepository groups;
+    @Autowired private StudentGroupRepository enrolments;
+    @Autowired private AttendanceRepository attendances;
+    @Autowired private PaymentRepository payments;
 
     @Test
-    @DisplayName("les huit fichiers, dans l'ordre : tout importé, chaque colonne de chaque ligne retrouvée")
+    @DisplayName("les neuf fichiers, dans l'ordre : tout importé, chaque colonne de chaque ligne retrouvée")
     void wholeSampleImports() throws Exception {
         importFile("levels", "1-niveaux.csv", 4);
         importFile("subjects", "2-matieres.csv", 8);
@@ -95,6 +107,7 @@ class SampleCsvImportIntegrationTest {
         importFile("teachers", "6-enseignants.csv", 9);
         importFile("students", "7-eleves.csv", 40);
         importFile("groups", "8-groupes.csv", 16);
+        importFile("enrolments", "9-inscriptions.csv", 69);
 
         // Première colonne de chaque fichier, celle qu'un BOM corromprait : relue telle quelle.
         assertThat(levels.findAll()).extracting("name").containsExactlyInAnyOrderElementsOf(column("1-niveaux.csv", "name"));
@@ -143,6 +156,23 @@ class SampleCsvImportIntegrationTest {
             assertThat(group.getSessionNumberPerSerie()).isEqualTo(Integer.parseInt(row.get("sessionNumberPerSerie")));
             assertThat(group.getPrice().getPrice().intValue()).isEqualTo(Integer.parseInt(row.get("price")));
         }
+
+        // Chaque inscription du fichier : ouverte, à la date d'arrivée du fichier.
+        List<Map<String, String>> enrolmentRows = rows("9-inscriptions.csv");
+        for (Map<String, String> row : enrolmentRows) {
+            String who = row.get("firstName") + " " + row.get("lastName");
+            StudentGroupEntity enrolment = enrolments.findByGroupIdAndStudentIdAndActiveTrue(
+                            groupByName.get(row.get("group")).getId(), studentByName.get(who).getId())
+                    .orElseThrow(() -> new AssertionError("inscription de " + who + " à " + row.get("group")));
+            assertThat(EnrolmentWindow.dayOf(enrolment.getDateAssigned()))
+                    .as("arrivée de %s à %s", who, row.get("group"))
+                    .isEqualTo(LocalDate.parse(row.get("arrivalDate")));
+            assertThat(enrolment.getDateLeft()).as("départ de %s à %s", who, row.get("group")).isNull();
+        }
+        assertThat(enrolments.count()).isEqualTo(enrolmentRows.size()).isEqualTo(69);
+        // L'import crée des inscriptions, et rien d'autre.
+        assertThat(attendances.count()).isZero();
+        assertThat(payments.count()).isZero();
 
         // Aucune trace d'un BOM ni d'un caractère de remplacement (accent mal décodé) dans les noms.
         List<String> names = new ArrayList<>();

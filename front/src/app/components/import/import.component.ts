@@ -42,7 +42,7 @@ interface ImportCard {
 })
 export class ImportComponent {
 
-  /** Cartes d'import, ordonnées par dépendance (référentiels → profs → élèves → groupes). */
+  /** Cartes d'import, ordonnées par dépendance (référentiels → profs → élèves → groupes → inscriptions). */
   readonly cards: ImportCard[] = [
     { kind: 'levels', icon: 'stairs', titleKey: 'IMPORT.LEVELS.TITLE', columnsKey: 'IMPORT.LEVELS.COLUMNS' },
     { kind: 'subjects', icon: 'menu_book', titleKey: 'IMPORT.SUBJECTS.TITLE', columnsKey: 'IMPORT.SUBJECTS.COLUMNS' },
@@ -51,7 +51,8 @@ export class ImportComponent {
     { kind: 'pricing', icon: 'price_change', titleKey: 'IMPORT.PRICING.TITLE', columnsKey: 'IMPORT.PRICING.COLUMNS' },
     { kind: 'teachers', icon: 'workspace_premium', titleKey: 'IMPORT.TEACHERS.TITLE', columnsKey: 'IMPORT.TEACHERS.COLUMNS' },
     { kind: 'students', icon: 'school', titleKey: 'IMPORT.STUDENTS.TITLE', columnsKey: 'IMPORT.STUDENTS.COLUMNS' },
-    { kind: 'groups', icon: 'groups_3', titleKey: 'IMPORT.GROUPS.TITLE', columnsKey: 'IMPORT.GROUPS.COLUMNS', noteKey: 'IMPORT.GROUPS.NOTE' }
+    { kind: 'groups', icon: 'groups_3', titleKey: 'IMPORT.GROUPS.TITLE', columnsKey: 'IMPORT.GROUPS.COLUMNS', noteKey: 'IMPORT.GROUPS.NOTE' },
+    { kind: 'enrolments', icon: 'how_to_reg', titleKey: 'IMPORT.ENROLMENTS.TITLE', columnsKey: 'IMPORT.ENROLMENTS.COLUMNS', noteKey: 'IMPORT.ENROLMENTS.NOTE' }
   ];
 
   /** État par type d'import (fichier sélectionné, chargement, résultat, erreur). */
@@ -100,6 +101,7 @@ export class ImportComponent {
       case 'rooms': return this.importService.importRooms(file);
       case 'group-types': return this.importService.importGroupTypes(file);
       case 'pricing': return this.importService.importPricing(file);
+      case 'enrolments': return this.importService.importEnrolments(file);
     }
   }
 }

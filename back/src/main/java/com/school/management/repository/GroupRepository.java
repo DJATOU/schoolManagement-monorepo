@@ -74,6 +74,19 @@ public interface GroupRepository extends JpaRepository<GroupEntity, Long> {
     @Query("SELECT g FROM GroupEntity g "
             + "WHERE g.schoolYear.id = :schoolYearId AND (g.active IS NULL OR g.active = true)")
     List<GroupEntity> findActiveBySchoolYearId(@Param("schoolYearId") Long schoolYearId);
+    /**
+     * Groupes non désactivés d'une année scolaire portant ce nom, casse et espaces de bord ignorés
+     * (import CSV des inscriptions).
+     *
+     * <p>Une liste : rien n'interdit deux groupes du même nom dans une année. L'appelant refuse
+     * alors la ligne au lieu de choisir un groupe au hasard.</p>
+     */
+    @Query("SELECT g FROM GroupEntity g "
+            + "WHERE g.schoolYear.id = :schoolYearId AND (g.active IS NULL OR g.active = true) "
+            + "AND lower(trim(g.name)) = lower(trim(:name)) "
+            + "ORDER BY g.id")
+    List<GroupEntity> findActiveBySchoolYearIdAndName(@Param("schoolYearId") Long schoolYearId,
+            @Param("name") String name);
 
     // Groupes sans année scolaire (utilisé par la migration pour les rattacher à l'année initiale)
     List<GroupEntity> findBySchoolYearIsNull();

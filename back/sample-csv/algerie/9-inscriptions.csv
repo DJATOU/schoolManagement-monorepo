@@ -1,0 +1,70 @@
+﻿firstName,lastName,group,arrivalDate,phoneNumber
+Amine,Belkacem,Maths 4 AM A,2026-09-15,0550000101
+Léa,Haddad,Maths 4 AM A,2026-09-15,0550000102
+Yacine,Mansouri,Maths 4 AM A,2026-09-15,0550000103
+Chloé,Brahimi,Maths 4 AM A,2026-09-15,0550000104
+Lucas,Saidi,Maths 4 AM A,2026-09-15,0550000105
+Meriem,Cherif,Maths 4 AM B,2026-09-15,
+Hugo,Mebarki,Maths 4 AM B,2026-10-05,0550000107
+Khadidja,Hamidi,Maths 4 AM B,2026-09-15,0550000108
+Mehdi,Bouzid,Maths 4 AM B,2026-09-15,0550000109
+Emma,Ziani,Maths 4 AM B,2026-09-15,0550000110
+Amine,Belkacem,Physique 4 AM,2026-09-15,0550000101
+Léa,Haddad,Physique 4 AM,2026-09-15,0550000102
+Hugo,Mebarki,Physique 4 AM,2026-09-15,0550000107
+Emma,Ziani,Physique 4 AM,2026-09-15,0550000110
+Yacine,Mansouri,Français 4 AM,2026-09-15,0550000103
+Chloé,Brahimi,Français 4 AM,2026-09-15,0550000104
+Meriem,Cherif,Français 4 AM,2026-09-15,
+Mehdi,Bouzid,Français 4 AM,2026-09-15,0550000109
+Mohamed,Khelifi,Maths 1 AS,2026-09-15,0550000201
+Manon,Rahmani,Maths 1 AS,2026-09-15,0550000202
+Théo,Lounis,Maths 1 AS,2026-09-15,0550000203
+Aya,Messaoudi,Maths 1 AS,2026-09-15,0550000204
+Walid,Benamara,Maths 1 AS,2026-09-15,0550000205
+Camille,Amrani,Maths 1 AS,2026-09-15,0550000206
+Mohamed,Khelifi,Physique 1 AS,2026-09-15,0550000201
+Théo,Lounis,Physique 1 AS,2026-09-15,0550000203
+Nathan,Belhadj,Physique 1 AS,2026-09-15,0550000207
+Imane,Djebbar,Physique 1 AS,2026-09-15,0550000208
+Manon,Rahmani,Anglais 1 AS,2026-09-15,0550000202
+Aya,Messaoudi,Anglais 1 AS,2026-09-15,0550000204
+Hamza,Ferhat,Anglais 1 AS,2026-09-15,
+Sarah,Guerfi,Anglais 1 AS,2026-09-15,0550000210
+Camille,Amrani,Anglais 1 AS,2026-10-05,0550000206
+Zakaria,Kaci,Maths 2 AS Sciences exp.,2026-09-15,0550000301
+Clara,Larbi,Maths 2 AS Sciences exp.,2026-09-15,0550000302
+Julien,Medjahed,Maths 2 AS Sciences exp.,2026-09-15,0550000303
+Chaïma,Nedjar,Maths 2 AS Sciences exp.,2026-09-15,0550000304
+Bilal,Ouali,Maths 2 AS Sciences exp.,2026-09-15,0550000305
+Inès,Rezki,Maths 2 AS Sciences exp.,2026-09-15,
+Zakaria,Kaci,Sciences naturelles 2 AS,2026-09-15,0550000301
+Chaïma,Nedjar,Sciences naturelles 2 AS,2026-09-15,0550000304
+Louis,Slimani,Sciences naturelles 2 AS,2026-09-15,0550000307
+Rania,Taleb,Sciences naturelles 2 AS,2026-09-15,0550000308
+Oussama,Yahiaoui,Sciences naturelles 2 AS,2026-10-05,0550000309
+Lina,Zerrouki,Sciences naturelles 2 AS,2026-09-15,0550000310
+Sofiane,Bensalem,Maths 3 AS A,2026-09-15,0550000401
+Maya,Chabane,Maths 3 AS A,2026-09-15,0550000402
+Abdelkader,Daoud,Maths 3 AS A,2026-09-15,0550000403
+Jade,Ghali,Maths 3 AS A,2026-09-15,0550000404
+Adam,Hadjadj,Maths 3 AS A,2026-09-15,0550000405
+Asma,Kaddour,Maths 3 AS B,2026-09-15,0550000406
+Raphaël,Lahlou,Maths 3 AS B,2026-09-15,0550000407
+Houda,Mekki,Maths 3 AS B,2026-09-15,
+Sofiane,Bensalem,Physique 3 AS,2026-09-15,0550000401
+Maya,Chabane,Physique 3 AS,2026-09-15,0550000402
+Asma,Kaddour,Physique 3 AS,2026-09-15,0550000406
+Ilyes,Nouri,Physique 3 AS,2026-09-15,0550000409
+Abdelkader,Daoud,Philosophie 3 AS,2026-09-15,0550000403
+Jade,Ghali,Philosophie 3 AS,2026-09-15,0550000404
+Houda,Mekki,Philosophie 3 AS,2026-09-15,
+Juliette,Boudjemaa,Philosophie 3 AS,2026-09-15,0550000410
+Ilyes,Nouri,Philosophie 3 AS,2026-09-15,0550000409
+Adam,Hadjadj,Arabe 3 AS,2026-09-15,0550000405
+Raphaël,Lahlou,Arabe 3 AS,2026-09-15,0550000407
+Juliette,Boudjemaa,Arabe 3 AS,2026-09-15,0550000410
+Maya,Chabane,Histoire-Géographie 3 AS,2026-09-15,0550000402
+Jade,Ghali,Histoire-Géographie 3 AS,2026-09-15,0550000404
+Ilyes,Nouri,Histoire-Géographie 3 AS,2026-09-15,0550000409
+Juliette,Boudjemaa,Maths 3 AS individuel,2026-11-02,0550000410
