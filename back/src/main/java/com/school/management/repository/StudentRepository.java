@@ -78,6 +78,21 @@ public interface StudentRepository extends JpaRepository<StudentEntity, Long> {
             "LEFT JOIN FETCH ser.sessions sess " +
             "WHERE s.id = :studentId")
     StudentEntity findStudentWithAllData(@Param("studentId") Long studentId);
+    /**
+     * Élèves de ce prénom et de ce nom, casse et espaces de bord ignorés, au statut demandé et non
+     * supprimés logiquement (import CSV des inscriptions).
+     *
+     * <p>Une liste et non un {@code Optional} : deux élèves peuvent légitimement porter le même
+     * nom. L'appelant départage les homonymes (par le téléphone) au lieu d'en choisir un au hasard.</p>
+     */
+    @Query("SELECT s FROM StudentEntity s "
+            + "WHERE lower(trim(s.firstName)) = lower(trim(:firstName)) "
+            + "AND lower(trim(s.lastName)) = lower(trim(:lastName)) "
+            + "AND s.status = :status AND (s.active IS NULL OR s.active = true) "
+            + "ORDER BY s.id")
+    List<StudentEntity> findByFullNameAndStatus(@Param("firstName") String firstName,
+            @Param("lastName") String lastName,
+            @Param("status") StudentStatus status);
 
     @EntityGraph(value = "Student.withAllData", type = EntityGraph.EntityGraphType.LOAD)
     @NonNull

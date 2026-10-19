@@ -1,15 +1,18 @@
 package com.school.management.service.importcsv;
 
+import com.school.management.dto.StudentGroupDTO;
 import com.school.management.dto.importcsv.ImportResultDTO;
 import com.school.management.persistance.GroupEntity;
 import com.school.management.persistance.GroupTypeEntity;
 import com.school.management.persistance.LevelEntity;
+import com.school.management.persistance.SchoolYearEntity;
 import com.school.management.persistance.StudentEntity;
 import com.school.management.persistance.StudentStatus;
 import com.school.management.persistance.PricingEntity;
 import com.school.management.persistance.RoomEntity;
 import com.school.management.persistance.SubjectEntity;
 import com.school.management.persistance.TeacherEntity;
+import com.school.management.repository.GroupRepository;
 import com.school.management.repository.GroupTypeRepository;
 import com.school.management.repository.LevelRepository;
 import com.school.management.repository.PricingRepository;
@@ -17,6 +20,9 @@ import com.school.management.repository.RoomRepository;
 import com.school.management.repository.StudentRepository;
 import com.school.management.repository.SubjectRepository;
 import com.school.management.repository.TeacherRepository;
+import com.school.management.service.CurrentSchoolYearService;
+import com.school.management.service.StudentGroupService;
+import com.school.management.service.exception.CustomServiceException;
 import com.school.management.service.group.GroupServiceImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,11 +35,16 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.time.format.ResolverStyle;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Service d'import CSV minimal (élèves, enseignants, groupes).
@@ -61,11 +72,24 @@ import java.util.Map;
  * deux fois avait créé une seconde fiche par personne, comptée par le tableau de bord. Pas d'index
  * unique ici : deux enseignants homonymes restent possibles par la saisie manuelle. Les élèves ne
  * sont pas concernés, deux élèves pouvant légitimement porter le même nom.</p>
+ *
+ * <p><b>Inscriptions.</b> L'import des inscriptions (élève → groupe, à une date d'arrivée) passe
+ * par le chemin de « Ajouter un étudiant » ({@link StudentGroupService#addStudentsToGroup}), qui
+ * porte tous les contrôles métier. C'est le seul import sans transaction englobante : chaque ligne
+ * est validée dans sa propre transaction, pour qu'un refus n'annule que sa ligne (voir
+ * {@link #importEnrolments(MultipartFile)}).</p>
  */
 @Service
 public class CsvImportService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(CsvImportService.class);
+
+    /**
+     * Format de la date d'arrivée : {@code yyyy-MM-dd}, celui de l'API ({@code StudentGroupDTO})
+     * et de l'écran. Résolution stricte : un jour inexistant (2026-02-30) est refusé, pas corrigé.
+     */
+    private static final DateTimeFormatter ARRIVAL_DATE_FORMAT =
+            DateTimeFormatter.ofPattern("uuuu-MM-dd").withResolverStyle(ResolverStyle.STRICT);
 
     private final StudentRepository studentRepository;
     private final TeacherRepository teacherRepository;
@@ -75,6 +99,10 @@ public class CsvImportService {
     private final RoomRepository roomRepository;
     private final PricingRepository pricingRepository;
     private final GroupServiceImpl groupService;
+    private final GroupRepository groupRepository;
+    private final CurrentSchoolYearService currentSchoolYearService;
+    /** Seul chemin d'écriture d'une inscription : aucun accès direct à la table d'inscription ici. */
+    private final StudentGroupService studentGroupService;
 
     @Autowired
     public CsvImportService(StudentRepository studentRepository,
@@ -84,7 +112,10 @@ public class CsvImportService {
                             GroupTypeRepository groupTypeRepository,
                             RoomRepository roomRepository,
                             PricingRepository pricingRepository,
-                            GroupServiceImpl groupService) {
+                            GroupServiceImpl groupService,
+                            GroupRepository groupRepository,
+                            CurrentSchoolYearService currentSchoolYearService,
+                            StudentGroupService studentGroupService) {
         this.studentRepository = studentRepository;
         this.teacherRepository = teacherRepository;
         this.levelRepository = levelRepository;
@@ -93,6 +124,9 @@ public class CsvImportService {
         this.roomRepository = roomRepository;
         this.pricingRepository = pricingRepository;
         this.groupService = groupService;
+        this.groupRepository = groupRepository;
+        this.currentSchoolYearService = currentSchoolYearService;
+        this.studentGroupService = studentGroupService;
     }
 
     /**
@@ -580,6 +614,228 @@ public class CsvImportService {
         return result;
     }
 
+    /**
+     * Importe des inscriptions (un élève dans un groupe, à une date d'arrivée) depuis un CSV.
+     * Colonnes reconnues : {@code firstName,lastName,group,arrivalDate,phoneNumber}.
+     * Obligatoires : {@code firstName}, {@code lastName}, {@code group}, {@code arrivalDate}
+     * (AAAA-MM-JJ). Une ligne = une inscription : un élève suivi dans deux groupes a deux lignes.
+     *
+     * <p><b>Résolution.</b> L'élève est cherché parmi les élèves actifs par prénom et nom, casse et
+     * espaces de bord ignorés ; {@code phoneNumber} ne sert qu'à départager des homonymes. Le groupe
+     * est cherché par son nom dans l'année scolaire <b>courante</b>, comme l'import des groupes y
+     * rattache les siens : un groupe d'une année close n'est jamais résolu.</p>
+     *
+     * <p><b>Téléphone contredit.</b> Un nom unique désigne l'élève même si le téléphone du fichier
+     * ne correspond pas au sien : la ligne est importée, mais signalée en avertissement. Le cas
+     * typique est un homonyme dont la ligne a échoué à l'import des élèves : le fichier le désigne
+     * par son téléphone, et c'est l'autre qui est inscrit, et doit les séances du groupe. Le refus
+     * bloquerait aussi un simple changement de numéro ; le silence ne serait jamais relu. Un élève
+     * sans téléphone enregistré reçoit le même avertissement : le téléphone fourni n'a pas pu être
+     * vérifié. Sans téléphone dans le fichier, rien n'est signalé : la colonne est facultative.</p>
+     *
+     * <p><b>Aucune date par défaut.</b> La date d'arrivée décide des séances dues : absente ou
+     * invalide, la ligne est refusée et la méthode métier n'est pas appelée (elle prendrait le jour
+     * même).</p>
+     *
+     * <p><b>Contrôles métier.</b> L'inscription passe par {@link StudentGroupService#addStudentsToGroup},
+     * le chemin de « Ajouter un étudiant » : niveau, bornes de l'année, départ recouvert, année close
+     * et inscription déjà en cours y sont contrôlés, et ne sont pas réimplémentés ici. Son refus est
+     * rapporté sur la ligne avec le message du serveur. Seules des inscriptions sont créées : ni
+     * présence, ni absence, ni paiement, ni série.</p>
+     *
+     * <p><b>Pas de transaction englobante</b>, contrairement aux autres imports. Chaque ligne appelle
+     * la méthode métier sur un autre bean, qui ouvre et valide sa propre transaction : un refus
+     * n'annule que sa ligne. Dans une transaction englobante, le refus traversant le proxy
+     * transactionnel la marquerait « rollback-only », et son commit final lèverait
+     * {@code UnexpectedRollbackException} : toutes les lignes, valides comprises, seraient perdues.
+     * Pour la même raison, la boucle ne manipule que des identifiants et des champs simples, relus à
+     * chaque ligne.</p>
+     */
+    public ImportResultDTO importEnrolments(MultipartFile file) {
+        ImportResultDTO result = new ImportResultDTO();
+        List<String[]> rows = readCsv(file, result);
+        if (rows.isEmpty()) {
+            return result;
+        }
+
+        Optional<SchoolYearEntity> currentYear = currentSchoolYearService.findCurrent();
+        if (currentYear.isEmpty()) {
+            result.addError(0, "Aucune année scolaire courante définie : les inscriptions visent les "
+                    + "groupes de l'année courante. Désignez l'année courante, puis relancez l'import.");
+            return result;
+        }
+        Long schoolYearId = currentYear.get().getId();
+        String schoolYearLabel = currentYear.get().getLabel();
+
+        Map<String, Integer> col = headerIndex(rows.get(0));
+        for (int i = 1; i < rows.size(); i++) {
+            int lineNumber = i + 1;
+            String[] row = rows.get(i);
+            try {
+                String firstName = value(row, col, "firstname");
+                String lastName = value(row, col, "lastname");
+                String groupName = value(row, col, "group");
+                String arrivalRaw = value(row, col, "arrivaldate");
+
+                List<String> missing = new ArrayList<>();
+                if (isBlank(firstName)) {
+                    missing.add("firstName");
+                }
+                if (isBlank(lastName)) {
+                    missing.add("lastName");
+                }
+                if (isBlank(groupName)) {
+                    missing.add("group");
+                }
+                if (isBlank(arrivalRaw)) {
+                    missing.add("arrivalDate");
+                }
+                if (!missing.isEmpty()) {
+                    String message = "Obligatoire(s) manquant(s) : " + String.join(", ", missing) + ".";
+                    if (missing.contains("arrivalDate")) {
+                        message += " La date d'arrivée n'a pas de valeur par défaut : c'est elle qui "
+                                + "décide des séances dues.";
+                    }
+                    result.addError(lineNumber, message);
+                    continue;
+                }
+
+                LocalDate arrival;
+                try {
+                    arrival = LocalDate.parse(arrivalRaw.trim(), ARRIVAL_DATE_FORMAT);
+                } catch (DateTimeParseException dtpe) {
+                    result.addError(lineNumber, "Date d'arrivée invalide : " + arrivalRaw.trim()
+                            + " (format attendu AAAA-MM-JJ, par exemple 2026-09-15).");
+                    continue;
+                }
+
+                String fullName = firstName.trim() + " " + lastName.trim();
+                StudentEntity student = resolveStudent(lineNumber, row, col, firstName, lastName,
+                        fullName, result);
+                if (student == null) {
+                    continue;
+                }
+                // Calculé avant l'appel métier : la boucle ne relit aucune entité après la transaction
+                // de la ligne.
+                String phoneWarning = phoneWarning(student, value(row, col, "phonenumber"), fullName);
+
+                List<GroupEntity> groups = groupRepository
+                        .findActiveBySchoolYearIdAndName(schoolYearId, groupName.trim());
+                if (groups.isEmpty()) {
+                    result.addError(lineNumber, "Groupe introuvable dans l'année scolaire courante ("
+                            + schoolYearLabel + ") : " + groupName.trim() + ". Importez d'abord les groupes ; "
+                            + "un groupe d'une année close ne reçoit plus d'inscription.");
+                    continue;
+                }
+                if (groups.size() > 1) {
+                    result.addError(lineNumber, "Plusieurs groupes « " + groupName.trim()
+                            + " » dans l'année scolaire courante (" + schoolYearLabel
+                            + ") : renommez-les pour les distinguer.");
+                    continue;
+                }
+                GroupEntity group = groups.get(0);
+
+                // Chemin de « Ajouter un étudiant » : tous les contrôles métier y sont faits.
+                int created = studentGroupService.addStudentsToGroup(StudentGroupDTO.builder()
+                        .groupId(group.getId())
+                        .studentIds(List.of(student.getId()))
+                        .dateAssigned(arrival)
+                        .build());
+                if (created == 0) {
+                    result.addError(lineNumber, "Déjà inscrit : " + fullName + " suit déjà le groupe « "
+                            + group.getName() + " » (inscription en cours). Ligne ignorée pour ne pas "
+                            + "créer de doublon.");
+                    continue;
+                }
+                result.incrementImported();
+                // Seulement sur une ligne importée : une ligne refusée porte déjà son erreur.
+                if (phoneWarning != null) {
+                    result.addWarning(lineNumber, phoneWarning);
+                }
+            } catch (CustomServiceException e) {
+                // Refus métier (niveau, bornes de l'année, départ recouvert, année close) : le serveur
+                // en nomme la cause, reprise telle quelle.
+                result.addError(lineNumber, "Inscription refusée : " + e.getMessage());
+            } catch (Exception e) {
+                LOGGER.warn("Import inscription ligne {} en échec : {}", lineNumber, e.getMessage());
+                result.addError(lineNumber, e.getMessage());
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Élève actif désigné par la ligne, ou {@code null} après avoir rapporté pourquoi il ne peut
+     * pas l'être. Un nom unique suffit ; le téléphone ne départage que des homonymes (s'il contredit
+     * un nom unique, la ligne passe avec un avertissement : {@code phoneWarning}).
+     */
+    private StudentEntity resolveStudent(int lineNumber, String[] row, Map<String, Integer> col,
+                                         String firstName, String lastName, String fullName,
+                                         ImportResultDTO result) {
+        List<StudentEntity> namesakes = studentRepository
+                .findByFullNameAndStatus(firstName.trim(), lastName.trim(), StudentStatus.ACTIVE);
+        if (namesakes.isEmpty()) {
+            result.addError(lineNumber, "Élève introuvable parmi les élèves actifs : " + fullName
+                    + ". Importez d'abord les élèves.");
+            return null;
+        }
+        if (namesakes.size() == 1) {
+            return namesakes.get(0);
+        }
+
+        String phone = value(row, col, "phonenumber");
+        String wanted = normalizePhone(phone);
+        if (wanted.isEmpty()) {
+            result.addError(lineNumber, "Plusieurs élèves actifs s'appellent " + fullName + " ("
+                    + namesakes.size() + ") : renseignez la colonne phoneNumber pour désigner le bon.");
+            return null;
+        }
+        List<StudentEntity> matching = namesakes.stream()
+                .filter(s -> wanted.equals(normalizePhone(s.getPhoneNumber())))
+                .toList();
+        if (matching.isEmpty()) {
+            result.addError(lineNumber, "Plusieurs élèves actifs s'appellent " + fullName
+                    + ", mais aucun n'a le téléphone " + phone.trim() + ".");
+            return null;
+        }
+        if (matching.size() > 1) {
+            result.addError(lineNumber, "Plusieurs élèves actifs s'appellent " + fullName
+                    + " et ont le téléphone " + phone.trim() + " : inscrivez-le depuis la fiche du groupe "
+                    + "(Ajouter un étudiant).");
+            return null;
+        }
+        return matching.get(0);
+    }
+
+    /**
+     * Avertissement à porter sur la ligne quand le téléphone du fichier ne confirme pas l'élève
+     * retenu, ou {@code null}. Seul un nom unique peut y conduire : entre homonymes, l'élève retenu
+     * a par construction le téléphone du fichier.
+     */
+    private static String phoneWarning(StudentEntity student, String phone, String fullName) {
+        String given = normalizePhone(phone);
+        if (given.isEmpty()) {
+            return null;
+        }
+        String stored = normalizePhone(student.getPhoneNumber());
+        if (stored.isEmpty()) {
+            return "Téléphone non vérifié : " + fullName + " est inscrit, mais sa fiche n'a aucun "
+                    + "téléphone à comparer à celui du fichier (" + phone.trim() + "). Vérifiez qu'il "
+                    + "s'agit du bon élève.";
+        }
+        if (!given.equals(stored)) {
+            return "Téléphone différent : " + fullName + " est inscrit, mais le téléphone du fichier ("
+                    + phone.trim() + ") ne correspond pas à celui de sa fiche (" + student.getPhoneNumber().trim()
+                    + "). Vérifiez qu'il s'agit du bon élève.";
+        }
+        return null;
+    }
+
+    /** Téléphone comparable : espaces, points, tirets et parenthèses retirés. */
+    private static String normalizePhone(String phone) {
+        return phone == null ? "" : phone.replaceAll("[\\s.\\-()]", "");
+    }
+
     // ==========================================================================================
     // Helpers CSV
     // ==========================================================================================
@@ -597,12 +853,17 @@ public class CsvImportService {
         try (BufferedReader reader = new BufferedReader(
                 new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8))) {
             String headerLine = reader.readLine();
+            // BOM éventuel en début de fichier (UTF-8 avec BOM : Excel sous Windows en a besoin pour
+            // afficher les accents). Le décodeur UTF-8 de Java le laisse dans le texte : non retiré,
+            // il colle à la première colonne (« \uFEFFfirstName ») et chaque ligne est refusée.
+            // Retiré AVANT le contrôle de l'en-tête : un fichier réduit à son BOM est vide.
+            if (headerLine != null) {
+                headerLine = headerLine.replace("\uFEFF", "");
+            }
             if (headerLine == null || headerLine.isBlank()) {
                 result.addError(0, "En-tête CSV manquant.");
                 return rows;
             }
-            // BOM éventuel en début de fichier.
-            headerLine = headerLine.replace("\uFEFF", "");
             char separator = headerLine.contains(";") ? ';' : ',';
 
             rows.add(split(headerLine, separator));

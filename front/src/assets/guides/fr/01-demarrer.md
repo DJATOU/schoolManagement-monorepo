@@ -83,8 +83,23 @@ Pour démarrer vite, chargez vos listes avec **Inscription › Import CSV**, dan
 2. Tarifs (le prix d'une séance)
 3. Enseignants, puis Élèves
 4. Groupes : ils citent un niveau, une matière, un enseignant et un tarif déjà importés
+5. Inscriptions : un élève, un groupe et sa date d'arrivée par ligne
 
 Chaque fichier commence par une ligne d'en-tête. L'écran affiche ensuite « Importés : N — Erreurs : M », et la raison de chaque ligne refusée.
 
 > [!NOTE]
 > Un enseignant déjà présent est refusé, pour ne pas créer de doublon. Deux élèves peuvent porter le même nom : ils sont acceptés.
+
+<!-- page -->
+
+## Importer les inscriptions
+
+Le fichier des inscriptions place les élèves dans leurs groupes, comme **Ajouter un étudiant** sur la fiche du groupe, avec les mêmes contrôles : niveau, année scolaire, inscription déjà en cours.
+
+- Une ligne par inscription : un élève suivi dans deux groupes a deux lignes.
+- Le groupe est cherché par son nom, dans l'année **courante**.
+- La **date d'arrivée** est obligatoire (AAAA-MM-JJ). Les séances à partir de ce jour sont dues ; celles d'avant ne concernent pas l'élève.
+- Deux élèves du même nom : ajoutez leur téléphone (colonne phoneNumber) pour désigner le bon ; un téléphone qui ne correspond pas donne un avertissement.
+
+> [!NOTE]
+> L'import crée seulement les inscriptions : aucune présence, absence ni paiement.

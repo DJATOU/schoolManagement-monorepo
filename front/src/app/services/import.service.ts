@@ -30,10 +30,11 @@ export type ImportKind =
   | 'subjects'
   | 'rooms'
   | 'group-types'
-  | 'pricing';
+  | 'pricing'
+  | 'enrolments';
 
 /**
- * Service d'import CSV (élèves, enseignants, groupes).
+ * Service d'import CSV (élèves, enseignants, groupes, inscriptions).
  *
  * Un service par domaine d'appel HTTP, gestion d'erreur centralisée (schéma
  * payment.service.ts). Les fichiers sont envoyés en multipart/form-data.
@@ -79,6 +80,11 @@ export class ImportService {
 
   importPricing(file: File): Observable<ImportResult> {
     return this.upload('pricing', file);
+  }
+
+  /** Inscriptions (élève → groupe, date d'arrivée) : après les élèves et les groupes. */
+  importEnrolments(file: File): Observable<ImportResult> {
+    return this.upload('enrolments', file);
   }
 
   private upload(kind: ImportKind, file: File): Observable<ImportResult> {

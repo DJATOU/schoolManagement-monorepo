@@ -1,4 +1,4 @@
-name,groupType,level,subject,teacherFirstName,teacherLastName,sessionNumberPerSerie,price
+﻿name,groupType,level,subject,teacherFirstName,teacherLastName,sessionNumberPerSerie,price
 Maths 4 AM A,Moyen groupe,4 AM,Mathématiques,Mohamed,Benali,4,500
 Maths 4 AM B,Moyen groupe,4 AM,Mathématiques,Nadia,Aït Ahmed,4,500
 Physique 4 AM,Moyen groupe,4 AM,Physique,Karim,Bouchareb,4,500

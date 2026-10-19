@@ -84,6 +84,11 @@
       "TITLE": "Pricing (price per session)",
       "COLUMNS": "Columns: price (required). The price is then linked to a group via the form."
     },
+    "ENROLMENTS": {
+      "TITLE": "Enrolments (student → group)",
+      "COLUMNS": "Columns: firstName, lastName, group, arrivalDate, phoneNumber (firstName, lastName, group and arrivalDate required; arrivalDate as YYYY-MM-DD, e.g. 2026-09-15; phoneNumber optional)",
+      "NOTE": "Import after students and groups. One row = one enrolment: a student attending two groups has two rows. The group is looked up by name in the current school year. phoneNumber is only used to tell apart two students with the same name; if it does not match the student found, the row is imported with a warning. The arrival date is required: sessions from that day on are owed, earlier ones do not concern the student. Same checks as the group page's “Ajouter un étudiant” button (level, school year, enrolment already open). Only enrolments are created: no attendance, absence or payment."
+    },
     "WARNINGS": "Warnings"
   },
   "LIST_STATE": {

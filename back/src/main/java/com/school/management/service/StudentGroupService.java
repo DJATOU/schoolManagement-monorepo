@@ -102,7 +102,24 @@ public class StudentGroupService {
         }
     }
 
-    public void addStudentsToGroup(StudentGroupDTO studentGroupDto) {
+    /**
+     * Inscrit des étudiants dans un groupe, chacun à la date d'arrivée demandée (« Ajouter un
+     * étudiant » sur la fiche du groupe, et import CSV des inscriptions).
+     *
+     * <p>Porte tous les contrôles d'une inscription : année close (409), niveau (400), arrivée dans
+     * l'année du groupe (400), arrivée postérieure à un départ du même groupe (409). Un étudiant
+     * déjà inscrit (inscription active) est laissé tel quel, sans erreur, et n'est pas compté.</p>
+     *
+     * <p>Transactionnelle parce que l'import CSV l'appelle hors transaction, une ligne à la fois :
+     * chaque appel valide sa propre inscription, et un refus n'annule que sa ligne. Ne pas
+     * l'appeler depuis une transaction englobante qui intercepte ses refus : le refus marquerait la
+     * transaction englobante « rollback-only », et son commit perdrait toutes les lignes.</p>
+     *
+     * @param studentGroupDto le groupe, les étudiants et la date d'arrivée
+     * @return le nombre d'inscriptions créées (0 si tous les étudiants étaient déjà inscrits)
+     */
+    @Transactional
+    public int addStudentsToGroup(StudentGroupDTO studentGroupDto) {
         GroupEntity group = groupRepository.findById(Objects.requireNonNull(studentGroupDto.getGroupId()))
                 .orElseThrow(
                         () -> new EntityNotFoundException("Group not found with id: " + studentGroupDto.getGroupId()));
@@ -123,11 +140,14 @@ public class StudentGroupService {
         // la table d'inscription, clôtures comprises : réinscrire un étudiant parti ne faisait
         // alors rien, sans le dire.
         LocalDate arrival = arrivalOf(studentGroupDto);
-        students.forEach(student -> {
+        int created = 0;
+        for (StudentEntity student : students) {
             if (!studentGroupRepository.existsByStudentAndGroupAndActiveTrue(student, group)) {
                 enrol(student, group, arrival, studentGroupDto);
+                created++;
             }
-        });
+        }
+        return created;
     }
 
     /** Date_Inscription demandée, ou le jour même sans date (exigence 5.1). */

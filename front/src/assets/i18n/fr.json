@@ -84,6 +84,11 @@
       "TITLE": "Tarifs (prix par séance)",
       "COLUMNS": "Colonnes : price (obligatoire). Le tarif est ensuite rattaché à un groupe via le formulaire."
     },
+    "ENROLMENTS": {
+      "TITLE": "Inscriptions (élève → groupe)",
+      "COLUMNS": "Colonnes : firstName, lastName, group, arrivalDate, phoneNumber (firstName, lastName, group et arrivalDate obligatoires ; arrivalDate au format AAAA-MM-JJ, ex. 2026-09-15 ; phoneNumber facultatif)",
+      "NOTE": "À importer après les élèves et les groupes. Une ligne = une inscription : un élève suivi dans deux groupes a deux lignes. Le groupe est cherché par son nom dans l'année scolaire courante. phoneNumber ne sert qu'à départager deux élèves du même nom ; s'il ne correspond pas à l'élève trouvé, la ligne est importée avec un avertissement. La date d'arrivée est obligatoire : les séances à partir de ce jour sont dues, celles d'avant ne concernent pas l'élève. Mêmes contrôles que « Ajouter un étudiant » (niveau, année scolaire, inscription déjà en cours). Seules les inscriptions sont créées : aucune présence, absence ni paiement."
+    },
     "WARNINGS": "Avertissements"
   },
   "LIST_STATE": {

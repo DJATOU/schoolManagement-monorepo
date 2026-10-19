@@ -83,8 +83,23 @@ To get going quickly, load your lists with **Registration › CSV Import**, in t
 2. Prices (the price of one session)
 3. Teachers, then Students
 4. Groups: they name a level, a subject, a teacher and a price already imported
+5. Enrolments: one student, one group and an arrival date per row
 
 Each file starts with a header row. The screen then shows how many rows were imported, how many were refused, and why.
 
 > [!NOTE]
 > A teacher who already exists is refused, so no duplicate is created. Two students may share a name: they are accepted.
+
+<!-- page -->
+
+## Importing enrolments
+
+The enrolments file places students in their groups, like **Ajouter un étudiant** on the group's page (this button keeps its French label), with the same checks: level, school year, enrolment already open.
+
+- One row per enrolment: a student attending two groups has two rows.
+- The group is looked up by name, in the **current** year.
+- The **arrival date** is required (YYYY-MM-DD). Sessions from that day on are owed; earlier ones do not concern the student.
+- Two students with the same name: add their phone number (phoneNumber column) to pick the right one. A phone number that does not match the student found gives a warning: check it is the right student.
+
+> [!NOTE]
+> The import only creates enrolments: no attendance, absence or payment.
