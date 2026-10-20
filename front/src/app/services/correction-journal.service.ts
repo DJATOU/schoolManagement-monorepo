@@ -1,5 +1,6 @@
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
+import { TranslateService } from '@ngx-translate/core';
 import { catchError, Observable, throwError } from 'rxjs';
 
 import { API_BASE_URL } from '../api-base-url';
@@ -17,6 +18,8 @@ import { CorrectionJournal } from '../models/correction/journal';
 export class CorrectionJournalService {
 
   private readonly baseUrl = `${API_BASE_URL}/api/students`;
+
+  private readonly translate = inject(TranslateService);
 
   constructor(private http: HttpClient) {}
 
@@ -38,28 +41,28 @@ export class CorrectionJournalService {
   }
 
   /** Le motif du serveur est gardé : une période à l'envers est dite telle quelle. */
-  private handleError(error: HttpErrorResponse): Observable<never> {
+  private handleError = (error: HttpErrorResponse): Observable<never> => {
     const serverMessage = typeof error.error?.message === 'string' && error.error.message.trim().length > 0
       ? error.error.message as string : null;
     let message: string;
     switch (error.status) {
       case 400:
       case 404:
-        message = serverMessage ?? 'Le journal n\'a pas pu être chargé.';
+        message = serverMessage ?? this.translate.instant('journal.loadError');
         break;
       case 401:
-        message = 'Session expirée : reconnectez-vous';
+        message = this.translate.instant('HTTP_ERRORS.SESSION_EXPIRED');
         break;
       case 403:
-        message = 'Action réservée aux administrateurs';
+        message = this.translate.instant('HTTP_ERRORS.ADMIN_ONLY');
         break;
       case 0:
-        message = 'Serveur injoignable';
+        message = this.translate.instant('HTTP_ERRORS.UNREACHABLE');
         break;
       default:
-        message = 'Le journal n\'a pas pu être chargé.';
+        message = this.translate.instant('journal.loadError');
     }
     console.error('Correction Journal Service Error:', message, error);
     return throwError(() => new Error(message));
-  }
+  };
 }

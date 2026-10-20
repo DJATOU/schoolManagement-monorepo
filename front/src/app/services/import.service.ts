@@ -1,5 +1,6 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
+import { TranslateService } from '@ngx-translate/core';
 import { catchError, Observable, throwError } from 'rxjs';
 import { API_BASE_URL } from '../api-base-url';
 
@@ -48,6 +49,8 @@ export class ImportService {
 
   private readonly baseUrl = `${API_BASE_URL}/api/import`;
 
+  private readonly translate = inject(TranslateService);
+
   constructor(private http: HttpClient) {}
 
   importStudents(file: File): Observable<ImportResult> {
@@ -94,17 +97,17 @@ export class ImportService {
       .pipe(catchError(this.handleError));
   }
 
-  private handleError(error: HttpErrorResponse): Observable<never> {
-    let errorMessage = 'Une erreur est survenue';
+  private handleError = (error: HttpErrorResponse): Observable<never> => {
+    let errorMessage: string = this.translate.instant('HTTP_ERRORS.GENERIC');
     if (error.error instanceof ErrorEvent) {
-      errorMessage = `Erreur: ${error.error.message}`;
+      errorMessage = this.translate.instant('HTTP_ERRORS.WITH_MESSAGE_COMPACT', { message: error.error.message });
     } else {
-      errorMessage = error.error?.message || `Code: ${error.status}`;
+      errorMessage = error.error?.message || this.translate.instant('HTTP_ERRORS.CODE', { status: error.status });
       if (error.status === 500) {
-        errorMessage = 'Erreur serveur. Veuillez réessayer plus tard.';
+        errorMessage = this.translate.instant('HTTP_ERRORS.SERVER');
       }
     }
     console.error('Import Service Error:', errorMessage, error);
     return throwError(() => new Error(errorMessage));
-  }
+  };
 }

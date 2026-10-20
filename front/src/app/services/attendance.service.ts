@@ -1,5 +1,6 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
+import { TranslateService } from '@ngx-translate/core';
 import { Observable, catchError, tap, throwError } from 'rxjs';
 import { API_BASE_URL } from '../api-base-url';
 import { Attendance } from '../models/Attendance/attendance';
@@ -19,6 +20,8 @@ import { CorrectionStep } from './encashment.service';
 })
 export class AttendanceService {
     private apiUrl = `${API_BASE_URL}/api/attendances`;  // Adjust based on your API URL structure
+
+    private readonly translate = inject(TranslateService);
 
     constructor(private http: HttpClient) {}
     
@@ -57,20 +60,20 @@ export class AttendanceService {
       let message: string;
       switch (error.status) {
         case 409:
-          message = serverMessage ?? 'Une présence existe déjà pour un ou plusieurs étudiants de cette séance.';
+          message = serverMessage ?? this.translate.instant('HTTP_ERRORS.ATTENDANCE.DUPLICATE');
           break;
         case 400:
         case 404:
-          message = serverMessage ?? 'Feuille de présence refusée.';
+          message = serverMessage ?? this.translate.instant('HTTP_ERRORS.ATTENDANCE.SHEET_REFUSED');
           break;
         case 403:
-          message = 'Action réservée aux administrateurs';
+          message = this.translate.instant('HTTP_ERRORS.ADMIN_ONLY');
           break;
         case 0:
-          message = 'Serveur injoignable';
+          message = this.translate.instant('HTTP_ERRORS.UNREACHABLE');
           break;
         default:
-          message = 'La feuille de présence n\'a pas pu être enregistrée.';
+          message = this.translate.instant('HTTP_ERRORS.ATTENDANCE.SHEET_FAILED');
       }
       return new AttendanceSubmissionError(message, error.status, body.errorCode ?? null,
         Array.isArray(body.rejected) ? body.rejected : []);
@@ -142,9 +145,9 @@ export class AttendanceService {
     private correctionError(error: HttpErrorResponse): Observable<never> {
       console.error('Attendance correction error:', error);
       return throwError(() => correctionErrorOf(error, {
-        notFound: 'Présence introuvable',
-        fallback: 'La correction de la présence n\'a pas pu aboutir'
-      }));
+        notFound: 'HTTP_ERRORS.ATTENDANCE.NOT_FOUND',
+        fallback: 'HTTP_ERRORS.ATTENDANCE.CORRECTION_FAILED'
+      }, this.translate));
     }
 
 
@@ -206,7 +209,7 @@ export class AttendanceService {
       `${this.apiUrl}/${attendanceId}/justification-audit`
     ).pipe(
       catchError(() => throwError(() =>
-        new Error("L'historique des modifications n'a pas pu être chargé")))
+        new Error(this.translate.instant('HTTP_ERRORS.ATTENDANCE.AUDIT_LOAD_FAILED'))))
     );
   }
 
@@ -215,16 +218,16 @@ export class AttendanceService {
     switch (error.status) {
       case 400:
       case 409:
-        return error.error?.message || 'Modification refusée';
+        return error.error?.message || this.translate.instant('HTTP_ERRORS.ATTENDANCE.JUSTIFICATION_REFUSED');
       case 403:
-        return 'Action réservée aux administrateurs';
+        return this.translate.instant('HTTP_ERRORS.ADMIN_ONLY');
       case 404:
-        return 'Présence introuvable';
+        return this.translate.instant('HTTP_ERRORS.ATTENDANCE.NOT_FOUND');
       case 0:
         // Requête jamais parvenue : distinct d'un refus, la modification a peut-être abouti.
-        return "Serveur injoignable : le résultat de l'opération est inconnu";
+        return this.translate.instant('HTTP_ERRORS.UNREACHABLE_UNKNOWN_OUTCOME');
       default:
-        return 'Une erreur est survenue lors de la modification';
+        return this.translate.instant('HTTP_ERRORS.ATTENDANCE.JUSTIFICATION_FAILED');
     }
   }
 }

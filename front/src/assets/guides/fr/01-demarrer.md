@@ -26,7 +26,7 @@ Pour quitter : cliquez sur votre nom en haut à droite, puis sur **Déconnexion*
 - **Élèves**, **Groupes**, **Professeurs** : choisissez ce que vous cherchez, puis tapez au moins deux lettres dans la recherche.
 - L'icône **livre** ouvre ce guide.
 - **Année scolaire** : l'année affichée partout.
-- **Votre nom** : mode sombre ou clair, langue (**Français**, **Anglais**), **Gestion des comptes**, **Déconnexion**.
+- **Votre nom** : mode sombre ou clair, langue (**Français**, **English**, **العربية**), **Gestion des comptes**, **Déconnexion**.
 
 > [!TIP]
 > Pour ouvrir la fiche de Lucas Lefebvre : onglet **Élèves**, tapez « Luc », puis choisissez « Lucas Lefebvre » dans les suggestions.
@@ -81,7 +81,7 @@ Pour démarrer vite, chargez vos listes avec **Inscription › Import CSV**, dan
 
 1. Niveaux, Matières, Salles, Types de groupe
 2. Tarifs (le prix d'une séance)
-3. Enseignants, puis Élèves
+3. Enseignants, puis Élèves (dateOfBirth facultative, AAAA-MM-JJ, colonne en **Texte** dans Excel)
 4. Groupes : ils citent un niveau, une matière, un enseignant et un tarif déjà importés
 5. Inscriptions : un élève, un groupe et sa date d'arrivée par ligne
 

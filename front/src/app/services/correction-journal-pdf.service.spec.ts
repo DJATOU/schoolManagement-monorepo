@@ -7,6 +7,9 @@ import { CorrectionJournalPdfService } from './correction-journal-pdf.service';
 import { setupServiceTestBed } from '../../testing/setup';
 import { CorrectionJournal, JournalEntry } from '../models/correction/journal';
 import { PdfOutputService } from './pdf-output.service';
+import frTranslations from '../../assets/i18n/fr.json';
+import enTranslations from '../../assets/i18n/en.json';
+import arTranslations from '../../assets/i18n/ar.json';
 
 /**
  * Journal imprimé (D.5 ; exigence 12.4) : ce qu'on remet à un parent qui conteste. On vérifie la
@@ -183,6 +186,61 @@ describe('CorrectionJournalPdfService', () => {
     expect(((doc.content as Content[])[0] as { columns: { image?: string }[] }).columns[0].image)
       .toBe('data:image/png;base64,LOGO');
     expect(fileName).toBe('journal_Amine_Belkacem_2030-01-01_2030-01-31.pdf');
+  });
+});
+
+/** Langue du Journal imprimé : français sous une interface en arabe, anglais sous l'anglais. */
+describe('CorrectionJournalPdfService — langue du document', () => {
+  let service: CorrectionJournalPdfService;
+  let translate: TranslateService;
+
+  const journal: CorrectionJournal = {
+    studentId: 42,
+    studentName: 'Amine Belkacem',
+    from: '2030-01-01',
+    to: '2030-01-31',
+    entries: [{
+      performedAt: '2030-01-14T09:05:00',
+      category: 'JUSTIFICATION',
+      description: 'Séance du 07/01/2030 : absence justifiée',
+      amountEffect: null,
+      reasonType: 'DATA_ENTRY_ERROR',
+      reasonText: null,
+      performedBy: 'directrice'
+    }]
+  };
+
+  beforeEach(() => {
+    setupServiceTestBed();
+    translate = TestBed.inject(TranslateService);
+    translate.setTranslation('fr', frTranslations);
+    translate.setTranslation('en', enTranslations);
+    translate.setTranslation('ar', arTranslations);
+    service = TestBed.inject(CorrectionJournalPdfService);
+  });
+
+  /** Texte du document, pied de page compris. */
+  const printed = (): string => {
+    const doc = service.buildDocument(journal, '', new Date(2030, 1, 3, 8, 4));
+    const footer = (doc.footer as (current: number, total: number) => Content)(1, 2);
+    return JSON.stringify(doc.content) + JSON.stringify(footer) + (doc.info?.title ?? '');
+  };
+
+  it('arabe : Journal en français, chiffres latins, aucun caractère arabe', () => {
+    translate.use('ar');
+    const text = printed();
+    expect(text).toContain(frTranslations.journal.title);
+    expect(text).toContain(frTranslations.journal.noEffect);
+    expect(text).toContain(frTranslations.correction.reason.DATA_ENTRY_ERROR);
+    expect(text).toContain('03/02/2030 08:04');
+    expect(text).not.toMatch(/[\u0600-\u06FF]/);
+  });
+
+  it('anglais : Journal en anglais', () => {
+    translate.use('en');
+    const text = printed();
+    expect(text).toContain(enTranslations.journal.title);
+    expect(text).not.toContain(frTranslations.journal.noEffect);
   });
 });
 

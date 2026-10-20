@@ -8,6 +8,12 @@ import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
 import { of } from 'rxjs';
+import { registerAppLocales } from '../app/shared/locale';
+
+// Comme `src/main.ts` : les pipes qui formatent dans la langue de l'interface (`appDate`,
+// `new DatePipe('fr')`) ont besoin des données de locale (fr, en, ar-DZ), absentes par défaut
+// sous Karma.
+registerAppLocales();
 
 /**
  * Harnais de test partagé du frontend.

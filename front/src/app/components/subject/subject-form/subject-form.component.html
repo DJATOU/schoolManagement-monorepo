@@ -1,15 +1,15 @@
 <form [formGroup]="subjectForm" (ngSubmit)="onSubmit()" class="form-container fade-in">
     <h2 class="form-title">{{ (editingId ? 'RESOURCE_FORM.EDIT_TITLE' : 'RESOURCE_FORM.CREATE_TITLE') | translate: { entity: 'RESOURCE_FORM.ENTITY.subject' | translate } }}</h2>
     <mat-tab-group class="tab-group">
-      <mat-tab label="Basic Information">
+      <mat-tab [label]="'RESOURCE_FORM.TABS.BASIC_INFO' | translate">
         <div class="tab-content">
           <mat-form-field appearance="fill">
-            <mat-label>Name</mat-label>
+            <mat-label>{{ 'RESOURCE_FORM.FIELDS.NAME' | translate }}</mat-label>
             <input matInput formControlName="name">
           </mat-form-field>
   
           <mat-form-field appearance="fill">
-            <mat-label>Description</mat-label>
+            <mat-label>{{ 'COMMON.DESCRIPTION' | translate }}</mat-label>
             <textarea matInput formControlName="description"></textarea>
           </mat-form-field>
         </div>
@@ -18,7 +18,7 @@
   
     <div class="button-container">
       <button mat-raised-button color="primary" type="submit" class="submit-button" appAdminOnly>{{ (editingId ? 'RESOURCE_FORM.UPDATE' : 'RESOURCE_FORM.SAVE') | translate }}</button>
-      <button mat-raised-button color="accent" type="button" class="clear-button" (click)="onClearForm()">Clear</button>
+      <button mat-raised-button color="accent" type="button" class="clear-button" (click)="onClearForm()">{{ 'COMMON.CLEAR' | translate }}</button>
     </div>
 </form>
   

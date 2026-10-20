@@ -2,17 +2,18 @@ import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { TranslateModule } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-list-header',
   standalone: true,
-  imports: [CommonModule, MatSlideToggleModule, FormsModule],
+  imports: [CommonModule, MatSlideToggleModule, FormsModule, TranslateModule],
   template: `
     <div class="list-header">
       <div class="summary">
         <span class="count">{{ count }}</span>
         <span class="label">{{ entityName }}</span>
-        <span class="late-count" *ngIf="lateCount > 0">• Retards: {{ lateCount }}</span>
+        <span class="late-count" *ngIf="lateCount > 0">• {{ 'LIST_HEADER.LATE' | translate }} {{ lateCount }}</span>
       </div>
       
       <mat-slide-toggle

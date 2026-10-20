@@ -1,5 +1,6 @@
 import { Directive, ElementRef, OnDestroy, OnInit, Renderer2 } from '@angular/core';
-import { Subscription } from 'rxjs';
+import { TranslateService } from '@ngx-translate/core';
+import { Subscription, merge } from 'rxjs';
 import { AuthService } from '../services/auth.service';
 
 /**
@@ -22,11 +23,14 @@ export class AdminOnlyDirective implements OnInit, OnDestroy {
   constructor(
     private el: ElementRef<HTMLElement>,
     private renderer: Renderer2,
-    private authService: AuthService
+    private authService: AuthService,
+    private translate: TranslateService
   ) {}
 
   ngOnInit(): void {
-    this.sub = this.authService.currentUser$.subscribe(() => this.apply());
+    // L'infobulle suit aussi la langue de l'interface.
+    this.sub = merge(this.authService.currentUser$, this.translate.onLangChange)
+      .subscribe(() => this.apply());
     this.apply();
   }
 
@@ -47,7 +51,7 @@ export class AdminOnlyDirective implements OnInit, OnDestroy {
       this.renderer.setAttribute(node, 'disabled', 'true');
       (node as HTMLButtonElement).disabled = true;
       this.renderer.addClass(node, 'viewer-disabled');
-      this.renderer.setAttribute(node, 'title', 'Action réservée aux administrateurs');
+      this.renderer.setAttribute(node, 'title', this.translate.instant('HTTP_ERRORS.ADMIN_ONLY'));
     }
   }
 }

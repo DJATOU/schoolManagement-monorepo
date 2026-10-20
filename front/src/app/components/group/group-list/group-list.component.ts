@@ -6,6 +6,7 @@ import { Router } from '@angular/router';
 import { Group } from '../../../models/group/group';
 import { GroupService } from '../../../services/group.service';
 import { SecureImageDirective } from '../../../shared/secure-image.directive';
+import { TranslateModule } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-group-list',
@@ -16,7 +17,8 @@ import { SecureImageDirective } from '../../../shared/secure-image.directive';
     MatCardContent,
     MatIcon
   ,
-    SecureImageDirective
+    SecureImageDirective,
+    TranslateModule
   ],
   templateUrl: './group-list.component.html',
   styleUrl: './group-list.component.scss'

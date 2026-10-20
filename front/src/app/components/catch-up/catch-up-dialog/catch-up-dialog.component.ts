@@ -11,6 +11,8 @@ import { catchError, tap, throwError } from 'rxjs';
 import { CatchUpService } from '../../../services/catch-up.service';
 import { Session } from '../../../models/session/session';
 import { AdminOnlyDirective } from '../../../shared/admin-only.directive';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { LocalizedDatePipe } from '../../../pipes/localized-date.pipe';
 
 /** Données attendues par le dialogue de planification. */
 export interface CatchUpScheduleData {
@@ -40,39 +42,41 @@ export interface CatchUpScheduleData {
     MatInputModule,
     MatSelectModule,
     MatSnackBarModule,
-    AdminOnlyDirective
+    AdminOnlyDirective,
+    TranslateModule,
+    LocalizedDatePipe
   ],
   template: `
-    <h2 mat-dialog-title>Planifier un rattrapage</h2>
+    <h2 mat-dialog-title>{{ 'CATCH_UP.SCHEDULE.TITLE' | translate }}</h2>
     <mat-dialog-content [formGroup]="catchUpForm" class="catch-up-content">
       <div class="session-info">
-        <p><strong>Séance manquée :</strong>
+        <p><strong>{{ 'CATCH_UP.SCHEDULE.MISSED_SESSION' | translate }}</strong>
           {{ data.originalSessionName || ('#' + data.originalSessionId) }}</p>
       </div>
       <mat-form-field appearance="fill">
-        <mat-label>Séance de rattrapage</mat-label>
+        <mat-label>{{ 'CATCH_UP.SCHEDULE.CATCH_UP_SESSION' | translate }}</mat-label>
         <mat-select formControlName="catchUpSessionId" (selectionChange)="onSessionChange($event.value)">
           <mat-option *ngFor="let session of availableSessions" [value]="session.id">
-            {{ session.title || 'Session' }}
-            <ng-container *ngIf="session.sessionTimeStart"> - {{ session.sessionTimeStart | date:'mediumDate' }}</ng-container>
+            {{ session.title || ('CATCH_UP.SCHEDULE.SESSION_FALLBACK' | translate) }}
+            <ng-container *ngIf="session.sessionTimeStart"> - {{ session.sessionTimeStart | appDate:'mediumDate' }}</ng-container>
             <ng-container *ngIf="session.groupName"> ({{ session.groupName }})</ng-container>
           </mat-option>
         </mat-select>
       </mat-form-field>
       <p *ngIf="loaded && availableSessions.length === 0" class="empty-hint">
-        Aucune séance compatible disponible (même année, même type de groupe et même prix).
+        {{ 'CATCH_UP.SCHEDULE.NO_SESSION' | translate }}
       </p>
       <mat-form-field appearance="fill">
-        <mat-label>Notes</mat-label>
+        <mat-label>{{ 'CATCH_UP.CREATE.NOTES' | translate }}</mat-label>
         <textarea matInput formControlName="notes"></textarea>
       </mat-form-field>
       <div class="helper-text">
-        <p>Le paiement sera associé uniquement à la séance de rattrapage sélectionnée.</p>
+        <p>{{ 'CATCH_UP.SCHEDULE.PAYMENT_HINT' | translate }}</p>
       </div>
     </mat-dialog-content>
     <mat-dialog-actions align="end">
-      <button mat-button mat-dialog-close>Annuler</button>
-      <button mat-raised-button color="primary" (click)="scheduleCatchUp()" [disabled]="catchUpForm.invalid" appAdminOnly>Planifier</button>
+      <button mat-button mat-dialog-close>{{ 'common.cancel' | translate }}</button>
+      <button mat-raised-button color="primary" (click)="scheduleCatchUp()" [disabled]="catchUpForm.invalid" appAdminOnly>{{ 'CATCH_UP.LIST.SCHEDULE' | translate }}</button>
     </mat-dialog-actions>
   `,
   styles: [
@@ -93,6 +97,7 @@ export class CatchUpDialogComponent implements OnInit {
     private fb: FormBuilder,
     private catchUpService: CatchUpService,
     private snackBar: MatSnackBar,
+    private translate: TranslateService,
     public dialogRef: MatDialogRef<CatchUpDialogComponent>,
     @Inject(MAT_DIALOG_DATA) public data: CatchUpScheduleData
   ) {
@@ -116,7 +121,7 @@ export class CatchUpDialogComponent implements OnInit {
         catchError(error => {
           this.loaded = true;
           console.error('Erreur lors du chargement des sessions disponibles', error);
-          this.snackBar.open('Impossible de charger les sessions de rattrapage', 'Fermer', { duration: 4000 });
+          this.snackBar.open(this.translate.instant('CATCH_UP.SCHEDULE.LOAD_ERROR'), this.translate.instant('common.close'), { duration: 4000 });
           return throwError(() => error);
         })
       )
@@ -135,7 +140,7 @@ export class CatchUpDialogComponent implements OnInit {
       this.catchUpGroupId = session?.groupId ?? null;
     }
     if (this.catchUpGroupId == null) {
-      this.snackBar.open('Groupe de rattrapage introuvable pour cette séance', 'Fermer', { duration: 4000 });
+      this.snackBar.open(this.translate.instant('CATCH_UP.SCHEDULE.GROUP_NOT_FOUND'), this.translate.instant('common.close'), { duration: 4000 });
       return;
     }
 
@@ -143,13 +148,13 @@ export class CatchUpDialogComponent implements OnInit {
       .scheduleCatchUp(this.data.requestId, catchUpSessionId, this.catchUpGroupId)
       .pipe(
         catchError(error => {
-          const msg = error?.error?.message || 'Impossible de planifier le rattrapage';
-          this.snackBar.open(msg, 'Fermer', { duration: 5000 });
+          const msg = error?.error?.message || this.translate.instant('CATCH_UP.SCHEDULE.SCHEDULE_ERROR');
+          this.snackBar.open(msg, this.translate.instant('common.close'), { duration: 5000 });
           return throwError(() => error);
         })
       )
       .subscribe(response => {
-        this.snackBar.open('Rattrapage planifié', 'Fermer', { duration: 3000 });
+        this.snackBar.open(this.translate.instant('CATCH_UP.SCHEDULE.SCHEDULED'), this.translate.instant('common.close'), { duration: 3000 });
         this.dialogRef.close(response);
       });
   }

@@ -5,12 +5,12 @@
 Payments are collected **from the student's profile**:
 
 1. Top bar: **Students** tab, type the name, open the profile.
-2. Click **Ajouter un paiement** (this button keeps its French label).
+2. Click **Add a payment**.
 
 The **Financial Management › Payments** menu is for searching and checking payments (filters, CSV export, history) and for refunds. Payments are not collected there.
 
 > [!NOTE]
-> On a past year, or for a Viewer account, the payment button is greyed out.
+> On a past year, or for a Viewer account, **Add a payment** is greyed out.
 
 <!-- page -->
 

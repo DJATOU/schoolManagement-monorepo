@@ -1,13 +1,18 @@
 import frTranslations from '../../assets/i18n/fr.json';
 import enTranslations from '../../assets/i18n/en.json';
+import arTranslations from '../../assets/i18n/ar.json';
 
 /**
- * Test de parité des clés de traduction FR / EN.
+ * Test de parité des clés de traduction FR / EN / AR.
  *
  * Garantit que chaque clé de traduction définie dans `fr.json` possède une
- * contrepartie dans `en.json` et inversement. Toute clé introduite (notamment
+ * contrepartie dans `en.json` et `ar.json`, et inversement. Toute clé introduite (notamment
  * par la fonctionnalité "année scolaire" : `schoolYear.*`, `parcours.*`,
- * `yearEnd.*`) doit exister dans les deux fichiers.
+ * `yearEnd.*`) doit exister dans les trois fichiers.
+ *
+ * <p>Garde-fou des traductions : il échoue aussi sur une valeur vide, des paramètres
+ * `{{…}}` différents d'une langue à l'autre, une valeur arabe restée non traduite (sans lettre
+ * arabe, ou avec des lettres accentuées du français) et une feuille qui n'est pas une chaîne.</p>
  *
  * Requirements: 15.1, 15.4
  */
@@ -32,6 +37,27 @@ function flattenKeys(tree: TranslationTree, prefix = ''): string[] {
   return keys;
 }
 
+/** Feuilles d'un arbre de traductions, avec leur chemin pointé ; tableaux et scalaires inclus. */
+function flattenEntries(tree: TranslationTree, prefix = ''): [string, unknown][] {
+  const entries: [string, unknown][] = [];
+  for (const key of Object.keys(tree)) {
+    const value: unknown = tree[key];
+    const path = prefix ? `${prefix}.${key}` : key;
+    if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+      entries.push(...flattenEntries(value as TranslationTree, path));
+    } else {
+      entries.push([path, value]);
+    }
+  }
+  return entries;
+}
+
+/** Noms des paramètres `{{nom}}` d'une valeur, triés et dédoublonnés (syntaxe de ngx-translate). */
+function placeholders(value: unknown): string[] {
+  const names = [...String(value).matchAll(/\{\{\s?([^{}\s]*)\s?\}\}/g)].map(match => match[1]);
+  return [...new Set(names)].sort();
+}
+
 /**
  * Lit la valeur d'un chemin pointé, ou une chaîne vide si le chemin n'existe pas.
  *
@@ -48,9 +74,108 @@ function readKey(tree: unknown, path: string): string {
   return typeof value === 'string' ? value : '';
 }
 
-describe('i18n FR/EN key parity', () => {
+describe('i18n FR/EN/AR key parity', () => {
   const frKeys = new Set(flattenKeys(frTranslations as unknown as TranslationTree));
   const enKeys = new Set(flattenKeys(enTranslations as unknown as TranslationTree));
+  const arKeys = new Set(flattenKeys(arTranslations as unknown as TranslationTree));
+
+  const files: Record<'fr' | 'en' | 'ar', TranslationTree> = {
+    fr: frTranslations as unknown as TranslationTree,
+    en: enTranslations as unknown as TranslationTree,
+    ar: arTranslations as unknown as TranslationTree
+  };
+  const languages = Object.keys(files) as ('fr' | 'en' | 'ar')[];
+  const leaves = Object.fromEntries(
+    languages.map(lang => [lang, new Map(flattenEntries(files[lang]))])
+  ) as Record<'fr' | 'en' | 'ar', Map<string, unknown>>;
+
+  /**
+   * Valeurs arabes admises sans lettre arabe : compositions de paramètres, d'unités (« % ») et de
+   * ponctuation, qui n'ont rien à traduire. À garder aussi courte que possible : toute autre valeur
+   * sans lettre arabe est une valeur laissée non traduite. Le dinar s'écrit « دج » en arabe : les
+   * montants « {{amount}} دج » portent donc une lettre arabe et n'ont pas leur place ici.
+   */
+  const AR_WITHOUT_ARABIC_LETTER_ALLOWLIST = new Set([
+    'teacherPayroll.slip.rateValue', // « {{label}} ({{percent}} %) »
+    'teacherPayroll.dialog.rateOption', // « {{label}} ({{percent}} %) »
+    'SESSION_MODAL.CORRECTION.SUBJECT', // « {{session}} — {{student}}: {{change}} »
+    'enrolment.correction.subject' // « {{student}} — «{{group}}»، {{period}} » : virgule arabe seule
+  ]);
+
+  it('should have identical flattened key sets in fr.json, en.json and ar.json', () => {
+    const all = new Set(languages.flatMap(lang => [...leaves[lang].keys()]));
+    const report = languages
+      .map(lang => {
+        const missing = [...all].filter(key => !leaves[lang].has(key)).sort();
+        const extra = [...leaves[lang].keys()]
+          .filter(key => languages.some(other => other !== lang && !leaves[other].has(key))).sort();
+        return { lang, missing, extra };
+      })
+      .filter(({ missing, extra }) => missing.length > 0 || extra.length > 0)
+      .map(({ lang, missing, extra }) =>
+        `${lang}.json — missing: ${JSON.stringify(missing)}, present here but absent elsewhere: ${JSON.stringify(extra)}`);
+    expect(report).withContext(report.join('\n')).toEqual([]);
+  });
+
+  it('should only have string leaves in the three files', () => {
+    const offenders = languages.flatMap(lang => [...leaves[lang]]
+      .filter(([, value]) => typeof value !== 'string')
+      .map(([key, value]) => `${lang}.json ${key} = ${JSON.stringify(value)}`));
+    expect(offenders).withContext(`Non-string translation leaves: ${offenders.join(' ; ')}`).toEqual([]);
+  });
+
+  it('should have no empty or whitespace-only value in the three files', () => {
+    const offenders = languages.flatMap(lang => [...leaves[lang]]
+      .filter(([, value]) => typeof value === 'string' && value.trim() === '')
+      .map(([key]) => `${lang}.json ${key}`));
+    expect(offenders).withContext(`Empty translation values: ${offenders.join(' ; ')}`).toEqual([]);
+  });
+
+  it('should use the same {{placeholder}} names for a key in fr, en and ar', () => {
+    const offenders = [...leaves.fr.keys()]
+      .filter(key => leaves.en.has(key) && leaves.ar.has(key))
+      .filter(key => {
+        const expected = placeholders(leaves.fr.get(key)).join(',');
+        return placeholders(leaves.en.get(key)).join(',') !== expected
+          || placeholders(leaves.ar.get(key)).join(',') !== expected;
+      })
+      .map(key => `${key}: fr [${placeholders(leaves.fr.get(key))}] en [${placeholders(leaves.en.get(key))}] `
+        + `ar [${placeholders(leaves.ar.get(key))}]`);
+    expect(offenders).withContext(`Placeholder mismatch: ${offenders.join(' ; ')}`).toEqual([]);
+  });
+
+  it('should translate every Arabic value: at least one Arabic letter, outside the allowlist', () => {
+    const untranslated = [...leaves.ar]
+      .filter(([key]) => !AR_WITHOUT_ARABIC_LETTER_ALLOWLIST.has(key))
+      .filter(([, value]) => !/[\u0621-\u064A]/.test(String(value).replace(/\{\{[^{}]*\}\}/g, '')))
+      .map(([key, value]) => `${key} = ${JSON.stringify(value)}`);
+    expect(untranslated).withContext(`Arabic values without any Arabic letter: ${untranslated.join(' ; ')}`)
+      .toEqual([]);
+  });
+
+  it('should keep the Arabic allowlist free of stale or translatable entries', () => {
+    const stale = [...AR_WITHOUT_ARABIC_LETTER_ALLOWLIST].filter(key => !leaves.ar.has(key)
+      || /[\u0621-\u064A]/.test(String(leaves.ar.get(key)).replace(/\{\{[^{}]*\}\}/g, '')));
+    expect(stale).withContext(`Allowlist entries to remove: ${JSON.stringify(stale)}`).toEqual([]);
+  });
+
+  it('should leave no French accented letter in an Arabic value', () => {
+    const offenders = [...leaves.ar]
+      .filter(([, value]) => /[àâçéèêëîïôûùüÿœ]/i.test(String(value)))
+      .map(([key, value]) => `${key} = ${JSON.stringify(value)}`);
+    expect(offenders).withContext(`Arabic values containing French text: ${offenders.join(' ; ')}`).toEqual([]);
+  });
+
+  it('should have exactly the French key set in the Arabic translation file', () => {
+    const missingInAr = [...frKeys].filter((key) => !arKeys.has(key)).sort();
+    const extraInAr = [...arKeys].filter((key) => !frKeys.has(key)).sort();
+    expect(missingInAr)
+      .withContext(`Keys present in fr.json but missing in ar.json: ${JSON.stringify(missingInAr)}`)
+      .toEqual([]);
+    expect(extraInAr)
+      .withContext(`Keys present in ar.json but missing in fr.json: ${JSON.stringify(extraInAr)}`)
+      .toEqual([]);
+  });
 
   it('should define every French key in the English translation file', () => {
     const missingInEn = [...frKeys].filter((key) => !enKeys.has(key)).sort();

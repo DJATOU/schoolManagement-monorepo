@@ -5,7 +5,12 @@ export interface Student {
     gender: string;
     email: string;
     phoneNumber: string;
-    dateOfBirth: Date;
+    /**
+     * Jour du calendrier `yyyy-MM-dd`, tel que l'API l'échange : ni heure ni fuseau. Le convertir
+     * en `Date` par `new Date(chaîne)` donnerait minuit UTC, la veille à l'ouest de Greenwich ;
+     * passer par `shared/iso-day`. Nul pour un élève importé sans date de naissance.
+     */
+    dateOfBirth: string | null;
     placeOfBirth: string;
     photo: string;
 

@@ -2,6 +2,8 @@ import { Injectable } from '@angular/core';
 import pdfMake from 'pdfmake/build/pdfmake';
 import pdfFonts from 'pdfmake/build/vfs_fonts';
 import { Content, TDocumentDefinitions } from 'pdfmake/interfaces';
+import { TranslateService } from '@ngx-translate/core';
+import { pdfInstant, pdfLocale } from '../shared/pdf-i18n';
 
 export interface PdfInfoRow {
   label: string;
@@ -35,7 +37,7 @@ export interface PdfExtraPage {
 @Injectable({ providedIn: 'root' })
 export class ProfilePdfService {
 
-  constructor() {
+  constructor(private translate: TranslateService) {
     (pdfMake as any).vfs = pdfFonts.pdfMake.vfs;
   }
 
@@ -55,11 +57,13 @@ export class ProfilePdfService {
     /** Volets annexes, chacun sur sa propre page. */
     extraPages?: PdfExtraPage[];
   }): void {
+    // Libellés et date dans la langue du PDF : français pour toute langue autre que fr / en.
+    const t = (key: string, params?: object) => pdfInstant(this.translate, key, params);
     const content: Content[] = [
       {
         columns: [
           { text: options.title, style: 'header' },
-          { text: new Date().toLocaleDateString('fr-FR'), alignment: 'right', margin: [0, 8, 0, 0] }
+          { text: new Date().toLocaleDateString(pdfLocale(this.translate)), alignment: 'right', margin: [0, 8, 0, 0] }
         ]
       }
     ];
@@ -101,8 +105,8 @@ export class ProfilePdfService {
 
     content.push({
       columns: [
-        { text: 'Signature : ________________________', margin: [0, 50, 0, 0] },
-        { text: 'Administration : ________________________', alignment: 'right', margin: [0, 50, 0, 0] }
+        { text: t('PROFILE_PDF.SIGNATURE'), margin: [0, 50, 0, 0] },
+        { text: t('PROFILE_PDF.ADMINISTRATION'), alignment: 'right', margin: [0, 50, 0, 0] }
       ]
     });
 
@@ -118,7 +122,7 @@ export class ProfilePdfService {
       },
       defaultStyle: { fontSize: 11 },
       footer: (current: number, total: number): Content => ({
-        text: `Page ${current} / ${total}`,
+        text: t('PROFILE_PDF.PAGE', { current, total }),
         alignment: 'center',
         fontSize: 9,
         margin: [0, 8, 0, 0]

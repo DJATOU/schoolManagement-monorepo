@@ -1,7 +1,10 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { LevelFormComponent } from './level-form.component';
+import { TranslateService } from '@ngx-translate/core';
 import { setupComponentTestBed } from '../../../../testing/setup';
+import frTranslations from '../../../../assets/i18n/fr.json';
+import enTranslations from '../../../../assets/i18n/en.json';
 
 describe('LevelFormComponent', () => {
   let component: LevelFormComponent;
@@ -43,5 +46,26 @@ describe('LevelFormComponent', () => {
 
     component.levelForm.get('levelSequence')?.setValue(0);
     expect(component.levelForm.get('levelSequence')?.hasError('min')).toBeTrue();
+  });
+
+  it('libellés en français sous fr (ils étaient en anglais), en anglais sous en', () => {
+    const translate = TestBed.inject(TranslateService);
+    translate.setTranslation('fr', frTranslations);
+    translate.setTranslation('en', enTranslations);
+    const text = (): string => (fixture.nativeElement as HTMLElement).textContent ?? '';
+
+    translate.use('fr');
+    fixture.detectChanges();
+    expect(text()).toContain('Informations générales');
+    expect(text()).toContain('Code du niveau');
+    expect(text()).toContain('Rang (ordre de passage)');
+    expect(text()).toContain('Effacer');
+
+    translate.use('en');
+    fixture.detectChanges();
+    expect(text()).toContain('Basic Information');
+    expect(text()).toContain('Level code');
+    expect(text()).toContain('Rank (promotion order)');
+    expect(text()).toContain('Clear');
   });
 });

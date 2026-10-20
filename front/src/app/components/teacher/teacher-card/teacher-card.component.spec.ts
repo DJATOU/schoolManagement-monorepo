@@ -3,6 +3,8 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { TeacherCardComponent } from './teacher-card.component';
 import { setupComponentTestBed } from '../../../../testing/setup';
 import { aTeacher } from '../../../../testing/fixtures';
+import { TranslateService } from '@ngx-translate/core';
+import frTranslations from '../../../../assets/i18n/fr.json';
 
 /**
  * `teacher` est une entrée obligatoire : `ngOnInit` construit à partir d'elle le profil
@@ -34,8 +36,13 @@ describe('TeacherCardComponent', () => {
     }));
   });
 
-  it('porte la spécialisation en sous-titre', () => {
-    expect(component.profile.subtitle).toContain('Mathématiques');
+  it('porte la spécialisation en sous-titre, en français', () => {
+    const translate = TestBed.inject(TranslateService);
+    translate.setTranslation('fr', frTranslations);
+    translate.use('fr');
+    fixture.detectChanges();
+    expect((fixture.nativeElement.querySelector('.card-subtitle') as HTMLElement).textContent?.trim())
+      .toBe('Spécialisation : Mathématiques');
   });
 
   it('affiche le nom de l\'enseignant', () => {

@@ -12,7 +12,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
 import { SessionService } from '../../../services/SessionService';
 import { SeriesService } from '../../../services/series.service';
@@ -80,7 +80,8 @@ export class SeriesDetailComponent implements OnInit {
     private seriesService: SeriesService,
     private seriesSessionsPdfService: SeriesSessionsPdfService,
     private dialog: MatDialog,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private translate: TranslateService
   ) {}
 
   ngOnInit(): void {
@@ -113,7 +114,7 @@ export class SeriesDetailComponent implements OnInit {
       error: (error) => {
         console.error('Erreur lors du chargement de la série :', error);
         this.loadingSeries = false;
-        this.showError('Erreur lors du chargement de la série.');
+        this.showError(this.translate.instant('series.detail.loadSeriesError'));
       }
     });
   }
@@ -130,7 +131,7 @@ export class SeriesDetailComponent implements OnInit {
       error: (error) => {
         console.error('Erreur lors du chargement des sessions :', error);
         this.loadingSessions = false;
-        this.showError('Erreur lors du chargement des sessions.');
+        this.showError(this.translate.instant('series.detail.loadSessionsError'));
       }
     });
   }
@@ -224,6 +225,6 @@ export class SeriesDetailComponent implements OnInit {
   }
 
   private showError(message: string): void {
-    this.snackBar.open(message, 'OK', { duration: 4000, panelClass: ['snack-bar-error'] });
+    this.snackBar.open(message, this.translate.instant('common.ok'), { duration: 4000, panelClass: ['snack-bar-error'] });
   }
 }

@@ -12,7 +12,7 @@ import { MatIcon } from '@angular/material/icon';
 import { StudentPaymentStatusService } from '../../../../services/student-payment-status.service';
 import { StudentPaymentStatus } from '../../../../models/student-payment-status';
 import { SecureImageDirective } from '../../../../shared/secure-image.directive';
-import { TranslateService } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { buildLatePaymentTooltip } from '../../../../utils/payment-status-tooltip';
 
 @Component({
@@ -28,7 +28,8 @@ import { buildLatePaymentTooltip } from '../../../../utils/payment-status-toolti
     MatTooltipModule,
     MatChipsModule
   ,
-    SecureImageDirective
+    SecureImageDirective,
+    TranslateModule
   ],
   templateUrl: './student-list-item.component.html',
   styleUrls: ['./student-list-item.component.scss']

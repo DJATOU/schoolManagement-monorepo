@@ -3,6 +3,7 @@ import { TranslateService } from '@ngx-translate/core';
 import pdfMake from 'pdfmake/build/pdfmake';
 import pdfFonts from 'pdfmake/build/vfs_fonts';
 import { Content, TDocumentDefinitions } from 'pdfmake/interfaces';
+import { pdfInstant, pdfLanguage } from '../shared/pdf-i18n';
 
 /**
  * Une part de versement reportée sur une autre série, telle qu'imprimée sur le reçu.
@@ -241,7 +242,7 @@ export class PaymentReceiptPdfService {
   }
 
   private t(key: string, params?: Record<string, unknown>): string {
-    return this.clean(this.translate.instant(key, params));
+    return this.clean(pdfInstant(this.translate, key, params));
   }
 
   /**
@@ -612,7 +613,8 @@ export class PaymentReceiptPdfService {
     }).format(date));
   }
 
+  /** Locale du document : 'en-GB' en anglais, 'fr-FR' sinon (arabe compris, voir pdf-i18n). */
   private locale(): string {
-    return this.translate.currentLang === 'en' ? 'en-GB' : 'fr-FR';
+    return pdfLanguage(this.translate) === 'en' ? 'en-GB' : 'fr-FR';
   }
 }

@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ElementRef, AfterViewInit, inject } from '@angular/core';
 import { StudentService } from '../services/student.service';
 import { Student } from '../domain/student';
 import { StudentCardComponent } from '../student-card/student-card.component';
@@ -26,7 +26,7 @@ import { Level } from '../../../models/level/level';
 import { forkJoin, of, Subject } from 'rxjs';
 import { catchError, map, takeUntil } from 'rxjs/operators';
 import { SchoolYearContextService } from '../../../services/school-year-context.service';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
 interface StudentWithPayment extends Student {
   paymentStatus?: 'GOOD' | 'LATE' | 'NA';
@@ -90,6 +90,8 @@ export class StudentSearchComponent implements OnInit, OnDestroy, AfterViewInit 
 
   /** Désabonnement à la destruction du composant. */
   private readonly destroy$ = new Subject<void>();
+
+  private readonly translate = inject(TranslateService);
 
   constructor(
     private studentService: StudentService,
@@ -482,10 +484,10 @@ export class StudentSearchComponent implements OnInit, OnDestroy, AfterViewInit 
    * Get page range label for compact pagination
    */
   getPageRangeLabel(): string {
-    if (this.totalStudents === 0) return '0 sur 0';
+    if (this.totalStudents === 0) return this.translate.instant('STUDENT_SEARCH.PAGE_RANGE_EMPTY');
     const startIndex = this.currentPageIndex * this.pageSize + 1;
     const endIndex = Math.min((this.currentPageIndex + 1) * this.pageSize, this.totalStudents);
-    return `${startIndex}-${endIndex} sur ${this.totalStudents}`;
+    return this.translate.instant('STUDENT_SEARCH.PAGE_RANGE', { start: startIndex, end: endIndex, total: this.totalStudents });
   }
 
   /**

@@ -3,24 +3,25 @@ import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { CommonModule } from '@angular/common';
+import { TranslateModule } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-view-toggle',
   standalone: true,
-  imports: [CommonModule, MatButtonToggleModule, MatIconModule, MatTooltipModule],
+  imports: [CommonModule, MatButtonToggleModule, MatIconModule, MatTooltipModule, TranslateModule],
   template: `
     <mat-button-toggle-group 
       [value]="viewMode"
       (change)="onViewModeChange($event.value)"
       class="view-toggle"
-      aria-label="Mode d'affichage">
-      <mat-button-toggle value="card" matTooltip="Affichage en cartes" aria-label="Cartes">
+      [attr.aria-label]="'VIEW_TOGGLE.ARIA_LABEL' | translate">
+      <mat-button-toggle value="card" [matTooltip]="'VIEW_TOGGLE.CARDS_TOOLTIP' | translate" [aria-label]="'VIEW_TOGGLE.CARDS' | translate">
         <mat-icon>grid_view</mat-icon>
-        <span>Cartes</span>
+        <span>{{ 'VIEW_TOGGLE.CARDS' | translate }}</span>
       </mat-button-toggle>
-      <mat-button-toggle value="list" matTooltip="Affichage en liste" aria-label="Liste">
+      <mat-button-toggle value="list" [matTooltip]="'VIEW_TOGGLE.LIST_TOOLTIP' | translate" [aria-label]="'VIEW_TOGGLE.LIST' | translate">
         <mat-icon>view_list</mat-icon>
-        <span>Liste</span>
+        <span>{{ 'VIEW_TOGGLE.LIST' | translate }}</span>
       </mat-button-toggle>
     </mat-button-toggle-group>
   `,

@@ -15,6 +15,7 @@ import { Group } from '../../../models/group/group';
 import { Level } from '../../../models/level/level';
 import { Student } from '../../student/domain/student';
 import { AdminOnlyDirective } from '../../../shared/admin-only.directive';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
 /**
  * Dialog d'ajout d'une réduction, ergonomique et aligné sur le backend.
@@ -35,46 +36,47 @@ import { AdminOnlyDirective } from '../../../shared/admin-only.directive';
     MatInputModule,
     MatSelectModule,
     MatSnackBarModule,
-    AdminOnlyDirective
+    AdminOnlyDirective,
+    TranslateModule
   ],
   template: `
-    <h2 mat-dialog-title>Ajouter une réduction</h2>
+    <h2 mat-dialog-title>{{ 'discount.add' | translate }}</h2>
     <mat-dialog-content [formGroup]="discountForm" class="discount-content">
       <mat-form-field appearance="fill">
-        <mat-label>Niveau (filtre)</mat-label>
+        <mat-label>{{ 'discount.dialog.levelFilter' | translate }}</mat-label>
         <mat-select formControlName="levelId" (selectionChange)="onLevelChange()">
-          <mat-option [value]="null">Tous les niveaux</mat-option>
+          <mat-option [value]="null">{{ 'discount.dialog.allLevels' | translate }}</mat-option>
           <mat-option *ngFor="let l of levels" [value]="l.id">{{ l.name }}</mat-option>
         </mat-select>
       </mat-form-field>
 
       <mat-form-field appearance="fill">
-        <mat-label>Groupe</mat-label>
+        <mat-label>{{ 'discount.dialog.group' | translate }}</mat-label>
         <mat-select formControlName="groupId" (selectionChange)="onGroupChange()">
           <mat-option *ngFor="let g of filteredGroups" [value]="g.id">{{ g.name }}</mat-option>
         </mat-select>
       </mat-form-field>
 
       <mat-form-field appearance="fill">
-        <mat-label>Étudiant</mat-label>
+        <mat-label>{{ 'discount.columns.student' | translate }}</mat-label>
         <mat-select formControlName="studentId">
-          <mat-option *ngIf="loadingStudents" [value]="null" disabled>Chargement...</mat-option>
+          <mat-option *ngIf="loadingStudents" [value]="null" disabled>{{ 'discount.dialog.loading' | translate }}</mat-option>
           <mat-option *ngFor="let s of students" [value]="s.id">
             {{ s.firstName }} {{ s.lastName }}
           </mat-option>
         </mat-select>
-        <mat-hint *ngIf="!discountForm.value.groupId">Choisissez d'abord un groupe</mat-hint>
+        <mat-hint *ngIf="!discountForm.value.groupId">{{ 'discount.dialog.chooseGroupFirst' | translate }}</mat-hint>
       </mat-form-field>
 
       <mat-form-field appearance="fill">
-        <mat-label>Taux (%)</mat-label>
+        <mat-label>{{ 'discount.dialog.ratePercent' | translate }}</mat-label>
         <input matInput type="number" min="0" max="100" formControlName="ratePercent" />
-        <mat-hint>0 à 100 (ex. 50 = 50%)</mat-hint>
+        <mat-hint>{{ 'discount.dialog.rateHint' | translate }}</mat-hint>
       </mat-form-field>
     </mat-dialog-content>
     <mat-dialog-actions align="end">
-      <button mat-button mat-dialog-close>Annuler</button>
-      <button mat-raised-button color="primary" (click)="save()" [disabled]="discountForm.invalid" appAdminOnly>Enregistrer</button>
+      <button mat-button mat-dialog-close>{{ 'common.cancel' | translate }}</button>
+      <button mat-raised-button color="primary" (click)="save()" [disabled]="discountForm.invalid" appAdminOnly>{{ 'discount.edit.save' | translate }}</button>
     </mat-dialog-actions>
   `,
   styles: [`.discount-content { display: grid; gap: 12px; min-width: 340px; }`]
@@ -95,6 +97,7 @@ export class DiscountDialogComponent implements OnInit {
     private levelService: LevelService,
     private snackBar: MatSnackBar,
     private dialogRef: MatDialogRef<DiscountDialogComponent>,
+    private translate: TranslateService,
     @Inject(MAT_DIALOG_DATA) public data: { studentId?: number; groupId?: number }
   ) {
     this.discountForm = this.fb.group({
@@ -170,10 +173,10 @@ export class DiscountDialogComponent implements OnInit {
 
     this.discountService.addDiscount(payload).subscribe({
       next: discount => {
-        this.snackBar.open('Réduction enregistrée', 'Fermer', { duration: 3000 });
+        this.snackBar.open(this.translate.instant('discount.dialog.saved'), this.translate.instant('common.close'), { duration: 3000 });
         this.dialogRef.close(discount);
       },
-      error: (err: Error) => this.snackBar.open(err.message || 'Erreur lors de la sauvegarde', 'Fermer', { duration: 4000 })
+      error: (err: Error) => this.snackBar.open(err.message || this.translate.instant('discount.dialog.saveError'), this.translate.instant('common.close'), { duration: 4000 })
     });
   }
 }

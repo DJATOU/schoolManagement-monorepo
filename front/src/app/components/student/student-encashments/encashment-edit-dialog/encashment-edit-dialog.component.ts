@@ -6,7 +6,7 @@ import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/materia
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { Subscription } from 'rxjs';
 
 import { Encashment } from '../../../../models/payment/encashment';
@@ -17,6 +17,7 @@ import { Student } from '../../domain/student';
 import { GroupService } from '../../../../services/group.service';
 import { SeriesService } from '../../../../services/series.service';
 import { PAYMENT_METHOD_OPTIONS } from '../../../../utils/form-options';
+import { currencySuffix } from '../../../../shared/currency';
 
 /** Un choix de liste : identifiant et libellé. */
 interface Choice {
@@ -72,11 +73,17 @@ export class EncashmentEditDialogComponent implements OnInit, OnDestroy {
 
   private readonly subscriptions = new Subscription();
 
+  /** Suffixe du champ montant : « DA », « دج » en arabe. */
+  get currencySuffix(): string {
+    return currencySuffix(this.translate);
+  }
+
   constructor(
     private fb: FormBuilder,
     private dialogRef: MatDialogRef<EncashmentEditDialogComponent, EncashmentChanges>,
     private groupService: GroupService,
     private seriesService: SeriesService,
+    private translate: TranslateService,
     @Inject(MAT_DIALOG_DATA) public data: EncashmentEditDialogData
   ) {
     const encashment = data.encashment;

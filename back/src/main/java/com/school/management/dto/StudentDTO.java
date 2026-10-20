@@ -1,12 +1,13 @@
 package com.school.management.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.school.management.persistance.StudentStatus;
 import jakarta.validation.constraints.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
-import java.util.Date;
+import java.time.LocalDate;
 import java.util.Set;
 
 import org.springframework.format.annotation.DateTimeFormat;
@@ -39,9 +40,11 @@ public class StudentDTO {
 
     private String communicationPreference;
 
-    @NotNull(message = "Date of birth is required")
+    // Facultative : un élève importé par CSV n'en a pas, et doit rester modifiable (PUT @Valid).
+    // Le formulaire d'inscription l'exige côté écran.
     @DateTimeFormat(pattern = "yyyy-MM-dd")
-    private Date dateOfBirth;
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
+    private LocalDate dateOfBirth;
 
     private String placeOfBirth;
 

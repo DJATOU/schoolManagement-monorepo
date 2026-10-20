@@ -19,6 +19,8 @@ import {
 import { CorrectionStep, EncashmentService } from '../../../services/encashment.service';
 import { PaymentReceiptPdfService } from '../../../services/payment-receipt-pdf.service';
 import { receiptFromEncashment } from '../../../utils/encashment-receipt';
+import { pdfInstant } from '../../../shared/pdf-i18n';
+import { currencySuffix } from '../../../shared/currency';
 import { PAYMENT_METHOD_OPTIONS } from '../../../utils/form-options';
 import {
   CorrectionDialogComponent,
@@ -71,8 +73,10 @@ export class StudentEncashmentsComponent implements OnChanges {
   /** Lecture seule (année passée) : ni annulation ni correction. */
   @Input() readOnly = false;
 
-  /** Suffixe monétaire, aligné sur le reste de l'application (« 8 000 DA »). */
-  readonly currencySuffix = 'DA';
+  /** Suffixe monétaire de l'écran : « 8 000 DA », « 8 000 دج » en arabe. */
+  get currencySuffix(): string {
+    return currencySuffix(this.translate);
+  }
 
   /** Versements de l'élève, dans l'ordre du serveur : le plus récent d'abord. */
   encashments: Encashment[] = [];
@@ -131,9 +135,10 @@ export class StudentEncashmentsComponent implements OnChanges {
   }
 
   /** Libellé traduit du mode de règlement ; le code brut à défaut de libellé connu. */
-  methodLabel(encashment: Encashment): string {
+  methodLabel(encashment: Encashment,
+              t: (key: string) => string = key => this.translate.instant(key)): string {
     const option = PAYMENT_METHOD_OPTIONS.find(candidate => candidate.value === encashment.paymentMethod);
-    return option ? this.translate.instant(option.labelKey) : (encashment.paymentMethod ?? '');
+    return option ? t(option.labelKey) : (encashment.paymentMethod ?? '');
   }
 
   trackById(_index: number, encashment: Encashment): number {
@@ -285,7 +290,9 @@ export class StudentEncashmentsComponent implements OnChanges {
 
   /** La génération est asynchrone (chargement du logo) : l'échec est capté sur la promesse. */
   private print(encashment: Encashment): Promise<void> {
-    return this.receiptPdfService.generateAndPrint(receiptFromEncashment(encashment, this.methodLabel(encashment)))
+    return this.receiptPdfService.generateAndPrint(receiptFromEncashment(encashment,
+      // Mode de règlement imprimé dans la langue du reçu (français sous l'arabe), pas de l'écran.
+      this.methodLabel(encashment, key => pdfInstant(this.translate, key))))
       .catch((err: unknown) => {
         console.error('Erreur lors de l\'impression du reçu :', err);
         this.notify(this.translate.instant('payment.encashments.reprintError'));

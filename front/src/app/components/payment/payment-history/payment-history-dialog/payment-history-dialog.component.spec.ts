@@ -2,6 +2,9 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { TranslateService } from '@ngx-translate/core';
 import pdfMake from 'pdfmake/build/pdfmake';
 import { TDocumentDefinitions } from 'pdfmake/interfaces';
+import frTranslations from '../../../../../assets/i18n/fr.json';
+import enTranslations from '../../../../../assets/i18n/en.json';
+import arTranslations from '../../../../../assets/i18n/ar.json';
 
 import { PaymentHistoryDialogComponent } from './payment-history-dialog.component';
 import { SeriesHistoryDTO } from '../../../../models/sessionSerie/SeriesHistoryDTO';
@@ -158,6 +161,33 @@ describe('PaymentHistoryDialogComponent', () => {
 
       const texts = JSON.stringify(captured.content);
       expect(texts).toContain('payment.history.labels.refunded : 400 DA');
+    });
+
+    it('interface en arabe : écran en arabe, PDF en français, chiffres latins, aucun caractère arabe', async () => {
+      const translate = TestBed.inject(TranslateService);
+      translate.setTranslation('fr', frTranslations);
+      translate.setTranslation('en', enTranslations);
+      translate.setTranslation('ar', arTranslations);
+      translate.use('ar');
+      select(series({ sessions: [{ sessionId: 1, sessionName: 'Séance 1', attendanceStatus: 'PRESENT',
+        paymentStatus: 'PAID', amountPaid: 2400, paymentDate: '2030-02-03' } as never] }));
+      // L'écran, lui, reste en arabe.
+      expect(component.statusLabel(component.paymentHistory.data[0])).toBe(arTranslations.payment.history.status.paid);
+      spyOn(component as never, 'convertImageToBase64').and.returnValue(Promise.resolve('') as never);
+      let captured: TDocumentDefinitions = { content: [] };
+      spyOn(pdfMake, 'createPdf').and.callFake(((definition: TDocumentDefinitions) => {
+        captured = definition;
+        return { getBlob: () => undefined };
+      }) as never);
+      await component.generatePdf();
+      const text = JSON.stringify(captured.content)
+        + JSON.stringify((captured.footer as (current: number, total: number) => unknown)(1, 2));
+      expect(text).toContain(frTranslations.payment.history.pdf.title);
+      expect(text).toContain(`${frTranslations.payment.history.labels.refunded} : 400 DA`);
+      expect(text).toContain(frTranslations.payment.history.status.paid);
+      expect(text).toContain('2 400 DA');
+      expect(text).toContain('03/02/2030');
+      expect(text).not.toMatch(/[\u0600-\u06FF]/);
     });
 
     it('n\'imprime pas de ligne « remboursé » sans remboursement', async () => {

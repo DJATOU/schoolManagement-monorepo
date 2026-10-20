@@ -1,7 +1,7 @@
 <mat-card class="app-entity-card group-card" (click)="navigateToGroupProfile()">
   <div class="app-entity-card__body profile-card-content">
     <div class="app-entity-card__avatar profile-photo">
-      <img *ngIf="groupPhotoUrl; else groupInitials" [appSecureImage]="groupPhotoUrl" alt="Photo du groupe" class="group-photo"
+      <img *ngIf="groupPhotoUrl; else groupInitials" [appSecureImage]="groupPhotoUrl" [alt]="'PROFILE_CARD.GROUP_PHOTO' | translate" class="group-photo"
         (error)="onImageError()">
       <ng-template #groupInitials>
         <div class="initials-avatar" [style.background-color]="avatarColor">

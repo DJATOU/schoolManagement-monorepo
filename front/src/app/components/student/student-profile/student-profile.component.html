@@ -18,7 +18,7 @@
       <div class="pf-identity">
         <div class="pf-avatar">
           <img *ngIf="studentPhotoUrl && !hasImageError; else studentInitials" [appSecureImage]="studentPhotoUrl"
-            alt="Photo de l'étudiant" (error)="onImageError()">
+            [alt]="'STUDENT_PROFILE.PHOTO_ALT' | translate" (error)="onImageError()">
           <ng-template #studentInitials>
             <div class="pf-initials" [style.background-color]="avatarColor">{{ getInitials() }}</div>
           </ng-template>
@@ -32,26 +32,26 @@
       </div>
 
       <div class="pf-header-buttons">
-        <button mat-icon-button class="pf-hb pf-hb-edit" (click)="onEdit()" matTooltip="Modifier le profil" appAdminOnly>
+        <button mat-icon-button class="pf-hb pf-hb-edit" (click)="onEdit()" [matTooltip]="'STUDENT_PROFILE.EDIT_TOOLTIP' | translate" appAdminOnly>
           <mat-icon>edit</mat-icon>
         </button>
         <button mat-icon-button class="pf-hb pf-hb-payment" (click)="openPaymentHistoryDialog()"
-          matTooltip="Historique des paiements">
+          [matTooltip]="'STUDENT_PROFILE.PAYMENT_HISTORY_TOOLTIP' | translate">
           <mat-icon>account_balance_wallet</mat-icon>
         </button>
         <button mat-icon-button class="pf-hb pf-hb-attendance" (click)="openAttendanceHistoryDialog()"
-          matTooltip="Historique de présence">
+          [matTooltip]="'STUDENT_PROFILE.ATTENDANCE_HISTORY_TOOLTIP' | translate">
           <mat-icon>fact_check</mat-icon>
         </button>
         <button mat-icon-button class="pf-hb pf-hb-print" (click)="openFullHistoryDialog()"
-          matTooltip="Historique complet">
+          [matTooltip]="'STUDENT_PROFILE.FULL_HISTORY_TOOLTIP' | translate">
           <mat-icon>history</mat-icon>
         </button>
         <button mat-icon-button class="pf-hb pf-hb-edit" (click)="printProfilePdf()"
-          matTooltip="Imprimer la fiche (PDF)">
+          [matTooltip]="'STUDENT_PROFILE.PRINT_TOOLTIP' | translate">
           <mat-icon>badge</mat-icon>
         </button>
-        <button mat-icon-button class="pf-hb pf-hb-danger" (click)="onDisable()" matTooltip="Désactiver le compte" appAdminOnly>
+        <button mat-icon-button class="pf-hb pf-hb-danger" (click)="onDisable()" [matTooltip]="'STUDENT_PROFILE.DISABLE_TOOLTIP' | translate" appAdminOnly>
           <mat-icon>block</mat-icon>
         </button>
       </div>
@@ -61,22 +61,22 @@
     <div class="pf-body">
       <div class="pf-grid">
         <section class="pf-section">
-          <h3 class="pf-section-title"><mat-icon>person</mat-icon>Informations personnelles</h3>
-          <div class="pf-row"><mat-icon>wc</mat-icon><span class="pf-label">Sexe</span><span class="pf-value">{{ student?.gender || '—' }}</span></div>
-          <div class="pf-row"><mat-icon>mail</mat-icon><span class="pf-label">Email</span><span class="pf-value">{{ student?.email || '—' }}</span></div>
-          <div class="pf-row"><mat-icon>call</mat-icon><span class="pf-label">Téléphone</span><span class="pf-value">{{ student?.phoneNumber || '—' }}</span></div>
-          <div class="pf-row"><mat-icon>cake</mat-icon><span class="pf-label">Date de naissance</span><span class="pf-value">{{ (student?.dateOfBirth | date: 'mediumDate') || '—' }}</span></div>
-          <div class="pf-row"><mat-icon>place</mat-icon><span class="pf-label">Lieu de naissance</span><span class="pf-value">{{ student?.placeOfBirth || '—' }}</span></div>
-          <div class="pf-row"><mat-icon>flag</mat-icon><span class="pf-label">{{ 'COMMON.NATIONALITY' | translate }}</span><span class="pf-value">{{ student?.nationality || '—' }}</span></div>
+          <h3 class="pf-section-title"><mat-icon>person</mat-icon>{{ 'STUDENT_PROFILE.PERSONAL_INFO' | translate }}</h3>
+          <div class="pf-row"><mat-icon>wc</mat-icon><span class="pf-label">{{ 'COMMON.GENDER' | translate }}</span><span class="pf-value">{{ genderLabel(student?.gender) || '—' }}</span></div>
+          <div class="pf-row"><mat-icon>mail</mat-icon><span class="pf-label">{{ 'COMMON.EMAIL' | translate }}</span><span class="pf-value">{{ student?.email || '—' }}</span></div>
+          <div class="pf-row"><mat-icon>call</mat-icon><span class="pf-label">{{ 'STUDENT_PROFILE.PHONE' | translate }}</span><span class="pf-value">{{ student?.phoneNumber || '—' }}</span></div>
+          <div class="pf-row"><mat-icon>cake</mat-icon><span class="pf-label">{{ 'COMMON.BIRTHDATE' | translate }}</span><span class="pf-value">{{ birthDateLabel || '—' }}</span></div>
+          <div class="pf-row"><mat-icon>place</mat-icon><span class="pf-label">{{ 'COMMON.BIRTHPLACE' | translate }}</span><span class="pf-value">{{ student?.placeOfBirth || '—' }}</span></div>
+          <div class="pf-row"><mat-icon>flag</mat-icon><span class="pf-label">{{ 'COMMON.NATIONALITY' | translate }}</span><span class="pf-value">{{ nationalityLabel(student?.nationality) || '—' }}</span></div>
           <div class="pf-row"><mat-icon>home</mat-icon><span class="pf-label">{{ 'COMMON.ADDRESS' | translate }}</span><span class="pf-value">{{ student?.address || '—' }}</span></div>
           <div class="pf-row"><mat-icon>location_city</mat-icon><span class="pf-label">{{ 'COMMON.CITY' | translate }}</span><span class="pf-value">{{ student?.city || '—' }}</span></div>
         </section>
 
         <section class="pf-section">
-          <h3 class="pf-section-title"><mat-icon>menu_book</mat-icon>Informations académiques</h3>
-          <div class="pf-row"><mat-icon>school</mat-icon><span class="pf-label">Niveau</span><span class="pf-value">{{ student?.levelName || '—' }}</span></div>
-          <div class="pf-row"><mat-icon>apartment</mat-icon><span class="pf-label">Établissement</span><span class="pf-value">{{ student?.establishment || '—' }}</span></div>
-          <div class="pf-row"><mat-icon>grade</mat-icon><span class="pf-label">Moyenne</span><span class="pf-value">{{ student?.averageScore != null ? student?.averageScore : '—' }}</span></div>
+          <h3 class="pf-section-title"><mat-icon>menu_book</mat-icon>{{ 'STUDENT_PROFILE.ACADEMIC_INFO' | translate }}</h3>
+          <div class="pf-row"><mat-icon>school</mat-icon><span class="pf-label">{{ 'COMMON.LEVEL' | translate }}</span><span class="pf-value">{{ student?.levelName || '—' }}</span></div>
+          <div class="pf-row"><mat-icon>apartment</mat-icon><span class="pf-label">{{ 'COMMON.SCHOOL' | translate }}</span><span class="pf-value">{{ student?.establishment || '—' }}</span></div>
+          <div class="pf-row"><mat-icon>grade</mat-icon><span class="pf-label">{{ 'STUDENT_PROFILE.AVERAGE' | translate }}</span><span class="pf-value">{{ student?.averageScore != null ? student?.averageScore : '—' }}</span></div>
           <div class="pf-row" *ngIf="student?.description"><mat-icon>sticky_note_2</mat-icon><span class="pf-label">{{ 'EDIT_STUDENT.DESCRIPTION' | translate }}</span><span class="pf-value">{{ student?.description }}</span></div>
         </section>
 
@@ -115,11 +115,11 @@
       <div class="pf-actions">
         <button mat-flat-button class="pf-action-primary" (click)="openPaymentDialog()"
           [disabled]="(writeDisabled$ | async) ?? false">
-          <mat-icon>add_card</mat-icon> Ajouter un paiement
+          <mat-icon>add_card</mat-icon> {{ 'STUDENT_PROFILE.ADD_PAYMENT' | translate }}
         </button>
         <button mat-stroked-button class="pf-action-secondary" (click)="openGroupDialog()"
           [disabled]="(writeDisabled$ | async) ?? false">
-          <mat-icon>groups</mat-icon> Gérer les groupes
+          <mat-icon>groups</mat-icon> {{ 'STUDENT_PROFILE.MANAGE_GROUPS' | translate }}
         </button>
       </div>
     </div>
@@ -131,7 +131,7 @@
       <mat-expansion-panel-header>
         <mat-panel-title>
           <mat-icon>groups</mat-icon>
-          Groupes ({{ studentGroups.length }})
+          {{ 'STUDENT_PROFILE.GROUPS_COUNT' | translate: { count: studentGroups.length } }}
         </mat-panel-title>
       </mat-expansion-panel-header>
       <div class="pf-cards-scroll">
@@ -143,7 +143,7 @@
         <ng-template #noGroups>
           <div class="pf-empty">
             <mat-icon>group_off</mat-icon>
-            <span>Aucun groupe pour le moment</span>
+            <span>{{ 'STUDENT_PROFILE.NO_GROUPS' | translate }}</span>
           </div>
         </ng-template>
       </div>

@@ -1,5 +1,6 @@
 import { HttpClient, HttpErrorResponse, HttpHeaders, HttpParams } from '@angular/common/http';
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
+import { TranslateService } from '@ngx-translate/core';
 import { catchError, Observable, throwError } from 'rxjs';
 import { Payment } from '../models/payment/payment';
 import { PaymentDetail } from '../models/paymentDetail/paymentDetail';
@@ -26,6 +27,8 @@ import { API_BASE_URL } from '../api-base-url';
 export class PaymentService {
 
   private readonly baseUrl = `${API_BASE_URL}/api/payments`;
+
+  private readonly translate = inject(TranslateService);
 
   constructor(private http: HttpClient) {}
 
@@ -329,31 +332,31 @@ export class PaymentService {
   /**
    * Gestion centralisée des erreurs HTTP
    */
-  private handleError(error: HttpErrorResponse): Observable<never> {
-    let errorMessage = 'Une erreur est survenue';
+  private handleError = (error: HttpErrorResponse): Observable<never> => {
+    let errorMessage: string = this.translate.instant('HTTP_ERRORS.GENERIC');
 
     if (error.error instanceof ErrorEvent) {
       // Erreur côté client
-      errorMessage = `Erreur: ${error.error.message}`;
+      errorMessage = this.translate.instant('HTTP_ERRORS.WITH_MESSAGE_COMPACT', { message: error.error.message });
     } else {
       // Erreur côté serveur
-      errorMessage = `Code: ${error.status}\nMessage: ${error.message}`;
+      errorMessage = this.translate.instant('HTTP_ERRORS.CODE_MESSAGE', { status: error.status, message: error.message });
 
       // Messages spécifiques selon le code HTTP
       switch (error.status) {
         case 404:
-          errorMessage = 'Paiement non trouvé';
+          errorMessage = this.translate.instant('HTTP_ERRORS.PAYMENT.NOT_FOUND');
           break;
         case 400:
-          errorMessage = error.error?.message || 'Données invalides';
+          errorMessage = error.error?.message || this.translate.instant('HTTP_ERRORS.INVALID_DATA');
           break;
         case 500:
-          errorMessage = 'Erreur serveur. Veuillez réessayer plus tard.';
+          errorMessage = this.translate.instant('HTTP_ERRORS.SERVER');
           break;
       }
     }
 
     console.error('Payment Service Error:', errorMessage, error);
     return throwError(() => new Error(errorMessage));
-  }
+  };
 }

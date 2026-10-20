@@ -14,6 +14,7 @@ import { AdminOnlyDirective } from '../../../shared/admin-only.directive';
 import { CatchUpBillingService } from '../../../services/catch-up-billing.service';
 import { PendingCatchUp } from '../../../models/catchUp/catch-up-billing';
 import { CatchUpBillingDialogComponent } from '../catch-up-billing-dialog/catch-up-billing-dialog.component';
+import { LocalizedDatePipe } from '../../../pipes/localized-date.pipe';
 
 /**
  * Rattrapages en attente de décision de facturation.
@@ -41,7 +42,8 @@ import { CatchUpBillingDialogComponent } from '../catch-up-billing-dialog/catch-
     MatSnackBarModule,
     MatTooltipModule,
     TranslateModule,
-    AdminOnlyDirective
+    AdminOnlyDirective,
+    LocalizedDatePipe
   ]
 })
 export class CatchUpBillingListComponent implements OnInit {

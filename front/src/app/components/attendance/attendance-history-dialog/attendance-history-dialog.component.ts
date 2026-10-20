@@ -18,6 +18,9 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { JustificationUpdateResult } from '../../../models/Attendance/justification';
 import { AdminOnlyDirective } from '../../../shared/admin-only.directive';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { LocalizedDatePipe } from '../../../pipes/localized-date.pipe';
+import { pdfInstant, pdfLocale } from '../../../shared/pdf-i18n';
 import {
   JustificationEditDialogComponent
 } from '../justification-edit-dialog/justification-edit-dialog.component';
@@ -45,7 +48,9 @@ import { Content, TDocumentDefinitions } from 'pdfmake/interfaces';
     MatTableModule,
     MatIconModule,
     MatTooltipModule,
-    AdminOnlyDirective
+    AdminOnlyDirective,
+    TranslateModule,
+    LocalizedDatePipe
   ]
 })
 export class AttendanceHistoryDialogComponent implements OnInit {
@@ -67,6 +72,7 @@ export class AttendanceHistoryDialogComponent implements OnInit {
     private seriesService: SeriesService,
     private sessionService: SessionService,
     private dialog: MatDialog,
+    private translate: TranslateService,
     public dialogRef: MatDialogRef<AttendanceHistoryDialogComponent>,
     @Inject(MAT_DIALOG_DATA) public data: { studentId: number }
   ) {}
@@ -127,7 +133,9 @@ export class AttendanceHistoryDialogComponent implements OnInit {
               const session = sessions[index];
               return {
                 ...attendance,
-                sessionName: session?.title || 'Session inconnue', // Récupérer le nom de la session ou une valeur par défaut
+                sessionName: session?.title || this.translate.instant('ATTENDANCE_HISTORY.UNKNOWN_SESSION'), // Récupérer le nom de la session ou une valeur par défaut
+                // Titre brut, pour le PDF : le repli ci-dessus est dans la langue de l'écran.
+                sessionTitle: session?.title || null,
                 sessionDate: session?.sessionTimeStart || null // Récupérer la date de la session ou null
               };
             });
@@ -168,9 +176,9 @@ export class AttendanceHistoryDialogComponent implements OnInit {
       return '';
     }
     if (attendance.isJustified === null || attendance.isJustified === undefined) {
-      return 'Non renseignée';
+      return this.translate.instant('justification.dialog.notSet');
     }
-    return attendance.isJustified ? 'Justifiée' : 'Non justifiée';
+    return this.translate.instant(attendance.isJustified ? 'justification.dialog.justified' : 'justification.dialog.unjustified');
   }
 
   /** Vrai si la justification de cette ligne est modifiable : seules les absences le sont. */
@@ -230,6 +238,16 @@ export class AttendanceHistoryDialogComponent implements OnInit {
     });
   }
 
+  /** Libellé du PDF : langue de l'interface en français / anglais, français sinon (arabe). */
+  private pdf(key: string, params?: object): string {
+    return pdfInstant(this.translate, key, params);
+  }
+
+  /** Date du PDF, au format de la langue du document. */
+  private pdfDate(value: string | Date): string {
+    return new Date(value).toLocaleDateString(pdfLocale(this.translate));
+  }
+
   // Méthode pour générer le PDF
   async generatePdf(): Promise<void> {
     let logoBase64 = '';
@@ -248,7 +266,7 @@ export class AttendanceHistoryDialogComponent implements OnInit {
               width: 100
             },
             {
-              text: 'Historique des Présences',
+              text: this.pdf('ATTENDANCE_HISTORY.PDF.TITLE'),
               style: 'header',
               alignment: 'right'
             }
@@ -256,11 +274,11 @@ export class AttendanceHistoryDialogComponent implements OnInit {
         },
         { text: '\n\n' },
         {
-          text: `Étudiant : ${this.studentName}`,
+          text: this.pdf('ATTENDANCE_HISTORY.PDF.STUDENT', { name: this.studentName }),
           style: 'subheader'
         },
         {
-          text: `Date : ${new Date().toLocaleDateString()}`,
+          text: this.pdf('ATTENDANCE_HISTORY.PDF.DATE', { date: this.pdfDate(new Date()) }),
           alignment: 'right'
         },
         { text: '\n' },
@@ -274,12 +292,12 @@ export class AttendanceHistoryDialogComponent implements OnInit {
         {
           columns: [
             {
-              text: 'Signature de l\'Étudiant : ________________________',
+              text: this.pdf('ATTENDANCE_HISTORY.PDF.STUDENT_SIGNATURE'),
               alignment: 'left',
               margin: [0, 50, 0, 0]
             },
             {
-              text: 'Signature de l\'Administration : ________________________',
+              text: this.pdf('ATTENDANCE_HISTORY.PDF.ADMIN_SIGNATURE'),
               alignment: 'right',
               margin: [0, 50, 0, 0]
             }
@@ -317,7 +335,7 @@ export class AttendanceHistoryDialogComponent implements OnInit {
       },
       footer: (currentPage: number, pageCount: number): Content => {
         return {
-          text: `Page ${currentPage} sur ${pageCount}`,
+          text: this.pdf('ATTENDANCE_HISTORY.PDF.PAGE', { current: currentPage, total: pageCount }),
           alignment: 'center',
           fontSize: 10,
           margin: [0, 10, 0, 0]
@@ -338,33 +356,39 @@ export class AttendanceHistoryDialogComponent implements OnInit {
 
     // En-têtes du tableau
     body.push([
-      { text: 'Session', style: 'tableHeader' },
-      { text: 'Date de la Session', style: 'tableHeader' },
-      { text: 'Présence', style: 'tableHeader' },
-      { text: 'Justifiée', style: 'tableHeader' },
-      { text: 'Description', style: 'tableHeader' }
+      { text: this.pdf('ATTENDANCE_HISTORY.COL_SESSION'), style: 'tableHeader' },
+      { text: this.pdf('ATTENDANCE_HISTORY.PDF.COL_DATE'), style: 'tableHeader' },
+      { text: this.pdf('ATTENDANCE_HISTORY.PDF.COL_PRESENCE'), style: 'tableHeader' },
+      { text: this.pdf('ATTENDANCE_HISTORY.PDF.COL_JUSTIFIED'), style: 'tableHeader' },
+      { text: this.pdf('ATTENDANCE_HISTORY.PDF.COL_DESCRIPTION'), style: 'tableHeader' }
     ]);
 
     // Données du tableau
     if (this.attendanceHistory.data && this.attendanceHistory.data.length > 0) {
       for (const attendance of this.attendanceHistory.data) {
         const fillColor = this.getFillColorForAttendance(attendance);
-        const sessionName = attendance.sessionName || 'N/A';
-        const sessionDisplayName = attendance.isCatchUp ? `${sessionName} (Rattrapage)` : sessionName;
+        const notAvailable = this.pdf('ATTENDANCE_HISTORY.PDF.NOT_AVAILABLE');
+        // Titre brut de la séance, ou le repli « Session inconnue » dans la langue du document.
+        const sessionName = attendance.sessionTitle || this.pdf('ATTENDANCE_HISTORY.UNKNOWN_SESSION');
+        const sessionDisplayName = attendance.isCatchUp
+          ? `${sessionName} ${this.pdf('ATTENDANCE_HISTORY.CATCH_UP_TAG')}`
+          : sessionName;
+        const yes = this.pdf('common.yes');
+        const no = this.pdf('common.no');
 
-        const justifiedText = attendance.isPresent ? '' : (attendance.isJustified ? 'Oui' : 'Non');
+        const justifiedText = attendance.isPresent ? '' : (attendance.isJustified ? yes : no);
 
         body.push([
           { text: sessionDisplayName, fillColor, ...(attendance.isCatchUp && { color: 'red', bold: true }) },
-          { text: attendance.sessionDate ? new Date(attendance.sessionDate).toLocaleDateString() : 'N/A', fillColor },
-          { text: attendance.isPresent ? 'Oui' : 'Non', fillColor },
+          { text: attendance.sessionDate ? this.pdfDate(attendance.sessionDate) : notAvailable, fillColor },
+          { text: attendance.isPresent ? yes : no, fillColor },
           { text: justifiedText, fillColor },
           { text: attendance.description || '', fillColor }
         ]);
       }
     } else {
       body.push([
-        { text: 'Aucune donnée disponible', colSpan: 5, alignment: 'center' }
+        { text: this.pdf('ATTENDANCE_HISTORY.PDF.NO_DATA'), colSpan: 5, alignment: 'center' }
       ]);
     }
 

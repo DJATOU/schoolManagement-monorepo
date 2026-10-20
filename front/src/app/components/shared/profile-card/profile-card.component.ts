@@ -20,6 +20,9 @@ interface Profile {
   lastName: string;
   photo: string;
   subtitle?: string;
+  /** Sous-titre à traduire : prioritaire sur `subtitle`, il suit le changement de langue. */
+  subtitleKey?: string;
+  subtitleParams?: Record<string, unknown>;
   email?: string;
   phoneNumber?: string;
   level?: number;

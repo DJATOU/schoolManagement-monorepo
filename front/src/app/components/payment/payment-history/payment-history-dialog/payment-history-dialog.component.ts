@@ -15,7 +15,8 @@ import { StudentService } from '../../../student/services/student.service';
 import { StudentFullHistoryDTO } from '../../../student/domain/StudentFullHistoryDTO';
 import { GroupHistoryDTO } from '../../../../models/group/GroupHistoryDTO';
 import { SeriesHistoryDTO } from '../../../../models/sessionSerie/SeriesHistoryDTO';
-import { resolveLocale } from '../../../../shared/locale';
+import { pdfInstant, pdfLocale } from '../../../../shared/pdf-i18n';
+import { currencySuffix, pdfWithCurrency } from '../../../../shared/currency';
 import { AmountPipe } from '../../../../pipes/amount.pipe';
 import {
   countBillableSessions,
@@ -32,6 +33,7 @@ import pdfFonts from 'pdfmake/build/vfs_fonts';
 (pdfMake as any).vfs = pdfFonts.pdfMake.vfs;
 
 import { Content, TDocumentDefinitions } from 'pdfmake/interfaces';
+import { LocalizedDatePipe } from '../../../../pipes/localized-date.pipe';
 
 /** Statuts affichables, alignés sur les clés de traduction existantes. */
 type DisplayStatus = 'paid' | 'partiallyPaid' | 'unpaid';
@@ -91,12 +93,15 @@ interface SessionPaymentRow {
     MatTableModule,
     MatIconModule,
     TranslateModule,
-    AmountPipe
+    AmountPipe,
+    LocalizedDatePipe
   ]
 })
 export class PaymentHistoryDialogComponent implements OnInit {
-  /** Suffixe monétaire, aligné sur le reste de l'application (« 8 000 DA »). */
-  readonly currencySuffix = 'DA';
+  /** Suffixe monétaire de l'écran : « 8 000 DA », « 8 000 دج » en arabe. */
+  get currencySuffix(): string {
+    return currencySuffix(this.translate);
+  }
 
   studentGroups: GroupHistoryDTO[] = [];
   sessionSeries: SeriesHistoryDTO[] = [];
@@ -262,7 +267,7 @@ export class PaymentHistoryDialogComponent implements OnInit {
   }
 
   /**
-   * Montant formaté pour le PDF (« 2 100 DA »), selon la langue active.
+   * Montant formaté pour le PDF (« 2 100 DA »), selon la langue du document.
    *
    * <p>Le séparateur de milliers du français est une espace fine insécable (U+202F), et
    * celui d'autres locales une espace insécable (U+00A0). La police embarquée du générateur
@@ -270,15 +275,24 @@ export class PaymentHistoryDialogComponent implements OnInit {
    * donc à une espace ordinaire.</p>
    */
   private formatAmount(amount: number): string {
-    const formatted = amount.toLocaleString(resolveLocale(this.translate.currentLang), {
+    const formatted = amount.toLocaleString(pdfLocale(this.translate), {
       maximumFractionDigits: 2
     });
-    return `${formatted.replace(/[\u202F\u00A0]/g, ' ')} ${this.currencySuffix}`;
+    // Suffixe du document (« DA » sous une interface en arabe), pas celui de l'écran.
+    return pdfWithCurrency(formatted.replace(/[\u202F\u00A0]/g, ' '), this.translate);
   }
 
-  /** Date formatée selon la langue active, et non selon celle du navigateur. */
+  /**
+   * Date du PDF, selon la langue du document et non selon celle du navigateur : français sous une
+   * interface en arabe, comme tout le document.
+   */
   private formatDate(value: string | Date | null | undefined): string {
-    return value ? new Date(value).toLocaleDateString(resolveLocale(this.translate.currentLang)) : '—';
+    return value ? new Date(value).toLocaleDateString(pdfLocale(this.translate)) : '—';
+  }
+
+  /** Libellé du PDF : langue de l'interface en français / anglais, français sinon (arabe). */
+  private pdf(key: string, params?: object): string {
+    return pdfInstant(this.translate, key, params);
   }
 
   private getFillColorForRow(row: SessionPaymentRow): string {
@@ -314,13 +328,13 @@ export class PaymentHistoryDialogComponent implements OnInit {
   private rowTitle(row: SessionPaymentRow): string {
     const name = row.sessionName || '—';
     if (row.pendingDecision) {
-      return `${this.translate.instant('payment.history.pendingDecision.tag')} — ${name}`;
+      return `${this.pdf('payment.history.pendingDecision.tag')} — ${name}`;
     }
     if (row.excluded) {
-      return `${this.translate.instant('payment.history.excluded.tag')} — ${name}`;
+      return `${this.pdf('payment.history.excluded.tag')} — ${name}`;
     }
     if (row.catchUp) {
-      return `${this.translate.instant('payment.history.labels.catchUpPrefix')} ${name}`;
+      return `${this.pdf('payment.history.labels.catchUpPrefix')} ${name}`;
     }
     return name;
   }
@@ -339,20 +353,25 @@ export class PaymentHistoryDialogComponent implements OnInit {
    * avance est licite. Le statut de paiement reste donc celui du serveur.</p>
    */
   statusLabel(row: SessionPaymentRow): string {
+    return this.statusText(row, (key, params) => this.translate.instant(key, params));
+  }
+
+  /** Même libellé, dans la langue d'un document (écran ou PDF). */
+  private statusText(row: SessionPaymentRow, t: (key: string, params?: object) => string): string {
     // Rattrapage à préciser : ni « non facturée » (gratuité décidée), ni un statut de paiement
     // (dette établie). La décision reste à prendre, et le libellé doit le dire tel quel.
     if (row.pendingDecision) {
-      return this.translate.instant('payment.history.pendingDecision.reason');
+      return t('payment.history.pendingDecision.reason');
     }
     if (row.excluded) {
-      return this.translate.instant('payment.history.excluded.reason');
+      return t('payment.history.excluded.reason');
     }
     if (!row.attendanceRecorded) {
-      return this.translate.instant('payment.history.attendancePending', {
-        status: this.translate.instant('payment.history.status.' + row.status)
+      return t('payment.history.attendancePending', {
+        status: t('payment.history.status.' + row.status)
       });
     }
-    return this.translate.instant('payment.history.status.' + row.status);
+    return t('payment.history.status.' + row.status);
   }
 
   // Méthode pour convertir l'image en Base64
@@ -387,7 +406,7 @@ export class PaymentHistoryDialogComponent implements OnInit {
     // Le total d'une série ordinaire ne porte que les séances facturables à cet étudiant : le
     // nommer « Total » laissait croire à un coût nominal, et donc à un reste à payer manquant
     // (exigence 11.6). Le détail du calcul est imprimé juste en dessous, en clair.
-    const totalLabel = this.translate.instant(
+    const totalLabel = this.pdf(
       this.isCatchUpSeries ? 'payment.history.labels.totalCatchUp' : 'payment.history.labels.seriesCost');
 
     const documentDefinition: TDocumentDefinitions = {
@@ -399,7 +418,7 @@ export class PaymentHistoryDialogComponent implements OnInit {
               width: 100
             },
             {
-              text: this.translate.instant('payment.history.pdf.title'),
+              text: this.pdf('payment.history.pdf.title'),
               style: 'header',
               alignment: 'right'
             }
@@ -407,11 +426,11 @@ export class PaymentHistoryDialogComponent implements OnInit {
         },
         { text: '\n\n' },
         {
-          text: `${this.translate.instant('payment.history.pdf.student')}: ${this.studentName}`,
+          text: `${this.pdf('payment.history.pdf.student')}: ${this.studentName}`,
           style: 'subheader'
         },
         {
-          text: `${this.translate.instant('payment.history.pdf.date')}: ${this.formatDate(new Date())}`,
+          text: `${this.pdf('payment.history.pdf.date')}: ${this.formatDate(new Date())}`,
           alignment: 'right'
         },
         { text: '\n' },
@@ -420,26 +439,26 @@ export class PaymentHistoryDialogComponent implements OnInit {
           style: 'sectionHeader'
         },
         ...(this.isCatchUpSeries ? [{
-          text: this.translate.instant('payment.history.pdf.catchUpOnly'),
+          text: this.pdf('payment.history.pdf.catchUpOnly'),
           style: 'catchUpNote',
           color: 'red',
           bold: true,
           margin: [0, 5, 0, 10]
         }] : []),
         ...(this.isExemptedSeries ? [{
-          text: this.translate.instant('payment.history.exempted'),
+          text: this.pdf('payment.history.exempted'),
           bold: true,
           margin: [0, 5, 0, 10]
         }] : []),
         // Décompte facturable : sans lui, le coût imprimé au prorata reste inexpliqué.
         {
-          text: this.translate.instant('payment.history.pdf.billableSessions',
+          text: this.pdf('payment.history.pdf.billableSessions',
             { count: this.billableSessions }),
           margin: [0, 0, 0, 4]
         },
         // Séances écartées : affichées dans le tableau, mais explicitement hors dette.
         ...(this.excludedSessions > 0 ? [{
-          text: this.translate.instant('payment.history.pdf.excludedSessions',
+          text: this.pdf('payment.history.pdf.excludedSessions',
             { count: this.excludedSessions }),
           italics: true,
           margin: [0, 0, 0, 6]
@@ -448,7 +467,7 @@ export class PaymentHistoryDialogComponent implements OnInit {
           columns: [
             { text: `${totalLabel} : ${this.formatAmount(this.seriesTotal)}`, width: '50%' },
             {
-              text: `${this.translate.instant('payment.history.labels.paid')} : `
+              text: `${this.pdf('payment.history.labels.paid')} : `
                 + this.formatAmount(this.seriesPaid),
               width: '50%'
             }
@@ -457,13 +476,13 @@ export class PaymentHistoryDialogComponent implements OnInit {
         {
           columns: [
             {
-              text: `${this.translate.instant('payment.history.labels.remaining')} : `
+              text: `${this.pdf('payment.history.labels.remaining')} : `
                 + this.formatAmount(this.seriesRemaining),
               width: '50%'
             },
             {
-              text: `${this.translate.instant('payment.history.labels.status')} : `
-                + this.translate.instant('payment.history.status.' + this.seriesStatus),
+              text: `${this.pdf('payment.history.labels.status')} : `
+                + this.pdf('payment.history.status.' + this.seriesStatus),
               width: '50%'
             }
           ]
@@ -471,7 +490,7 @@ export class PaymentHistoryDialogComponent implements OnInit {
         // Remboursé : le versé imprimé est net, cette ligne dit pourquoi il est inférieur à ce
         // que la famille a remis.
         ...(this.seriesRefunded > 0 ? [{
-          text: `${this.translate.instant('payment.history.labels.refunded')} : `
+          text: `${this.pdf('payment.history.labels.refunded')} : `
             + this.formatAmount(this.seriesRefunded)
         }] : []),
         // Trop-perçu : sans cette ligne, le versement affiché en tête ne correspondait pas
@@ -479,12 +498,12 @@ export class PaymentHistoryDialogComponent implements OnInit {
         ...(this.seriesOverpaid > 0 ? [{
           columns: [
             {
-              text: `${this.translate.instant('payment.history.labels.allocated')} : `
+              text: `${this.pdf('payment.history.labels.allocated')} : `
                 + this.formatAmount(this.seriesAllocated),
               width: '50%'
             },
             {
-              text: `${this.translate.instant('payment.history.labels.overpaid')} : `
+              text: `${this.pdf('payment.history.labels.overpaid')} : `
                 + this.formatAmount(this.seriesOverpaid),
               width: '50%'
             }
@@ -492,18 +511,18 @@ export class PaymentHistoryDialogComponent implements OnInit {
         }] : []),
         { text: '\n' },
         {
-          text: this.translate.instant('payment.history.pdf.details'),
+          text: this.pdf('payment.history.pdf.details'),
           style: 'sectionHeader'
         },
         this.getPaymentHistoryTable(),
         { text: '\n\n' },
         {
-          text: this.translate.instant('payment.history.pdf.studentSignature'),
+          text: this.pdf('payment.history.pdf.studentSignature'),
           alignment: 'right',
           margin: [0, 50, 0, 0]
         },
         {
-          text: this.translate.instant('payment.history.pdf.adminSignature'),
+          text: this.pdf('payment.history.pdf.adminSignature'),
           alignment: 'right',
           margin: [0, 50, 0, 0]
         }
@@ -539,8 +558,8 @@ export class PaymentHistoryDialogComponent implements OnInit {
       },
       footer: (currentPage: number, pageCount: number): Content => {
         return {
-          text: `${this.translate.instant('payment.history.pdf.page')} ${currentPage} `
-            + `${this.translate.instant('payment.history.pdf.of')} ${pageCount}`,
+          text: `${this.pdf('payment.history.pdf.page')} ${currentPage} `
+            + `${this.pdf('payment.history.pdf.of')} ${pageCount}`,
           alignment: 'center',
           fontSize: 10,
           margin: [0, 10, 0, 0]
@@ -561,10 +580,10 @@ export class PaymentHistoryDialogComponent implements OnInit {
 
     // En-têtes du tableau
     body.push([
-      { text: this.translate.instant('payment.history.table.session'), style: 'tableHeader' },
-      { text: this.translate.instant('payment.history.table.paymentDate'), style: 'tableHeader' },
-      { text: this.translate.instant('payment.history.table.amountPaid'), style: 'tableHeader' },
-      { text: this.translate.instant('payment.history.table.paymentStatus'), style: 'tableHeader' }
+      { text: this.pdf('payment.history.table.session'), style: 'tableHeader' },
+      { text: this.pdf('payment.history.table.paymentDate'), style: 'tableHeader' },
+      { text: this.pdf('payment.history.table.amountPaid'), style: 'tableHeader' },
+      { text: this.pdf('payment.history.table.paymentStatus'), style: 'tableHeader' }
     ]);
 
     // Données du tableau
@@ -576,12 +595,12 @@ export class PaymentHistoryDialogComponent implements OnInit {
           { text: this.rowTitle(row), fillColor },
           { text: this.formatDate(row.paymentDate), fillColor },
           { text: this.formatAmount(row.amountPaid), fillColor },
-          { text: this.statusLabel(row), fillColor }
+          { text: this.statusText(row, (key, params) => this.pdf(key, params)), fillColor }
         ]);
       }
     } else {
       body.push([
-        { text: this.translate.instant('payment.history.table.empty'), colSpan: 4, alignment: 'center' }
+        { text: this.pdf('payment.history.table.empty'), colSpan: 4, alignment: 'center' }
       ]);
     }
 

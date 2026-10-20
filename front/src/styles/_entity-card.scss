@@ -128,7 +128,7 @@
   text-transform: none;
 
   i.material-icons {
-    margin-right: 0;
+    margin-inline-end: 0;
   }
 
   &:hover {
@@ -148,7 +148,7 @@
 .entity-flip-button {
   position: absolute;
   bottom: 8px;
-  right: 8px;
+  inset-inline-end: 8px;
   background-color: rgba(63, 81, 181, 0.1);
   transition: all 0.3s ease;
   z-index: 10;

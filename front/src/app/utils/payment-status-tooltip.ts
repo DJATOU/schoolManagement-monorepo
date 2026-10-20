@@ -1,6 +1,7 @@
 import { TranslateService } from '@ngx-translate/core';
 import { StudentPaymentStatus } from '../models/student-payment-status';
 import { resolveLocale } from '../shared/locale';
+import { withCurrency } from '../shared/currency';
 
 /**
  * Compose l'infobulle détaillant les retards de paiement d'un étudiant.
@@ -28,7 +29,7 @@ export function buildLatePaymentTooltip(
   }
 
   const locale = resolveLocale(translate.currentLang);
-  const money = (value: number) => formatMoney(value, locale);
+  const money = (value: number) => formatMoney(value, locale, translate);
   const t = (key: string, params?: Record<string, unknown>) => translate.instant(key, params);
 
   const blocks = status.lateGroups.map(group => {
@@ -65,10 +66,11 @@ export function buildLatePaymentTooltip(
  * Formate un montant avec le suffixe monétaire.
  *
  * <p>Les décimales ne sont affichées que si elles portent une information : « 6 000 DA »
- * plutôt que « 6000.00 DA », mais « 6 000,5 DA » reste intact.</p>
+ * plutôt que « 6000.00 DA », mais « 6 000,5 DA » reste intact. Le suffixe suit la langue de
+ * l'interface : « 6 000 دج » en arabe.</p>
  */
-function formatMoney(value: number, locale: string): string {
-  return `${formatAmount(value, locale)} DA`;
+function formatMoney(value: number, locale: string, translate: TranslateService): string {
+  return withCurrency(formatAmount(value, locale), translate);
 }
 
 /** Formate un nombre selon la locale, sans suffixe monétaire. */

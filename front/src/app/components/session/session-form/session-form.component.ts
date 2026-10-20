@@ -16,6 +16,7 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatDatepickerModule } from '@angular/material/datepicker';
+import { provideTranslatedDatepickerIntl } from '../../../shared/translated-datepicker-intl';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatIconModule } from '@angular/material/icon';
 import { MatOptionModule } from '@angular/material/core';
@@ -33,6 +34,7 @@ import { resolveLocale } from '../../../shared/locale';
 import {
   RecurringConflict, RecurringSessionRequest, RecurringSessionResult, WeekDay
 } from '../../../models/session/recurring-session';
+import { LocalizedDatePipe } from '../../../pipes/localized-date.pipe';
 
 @Component({
   selector: 'app-session-form',
@@ -54,11 +56,12 @@ import {
     NgxMaterialTimepickerModule,
     MatCheckboxModule,
     TranslateModule,
-    AdminOnlyDirective
+    AdminOnlyDirective,
+    LocalizedDatePipe
   ],
   templateUrl: './session-form.component.html',
   styleUrls: ['./session-form.component.scss'],
-  providers: [SessionService]
+  providers: [provideTranslatedDatepickerIntl(), SessionService]
 })
 export class SessionFormComponent implements OnInit {
   sessionForm!: FormGroup;

@@ -3,7 +3,7 @@ package com.school.management.service;
 import com.school.management.dto.StudentDTO;
 import lombok.*;
 
-import java.util.Date;
+import java.time.LocalDate;
 import java.util.Set;
 
 @Getter
@@ -20,7 +20,7 @@ public class StudentPaymentStatus extends StudentDTO {
             String email,
             String gender,
             String phoneNumber,
-            Date dateOfBirth,
+            LocalDate dateOfBirth,
             String placeOfBirth,
             String photo,
             Long level,

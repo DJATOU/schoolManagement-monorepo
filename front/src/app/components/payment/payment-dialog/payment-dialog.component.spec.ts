@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
+import { TranslateService } from '@ngx-translate/core';
 import { PaymentDialogComponent } from './payment-dialog.component';
 import { createDialogRefSpy, DialogRefSpy, matDialogProviders, setupComponentTestBed } from '../../../../testing/setup';
 import { aGroup } from '../../../../testing/fixtures';
@@ -144,6 +145,18 @@ describe('PaymentDialogComponent', () => {
       component.submitPayment(paymentData());
 
       expect(generateAndPrint.calls.mostRecent().args[0].amountPaid).toBe(1500);
+    });
+
+    it('interface en arabe : le mode de règlement est imprimé en français', () => {
+      const translate = TestBed.inject(TranslateService);
+      translate.setTranslation('fr', { payment: { dialog: { methods: { cash: 'Espèces' } } } }, true);
+      translate.setTranslation('ar', { payment: { dialog: { methods: { cash: 'نقدًا' } } } }, true);
+      translate.use('ar');
+      spyOn(paymentService, 'processPayment').and.returnValue(of(anAllocation()));
+
+      component.submitPayment(paymentData());
+
+      expect(generateAndPrint.calls.mostRecent().args[0].paymentMethodLabel).toBe('Espèces');
     });
 
     it('le rattrapage imprime lui aussi le reçu enregistré', () => {

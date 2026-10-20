@@ -1,11 +1,12 @@
 package com.school.management.persistance;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
-import java.util.Date;
+import java.time.LocalDate;
 
 @MappedSuperclass
 @Getter
@@ -35,9 +36,12 @@ public abstract class PersonEntity extends BaseEntity {
     @Column(name = "phone_number")
     private String phoneNumber;
 
+    // Jour du calendrier, sans heure ni fuseau : sérialisé "yyyy-MM-dd". Annoté ici aussi car
+    // TeacherEntity est lu tel quel en corps de requête (PUT /api/teachers/{id}) et TutorEntity
+    // renvoyé tel quel (GET /api/students/{id}/tutor).
     @Column(name = "date_of_birth")
-    @Temporal(TemporalType.DATE) // or TemporalType.TIMESTAMP based on precision needed
-    private Date dateOfBirth;
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
+    private LocalDate dateOfBirth;
 
     @Column(name = "place_of_birth")
     private String placeOfBirth;

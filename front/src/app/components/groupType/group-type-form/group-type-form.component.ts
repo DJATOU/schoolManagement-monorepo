@@ -1,5 +1,5 @@
 import { HttpClientModule } from '@angular/common/http';
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
@@ -15,7 +15,7 @@ import { MatOptionModule } from '@angular/material/core';
 import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { AdminOnlyDirective } from '../../../shared/admin-only.directive';
 
 @Component({
@@ -49,6 +49,8 @@ export class GroupTypeFormComponent implements OnInit {
   /** Identifiant du type de groupe en cours de modification (null en mode création). */
   editingId: number | null = null;
 
+  private readonly translate = inject(TranslateService);
+
   constructor(
     private fb: FormBuilder,
     private groupTypeService: GroupTypeService,
@@ -77,7 +79,7 @@ export class GroupTypeFormComponent implements OnInit {
             size: groupType.size ?? ''
           }
         }),
-        error: () => this.showErrorMessage('Erreur lors du chargement du type de groupe.')
+        error: () => this.showErrorMessage(this.translate.instant('RESOURCE_FORM.MESSAGES.groupType.LOAD_ERROR'))
       });
     }
   }
@@ -126,12 +128,12 @@ export class GroupTypeFormComponent implements OnInit {
             // Mode modification : mise à jour du type de groupe existant.
             this.groupTypeService.updateGroupType(this.editingId, groupType).subscribe({
               next: () => {
-                this.showSuccessMessage('Type de groupe mis à jour avec succès.');
+                this.showSuccessMessage(this.translate.instant('RESOURCE_FORM.MESSAGES.groupType.UPDATED'));
                 this.router.navigate(['/groupType/table']);
               },
               error: (error) => {
                 console.error('Error updating group type:', error);
-                this.showErrorMessage('Erreur lors de la mise à jour du type de groupe.');
+                this.showErrorMessage(this.translate.instant('RESOURCE_FORM.MESSAGES.groupType.UPDATE_ERROR'));
               }
             });
           } else {
@@ -139,11 +141,11 @@ export class GroupTypeFormComponent implements OnInit {
               next: (created) => {
                 console.log('Group type created:', created);
                 this.onClearForm();
-                this.showSuccessMessage('Group type created successfully.');
+                this.showSuccessMessage(this.translate.instant('RESOURCE_FORM.MESSAGES.groupType.CREATED'));
               },
               error: (error) => {
                 console.error('Error creating group type:', error);
-                this.showErrorMessage('Error creating group type.');
+                this.showErrorMessage(this.translate.instant('RESOURCE_FORM.MESSAGES.groupType.CREATE_ERROR'));
               }
             });
           }
@@ -153,7 +155,7 @@ export class GroupTypeFormComponent implements OnInit {
       });
     } else {
       console.warn('Form is not valid');
-      this.showErrorMessage('Form is not valid');
+      this.showErrorMessage(this.translate.instant('RESOURCE_FORM.MESSAGES.FORM_INVALID'));
     }
   }
 
@@ -162,14 +164,14 @@ export class GroupTypeFormComponent implements OnInit {
   }
 
   showSuccessMessage(message: string): void {
-    this.snackBar.open(message, 'OK', {
+    this.snackBar.open(message, this.translate.instant('common.ok'), {
       duration: 3000,
       panelClass: ['snack-bar-success']
     });
   }
 
   showErrorMessage(message: string): void {
-    this.snackBar.open(message, 'OK', {
+    this.snackBar.open(message, this.translate.instant('common.ok'), {
       duration: 3000,
       panelClass: ['snack-bar-error']
     });

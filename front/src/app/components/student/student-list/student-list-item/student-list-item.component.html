@@ -6,7 +6,7 @@
     <div class="student-info">
       <div class="student-avatar">
         <img *ngIf="studentPhotoUrl && !hasImageError; else avatarInitials" [appSecureImage]="studentPhotoUrl"
-          alt="Photo de l'étudiant" (error)="onImageError()" />
+          [alt]="'PROFILE_CARD.STUDENT_PHOTO' | translate" (error)="onImageError()" />
         <ng-template #avatarInitials>
           <div class="initials-avatar" [style.background-color]="avatarColor">{{ getInitials() }}</div>
         </ng-template>
@@ -43,7 +43,7 @@
         <button
           mat-icon-button
           color="primary"
-          matTooltip="Envoyer un email"
+          [matTooltip]="'PROFILE_CARD.SEND_EMAIL' | translate"
           (click)="openEmail($event)"
           [disabled]="!student.email"
         >
@@ -52,7 +52,7 @@
         <button
           mat-icon-button
           color="accent"
-          matTooltip="Ouvrir WhatsApp"
+          [matTooltip]="'PROFILE_CARD.OPEN_WHATSAPP' | translate"
           (click)="openWhatsApp($event)"
           [disabled]="!student.phoneNumber"
         >
@@ -62,9 +62,9 @@
         <button
           *ngIf="showDeleteButton"
           mat-icon-button
-          matTooltip="Enregistrer le départ du groupe"
+          [matTooltip]="'PROFILE_CARD.RECORD_DEPARTURE' | translate"
           (click)="onDeleteStudent($event)"
-          aria-label="Enregistrer le départ du groupe"
+          [attr.aria-label]="'PROFILE_CARD.RECORD_DEPARTURE' | translate"
           class="disable-button"
         >
           <mat-icon>logout</mat-icon>

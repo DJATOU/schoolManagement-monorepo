@@ -3,7 +3,7 @@
   <mat-select [formControl]="selectedGroup"
               panelClass="group-selector-panel"
               [panelWidth]="null"
-              aria-label="Filtrer le calendrier par groupe"
+              [aria-label]="'GROUP_SELECTOR.ARIA_LABEL' | translate"
               [matTooltip]="getSelectedGroupName()"
               matTooltipClass="group-selector-tooltip">
     <!-- Valeur affichée dans le trigger : une seule ligne + ellipsis -->

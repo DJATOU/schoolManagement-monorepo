@@ -9,6 +9,10 @@ import { EnrolmentService } from '../../../services/enrolment.service';
 import { GroupService } from '../../../services/group.service';
 import { EnrolmentCorrectionFlow } from '../../shared/enrolment-correction/enrolment-correction-flow';
 import { Enrolment } from '../../../models/enrolment/enrolment';
+import { TranslateService } from '@ngx-translate/core';
+import { ProfilePdfService } from '../../../services/profile-pdf.service';
+import frTranslations from '../../../../assets/i18n/fr.json';
+import enTranslations from '../../../../assets/i18n/en.json';
 
 /**
  * Fiche d'un groupe, ouverte sur l'identifiant porté par l'URL.
@@ -20,11 +24,16 @@ import { Enrolment } from '../../../models/enrolment/enrolment';
 describe('GroupProfileComponent', () => {
   let component: GroupProfileComponent;
   let fixture: ComponentFixture<GroupProfileComponent>;
+  let translate: TranslateService;
 
   beforeEach(async () => {
     await setupComponentTestBed(GroupProfileComponent, {
       providers: activatedRouteProviders({ id: '5' })
     });
+    translate = TestBed.inject(TranslateService);
+    translate.setTranslation('fr', frTranslations);
+    translate.setTranslation('en', enTranslations);
+    translate.use('fr');
     fixture = TestBed.createComponent(GroupProfileComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
@@ -80,7 +89,8 @@ describe('GroupProfileComponent', () => {
 
       expect(enrolments.getStudentEnrolments).toHaveBeenCalledWith(1, 3);
       expect(correct).toHaveBeenCalledWith('DEPARTURE', open, 'Amine Belkacem');
-      expect(snackBar).toHaveBeenCalledWith('enrolment.correction.DEPARTURE.done', 'Fermer', jasmine.any(Object));
+      expect(snackBar).toHaveBeenCalledWith(
+        translate.instant('enrolment.correction.DEPARTURE.done', { group: 'Maths 1B' }), 'Fermer', jasmine.any(Object));
     });
 
     it('départ abandonné : rien n\'est annoncé', () => {
@@ -99,7 +109,7 @@ describe('GroupProfileComponent', () => {
       component.recordDeparture(aStudent({ id: 1 }));
 
       expect(correct).not.toHaveBeenCalled();
-      expect(snackBar).toHaveBeenCalledWith('enrolment.departure.notEnrolled', 'Fermer', jasmine.any(Object));
+      expect(snackBar).toHaveBeenCalledWith(frTranslations.enrolment.departure.notEnrolled, 'Fermer', jasmine.any(Object));
     });
 
     it('un échec de lecture est dit tel quel ; sans groupe ni élève, rien n\'est lu', () => {
@@ -113,6 +123,80 @@ describe('GroupProfileComponent', () => {
       component.group = undefined as never;
       component.recordDeparture(aStudent({ id: 1 }));
       expect(read).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  /**
+   * Langue de la fiche : le français reste celui d'avant l'externalisation des libellés, l'anglais
+   * suit la langue choisie. Le PDF est en français pour toute langue autre que l'anglais.
+   */
+  describe('langue de la fiche', () => {
+    beforeEach(() => {
+      component.group = aGroup({ id: 5, description: '' });
+      component.loadingGroup = false;
+      component.loadingStudents = false;
+      component.loadingSeries = false;
+      component.students = [aStudent({ id: 1 })];
+      component.applyStudentFilter();
+      fixture.detectChanges();
+    });
+
+    const text = (): string => (fixture.nativeElement.textContent as string).replace(/\s+/g, ' ');
+
+    it('français : libellés identiques à ceux d\'avant', () => {
+      expect(text()).toContain('Informations sur le groupe');
+      expect(text()).toContain('Type de groupe');
+      expect(text()).toContain('Sessions par série');
+      expect(text()).toContain('Aucune description.');
+      expect(text()).toContain('Ajouter un étudiant');
+      expect(text()).toContain('1 étudiant(s)');
+      expect(text()).toContain('0 série(s)');
+    });
+
+    it('anglais : libellés anglais', () => {
+      translate.use('en');
+      fixture.detectChanges();
+      expect(text()).toContain('Group information');
+      expect(text()).toContain('Group type');
+      expect(text()).toContain('No description.');
+      expect(text()).toContain('Add a student');
+      expect(text()).toContain('1 student(s)');
+      expect(text()).not.toContain('Informations sur le groupe');
+    });
+
+    function printedPdf() {
+      const pdf = spyOn(TestBed.inject(ProfilePdfService), 'generateProfilePdf');
+      component.printGroupPdf();
+      return pdf.calls.mostRecent().args[0];
+    }
+
+    it('PDF en français sous le français', () => {
+      const doc = printedPdf();
+      expect(doc.subtitle).toBe('Groupe · Petit groupe');
+      expect(doc.sections[0].heading).toBe('Informations sur le groupe');
+      expect(doc.sections[0].rows.map(row => row.label)).toContain('Année scolaire');
+      expect(doc.tableTitle).toBe('Étudiants (1)');
+      expect(doc.tableColumns).toEqual(['#', 'Nom', 'Prénom', 'Remarques']);
+      expect(doc.extraPages?.map(page => page.heading)).toContain('Séries');
+    });
+
+    it('PDF en français sous une langue autre que fr / en', () => {
+      translate.setTranslation('ar', {});
+      translate.use('ar');
+      const doc = printedPdf();
+      expect(doc.sections[0].heading).toBe('Informations sur le groupe');
+      expect(doc.tableColumns).toEqual(['#', 'Nom', 'Prénom', 'Remarques']);
+      expect(doc.extraPages?.map(page => page.heading)).toContain('Séries');
+    });
+
+    it('PDF en anglais sous l\'anglais', () => {
+      translate.use('en');
+      const doc = printedPdf();
+      expect(doc.subtitle).toBe('Group · Petit groupe');
+      expect(doc.sections[0].heading).toBe('Group information');
+      expect(doc.tableTitle).toBe('Students (1)');
+      expect(doc.tableColumns).toEqual(['#', 'Last name', 'First name', 'Remarks']);
+      expect(doc.extraPages?.map(page => page.heading)).toContain('Series');
     });
   });
 });

@@ -1,6 +1,9 @@
 package com.school.management.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.*;
+import org.springframework.format.annotation.DateTimeFormat;
+import java.time.LocalDate;
 import java.util.Date;
 
 @Getter
@@ -16,7 +19,9 @@ public class TutorDTO {
     private String gender;
     private String email;
     private String phoneNumber;
-    private Date dateOfBirth;
+    @DateTimeFormat(pattern = "yyyy-MM-dd")
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
+    private LocalDate dateOfBirth;
     private String placeOfBirth;
     private String relationship;
     private Boolean active;

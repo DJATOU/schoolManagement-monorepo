@@ -53,6 +53,7 @@ import {
   CorrectionDialogData,
   CorrectionDialogResult
 } from '../../shared/correction-dialog/correction-dialog.component';
+import { LocalizedDatePipe } from '../../../pipes/localized-date.pipe';
 
 @Component({
   selector: 'app-session-modal',
@@ -71,7 +72,8 @@ import {
     MatIcon,
     MatMenuModule,
     MatTooltipModule,
-    TranslateModule
+    TranslateModule,
+    LocalizedDatePipe
   ]
 })
 export class SessionModalComponent implements OnInit {
@@ -399,7 +401,7 @@ onValidateSession(): void {
   }
 
   private showErrorMessage(message: string): void {
-    this.snackBar.open(message, 'OK', {
+    this.snackBar.open(message, this.translate.instant('common.ok'), {
       duration: 4000,
       panelClass: ['snack-bar-error']
     });

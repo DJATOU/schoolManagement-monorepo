@@ -26,7 +26,7 @@ export function aStudent(overrides: Partial<Student> = {}): Student {
     gender: 'F',
     email: 'amina.belkacem@example.test',
     phoneNumber: '0555123456',
-    dateOfBirth: new Date('2008-05-14'),
+    dateOfBirth: '2008-05-14',
     placeOfBirth: 'Alger',
     photo: '',
     // `levelId` et `tutorId` sont laissés indéfinis à dessein : renseignés, ils déclenchent
@@ -69,7 +69,7 @@ export function aTeacher(overrides: Partial<Teacher> = {}): Teacher {
     gender: 'M',
     email: 'karim.saidi@example.test',
     phoneNumber: '0555987654',
-    dateOfBirth: new Date('1985-02-20'),
+    dateOfBirth: '1985-02-20',
     placeOfBirth: 'Oran',
     specialization: 'Mathématiques',
     groups: [],

@@ -40,6 +40,13 @@ describe('ImportComponent', () => {
     expect(cards[8].textContent).toContain('IMPORT.ENROLMENTS.NOTE');
   });
 
+  it('la carte des élèves porte une note : format de dateOfBirth et astuce Excel « Texte »', () => {
+    const index = component.cards.findIndex((card) => card.kind === 'students');
+    expect(component.cards[index].noteKey).toBe('IMPORT.STUDENTS.NOTE');
+    const cards = fixture.nativeElement.querySelectorAll('mat-card');
+    expect(cards[index].textContent).toContain('IMPORT.STUDENTS.NOTE');
+  });
+
   it('runImport(\'enrolments\') appelle importEnrolments et liste les erreurs par ligne', () => {
     const file = new File(['firstName,lastName,group,arrivalDate\n'], '9-inscriptions.csv', { type: 'text/csv' });
     importService.importEnrolments.and.returnValue(of({

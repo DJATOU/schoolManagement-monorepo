@@ -1,5 +1,5 @@
 import { HttpClientModule } from '@angular/common/http';
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -10,7 +10,7 @@ import { Room } from '../../../models/room/room';
 import { RoomService } from '../../../services/room.service';
 import { SummaryDialogComponent } from '../../summary-dialog/summary-dialog.component';
 import { MatTabsModule } from '@angular/material/tabs';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { AdminOnlyDirective } from '../../../shared/admin-only.directive';
 
 @Component({
@@ -38,6 +38,8 @@ export class RoomFormComponent implements OnInit {
 
   /** Identifiant de la salle en cours de modification (null en mode création). */
   editingId: number | null = null;
+
+  private readonly translate = inject(TranslateService);
 
   constructor(
     private fb: FormBuilder,
@@ -69,7 +71,7 @@ export class RoomFormComponent implements OnInit {
             description: room.description ?? ''
           }
         }),
-        error: () => this.showErrorMessage('Erreur lors du chargement de la salle.')
+        error: () => this.showErrorMessage(this.translate.instant('RESOURCE_FORM.MESSAGES.room.LOAD_ERROR'))
       });
     }
   }
@@ -120,12 +122,12 @@ export class RoomFormComponent implements OnInit {
             // Mode modification : mise à jour de la salle existante.
             this.roomService.updateRoom(this.editingId, room).subscribe({
               next: () => {
-                this.showSuccessMessage('Salle mise à jour avec succès.');
+                this.showSuccessMessage(this.translate.instant('RESOURCE_FORM.MESSAGES.room.UPDATED'));
                 this.router.navigate(['/room/table']);
               },
               error: (error) => {
                 console.error('Error updating room:', error);
-                this.showErrorMessage('Erreur lors de la mise à jour de la salle.');
+                this.showErrorMessage(this.translate.instant('RESOURCE_FORM.MESSAGES.room.UPDATE_ERROR'));
               }
             });
           } else {
@@ -133,11 +135,11 @@ export class RoomFormComponent implements OnInit {
               next: (created) => {
                 console.log('Room created:', created);
                 this.onClearForm();
-                this.showSuccessMessage('Room created successfully.');
+                this.showSuccessMessage(this.translate.instant('RESOURCE_FORM.MESSAGES.room.CREATED'));
               },
               error: (error) => {
                 console.error('Error creating room:', error);
-                this.showErrorMessage('Error creating room.');
+                this.showErrorMessage(this.translate.instant('RESOURCE_FORM.MESSAGES.room.CREATE_ERROR'));
               }
             });
           }
@@ -147,7 +149,7 @@ export class RoomFormComponent implements OnInit {
       });
     } else {
       console.warn('Form is not valid');
-      this.showErrorMessage('Form is not valid.');
+      this.showErrorMessage(this.translate.instant('RESOURCE_FORM.MESSAGES.FORM_INVALID'));
     }
   }
 
@@ -156,14 +158,14 @@ export class RoomFormComponent implements OnInit {
   }
 
   showSuccessMessage(message: string): void {
-    this.snackBar.open(message, 'OK', {
+    this.snackBar.open(message, this.translate.instant('common.ok'), {
       duration: 3000,
       panelClass: ['snack-bar-success']
     });
   }
 
   showErrorMessage(message: string): void {
-    this.snackBar.open(message, 'OK', {
+    this.snackBar.open(message, this.translate.instant('common.ok'), {
       duration: 3000,
       panelClass: ['snack-bar-error']
     });

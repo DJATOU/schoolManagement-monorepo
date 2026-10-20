@@ -24,17 +24,17 @@ export class GroupTypeTableComponent implements DeleteCommand {
     },
     {
       columnDef: 'name',
-      header: 'Name',
+      header: 'RESOURCE_TABLE.NAME',
       cell: (element: GroupType) => `${element.name}`,
     },
     {
       columnDef: 'size',
-      header: 'Size',
+      header: 'RESOURCE_TABLE.SIZE',
       cell: (element: GroupType) => `${element.size}`,
     },
     {
       columnDef: 'description',
-      header: 'Description',
+      header: 'COMMON.DESCRIPTION',
       cell: (element: GroupType) => `${element.description}`,
     },
   ];

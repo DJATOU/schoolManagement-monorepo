@@ -10,7 +10,7 @@
     <p><strong>{{ 'CATCH_UP_BILLING.FIELDS.STUDENT' | translate }} :</strong> {{ data.pending.studentName || '—' }}</p>
     <p><strong>{{ 'CATCH_UP_BILLING.FIELDS.HOST_SESSION' | translate }} :</strong>
       {{ data.pending.sessionTitle || '—' }}
-      <span *ngIf="data.pending.sessionDate"> — {{ data.pending.sessionDate | date: 'mediumDate' }}</span>
+      <span *ngIf="data.pending.sessionDate"> — {{ data.pending.sessionDate | appDate: 'mediumDate' }}</span>
     </p>
     <p><strong>{{ 'CATCH_UP_BILLING.FIELDS.HOST_GROUP' | translate }} :</strong> {{ data.pending.hostGroupName || '—' }}</p>
     <p class="cub-routing">
@@ -44,7 +44,7 @@
         <mat-select [(ngModel)]="selectedMissedSessionId" required>
           <mat-option *ngFor="let absence of absences" [value]="absence.sessionId">
             {{ absence.sessionTitle || '—' }}
-            <span *ngIf="absence.sessionDate"> — {{ absence.sessionDate | date: 'mediumDate' }}</span>
+            <span *ngIf="absence.sessionDate"> — {{ absence.sessionDate | appDate: 'mediumDate' }}</span>
             <span *ngIf="absence.groupName"> ({{ absence.groupName }})</span>
           </mat-option>
         </mat-select>
@@ -75,7 +75,7 @@
           <li *ngFor="let entry of auditTrail">
             <span class="cub-audit-field">{{ 'CATCH_UP_BILLING.AUDIT.' + entry.field | translate }}</span>
             <span class="cub-audit-change">{{ entry.oldValue || '—' }} → {{ entry.newValue || '—' }}</span>
-            <span class="cub-audit-meta">{{ entry.performedBy }} — {{ entry.performedAt | date: 'short' }}</span>
+            <span class="cub-audit-meta">{{ entry.performedBy }} — {{ entry.performedAt | appDate: 'short' }}</span>
             <span class="cub-audit-comment" *ngIf="entry.comment">{{ entry.comment }}</span>
           </li>
         </ul>

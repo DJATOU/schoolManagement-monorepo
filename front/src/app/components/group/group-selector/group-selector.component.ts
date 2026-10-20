@@ -6,6 +6,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatOptionModule } from '@angular/material/core';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { TranslateModule } from '@ngx-translate/core';
 import { GroupService } from '../../../services/group.service';
 import { Group } from '../../../models/group/group';
 
@@ -19,7 +20,8 @@ import { Group } from '../../../models/group/group';
     MatSelectModule,
     MatOptionModule,
     MatIconModule,
-    MatTooltipModule
+    MatTooltipModule,
+    TranslateModule
   ],
   templateUrl: './group-selector.component.html',
   styleUrls: ['./group-selector.component.scss']

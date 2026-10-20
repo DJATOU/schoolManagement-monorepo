@@ -21,11 +21,14 @@ import { Group } from '../../../models/group/group';
 import { GroupCardComponent } from '../../group/group-card/group-card.component';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { ProfilePdfService } from '../../../services/profile-pdf.service';
-import { TranslateService } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { AdminOnlyDirective } from '../../../shared/admin-only.directive';
 import { SecureImageDirective } from '../../../shared/secure-image.directive';
+import { formatDayFirst } from '../../../shared/iso-day';
 import { HasRoleDirective } from '../../../shared/has-role.directive';
 import { TeacherPayoutsComponent } from '../teacher-payouts/teacher-payouts.component';
+import { genderLabelKey } from '../../../utils/form-options';
+import { pdfInstant } from '../../../shared/pdf-i18n';
 @Component({
   selector: 'app-teacher-profile',
   standalone: true,
@@ -46,7 +49,8 @@ import { TeacherPayoutsComponent } from '../teacher-payouts/teacher-payouts.comp
   ,
     SecureImageDirective,
     HasRoleDirective,
-    TeacherPayoutsComponent
+    TeacherPayoutsComponent,
+    TranslateModule
   ],
   templateUrl: './teacher-profile.component.html',
   styleUrls: ['./teacher-profile.component.scss']
@@ -97,34 +101,49 @@ export class TeacherProfileComponent implements OnInit {
     });
   }
 
+  /** Date de naissance JJ/MM/AAAA, comme à la saisie : découpée, sans conversion de fuseau. */
+  get birthDateLabel(): string {
+    return formatDayFirst(this.teacher?.dateOfBirth);
+  }
+
+  /** Libellé traduit du sexe (« M » / « male » → Masculin) ; valeur brute si le code est inconnu. */
+  genderLabel(code: string | null | undefined): string {
+    const key = genderLabelKey(code);
+    return key ? this.translate.instant(key) : code ?? '';
+  }
+
   /** Génère la fiche PDF de l'enseignant (infos + groupes). */
   printProfilePdf(): void {
     if (!this.teacher) return;
     const t = this.teacher;
+    const tr = (key: string, params?: object) => pdfInstant(this.translate, key, params);
+    const genderKey = genderLabelKey(t.gender);
     this.profilePdfService.generateProfilePdf({
       title: `${t.firstName} ${t.lastName}`,
-      subtitle: t.specialization ? `Enseignant · ${t.specialization}` : 'Enseignant',
+      subtitle: t.specialization
+        ? tr('PROFILE_PDF.TEACHER_WITH_SPECIALIZATION', { specialization: t.specialization })
+        : tr('PROFILE_PDF.TEACHER'),
       sections: [
         {
-          heading: 'Informations personnelles',
+          heading: tr('TEACHER_PROFILE.PERSONAL_INFO'),
           rows: [
-            { label: 'Sexe', value: t.gender },
-            { label: 'Email', value: t.email },
-            { label: 'Téléphone', value: t.phoneNumber },
-            { label: 'Date de naissance', value: t.dateOfBirth ? new Date(t.dateOfBirth).toLocaleDateString('fr-FR') : null },
-            { label: 'Lieu de naissance', value: t.placeOfBirth },
-            { label: 'Adresse', value: t.address }
+            { label: tr('COMMON.GENDER'), value: genderKey ? tr(genderKey) : t.gender },
+            { label: tr('COMMON.EMAIL'), value: t.email },
+            { label: tr('TEACHER_PROFILE.PHONE'), value: t.phoneNumber },
+            { label: tr('COMMON.BIRTHDATE'), value: formatDayFirst(t.dateOfBirth) || null },
+            { label: tr('COMMON.BIRTHPLACE'), value: t.placeOfBirth },
+            { label: tr('COMMON.ADDRESS'), value: t.address }
           ]
         },
         {
-          heading: 'Informations professionnelles',
+          heading: tr('TEACHER_PROFILE.PROFESSIONAL_INFO'),
           rows: [
-            { label: 'Spécialisation', value: t.specialization },
-            { label: "Années d'expérience", value: t.yearsOfExperience }
+            { label: tr('TEACHER_PROFILE.SPECIALIZATION'), value: t.specialization },
+            { label: tr('TEACHER_PROFILE.EXPERIENCE'), value: t.yearsOfExperience }
           ]
         }
       ],
-      listTitle: `Groupes enseignés (${this.teacherGroups.length})`,
+      listTitle: tr('TEACHER_PROFILE.GROUPS_COUNT', { count: this.teacherGroups.length }),
       listItems: this.teacherGroups.map(g =>
         `${g.name}${g.levelName ? ' — ' + g.levelName : ''}${g.subjectName ? ' (' + g.subjectName + ')' : ''}`
       )
@@ -201,22 +220,22 @@ export class TeacherProfileComponent implements OnInit {
                   this.teacher = { ...updatedTeacher, photo: filename };
                   this.refreshPhotoUrl();
                   this.getTeacherDetails(updatedTeacher.id!);
-                  this.showSuccessMessage('Enseignant modifié avec succès.');
+                  this.showSuccessMessage(this.translate.instant('TEACHER_PROFILE.MESSAGES.UPDATED'));
                 },
                 error: (error) => {
                   console.error('Error uploading photo:', error);
-                  this.showErrorMessage('Erreur lors du téléchargement de la photo.');
+                  this.showErrorMessage(this.translate.instant('TEACHER_PROFILE.MESSAGES.PHOTO_UPLOAD_ERROR'));
                 }
               });
             } else {
               this.teacher = updatedTeacher;
               this.refreshPhotoUrl();
-              this.showSuccessMessage('Enseignant modifié avec succès.');
+              this.showSuccessMessage(this.translate.instant('TEACHER_PROFILE.MESSAGES.UPDATED'));
             }
           },
           error: (error) => {
             console.error('Error updating teacher:', error);
-            this.showErrorMessage('Erreur lors de la modification de l\'enseignant.');
+            this.showErrorMessage(this.translate.instant('TEACHER_PROFILE.MESSAGES.UPDATE_ERROR'));
           }
         });
       }
@@ -256,14 +275,14 @@ export class TeacherProfileComponent implements OnInit {
   }
 
   showSuccessMessage(message: string): void {
-    this.snackBar.open(message, 'OK', {
+    this.snackBar.open(message, this.translate.instant('common.ok'), {
       duration: 3000,
       panelClass: ['snack-bar-success']
     });
   }
 
   showErrorMessage(message: string): void {
-    this.snackBar.open(message, 'OK', {
+    this.snackBar.open(message, this.translate.instant('common.ok'), {
       duration: 3000,
       panelClass: ['snack-bar-error']
     });

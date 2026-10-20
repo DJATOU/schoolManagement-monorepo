@@ -1,26 +1,26 @@
-<h2 mat-dialog-title>Confirmation de Paiement</h2>
+<h2 mat-dialog-title>{{ 'payment.confirmation.title' | translate }}</h2>
 <mat-dialog-content>
-  <h3>Résumé du Paiement</h3>
-  <p><strong>Série :</strong> {{ data.seriesName }}</p>
+  <h3>{{ 'payment.confirmation.summary' | translate }}</h3>
+  <p><strong>{{ 'payment.confirmation.series' | translate }}</strong> {{ data.seriesName }}</p>
 
   <!-- Note de rattrapage en rouge -->
   <p *ngIf="data.isCatchUp" style="color: red; font-weight: bold; margin: 10px 0;">
-    ⚠️ RATTRAPAGE : Paiement par session assistée uniquement
+    {{ 'payment.confirmation.catchUpWarning' | translate }}
   </p>
 
-  <p><strong>{{ data.isCatchUp ? 'Nombre de sessions assistées' : 'Nombre de séances facturées' }} :</strong> {{ data.numberOfSessions }}</p>
+  <p><strong>{{ (data.isCatchUp ? 'payment.confirmation.attendedSessions' : 'payment.confirmation.billedSessions') | translate }} :</strong> {{ data.numberOfSessions }}</p>
   <!-- Séances non facturées : antérieures à l'inscription et non suivies. Sans ce rappel, le
        coût total paraîtrait inférieur au coût de la série sans raison visible. -->
   <p *ngIf="!data.isCatchUp && data.excludedSessions">
     <strong>{{ 'payment.dialog.hints.excludedSessions' | translate:{ excluded: data.excludedSessions } }}</strong>
     <span class="pcd-exclusion-reason">{{ 'payment.dialog.hints.exclusionReason' | translate }}</span>
   </p>
-  <p><strong>Prix par session :</strong> {{ data.pricePerSession | number:'1.2-2' }} DA</p>
-  <p><strong>Coût total :</strong> {{ data.totalCost | number:'1.2-2' }} DA</p>
+  <p><strong>{{ 'payment.confirmation.pricePerSession' | translate }}</strong> {{ data.pricePerSession | number:'1.2-2' | appCurrency }}</p>
+  <p><strong>{{ 'payment.confirmation.totalCost' | translate }}</strong> {{ data.totalCost | number:'1.2-2' | appCurrency }}</p>
 
   <!-- Explication pour rattrapage -->
   <p *ngIf="data.isCatchUp" style="color: #666; font-size: 0.9em; font-style: italic;">
-    Note : Pour un étudiant en rattrapage, seules les sessions auxquelles il a assisté sont facturées.
+    {{ 'payment.confirmation.catchUpNote' | translate }}
   </p>
 
   <hr>
@@ -56,23 +56,23 @@
     </p>
   </div>
 
-  <p><strong>Montant déjà payé :</strong> {{ data.totalPaid | number:'1.2-2' }} DA</p>
-  <p><strong>Montant restant à payer :</strong> {{ data.remainingAmount | number:'1.2-2' }} DA</p>
+  <p><strong>{{ 'payment.confirmation.alreadyPaid' | translate }}</strong> {{ data.totalPaid | number:'1.2-2' | appCurrency }}</p>
+  <p><strong>{{ 'payment.confirmation.remaining' | translate }}</strong> {{ data.remainingAmount | number:'1.2-2' | appCurrency }}</p>
 
   <!-- Note rattrapage -->
   <p *ngIf="data.isCatchUp" style="color: red; font-weight: bold; margin: 10px 0;">
-    Rattrapage : l'étudiant est en règle dès paiement de chaque session suivie.
+    {{ 'payment.confirmation.catchUpRule' | translate }}
   </p>
 
   <!-- Message de confirmation pour rattrapage -->
   <p *ngIf="data.isCatchUp && data.remainingAmount === 0" style="color: green; font-weight: bold;">
-    ✓ L'étudiant est en règle pour toutes ses sessions de rattrapage.
+    {{ 'payment.confirmation.catchUpSettled' | translate }}
   </p>
   <p *ngIf="data.isCatchUp" style="color: red; font-weight: bold; margin-top: 6px;">
-    Rattrapage : l'étudiant est en règle dès qu'il a payé chaque session suivie.
+    {{ 'payment.confirmation.catchUpRulePaid' | translate }}
   </p>
 </mat-dialog-content>
 <mat-dialog-actions>
-  <button mat-button (click)="onCancel()">Cancel</button>
-  <button mat-raised-button color="primary" (click)="onConfirm()" appAdminOnly>Confirm</button>
+  <button mat-button (click)="onCancel()">{{ 'payment.confirmation.cancel' | translate }}</button>
+  <button mat-raised-button color="primary" (click)="onConfirm()" appAdminOnly>{{ 'payment.confirmation.confirm' | translate }}</button>
 </mat-dialog-actions>

@@ -19,6 +19,7 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { TranslationService } from '../../services/translation.service';
 import { SchoolYearSelectorComponent } from '../school-year-selector/school-year-selector.component';
 import { AuthService } from '../../services/auth.service';
+import { APP_LANGUAGES } from '../../shared/app-languages';
 
 @Component({
   selector: 'app-navigation',
@@ -51,6 +52,8 @@ export class NavigationComponent implements OnInit {
   filteredSuggestions: Observable<string[]> | undefined;
   placeholderKey = 'NAV.SEARCH.PLACEHOLDER_STUDENT';
   currentSearchType: string = 'student';
+  /** Langues du menu utilisateur, nommées dans leur propre langue (autonymes). */
+  readonly languages = APP_LANGUAGES;
 
   @Output() sidenavToggle = new EventEmitter<void>();
   @Output() searchEvent = new EventEmitter<string>();
@@ -194,10 +197,6 @@ export class NavigationComponent implements OnInit {
 
   changeLanguage(lang: string) {
     this.translationService.useLanguage(lang);
-  }
-
-  toggleLanguage(): void {
-    this.translationService.toggleLanguage();
   }
 
   get currentLanguage(): string {

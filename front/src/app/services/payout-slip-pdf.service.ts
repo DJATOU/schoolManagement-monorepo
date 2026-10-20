@@ -4,6 +4,7 @@ import { Content, TDocumentDefinitions } from 'pdfmake/interfaces';
 import { Payout, PayoutSlip, payoutNature } from '../models/payroll/payroll';
 import { formatAmount } from '../pipes/amount.pipe';
 import { resolveLocale } from '../shared/locale';
+import { pdfInstant, pdfLanguage } from '../shared/pdf-i18n';
 import { pdfSafeText } from '../utils/pdf-print';
 import { PdfOutputService } from './pdf-output.service';
 
@@ -231,11 +232,12 @@ export class PayoutSlipPdfService {
   // ------------------------------------------------------------------
 
   private t(key: string, params?: Record<string, unknown>): string {
-    return pdfSafeText(this.translate.instant(key, params));
+    return pdfSafeText(pdfInstant(this.translate, key, params));
   }
 
+  /** Langue du document : celle de l'interface en français / anglais, français sinon (arabe). */
   private lang(): string {
-    return this.translate.currentLang || this.translate.defaultLang || 'fr';
+    return pdfLanguage(this.translate);
   }
 
   /** « 2 400,00 » : séparateur de la langue, espaces exotiques ramenés à une espace ordinaire. */

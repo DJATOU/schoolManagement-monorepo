@@ -1,5 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpTestingController } from '@angular/common/http/testing';
+import { TranslateService } from '@ngx-translate/core';
+import frTranslations from '../../assets/i18n/fr.json';
 import { API_BASE_URL } from '../api-base-url';
 import { CorrectionError } from '../models/correction/correction-error';
 import { PayoutError } from '../models/payroll/payroll';
@@ -14,6 +16,10 @@ describe('TeacherPayoutService', () => {
 
   beforeEach(() => {
     setupServiceTestBed();
+    // Messages d'erreur traduits : les assertions portent sur le texte français affiché.
+    const translate = TestBed.inject(TranslateService);
+    translate.setTranslation('fr', frTranslations);
+    translate.use('fr');
     service = TestBed.inject(TeacherPayoutService);
     http = TestBed.inject(HttpTestingController);
   });

@@ -1,7 +1,11 @@
 import { TestBed } from '@angular/core/testing';
+import { TranslateService } from '@ngx-translate/core';
 
 import { PaymentReceiptData, PaymentReceiptPdfService } from './payment-receipt-pdf.service';
 import { setupServiceTestBed } from '../../testing/setup';
+import frTranslations from '../../assets/i18n/fr.json';
+import enTranslations from '../../assets/i18n/en.json';
+import arTranslations from '../../assets/i18n/ar.json';
 
 /**
  * Le reçu réimprimé d'un versement annulé ne peut pas passer pour valide (spec admin-corrections,
@@ -61,6 +65,41 @@ describe('PaymentReceiptPdfService — reçu annulé', () => {
     const text = allText(doc.content);
     expect(text).toContain('payment.receipt.cancelledOn');
     expect(text).toContain('payment.receipt.replacedBy');
+  });
+
+  describe('langue du document', () => {
+    let translate: TranslateService;
+
+    beforeEach(() => {
+      translate = TestBed.inject(TranslateService);
+      translate.setTranslation('fr', frTranslations);
+      translate.setTranslation('en', enTranslations);
+      translate.setTranslation('ar', arTranslations);
+    });
+
+    /** Texte du reçu, pied de page compris. */
+    const printed = (): string => {
+      const doc = service.buildDocument(receipt({ amountPaid: 12000, amountAllocated: 12000, carryOvers: [] }), '');
+      return allText(doc.content) + ' ' + allText((doc.footer as () => unknown)());
+    };
+
+    it('arabe : reçu en français, montants et dates en chiffres latins, aucun caractère arabe', () => {
+      translate.use('ar');
+      const text = printed();
+      expect(text).toContain(frTranslations.payment.receipt.title);
+      expect(text).toContain(frTranslations.payment.receipt.amountReceived);
+      expect(text).toContain('12 000,00 DA');
+      expect(text).toContain('03/02/2030 09:15');
+      expect(text).not.toMatch(/[\u0600-\u06FF]/);
+    });
+
+    it('anglais : reçu en anglais', () => {
+      translate.use('en');
+      const text = printed();
+      expect(text).toContain(enTranslations.payment.receipt.title);
+      expect(text).toContain('12,000.00');
+      expect(text).not.toContain(frTranslations.payment.receipt.amountReceived);
+    });
   });
 
   it('un reçu annulé sans remplacement n\'en nomme aucun', () => {

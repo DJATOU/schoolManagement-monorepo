@@ -4,6 +4,7 @@ import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatDatepickerModule } from '@angular/material/datepicker';
+import { provideTranslatedDatepickerIntl } from '../../../../shared/translated-datepicker-intl';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
@@ -20,6 +21,7 @@ import { Group } from '../../../../models/group/group';
 import { Payout, PayoutCorrection, PayoutList, PayoutStatus, payoutNature } from '../../../../models/payroll/payroll';
 import { Teacher } from '../../../../models/teacher/teacher';
 import { AmountPipe, formatAmount } from '../../../../pipes/amount.pipe';
+import { currencySuffix } from '../../../../shared/currency';
 import { CorrectionStep } from '../../../../services/encashment.service';
 import { GroupService } from '../../../../services/group.service';
 import { PayoutSlipPdfService } from '../../../../services/payout-slip-pdf.service';
@@ -66,11 +68,15 @@ import {
     TranslateModule,
     AmountPipe
   ],
+  providers: [provideTranslatedDatepickerIntl()],
   templateUrl: './paid-tab.component.html',
   styleUrls: ['../teacher-payroll.shared.scss']
 })
 export class PaidTabComponent implements OnInit {
-  readonly currencySuffix = 'DA';
+  /** Suffixe monétaire de l'écran : « DA », « دج » en arabe. */
+  get currencySuffix(): string {
+    return currencySuffix(this.translate);
+  }
   readonly statuses: PayoutStatus[] = ['ACTIVE', 'CANCELLED'];
   readonly displayedColumns = ['number', 'paidAt', 'teacher', 'series', 'nature', 'rate', 'base', 'teacherAmount',
     'schoolAmount', 'status', 'actions'];

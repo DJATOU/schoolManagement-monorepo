@@ -5,7 +5,7 @@
       <div class="pf-identity">
         <div class="pf-avatar">
           <img *ngIf="teacherPhotoUrl && !hasImageError; else teacherInitials" [appSecureImage]="teacherPhotoUrl"
-            alt="Photo de l'enseignant" (error)="onImageError()">
+            [alt]="'TEACHER_PROFILE.PHOTO_ALT' | translate" (error)="onImageError()">
           <ng-template #teacherInitials>
             <div class="pf-initials" [style.background-color]="avatarColor">{{ getInitials() }}</div>
           </ng-template>
@@ -19,14 +19,14 @@
       </div>
 
       <div class="pf-header-buttons">
-        <button mat-icon-button class="pf-hb pf-hb-edit" (click)="onEdit()" matTooltip="Modifier le profil" appAdminOnly>
+        <button mat-icon-button class="pf-hb pf-hb-edit" (click)="onEdit()" [matTooltip]="'TEACHER_PROFILE.EDIT_TOOLTIP' | translate" appAdminOnly>
           <mat-icon>edit</mat-icon>
         </button>
-        <button mat-icon-button class="pf-hb pf-hb-print" (click)="printProfilePdf()" matTooltip="Imprimer la fiche (PDF)">
+        <button mat-icon-button class="pf-hb pf-hb-print" (click)="printProfilePdf()" [matTooltip]="'TEACHER_PROFILE.PRINT_TOOLTIP' | translate">
           <mat-icon>print</mat-icon>
         </button>
         <button mat-icon-button class="pf-hb pf-hb-danger" (click)="onDisable()"
-          matTooltip="Désactiver l'enseignant (historique conservé)" appAdminOnly>
+          [matTooltip]="'TEACHER_PROFILE.DISABLE_TOOLTIP' | translate" appAdminOnly>
           <mat-icon>block</mat-icon>
         </button>
       </div>
@@ -36,20 +36,20 @@
     <div class="pf-body">
       <div class="pf-grid">
         <section class="pf-section">
-          <h3 class="pf-section-title"><mat-icon>person</mat-icon>Informations personnelles</h3>
-          <div class="pf-row"><mat-icon>wc</mat-icon><span class="pf-label">Sexe</span><span class="pf-value">{{ teacher?.gender || '—' }}</span></div>
-          <div class="pf-row"><mat-icon>mail</mat-icon><span class="pf-label">Email</span><span class="pf-value">{{ teacher?.email || '—' }}</span></div>
-          <div class="pf-row"><mat-icon>call</mat-icon><span class="pf-label">Téléphone</span><span class="pf-value">{{ teacher?.phoneNumber || '—' }}</span></div>
-          <div class="pf-row"><mat-icon>cake</mat-icon><span class="pf-label">Date de naissance</span><span class="pf-value">{{ (teacher?.dateOfBirth | date: 'mediumDate') || '—' }}</span></div>
-          <div class="pf-row"><mat-icon>place</mat-icon><span class="pf-label">Lieu de naissance</span><span class="pf-value">{{ teacher?.placeOfBirth || '—' }}</span></div>
-          <div class="pf-row"><mat-icon>home</mat-icon><span class="pf-label">Adresse</span><span class="pf-value">{{ teacher?.address || '—' }}</span></div>
-          <div class="pf-row"><mat-icon>forum</mat-icon><span class="pf-label">Communication</span><span class="pf-value">{{ teacher?.communicationPreference || '—' }}</span></div>
+          <h3 class="pf-section-title"><mat-icon>person</mat-icon>{{ 'TEACHER_PROFILE.PERSONAL_INFO' | translate }}</h3>
+          <div class="pf-row"><mat-icon>wc</mat-icon><span class="pf-label">{{ 'COMMON.GENDER' | translate }}</span><span class="pf-value">{{ genderLabel(teacher?.gender) || '—' }}</span></div>
+          <div class="pf-row"><mat-icon>mail</mat-icon><span class="pf-label">{{ 'COMMON.EMAIL' | translate }}</span><span class="pf-value">{{ teacher?.email || '—' }}</span></div>
+          <div class="pf-row"><mat-icon>call</mat-icon><span class="pf-label">{{ 'TEACHER_PROFILE.PHONE' | translate }}</span><span class="pf-value">{{ teacher?.phoneNumber || '—' }}</span></div>
+          <div class="pf-row"><mat-icon>cake</mat-icon><span class="pf-label">{{ 'COMMON.BIRTHDATE' | translate }}</span><span class="pf-value">{{ birthDateLabel || '—' }}</span></div>
+          <div class="pf-row"><mat-icon>place</mat-icon><span class="pf-label">{{ 'COMMON.BIRTHPLACE' | translate }}</span><span class="pf-value">{{ teacher?.placeOfBirth || '—' }}</span></div>
+          <div class="pf-row"><mat-icon>home</mat-icon><span class="pf-label">{{ 'COMMON.ADDRESS' | translate }}</span><span class="pf-value">{{ teacher?.address || '—' }}</span></div>
+          <div class="pf-row"><mat-icon>forum</mat-icon><span class="pf-label">{{ 'TEACHER_PROFILE.COMMUNICATION' | translate }}</span><span class="pf-value">{{ teacher?.communicationPreference || '—' }}</span></div>
         </section>
 
         <section class="pf-section">
-          <h3 class="pf-section-title"><mat-icon>work</mat-icon>Informations professionnelles</h3>
-          <div class="pf-row"><mat-icon>workspace_premium</mat-icon><span class="pf-label">Spécialisation</span><span class="pf-value">{{ teacher?.specialization || '—' }}</span></div>
-          <div class="pf-row"><mat-icon>military_tech</mat-icon><span class="pf-label">Années d'expérience</span><span class="pf-value">{{ teacher?.yearsOfExperience != null ? teacher?.yearsOfExperience : '—' }}</span></div>
+          <h3 class="pf-section-title"><mat-icon>work</mat-icon>{{ 'TEACHER_PROFILE.PROFESSIONAL_INFO' | translate }}</h3>
+          <div class="pf-row"><mat-icon>workspace_premium</mat-icon><span class="pf-label">{{ 'TEACHER_PROFILE.SPECIALIZATION' | translate }}</span><span class="pf-value">{{ teacher?.specialization || '—' }}</span></div>
+          <div class="pf-row"><mat-icon>military_tech</mat-icon><span class="pf-label">{{ 'TEACHER_PROFILE.EXPERIENCE' | translate }}</span><span class="pf-value">{{ teacher?.yearsOfExperience != null ? teacher?.yearsOfExperience : '—' }}</span></div>
         </section>
       </div>
     </div>
@@ -61,7 +61,7 @@
       <mat-expansion-panel-header>
         <mat-panel-title>
           <mat-icon>groups</mat-icon>
-          Groupes enseignés ({{ teacherGroups.length }})
+          {{ 'TEACHER_PROFILE.GROUPS_COUNT' | translate: { count: teacherGroups.length } }}
         </mat-panel-title>
       </mat-expansion-panel-header>
       <div class="pf-cards-scroll">
@@ -72,7 +72,7 @@
         <ng-template #noGroups>
           <div class="pf-empty">
             <mat-icon>group_off</mat-icon>
-            <span>Aucun groupe enseigné pour le moment</span>
+            <span>{{ 'TEACHER_PROFILE.NO_GROUPS' | translate }}</span>
           </div>
         </ng-template>
       </div>

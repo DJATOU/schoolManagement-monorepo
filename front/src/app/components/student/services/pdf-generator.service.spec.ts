@@ -1,6 +1,8 @@
 import { TestBed } from '@angular/core/testing';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import frTranslations from '../../../../assets/i18n/fr.json';
+import enTranslations from '../../../../assets/i18n/en.json';
+import arTranslations from '../../../../assets/i18n/ar.json';
 import pdfMake from 'pdfmake/build/pdfmake';
 
 import { PdfGeneratorService } from './pdf-generator.service';
@@ -353,6 +355,49 @@ describe('PdfGeneratorService', () => {
       collectTexts(captured.content, texts);
       const hasPrefixedTitle = texts.some(t => t.includes('Séance de rattrapage : Rattrapage 1'));
       expect(hasPrefixedTitle).toBeTrue();
+    });
+
+    describe('document language', () => {
+      /** Texte complet du document (contenu et pied de page), dans la langue d'interface donnée. */
+      async function printedIn(lang: string): Promise<string> {
+        const translate = TestBed.inject(TranslateService);
+        translate.setTranslation('en', enTranslations);
+        translate.setTranslation('ar', arTranslations);
+        translate.use(lang);
+        let captured: TDocumentDefinitions = { content: [] };
+        spyOn(pdfMake, 'createPdf').and.callFake(((definition: TDocumentDefinitions) => {
+          captured = definition;
+          return { getBlob: (callback: (blob: Blob) => void) => callback(new Blob()) };
+        }) as never);
+        await service.generateFullHistoryPdf(fullHistory, 'logo.png');
+        const footer = captured.footer as (current: number, total: number) => unknown;
+        return JSON.stringify(captured.content) + JSON.stringify(footer(1, 2));
+      }
+
+      it('keeps today\'s French legend, signatures and footer', async () => {
+        const text = await printedIn('fr');
+        expect(text).toContain('Session de rattrapage (préfixe « Session de rattrapage: »)');
+        expect(text).toContain('Signature de l\'Étudiant : ________________________');
+        expect(text).toContain('Signature de l\'Administration : ________________________');
+        expect(text).toContain('Page 1 sur 2');
+      });
+
+      it('prints the history in French, Latin digits and no Arabic character, when the UI is Arabic', async () => {
+        const text = await printedIn('ar');
+        expect(text).toContain(frTranslations.studentHistory.pdf.title);
+        expect(text).toContain('Séance de rattrapage : Rattrapage 1');
+        expect(text).toContain('Page 1 sur 2');
+        expect(text).toContain(new Date().toLocaleDateString('fr-FR'));
+        expect(text).not.toMatch(/[\u0600-\u06FF]/);
+      });
+
+      it('prints the history in English when the UI is English', async () => {
+        const text = await printedIn('en');
+        expect(text).toContain(enTranslations.studentHistory.pdf.title);
+        expect(text).toContain('Student signature: ________________________');
+        expect(text).toContain('Page 1 of 2');
+        expect(text).not.toContain('Signature de l\'Étudiant');
+      });
     });
 
     it('renders the refunded amount when totalRefunded > 0', async () => {

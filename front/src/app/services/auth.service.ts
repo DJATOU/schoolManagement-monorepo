@@ -1,5 +1,6 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { Injectable } from '@angular/core';
+import { Injectable, Injector, inject } from '@angular/core';
+import { TranslateService } from '@ngx-translate/core';
 import { BehaviorSubject, Observable, catchError, map, tap, throwError } from 'rxjs';
 import { API_BASE_URL } from '../api-base-url';
 import { AuthResponse, AuthUser, LoginRequest, Role } from '../models/auth/auth.model';
@@ -20,6 +21,12 @@ export class AuthService {
   private readonly currentUserSubject = new BehaviorSubject<AuthUser | null>(this.restoreUser());
   /** Utilisateur courant (null si déconnecté). */
   readonly currentUser$ = this.currentUserSubject.asObservable();
+
+  /**
+   * `TranslateService` est lu à la demande : il charge ses fichiers par HttpClient, dont
+   * l'intercepteur dépend de ce service. L'injecter à la construction créerait un cycle.
+   */
+  private readonly injector = inject(Injector);
 
   constructor(private http: HttpClient) {}
 
@@ -102,9 +109,10 @@ export class AuthService {
 
   /** Gestion d'erreur centralisée. */
   private handleError = (error: HttpErrorResponse): Observable<never> => {
-    let message = 'Une erreur est survenue';
+    const translate = this.injector.get(TranslateService);
+    let message: string = translate.instant('HTTP_ERRORS.GENERIC');
     if (error.status === 401) {
-      message = 'Identifiant ou mot de passe invalide.';
+      message = translate.instant('AUTH.LOGIN.ERROR');
     } else if (error.error?.message) {
       message = error.error.message;
     }

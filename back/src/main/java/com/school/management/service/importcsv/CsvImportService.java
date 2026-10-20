@@ -85,10 +85,11 @@ public class CsvImportService {
     private static final Logger LOGGER = LoggerFactory.getLogger(CsvImportService.class);
 
     /**
-     * Format de la date d'arrivée : {@code yyyy-MM-dd}, celui de l'API ({@code StudentGroupDTO})
-     * et de l'écran. Résolution stricte : un jour inexistant (2026-02-30) est refusé, pas corrigé.
+     * Format des jours du calendrier (date d'arrivée, date de naissance) : {@code yyyy-MM-dd},
+     * celui de l'API ({@code StudentGroupDTO}, {@code StudentDTO}) et de l'écran. Résolution
+     * stricte : un jour inexistant (2026-02-30) est refusé, pas corrigé.
      */
-    private static final DateTimeFormatter ARRIVAL_DATE_FORMAT =
+    private static final DateTimeFormatter ISO_DAY_FORMAT =
             DateTimeFormatter.ofPattern("uuuu-MM-dd").withResolverStyle(ResolverStyle.STRICT);
 
     private final StudentRepository studentRepository;
@@ -367,8 +368,10 @@ public class CsvImportService {
 
     /**
      * Importe des élèves depuis un CSV.
-     * Colonnes reconnues : {@code firstName,lastName,gender,level,establishment,phoneNumber}.
-     * Obligatoires : {@code firstName}, {@code lastName}.
+     * Colonnes reconnues : {@code firstName,lastName,gender,level,establishment,phoneNumber,dateOfBirth}.
+     * Obligatoires : {@code firstName}, {@code lastName}. {@code dateOfBirth} est facultative, au
+     * format strict AAAA-MM-JJ : cellule vide ou colonne absente = élève sans date de naissance
+     * (aucune valeur par défaut) ; date invalide = ligne refusée.
      */
     @Transactional
     public ImportResultDTO importStudents(MultipartFile file) {
@@ -390,6 +393,20 @@ public class CsvImportService {
                     continue;
                 }
 
+                String dateOfBirthRaw = value(row, col, "dateofbirth");
+                LocalDate dateOfBirth = null;
+                if (!isBlank(dateOfBirthRaw)) {
+                    try {
+                        dateOfBirth = LocalDate.parse(dateOfBirthRaw.trim(), ISO_DAY_FORMAT);
+                    } catch (DateTimeParseException dtpe) {
+                        result.addError(lineNumber, "Date de naissance invalide : " + dateOfBirthRaw.trim()
+                                + " (format attendu AAAA-MM-JJ, par exemple 2010-05-15). Dans Excel, "
+                                + "formatez la colonne dateOfBirth en Texte avant la saisie : sinon Excel "
+                                + "réécrit la date en JJ/MM/AAAA.");
+                        continue;
+                    }
+                }
+
                 StudentEntity student = StudentEntity.builder()
                         .status(StudentStatus.ACTIVE)
                         .build();
@@ -398,6 +415,7 @@ public class CsvImportService {
                 student.setGender(emptyToNull(value(row, col, "gender")));
                 student.setPhoneNumber(emptyToNull(value(row, col, "phonenumber")));
                 student.setEstablishment(emptyToNull(value(row, col, "establishment")));
+                student.setDateOfBirth(dateOfBirth);
                 student.setActive(true);
 
                 String levelName = value(row, col, "level");
@@ -702,7 +720,7 @@ public class CsvImportService {
 
                 LocalDate arrival;
                 try {
-                    arrival = LocalDate.parse(arrivalRaw.trim(), ARRIVAL_DATE_FORMAT);
+                    arrival = LocalDate.parse(arrivalRaw.trim(), ISO_DAY_FORMAT);
                 } catch (DateTimeParseException dtpe) {
                     result.addError(lineNumber, "Date d'arrivée invalide : " + arrivalRaw.trim()
                             + " (format attendu AAAA-MM-JJ, par exemple 2026-09-15).");

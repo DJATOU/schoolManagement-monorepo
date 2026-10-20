@@ -8,6 +8,7 @@ import { TranslateService } from '@ngx-translate/core';
 import { DeleteCommand } from '../../shared/reusable-datatable/DeleteCommand';
 import { parseJavaDate } from '../../../shared/java-date';
 import { resolveLocale } from '../../../shared/locale';
+import { withCurrency } from '../../../shared/currency';
 
 @Component({
   selector: 'app-pricing-table',
@@ -45,7 +46,9 @@ export class PricingTableComponent implements DeleteCommand {
   }
 
   private buildColumns(): { columnDef: string; header: string; cell: (element: Pricing) => string }[] {
-    const label = (key: string) => this.translate.instant(`pricing.table.${key}`);
+    // En-têtes = clés, traduites par le tableau (écran) et par son export PDF, chacun dans sa
+    // langue : un libellé déjà traduit à l'écran en arabe se retrouverait tel quel dans le PDF.
+    const label = (key: string) => `pricing.table.${key}`;
 
     return [
       {
@@ -56,7 +59,9 @@ export class PricingTableComponent implements DeleteCommand {
       {
         columnDef: 'price',
         header: label('price'),
-        cell: (element: Pricing) => element.price != null ? `${element.price} DA` : ''
+        // Suffixe lu à chaque rendu : l'impression du tableau passe en français sous l'arabe
+        // (inPdfLanguage), la cellule imprimée porte alors « DA ».
+        cell: (element: Pricing) => element.price != null ? withCurrency(element.price, this.translate) : ''
       },
       {
         columnDef: 'effectiveDate',

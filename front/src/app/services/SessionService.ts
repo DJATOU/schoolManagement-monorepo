@@ -1,4 +1,5 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
+import { TranslateService } from '@ngx-translate/core';
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { catchError, Observable, throwError } from 'rxjs';
 import { API_BASE_URL } from '../api-base-url';
@@ -15,6 +16,8 @@ import { CorrectionStep } from './encashment.service';
 })
 export class SessionService {
   private apiUrl = `${API_BASE_URL}/api/sessions`;
+
+  private readonly translate = inject(TranslateService);
 
   constructor(private http: HttpClient) { }
 
@@ -106,9 +109,9 @@ export class SessionService {
   private correctionError(error: HttpErrorResponse): Observable<never> {
     console.error('Session Service Error:', error);
     return throwError(() => correctionErrorOf(error, {
-      notFound: 'Séance introuvable',
-      fallback: 'La dévalidation de la séance n\'a pas pu aboutir'
-    }));
+      notFound: 'HTTP_ERRORS.SESSION.NOT_FOUND',
+      fallback: 'HTTP_ERRORS.SESSION.UNVALIDATE_FAILED'
+    }, this.translate));
   }
 
   /**

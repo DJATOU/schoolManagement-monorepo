@@ -121,7 +121,7 @@
 
       .search-prefix {
         color: #6b7280;
-        margin-right: 8px;
+        margin-inline-end: 8px;
         cursor: pointer;
         font-size: 20px;
         display: flex;
@@ -152,7 +152,7 @@
         flex: 0 0 auto;
         width: 24px;
         height: 24px;
-        margin-left: 4px;
+        margin-inline-start: 4px;
         padding: 0;
         border: none;
         background: transparent;
@@ -247,7 +247,7 @@
     .dropdown-icon {
       color: rgba(255, 255, 255, 0.9);
       font-size: 20px;
-      margin-left: 4px;
+      margin-inline-start: 4px;
       transition: transform 0.2s ease;
     }
 
@@ -295,7 +295,7 @@
       height: 40px;
 
       mat-icon {
-        margin-right: 12px;
+        margin-inline-end: 12px;
         color: #6b7280;
         font-size: 20px;
       }
@@ -361,7 +361,7 @@
       }
 
       .dropdown-icon {
-        margin-left: 2px;
+        margin-inline-start: 2px;
       }
     }
   }

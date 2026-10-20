@@ -163,7 +163,7 @@
               </span>
               <ul class="preview-conflicts" *ngIf="preview.conflicts.length > 0">
                 <li *ngFor="let conflict of preview.conflicts.slice(0, 5)">
-                  {{ conflict.start | date:'EEEE d MMMM y, HH:mm' }} —
+                  {{ conflict.start | appDate:'EEEE d MMMM y, HH:mm' }} —
                   {{ conflictReason(conflict) }}
                 </li>
                 <li *ngIf="preview.conflicts.length > 5">

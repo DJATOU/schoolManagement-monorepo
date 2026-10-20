@@ -131,7 +131,7 @@
              au-delà du dû de la série, le surplus est reporté sur les séries suivantes. -->
         <input matInput formControlName="amountPaid" type="number" min="0"
           [max]="chainMaxPayable" required>
-        <span matTextSuffix>DA</span>
+        <span matTextSuffix>{{ currencySuffix }}</span>
         <mat-hint *ngIf="quote && !paymentForm.get('amountPaid')?.hasError('max')">
           {{ (isFullSeriesPayment ? 'payment.dialog.hints.fullSeriesAmount' : 'payment.dialog.hints.sessionPrice')
               | translate:{ price: (netSessionPrice | number:'1.2-2') } }}

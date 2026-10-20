@@ -15,7 +15,7 @@ describe('StudentSearchComponent', () => {
     return {
       id, firstName: 'Amina', lastName, status,
       gender: 'F', email: `${id}@example.com`, phoneNumber: '',
-      dateOfBirth: new Date('2010-01-01'), placeOfBirth: '', photo: '',
+      dateOfBirth: '2010-01-01', placeOfBirth: '', photo: '',
       level: 1, levelId: 1, establishment: ''
     };
   }

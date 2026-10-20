@@ -3,6 +3,11 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ProfileListItemComponent } from './profile-list-item.component';
 import { setupComponentTestBed } from '../../../../testing/setup';
 import { aProfile } from '../../../../testing/fixtures';
+import { By } from '@angular/platform-browser';
+import { MatTooltip } from '@angular/material/tooltip';
+import { TranslateService } from '@ngx-translate/core';
+import frTranslations from '../../../../assets/i18n/fr.json';
+import enTranslations from '../../../../assets/i18n/en.json';
 
 /**
  * Variante en liste de la carte de profil. `ngOnInit` déréférence `profile` pour composer
@@ -48,5 +53,21 @@ describe('ProfileListItemComponent', () => {
 
   it('cible « student » par défaut', () => {
     expect(component.profileType).toBe('student');
+  });
+
+  it('traduit les infobulles, en français comme avant puis en anglais', () => {
+    const translate = TestBed.inject(TranslateService);
+    translate.setTranslation('fr', frTranslations);
+    translate.setTranslation('en', enTranslations);
+    translate.use('fr');
+    fixture.detectChanges();
+    const tooltips = () => fixture.debugElement.queryAll(By.directive(MatTooltip))
+      .map(element => element.injector.get(MatTooltip).message);
+
+    expect(tooltips()).toEqual(['Envoyer un email', 'Ouvrir WhatsApp']);
+
+    translate.use('en');
+    fixture.detectChanges();
+    expect(tooltips()).toEqual(['Send an email', 'Open WhatsApp']);
   });
 });

@@ -1,8 +1,14 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 
+import { TranslateService } from '@ngx-translate/core';
+
 import { ReusableDatatableComponent } from './reusable-datatable.component';
+import { ProfilePdfService } from '../../../services/profile-pdf.service';
 import { setupComponentTestBed } from '../../../../testing/setup';
+import frTranslations from '../../../../assets/i18n/fr.json';
+import enTranslations from '../../../../assets/i18n/en.json';
+import arTranslations from '../../../../assets/i18n/ar.json';
 
 /**
  * Le tableau réutilisable est piloté entièrement par ses entrées : les colonnes et
@@ -58,6 +64,50 @@ describe('ReusableDatatableComponent', () => {
     expect(component.display(null)).toBe('');
     expect(component.display('undefined')).toBe('');
     expect(component.display(' Salle A ')).toBe('Salle A');
+  });
+
+  /**
+   * Export PDF : en français sous l'arabe (pdfmake ne dessine pas l'arabe), en-têtes-clés traduits
+   * dans la langue du document, cellules de l'écran appelant calculées dans cette langue.
+   */
+  describe('export PDF', () => {
+    let translate: TranslateService;
+    let generate: jasmine.Spy;
+
+    beforeEach(() => {
+      translate = TestBed.inject(TranslateService);
+      translate.setTranslation('fr', frTranslations);
+      translate.setTranslation('en', enTranslations);
+      translate.setTranslation('ar', arTranslations);
+      generate = spyOn(TestBed.inject(ProfilePdfService), 'generateProfilePdf');
+      // Une cellule qui dépend de la langue, comme les dates de tarif (noms de mois).
+      component.columns = [
+        { columnDef: 'name', header: 'LEVEL_TABLE.NAME', cell: (row: Row) => row.name },
+        { columnDef: 'lang', header: 'ID', cell: () => `langue ${translate.currentLang}` }
+      ];
+    });
+
+    it('interface en arabe : titre, sous-titre, en-têtes et cellules en français, aucun caractère arabe', () => {
+      translate.use('ar');
+      component.onPrint();
+
+      const pdf = generate.calls.mostRecent().args[0];
+      expect(pdf.title).toBe(frTranslations.DATATABLE.ENTITIES.level.title);
+      expect(pdf.tableColumns).toEqual([frTranslations.LEVEL_TABLE.NAME, 'ID']);
+      expect(pdf.tableRows).toEqual([['Première année', 'langue fr']]);
+      expect(JSON.stringify(pdf)).not.toMatch(/[\u0600-\u06FF]/);
+      expect(translate.currentLang).toBe('ar');
+    });
+
+    it('interface en anglais : document en anglais', () => {
+      translate.use('en');
+      component.onPrint();
+
+      const pdf = generate.calls.mostRecent().args[0];
+      expect(pdf.title).toBe(enTranslations.DATATABLE.ENTITIES.level.title);
+      expect(pdf.tableColumns).toEqual([enTranslations.LEVEL_TABLE.NAME, 'ID']);
+      expect(pdf.tableRows).toEqual([['Première année', 'langue en']]);
+    });
   });
 
   it('la sélection totale et le compteur de lignes suivent les données', () => {

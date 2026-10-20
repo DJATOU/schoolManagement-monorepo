@@ -6,6 +6,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatDatepickerModule } from '@angular/material/datepicker';
+import { provideTranslatedDatepickerIntl } from '../../../shared/translated-datepicker-intl';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
@@ -22,6 +23,7 @@ import { LevelService } from '../../../services/level.service';
 import { RevenueService } from '../../../services/revenue.service';
 import { SeriesService } from '../../../services/series.service';
 import { resolveLocale } from '../../../shared/locale';
+import { currencySuffix } from '../../../shared/currency';
 
 /**
  * Page « Recettes » : combien l'école a encaissé, ventilé sur l'axe choisi.
@@ -36,6 +38,7 @@ import { resolveLocale } from '../../../shared/locale';
 @Component({
   selector: 'app-revenue-report',
   standalone: true,
+  providers: [provideTranslatedDatepickerIntl()],
   templateUrl: './revenue-report.component.html',
   styleUrls: ['./revenue-report.component.scss'],
   imports: [
@@ -63,7 +66,10 @@ export class RevenueReportComponent implements OnInit {
   readonly axes: RevenueGroupBy[] = ['GROUP', 'SERIES', 'MONTH', 'SESSION'];
 
   readonly displayedColumns = ['label', 'share', 'collected'];
-  readonly currencySuffix = 'DA';
+  /** Suffixe monétaire de l'écran : « DA », « دج » en arabe. */
+  get currencySuffix(): string {
+    return currencySuffix(this.translate);
+  }
 
   filterForm: FormGroup;
   report: RevenueReport | null = null;

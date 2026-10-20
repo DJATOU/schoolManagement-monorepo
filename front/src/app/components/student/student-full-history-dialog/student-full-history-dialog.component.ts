@@ -15,6 +15,8 @@ import { RefundReceiptPdfService } from '../../../services/refund-receipt-pdf.se
 import { AuthService } from '../../../services/auth.service';
 import { StudentRefund } from '../../../models/refund/refund';
 import { AmountPipe } from '../../../pipes/amount.pipe';
+import { CurrencySuffixPipe } from '../../../pipes/currency-suffix.pipe';
+import { currencySuffix } from '../../../shared/currency';
 import { StudentFullHistoryDTO } from '../domain/StudentFullHistoryDTO';
 import { SeriesHistoryDTO } from '../../../models/sessionSerie/SeriesHistoryDTO';
 import { SessionHistoryDTO } from '../../../models/session/SessionHistoryDTO';
@@ -48,7 +50,8 @@ import {
     MatExpansionModule,
     MatProgressSpinnerModule,
     TranslateModule,
-    AmountPipe
+    AmountPipe,
+    CurrencySuffixPipe
   ]
 })
 export class StudentFullHistoryDialogComponent implements OnInit {
@@ -82,6 +85,11 @@ export class StudentFullHistoryDialogComponent implements OnInit {
   ngOnInit(): void {
     this.loadFullHistory();
     this.loadRefunds();
+  }
+
+  /** Suffixe monétaire affiché seul sous un montant : « DA », « دج » en arabe. */
+  get currencySuffix(): string {
+    return currencySuffix(this.translate);
   }
 
   /** Vrai pour un ADMIN : lui seul voit le détail des remboursements et peut réimprimer un reçu. */

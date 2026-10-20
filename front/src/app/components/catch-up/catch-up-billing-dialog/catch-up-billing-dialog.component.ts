@@ -14,6 +14,7 @@ import { TranslateModule } from '@ngx-translate/core';
 import { CatchUpBillingService } from '../../../services/catch-up-billing.service';
 import { StudentAbsence } from '../../../models/catchUp/student-absence';
 import { CatchUpBillingAudit, PendingCatchUp } from '../../../models/catchUp/catch-up-billing';
+import { LocalizedDatePipe } from '../../../pipes/localized-date.pipe';
 
 /**
  * Résolution (ou correction) de la facturation d'un rattrapage.
@@ -47,7 +48,8 @@ import { CatchUpBillingAudit, PendingCatchUp } from '../../../models/catchUp/cat
     MatFormFieldModule,
     MatInputModule,
     MatSelectModule,
-    TranslateModule
+    TranslateModule,
+    LocalizedDatePipe
   ]
 })
 export class CatchUpBillingDialogComponent implements OnInit {

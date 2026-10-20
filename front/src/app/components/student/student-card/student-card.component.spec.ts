@@ -3,6 +3,9 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { StudentCardComponent } from './student-card.component';
 import { setupComponentTestBed } from '../../../../testing/setup';
 import { aStudent } from '../../../../testing/fixtures';
+import { TranslateService } from '@ngx-translate/core';
+import frTranslations from '../../../../assets/i18n/fr.json';
+import enTranslations from '../../../../assets/i18n/en.json';
 
 /**
  * `student` est une entrée obligatoire, déréférencée par `ngOnInit`.
@@ -36,8 +39,25 @@ describe('StudentCardComponent', () => {
     }));
   });
 
-  it('porte le niveau en sous-titre', () => {
-    expect(component.profile.subtitle).toContain('2AS');
+  it('porte le niveau en sous-titre, en français puis en anglais', () => {
+    expect(component.profile.subtitleParams).toEqual({ level: '2AS' });
+    const translate = TestBed.inject(TranslateService);
+    translate.setTranslation('fr', frTranslations);
+    translate.setTranslation('en', enTranslations);
+    translate.use('fr');
+    fixture.detectChanges();
+    const subtitle = () => (fixture.nativeElement.querySelector('.card-subtitle') as HTMLElement).textContent?.trim();
+    expect(subtitle()).toBe('Niveau : 2AS');
+    translate.use('en');
+    fixture.detectChanges();
+    expect(subtitle()).toBe('Level: 2AS');
+  });
+
+  it('sans niveau, le sous-titre l\'indique', () => {
+    const card = TestBed.createComponent(StudentCardComponent);
+    card.componentRef.setInput('student', aStudent({ levelName: undefined }));
+    card.detectChanges();
+    expect(card.componentInstance.profile.subtitleKey).toBe('PROFILE_CARD.LEVEL_UNKNOWN');
   });
 
   it('n\'expose aucun tuteur quand l\'étudiant n\'en a pas', () => {

@@ -18,6 +18,7 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatDatepickerModule } from '@angular/material/datepicker';
+import { provideTranslatedDatepickerIntl } from '../../../shared/translated-datepicker-intl';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatIconModule } from '@angular/material/icon';
 import { MatOptionModule } from '@angular/material/core';
@@ -52,7 +53,7 @@ import { AdminOnlyDirective } from '../../../shared/admin-only.directive';
   ],
   templateUrl: './group-form.component.html',
   styleUrls: ['./group-form.component.scss'],
-  providers: [GroupService]
+  providers: [provideTranslatedDatepickerIntl(), GroupService]
 })
 export class GroupFormComponent implements OnInit {
   groupForm!: FormGroup;

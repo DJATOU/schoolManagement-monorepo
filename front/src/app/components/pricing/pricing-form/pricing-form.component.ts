@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
@@ -9,6 +9,7 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatDatepickerModule } from '@angular/material/datepicker';
+import { provideTranslatedDatepickerIntl } from '../../../shared/translated-datepicker-intl';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatIconModule } from '@angular/material/icon';
 import { MatOptionModule } from '@angular/material/core';
@@ -17,7 +18,7 @@ import { CommonModule } from '@angular/common';
 import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatCardModule } from '@angular/material/card';
 import { ActivatedRoute, Router } from '@angular/router';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { AdminOnlyDirective } from '../../../shared/admin-only.directive';
 
 @Component({
@@ -40,13 +41,15 @@ import { AdminOnlyDirective } from '../../../shared/admin-only.directive';
   ],
   templateUrl: './pricing-form.component.html',
   styleUrls: ['./pricing-form.component.scss'],
-  providers: [PricingService]
+  providers: [provideTranslatedDatepickerIntl(), PricingService]
 })
 export class PricingFormComponent implements OnInit {
   pricingForm!: FormGroup;
 
   /** Identifiant du tarif en cours de modification (null en mode création). */
   editingId: number | null = null;
+
+  private readonly translate = inject(TranslateService);
 
   constructor(
     private fb: FormBuilder,
@@ -76,7 +79,7 @@ export class PricingFormComponent implements OnInit {
           expirationDate: pricing.expirationDate ?? '',
           description: pricing.description ?? ''
         }),
-        error: () => this.showErrorMessage('Erreur lors du chargement du tarif.')
+        error: () => this.showErrorMessage(this.translate.instant('RESOURCE_FORM.MESSAGES.pricing.LOAD_ERROR'))
       });
     }
   }
@@ -129,12 +132,12 @@ export class PricingFormComponent implements OnInit {
             // Mode modification : mise à jour du tarif existant.
             this.pricingService.updatePricing(this.editingId, pricing).subscribe({
               next: () => {
-                this.showSuccessMessage('Tarif mis à jour avec succès.');
+                this.showSuccessMessage(this.translate.instant('RESOURCE_FORM.MESSAGES.pricing.UPDATED'));
                 this.router.navigate(['/pricing/table']);
               },
               error: (error) => {
                 console.error('Error updating pricing:', error);
-                this.showErrorMessage('Erreur lors de la mise à jour du tarif.');
+                this.showErrorMessage(this.translate.instant('RESOURCE_FORM.MESSAGES.pricing.UPDATE_ERROR'));
               }
             });
           } else {
@@ -142,11 +145,11 @@ export class PricingFormComponent implements OnInit {
               next: (created) => {
                 console.log('Pricing created:', created);
                 this.onClearForm();
-                this.showSuccessMessage('Pricing created successfully.');
+                this.showSuccessMessage(this.translate.instant('RESOURCE_FORM.MESSAGES.pricing.CREATED'));
               },
               error: (error) => {
                 console.error('Error creating pricing:', error);
-                this.showErrorMessage('Error creating pricing.');
+                this.showErrorMessage(this.translate.instant('RESOURCE_FORM.MESSAGES.pricing.CREATE_ERROR'));
               }
             });
           }
@@ -156,7 +159,7 @@ export class PricingFormComponent implements OnInit {
       });
     } else {
       console.warn('Form is not valid');
-      this.showErrorMessage('Form is not valid.');
+      this.showErrorMessage(this.translate.instant('RESOURCE_FORM.MESSAGES.FORM_INVALID'));
     }
   }
 
@@ -165,14 +168,14 @@ export class PricingFormComponent implements OnInit {
   }
 
   showSuccessMessage(message: string): void {
-    this.snackBar.open(message, 'OK', {
+    this.snackBar.open(message, this.translate.instant('common.ok'), {
       duration: 3000,
       panelClass: ['snack-bar-success']
     });
   }
 
   showErrorMessage(message: string): void {
-    this.snackBar.open(message, 'OK', {
+    this.snackBar.open(message, this.translate.instant('common.ok'), {
       duration: 3000,
       panelClass: ['snack-bar-error']
     });

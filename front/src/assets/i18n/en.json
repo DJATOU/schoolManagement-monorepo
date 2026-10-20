@@ -1,7 +1,19 @@
 {
   "STUDENT_SEARCH": {
     "SHOW_INACTIVE": "Show deactivated students",
-    "INACTIVE_BADGE": "Deactivated"
+    "INACTIVE_BADGE": "Deactivated",
+    "LATE_ONLY": "Show late payments only",
+    "FILTERS": "Filters",
+    "GROUP_CHIP": "Group:",
+    "LEVEL_CHIP": "Level:",
+    "LEVEL": "Level",
+    "ALL_LEVELS": "All levels",
+    "GROUP": "Group",
+    "ALL_GROUPS": "All groups",
+    "LOADING_MORE": "Loading...",
+    "ALL_DISPLAYED": "All students shown ({{count}})",
+    "PAGE_RANGE_EMPTY": "0 of 0",
+    "PAGE_RANGE": "{{start}}-{{end}} of {{total}}"
   },
   "AUTH": {
     "LOGIN": {
@@ -53,7 +65,8 @@
     "LINE": "Line",
     "STUDENTS": {
       "TITLE": "Students",
-      "COLUMNS": "Columns: firstName, lastName, gender, level, establishment, phoneNumber (firstName and lastName required)"
+      "COLUMNS": "Columns: firstName, lastName, gender, level, establishment, phoneNumber, dateOfBirth (firstName and lastName required; dateOfBirth optional, in YYYY-MM-DD format, e.g. 2010-05-15)",
+      "NOTE": "Excel in French rewrites dates as DD/MM/YYYY: format the dateOfBirth column as Text before typing the dates, otherwise the row is rejected. An empty cell leaves the student without a date of birth."
     },
     "TEACHERS": {
       "TITLE": "Teachers",
@@ -170,7 +183,46 @@
       "SESSION": "Session",
       "NO_ABSENCE": "No absence eligible for catch-up for this student.",
       "NOTES": "Notes",
-      "SUBMIT": "Create request"
+      "SUBMIT": "Create request",
+      "LOAD_STUDENTS_ERROR": "Unable to load the students",
+      "LOAD_ABSENCES_ERROR": "Unable to load the absences",
+      "CREATE_ERROR": "Unable to create the catch-up request",
+      "CREATED": "Catch-up request created"
+    },
+    "LIST": {
+      "TITLE": "Catch-up requests",
+      "NEW": "New request",
+      "STATUS_FILTER": "Filter by status",
+      "ALL": "All",
+      "STATUS": {
+        "PENDING": "Pending",
+        "SCHEDULED": "Scheduled",
+        "COMPLETED": "Completed",
+        "CANCELLED": "Cancelled"
+      },
+      "COLUMNS": {
+        "STUDENT": "Student",
+        "MISSED_SESSION": "Missed session",
+        "STATUS": "Status",
+        "ACTIONS": "Actions"
+      },
+      "SCHEDULE": "Schedule",
+      "COMPLETE": "Complete",
+      "LOAD_ERROR": "Unable to load the catch-ups",
+      "COMPLETED": "Catch-up completed",
+      "CANCELLED": "Catch-up cancelled"
+    },
+    "SCHEDULE": {
+      "TITLE": "Schedule a catch-up",
+      "MISSED_SESSION": "Missed session:",
+      "CATCH_UP_SESSION": "Catch-up session",
+      "SESSION_FALLBACK": "Session",
+      "NO_SESSION": "No compatible session available (same year, same group type and same price).",
+      "PAYMENT_HINT": "The payment will be linked only to the selected catch-up session.",
+      "LOAD_ERROR": "Unable to load the catch-up sessions",
+      "GROUP_NOT_FOUND": "Catch-up group not found for this session",
+      "SCHEDULE_ERROR": "Unable to schedule the catch-up",
+      "SCHEDULED": "Catch-up scheduled"
     }
   },
   "COMMON": {
@@ -192,16 +244,22 @@
     "COMMUNICATION": "Preferred contact method",
     "BIRTHDATE": "Date of birth",
     "BIRTHPLACE": "Place of birth",
+    "BIRTHDATE_HINT": "DD/MM/YYYY",
+    "BIRTHDATE_ERRORS": {
+      "REQUIRED": "The date of birth is required.",
+      "INVALID": "Invalid date: enter it as DD/MM/YYYY.",
+      "FUTURE": "The date of birth cannot be in the future."
+    },
     "ADDRESS": "Address",
     "CITY": "City",
     "LEVEL": "Level",
     "SCHOOL": "School",
-    "DESCRIPTION": "Description"
+    "DESCRIPTION": "Description",
+    "CURRENCY_SUFFIX": "DA"
   },
   "LANGUAGE": {
     "FRENCH": "French",
-    "ENGLISH": "English",
-    "TOGGLE": "Switch language (current: {{value}})"
+    "ENGLISH": "English"
   },
   "NAV": {
     "MENU": "Menu",
@@ -215,16 +273,19 @@
       "PLACEHOLDER_STUDENT": "Search for a student...",
       "PLACEHOLDER_GROUP": "Search for a group...",
       "PLACEHOLDER_TEACHER": "Search for a teacher...",
-      "PLACEHOLDER_GENERIC": "Search..."
+      "PLACEHOLDER_GENERIC": "Search...",
+      "NO_RESULT": "No result"
     },
     "USER": {
-      "ROLE": "Administrator"
+      "ROLE": "Administrator",
+      "AVATAR_ALT": "Admin"
     },
     "ACTIONS": {
       "TOGGLE_THEME": "Light/Dark mode",
       "SETTINGS": "Settings",
       "LOGOUT": "Logout"
-    }
+    },
+    "LOGO_ALT": "Logo"
   },
   "SIDE_MENU": {
     "BRAND_TITLE": "School Manager",
@@ -812,6 +873,17 @@
       "confirm": "Delete",
       "success": "Discount deleted successfully",
       "error": "Error while deleting the discount"
+    },
+    "dialog": {
+      "levelFilter": "Level (filter)",
+      "allLevels": "All levels",
+      "group": "Group",
+      "loading": "Loading...",
+      "chooseGroupFirst": "Choose a group first",
+      "ratePercent": "Rate (%)",
+      "rateHint": "0 to 100 (e.g. 50 = 50%)",
+      "saved": "Discount saved",
+      "saveError": "Error while saving"
     }
   },
   "payment": {
@@ -1103,6 +1175,24 @@
         "reason": "Catch-up awaiting a decision — no billing decided",
         "hint": "The missed session and the \"already paid\" decision still need to be indicated. This is not a debt."
       }
+    },
+    "confirmation": {
+      "title": "Payment confirmation",
+      "summary": "Payment summary",
+      "series": "Series:",
+      "catchUpWarning": "⚠️ CATCH-UP: payment per attended session only",
+      "attendedSessions": "Number of sessions attended",
+      "billedSessions": "Number of billed sessions",
+      "pricePerSession": "Price per session:",
+      "totalCost": "Total cost:",
+      "catchUpNote": "Note: for a student on catch-up, only the sessions attended are billed.",
+      "alreadyPaid": "Amount already paid:",
+      "remaining": "Amount remaining to pay:",
+      "catchUpRule": "Catch-up: the student is up to date as soon as each attended session is paid.",
+      "catchUpSettled": "✓ The student is up to date for all catch-up sessions.",
+      "catchUpRulePaid": "Catch-up: the student is up to date once each attended session has been paid.",
+      "cancel": "Cancel",
+      "confirm": "Confirm"
     }
   },
   "calendar": {
@@ -1112,6 +1202,22 @@
       "week": "Week",
       "day": "Day",
       "list": "List"
+    },
+    "filters": {
+      "title": "Filters",
+      "active": "Active filters",
+      "removeLevel": "Remove the level filter",
+      "removeSubject": "Remove the subject filter",
+      "removeGroup": "Remove the group filter",
+      "reset": "Reset the filters",
+      "byLevel": "Filter by level",
+      "bySubject": "Filter by subject",
+      "byGroup": "Filter by group",
+      "allLevels": "All levels",
+      "allSubjects": "All subjects",
+      "allGroups": "All groups",
+      "level": "Level",
+      "subject": "Subject"
     }
   },
   "RESOURCE_FORM": {
@@ -1125,6 +1231,65 @@
       "subject": "Subject",
       "groupType": "Group type",
       "pricing": "Pricing"
+    },
+    "TABS": {
+      "BASIC_INFO": "Basic Information",
+      "ROOM_DETAILS": "Room Details",
+      "GROUP_TYPE_DETAILS": "Group Type Details"
+    },
+    "FIELDS": {
+      "NAME": "Name",
+      "LEVEL_CODE": "Level code",
+      "LEVEL_SEQUENCE": "Rank (promotion order)",
+      "LEVEL_SEQUENCE_PLACEHOLDER": "e.g. 1 for year 1, 2 for year 2...",
+      "LEVEL_SEQUENCE_HINT": "Sets the promotion order between levels (1 = lowest).",
+      "CAPACITY": "Capacity",
+      "TYPE": "Type",
+      "NAME_REQUIRED": "Name is required",
+      "SIZE": "Size",
+      "SIZE_REQUIRED": "Size is required",
+      "PRICE": "Price",
+      "VALIDITY_RANGE": "Enter the validity date range",
+      "EFFECTIVE_DATE": "Effective date",
+      "EXPIRATION_DATE": "Expiration date"
+    },
+    "MESSAGES": {
+      "FORM_INVALID": "Form is not valid.",
+      "level": {
+        "LOAD_ERROR": "Error while loading the level.",
+        "UPDATED": "Level updated successfully.",
+        "UPDATE_ERROR": "Error while updating the level.",
+        "CREATED": "Level created successfully.",
+        "CREATE_ERROR": "Error creating level."
+      },
+      "room": {
+        "LOAD_ERROR": "Error while loading the room.",
+        "UPDATED": "Room updated successfully.",
+        "UPDATE_ERROR": "Error while updating the room.",
+        "CREATED": "Room created successfully.",
+        "CREATE_ERROR": "Error creating room."
+      },
+      "subject": {
+        "LOAD_ERROR": "Error while loading the subject.",
+        "UPDATED": "Subject updated successfully.",
+        "UPDATE_ERROR": "Error while updating the subject.",
+        "CREATED": "Subject created successfully.",
+        "CREATE_ERROR": "Error creating subject."
+      },
+      "groupType": {
+        "LOAD_ERROR": "Error while loading the group type.",
+        "UPDATED": "Group type updated successfully.",
+        "UPDATE_ERROR": "Error while updating the group type.",
+        "CREATED": "Group type created successfully.",
+        "CREATE_ERROR": "Error creating group type."
+      },
+      "pricing": {
+        "LOAD_ERROR": "Error while loading the pricing.",
+        "UPDATED": "Pricing updated successfully.",
+        "UPDATE_ERROR": "Error while updating the pricing.",
+        "CREATED": "Pricing created successfully.",
+        "CREATE_ERROR": "Error creating pricing."
+      }
     }
   },
   "ADD_STUDENTS_DIALOG": {
@@ -1406,12 +1571,16 @@
         "presentUnpaid": "Present and unpaid",
         "presentExempted": "Present and exempt",
         "excludedSession": "Session not billed: not attended, held before enrolment",
-        "pendingDecisionSession": "Catch-up awaiting a decision — no billing decided yet"
+        "pendingDecisionSession": "Catch-up awaiting a decision — no billing decided yet",
+        "catchUpSession": "Catch-up session (prefix « Catch-up session: »)"
       },
       "amountAllocatedAndOverpaid": "Allocated: {{allocated}} DA — Overpaid: {{overpaid}} DA",
       "pendingDecisionSession": "To be decided: {{name}}",
       "amountPaidNetOfTotal": "Total paid, net of refunds: {{paid}} DA / {{total}} DA due",
-      "refundLine": "Document {{number}} of {{date}}: {{amount}} DA — {{reason}}"
+      "refundLine": "Document {{number}} of {{date}}: {{amount}} DA — {{reason}}",
+      "studentSignature": "Student signature: ________________________",
+      "adminSignature": "Administration signature: ________________________",
+      "page": "Page {{current}} of {{total}}"
     },
     "seriesLabel": "Series",
     "totalPaid": "Total paid",
@@ -1452,6 +1621,35 @@
       "errors": {
         "required": "The series name is required."
       }
+    },
+    "detail": {
+      "backTooltip": "Back to the group",
+      "downloadPdf": "Download (PDF)",
+      "plannedSessions": "Planned sessions",
+      "createdSessions": "Sessions created",
+      "validatedCount": "Validated",
+      "scheduledCount": "Scheduled",
+      "filter": "Filter",
+      "filterPlaceholder": "Title, type, teacher, room…",
+      "empty": "No session in this series.",
+      "columns": {
+        "number": "No.",
+        "title": "Title",
+        "type": "Type",
+        "teacher": "Teacher",
+        "room": "Room",
+        "date": "Date",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "status": {
+        "disabled": "Disabled",
+        "validated": "Validated",
+        "scheduled": "Scheduled"
+      },
+      "openSession": "Open the session",
+      "loadSeriesError": "Error while loading the series.",
+      "loadSessionsError": "Error while loading the sessions."
     }
   },
   "studentDiscounts": {
@@ -1535,7 +1733,13 @@
       "noFinancialEffect": "This change affects neither the series cost, nor the amount due, nor the payment status.",
       "submitButton": "Save",
       "unchanged": "The justification already had this value: nothing was changed.",
-      "saved": "Justification updated."
+      "saved": "Justification updated.",
+      "noEffectTitle": "No effect on amounts.",
+      "noEffectText": "The justification is used for discipline follow-up and the right to a catch-up. It changes neither the cost of the series, nor the amount due, nor the payment status.",
+      "savedValue": "Recorded value",
+      "commentHistoryNote": "The comment is kept in the history: it explains the correction if it is disputed later.",
+      "checkHistory": "Check the history below before trying again.",
+      "loading": "Loading…"
     },
     "audit": {
       "title": "Change history",
@@ -1544,7 +1748,8 @@
       "to": "to",
       "by": "by",
       "noComment": "No comment",
-      "lastModified": "Changed by {{author}} on {{date}}"
+      "lastModified": "Changed by {{author}} on {{date}}",
+      "emptyInitial": "No change recorded: the value is the one initially entered."
     },
     "billing": {
       "stillBilled": "Session included in the series cost; justification does not change the amount due.",
@@ -1979,5 +2184,380 @@
       "empty": "No payout recorded for this teacher.",
       "total": "Total paid: {{amount}} DA"
     }
+  },
+  "GROUP_PROFILE": {
+    "PHOTO_ALT": "Group photo",
+    "EDIT_TOOLTIP": "Edit the group",
+    "PRINT_TOOLTIP": "Print the profile, payments received and series (PDF)",
+    "DISABLE_TOOLTIP": "Disable the group (history kept)",
+    "INFO_TITLE": "Group information",
+    "GROUP_TYPE": "Group type",
+    "SUBJECT": "Subject",
+    "SESSIONS_PER_SERIES": "Sessions per series",
+    "PRICE": "Price",
+    "TEACHER": "Teacher",
+    "TEACHER_LINK_TOOLTIP": "View the teacher's profile",
+    "NO_DESCRIPTION": "No description.",
+    "ADD_STUDENT": "Add a student",
+    "STUDENTS": "Students",
+    "STUDENT_COUNT": "{{count}} student(s)",
+    "STUDENT_FILTERED_COUNT": "{{filtered}} / {{count}} student(s)",
+    "FILTER_PLACEHOLDER": "Filter the group's students…",
+    "CLEAR_FILTER": "Clear the filter",
+    "NO_MATCH": "No student matches “{{filter}}”",
+    "SERIES": "Series",
+    "SERIES_COUNT": "{{count}} series",
+    "OPEN_SERIES_TOOLTIP": "View the sessions of the series",
+    "OPEN_SESSIONS_TOOLTIP": "View the sessions",
+    "MESSAGES": {
+      "STUDENTS_ADDED": "{{count}} student(s) added to the group.",
+      "UPDATED": "Group updated successfully.",
+      "PHOTO_UPLOAD_ERROR": "Error while uploading the photo.",
+      "UPDATE_ERROR": "Error while updating the group."
+    },
+    "PDF": {
+      "SCHOOL_YEAR": "School year",
+      "STUDENTS_TABLE": "Students ({{count}})",
+      "REMARKS": "Remarks",
+      "REVENUE_LOAD_ERROR": "Payments received could not be loaded.",
+      "REVENUE_EMPTY": "No payment recorded for this group.",
+      "COLLECTED_NET": "Collected (net)",
+      "REFUNDED": "Refunded",
+      "UNASSIGNED": "Not linked to a series",
+      "SUMMARY": "Summary",
+      "SERIES_COLUMN": "Series",
+      "REMAINING_COLUMN": "Remaining",
+      "BY_SERIES_NOTE": "Remaining and overpaid amounts are computed student by student: one student's overpayment does not offset another student's arrears.",
+      "MONTH_COLUMN": "Month",
+      "BY_MONTH_NOTE": "What came into the till each month, whatever series it settled: totals therefore differ from the per-series breakdown.",
+      "SERIES_TABLE": "Series ({{count}})",
+      "START": "Start",
+      "END": "End",
+      "SESSIONS_CREATED": "Sessions created",
+      "PLANNED": "Planned",
+      "VALIDATED": "Validated"
+    }
+  },
+  "STUDENT_PROFILE": {
+    "PHOTO_ALT": "Student photo",
+    "EDIT_TOOLTIP": "Edit the profile",
+    "PAYMENT_HISTORY_TOOLTIP": "Payment history",
+    "ATTENDANCE_HISTORY_TOOLTIP": "Attendance history",
+    "FULL_HISTORY_TOOLTIP": "Full history",
+    "PRINT_TOOLTIP": "Print the profile (PDF)",
+    "DISABLE_TOOLTIP": "Disable the account",
+    "PERSONAL_INFO": "Personal information",
+    "PHONE": "Phone",
+    "ACADEMIC_INFO": "Academic information",
+    "AVERAGE": "Average",
+    "ADD_PAYMENT": "Add a payment",
+    "MANAGE_GROUPS": "Manage groups",
+    "GROUPS_COUNT": "Groups ({{count}})",
+    "NO_GROUPS": "No groups yet",
+    "ERRORS": {
+      "PAYMENT_EXCEEDS_SESSIONS": "The payment cannot be made because it exceeds the cost of the sessions created so far.",
+      "STUDENT_NOT_FOUND": "The student was not found.",
+      "GROUP_NOT_FOUND": "The group was not found.",
+      "GENERIC_ERROR": "An error occurred. Please try again later.",
+      "GROUP_ALREADY_ASSOCIATED": "Some groups are already linked to the student.",
+      "INSUFFICIENT_SESSIONS": "Not enough sessions have been created to cover the payment.",
+      "INVALID_GROUP_LEVEL": "No group matching the student's level was found."
+    },
+    "MESSAGES": {
+      "CLOSE": "Close",
+      "INVALID_STUDENT": "Invalid student",
+      "NO_PAYMENT_GROUP": "No group available for payment",
+      "NO_GROUP_FOR_LEVEL": "No group available for this level.",
+      "ALL_GROUPS_ADDED": "All groups of this level have already been added to this student.",
+      "UPDATED": "Student updated successfully.",
+      "PHOTO_UPLOAD_ERROR": "Error while uploading the photo.",
+      "UPDATE_ERROR": "Error while updating the student.",
+      "NOT_FOUND": "Student not found.",
+      "FULL_HISTORY_ERROR": "Error while retrieving the full history."
+    },
+    "PDF": {
+      "GROUP_COLUMN": "Group",
+      "SUBJECT_COLUMN": "Subject"
+    }
+  },
+  "TEACHER_PROFILE": {
+    "PHOTO_ALT": "Teacher photo",
+    "EDIT_TOOLTIP": "Edit the profile",
+    "PRINT_TOOLTIP": "Print the profile (PDF)",
+    "DISABLE_TOOLTIP": "Disable the teacher (history kept)",
+    "PERSONAL_INFO": "Personal information",
+    "PHONE": "Phone",
+    "COMMUNICATION": "Communication",
+    "PROFESSIONAL_INFO": "Professional information",
+    "SPECIALIZATION": "Specialization",
+    "EXPERIENCE": "Years of experience",
+    "GROUPS_COUNT": "Groups taught ({{count}})",
+    "NO_GROUPS": "No groups taught yet",
+    "MESSAGES": {
+      "UPDATED": "Teacher updated successfully.",
+      "PHOTO_UPLOAD_ERROR": "Error while uploading the photo.",
+      "UPDATE_ERROR": "Error while updating the teacher."
+    }
+  },
+  "PROFILE_CARD": {
+    "PROFILE_PHOTO": "Profile photo",
+    "STUDENT_PHOTO": "Student photo",
+    "GROUP_PHOTO": "Group photo",
+    "SEND_EMAIL": "Send an email",
+    "OPEN_WHATSAPP": "Open WhatsApp",
+    "RECORD_DEPARTURE": "Record departure from the group",
+    "LEVEL": "Level: {{level}}",
+    "LEVEL_UNKNOWN": "Level: N/A",
+    "SPECIALIZATION": "Specialization: {{specialization}}"
+  },
+  "PROFILE_PDF": {
+    "PAGE": "Page {{current}} / {{total}}",
+    "SIGNATURE": "Signature: ________________________",
+    "ADMINISTRATION": "Administration: ________________________",
+    "GROUP": "Group",
+    "GROUP_WITH_TYPE": "Group · {{type}}",
+    "STUDENT": "Student",
+    "STUDENT_WITH_LEVEL": "Student · {{level}}",
+    "TEACHER": "Teacher",
+    "TEACHER_WITH_SPECIALIZATION": "Teacher · {{specialization}}"
+  },
+  "NATIONALITY": {
+    "ALGERIENNE": "Algerian",
+    "TUNISIENNE": "Tunisian",
+    "MAROCAINE": "Moroccan",
+    "LIBYENNE": "Libyan",
+    "MAURITANIENNE": "Mauritanian",
+    "EGYPTIENNE": "Egyptian",
+    "FRANCAISE": "French",
+    "ESPAGNOLE": "Spanish",
+    "ITALIENNE": "Italian",
+    "ALLEMANDE": "German",
+    "BRITANNIQUE": "British",
+    "BELGE": "Belgian",
+    "SUISSE": "Swiss",
+    "CANADIENNE": "Canadian",
+    "AMERICAINE": "American",
+    "TURQUE": "Turkish",
+    "SAOUDIENNE": "Saudi",
+    "EMIRATIE": "Emirati",
+    "QATARIENNE": "Qatari",
+    "KOWEITIENNE": "Kuwaiti",
+    "JORDANIENNE": "Jordanian",
+    "LIBANAISE": "Lebanese",
+    "SYRIENNE": "Syrian",
+    "IRAKIENNE": "Iraqi",
+    "PALESTINIENNE": "Palestinian",
+    "SENEGALAISE": "Senegalese",
+    "MALIENNE": "Malian",
+    "NIGERIENNE": "Nigerien",
+    "IVOIRIENNE": "Ivorian",
+    "CAMEROUNAISE": "Cameroonian",
+    "CHINOISE": "Chinese",
+    "INDIENNE": "Indian",
+    "OTHER": "Other"
+  },
+  "HTTP_ERRORS": {
+    "GENERIC": "An error occurred",
+    "SERVER": "Server error. Please try again later.",
+    "INVALID_DATA": "Invalid data",
+    "ADMIN_ONLY": "Action restricted to administrators",
+    "SESSION_EXPIRED": "Session expired: please sign in again",
+    "UNREACHABLE": "Server unreachable",
+    "UNREACHABLE_UNKNOWN_OUTCOME": "Server unreachable: the outcome of the operation is unknown",
+    "CORRECTION_REFUSED": "Correction refused",
+    "WITH_MESSAGE": "Error: {{message}}",
+    "WITH_MESSAGE_COMPACT": "Error: {{message}}",
+    "CODE": "Code: {{status}}",
+    "CODE_MESSAGE": "Code: {{status}}\nMessage: {{message}}",
+    "SESSION": {
+      "NOT_FOUND": "Session not found",
+      "UNVALIDATE_FAILED": "The session could not be unvalidated"
+    },
+    "ATTENDANCE": {
+      "DUPLICATE": "An attendance record already exists for one or more students of this session.",
+      "SHEET_REFUSED": "Attendance sheet refused.",
+      "SHEET_FAILED": "The attendance sheet could not be saved.",
+      "NOT_FOUND": "Attendance record not found",
+      "CORRECTION_FAILED": "The attendance correction could not be completed",
+      "AUDIT_LOAD_FAILED": "The change history could not be loaded",
+      "JUSTIFICATION_REFUSED": "Change refused",
+      "JUSTIFICATION_FAILED": "An error occurred while saving the change"
+    },
+    "CATCH_UP_BILLING": {
+      "NOT_FOUND": "Catch-up or session not found",
+      "ALREADY_RECORDED": "A catch-up is already recorded for this missed session"
+    },
+    "ENCASHMENT": {
+      "GENERIC": "An error occurred while reading the payments",
+      "NOT_FOUND": "Payment not found"
+    },
+    "ENROLMENT": {
+      "GENERIC": "An error occurred while reading the enrolments",
+      "NOT_FOUND": "Enrolment not found"
+    },
+    "PAYMENT": {
+      "NOT_FOUND": "Payment not found"
+    },
+    "REFUND": {
+      "GENERIC": "An error occurred during the refund",
+      "REFUSED": "Refund refused",
+      "NOT_FOUND": "Payment or refund not found"
+    },
+    "SCHOOL_YEAR": {
+      "NOT_FOUND": "School year not found",
+      "CONFLICT": "Conflict with the current state of the school years"
+    },
+    "YEAR_END": {
+      "NOT_FOUND": "Year-end resource not found"
+    },
+    "PAY_RATE": {
+      "GENERIC": "An error occurred on the rate catalogue",
+      "REFUSED": "Rate refused",
+      "NOT_FOUND": "Rate not found"
+    },
+    "PAYOUT": {
+      "GENERIC": "An error occurred on teacher payroll",
+      "REFUSED": "Payout refused",
+      "NOT_FOUND": "Payout not found",
+      "CORRECTION_REFUSED": "Payout correction refused"
+    },
+    "USER": {
+      "USERNAME_TAKEN": "This username is already taken."
+    },
+    "STUDENT": {
+      "NOT_FOUND": "Student not found"
+    }
+  },
+  "ATTENDANCE_HISTORY": {
+    "GROUPS": "Groups",
+    "SERIES": "Series",
+    "LEGEND_PRESENT": "Present",
+    "LEGEND_JUSTIFIED": "Absent, justified",
+    "LEGEND_NOT_JUSTIFIED": "Absent, not justified",
+    "COL_SESSION": "Session",
+    "CATCH_UP_TAG": "(Catch-up)",
+    "COL_DATE": "Date",
+    "COL_PRESENT": "Present",
+    "COL_JUSTIFIED": "Justified",
+    "JUSTIFICATION_NOTE": "The justification is used for discipline follow-up and the right to a catch-up. It is part of no amount calculation: an absence never increases the amount due, and a session missed after enrolment still counts in the cost of the series.",
+    "PRINT": "Print",
+    "UNKNOWN_SESSION": "Unknown session",
+    "PDF": {
+      "TITLE": "Attendance history",
+      "STUDENT": "Student: {{name}}",
+      "DATE": "Date: {{date}}",
+      "COL_DATE": "Session date",
+      "COL_PRESENCE": "Attendance",
+      "COL_JUSTIFIED": "Justified",
+      "COL_DESCRIPTION": "Description",
+      "NO_DATA": "No data available",
+      "NOT_AVAILABLE": "N/A",
+      "STUDENT_SIGNATURE": "Student signature: ________________________",
+      "ADMIN_SIGNATURE": "Administration signature: ________________________",
+      "PAGE": "Page {{current}} of {{total}}"
+    }
+  },
+  "TEACHER_SEARCH": {
+    "ALL_DISPLAYED": "All teachers shown ({{count}})",
+    "WITH_GROUPS_ONLY": "Show with groups only"
+  },
+  "GROUP_SEARCH": {
+    "ALL_DISPLAYED": "All groups shown ({{count}})",
+    "ACTIVE_ONLY": "Show active only"
+  },
+  "GROUP_SELECTOR": {
+    "ARIA_LABEL": "Filter the calendar by group"
+  },
+  "LEVEL_TABLE": {
+    "NAME": "Name",
+    "LEVEL_CODE": "Level code",
+    "RANK": "Rank"
+  },
+  "VIEW_TOGGLE": {
+    "ARIA_LABEL": "Display mode",
+    "CARDS_TOOLTIP": "Card view",
+    "CARDS": "Cards",
+    "LIST_TOOLTIP": "List view",
+    "LIST": "List"
+  },
+  "LIST_HEADER": {
+    "LATE": "Late:",
+    "ENTITY": {
+      "students": "students",
+      "groups": "groups",
+      "teachers": "teachers"
+    }
+  },
+  "DATEPICKER": {
+    "CALENDAR": "Calendar",
+    "OPEN_CALENDAR": "Open calendar",
+    "CLOSE_CALENDAR": "Close calendar",
+    "PREV_MONTH": "Previous month",
+    "NEXT_MONTH": "Next month",
+    "PREV_YEAR": "Previous year",
+    "NEXT_YEAR": "Next year",
+    "PREV_MULTI_YEAR": "Previous 24 years",
+    "NEXT_MULTI_YEAR": "Next 24 years",
+    "SWITCH_TO_MONTH_VIEW": "Choose date",
+    "SWITCH_TO_MULTI_YEAR_VIEW": "Choose month and year",
+    "START_DATE": "Start date",
+    "END_DATE": "End date"
+  },
+  "SESSION_ATTENDANCE_PDF": {
+    "TITLE_FALLBACK": "Session",
+    "SECTION_TITLE": "Attendance sheet",
+    "GENERATED_ON": "Sheet generated on {{date}}",
+    "VALIDATED": "Session validated",
+    "NOT_VALIDATED": "Session not validated",
+    "GROUP": "Group",
+    "ROOM": "Room",
+    "TEACHER": "Teacher",
+    "TYPE": "Type",
+    "START": "Start",
+    "END": "End",
+    "COL_NUMBER": "No.",
+    "COL_STUDENT": "Student",
+    "COL_PRESENCE": "Attendance",
+    "COL_JUSTIFIED": "Justified",
+    "COL_NOTE": "Note",
+    "NO_STUDENTS": "No student in this session.",
+    "CATCH_UP_NAME": "{{name}}  (Catch-up)",
+    "PRESENT": "Present",
+    "ABSENT": "Absent",
+    "LEGEND_ABSENT_UNJUSTIFIED": "Absent / Not justified",
+    "LEGEND_JUSTIFIED": "Justified absence",
+    "SUMMARY_TOTAL": "Total",
+    "SUMMARY_PRESENT": "Present",
+    "SUMMARY_ABSENT": "Absent",
+    "SUMMARY_JUSTIFIED": "Justified",
+    "TEACHER_SIGNATURE": "Teacher: ________________________"
+  },
+  "SERIES_SESSIONS_PDF": {
+    "TITLE_FALLBACK": "Series",
+    "GROUP_SUBTITLE": "Group · {{name}}",
+    "GENERATED_ON": "Generated on {{date}}",
+    "SECTION_TITLE": "Sessions",
+    "GROUP": "Group",
+    "PLANNED": "Planned sessions",
+    "CREATED": "Sessions created",
+    "COMPLETED": "Sessions completed",
+    "START": "Start",
+    "END": "End",
+    "COL_NUMBER": "No.",
+    "COL_TITLE": "Title",
+    "COL_TYPE": "Type",
+    "COL_TEACHER": "Teacher",
+    "COL_ROOM": "Room",
+    "COL_DATE": "Date",
+    "COL_STATUS": "Status",
+    "NO_SESSIONS": "No session in this series.",
+    "VALIDATED": "Validated",
+    "SCHEDULED": "Scheduled",
+    "TEACHER_SIGNATURE": "Teacher: ________________________"
+  },
+  "RESOURCE_TABLE": {
+    "NAME": "Name",
+    "CAPACITY": "Capacity",
+    "SIZE": "Size"
   }
 }
