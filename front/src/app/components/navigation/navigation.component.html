@@ -3,7 +3,7 @@
     <button mat-icon-button (click)="toggleSidenav()" class="menu-toggle" [matTooltip]="'NAV.MENU' | translate">
       <mat-icon>menu</mat-icon>
     </button>
-    <img src="assets/succes_assistance.png" alt="Logo" class="logo" [routerLink]="['/dashboard']" />
+    <img src="assets/succes_assistance.png" [alt]="'NAV.LOGO_ALT' | translate" class="logo" [routerLink]="['/dashboard']" />
   </div>
 
   <div class="search-tabs">
@@ -45,7 +45,7 @@
           <mat-option *ngIf="(filteredSuggestions | async)?.length === 0" disabled
             class="nav-suggestion nav-suggestion--empty">
             <mat-icon>search_off</mat-icon>
-            <span>Aucun résultat</span>
+            <span>{{ 'NAV.SEARCH.NO_RESULT' | translate }}</span>
           </mat-option>
         </ng-container>
       </mat-autocomplete>
@@ -63,7 +63,7 @@
   <div class="user-profile-pill" [matMenuTriggerFor]="userMenu">
     <img
       src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%233f51b5'/%3E%3Ccircle cx='50' cy='35' r='18' fill='white'/%3E%3Cellipse cx='50' cy='85' rx='30' ry='25' fill='white'/%3E%3C/svg%3E"
-      alt="Admin" class="user-avatar" />
+      [alt]="'NAV.USER.AVATAR_ALT' | translate" class="user-avatar" />
     <div class="user-info">
       <span class="user-name">{{ currentUser?.username || '—' }}</span>
       <span class="user-role">{{ (currentUser?.role === 'ADMIN' ? 'AUTH.ROLES.ADMIN' : 'AUTH.ROLES.VIEWER') | translate }}</span>
@@ -77,17 +77,11 @@
       <span>{{ 'NAV.ACTIONS.TOGGLE_THEME' | translate }}</span>
     </button>
     <button mat-menu-item disabled>{{ 'navigation.language' | translate }}</button>
-    <button mat-menu-item (click)="changeLanguage('fr')">
-      <mat-icon>language</mat-icon>
-      <span>{{ 'LANGUAGE.FRENCH' | translate }}</span>
-    </button>
-    <button mat-menu-item (click)="changeLanguage('en')">
-      <mat-icon>language</mat-icon>
-      <span>{{ 'LANGUAGE.ENGLISH' | translate }}</span>
-    </button>
-    <button mat-menu-item (click)="toggleLanguage()">
-      <mat-icon>swap_horiz</mat-icon>
-      <span>{{ 'LANGUAGE.TOGGLE' | translate:{ value: currentLanguage.toUpperCase() } }}</span>
+    <!-- Chaque langue est nommée dans sa propre langue (autonyme), quelle que soit la langue courante. -->
+    <button mat-menu-item *ngFor="let language of languages" class="language-option"
+      (click)="changeLanguage(language.code)" [attr.aria-current]="currentLanguage === language.code ? 'true' : null">
+      <mat-icon>{{ currentLanguage === language.code ? 'check' : 'language' }}</mat-icon>
+      <span [attr.lang]="language.code">{{ language.name }}</span>
     </button>
     <button mat-menu-item (click)="openSettings()">
       <mat-icon>settings</mat-icon>

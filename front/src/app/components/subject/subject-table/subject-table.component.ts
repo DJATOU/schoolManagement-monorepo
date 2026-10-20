@@ -22,12 +22,12 @@ export class SubjectTableComponent implements DeleteCommand {
     },
     {
       columnDef: 'name',
-      header: 'Name',
+      header: 'RESOURCE_TABLE.NAME',
       cell: (element: Subject) => `${element.name}`,
     },
     {
       columnDef: 'description',
-      header: 'Description',
+      header: 'COMMON.DESCRIPTION',
       cell: (element: Subject) => `${element.description}`,
     },
   ];

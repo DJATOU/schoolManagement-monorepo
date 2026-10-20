@@ -1,5 +1,6 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
+import { TranslateService } from '@ngx-translate/core';
 import { catchError, Observable, throwError } from 'rxjs';
 import { API_BASE_URL } from '../api-base-url';
 import { Refund, RefundCap, RefundReceipt, RefundRequest, StudentRefund } from '../models/refund/refund';
@@ -19,6 +20,8 @@ import { Refund, RefundCap, RefundReceipt, RefundRequest, StudentRefund } from '
 export class RefundService {
 
   private readonly baseUrl = `${API_BASE_URL}/api/refunds`;
+
+  private readonly translate = inject(TranslateService);
 
   constructor(private http: HttpClient) {}
 
@@ -91,35 +94,35 @@ export class RefundService {
    * (plafond dépassé avec ses montants, motif manquant, numéro de pièce non attribué), et un
    * message générique obligerait l'administrateur à deviner.</p>
    */
-  private handleError(error: HttpErrorResponse): Observable<never> {
-    let errorMessage = 'Une erreur est survenue lors du remboursement';
+  private handleError = (error: HttpErrorResponse): Observable<never> => {
+    let errorMessage: string = this.translate.instant('HTTP_ERRORS.REFUND.GENERIC');
 
     if (error.error instanceof ErrorEvent) {
-      errorMessage = `Erreur : ${error.error.message}`;
+      errorMessage = this.translate.instant('HTTP_ERRORS.WITH_MESSAGE', { message: error.error.message });
     } else {
       switch (error.status) {
         case 400:
         case 409:
-          errorMessage = error.error?.message || 'Remboursement refusé';
+          errorMessage = error.error?.message || this.translate.instant('HTTP_ERRORS.REFUND.REFUSED');
           break;
         case 403:
-          errorMessage = 'Action réservée aux administrateurs';
+          errorMessage = this.translate.instant('HTTP_ERRORS.ADMIN_ONLY');
           break;
         case 404:
-          errorMessage = error.error?.message || 'Versement ou remboursement introuvable';
+          errorMessage = error.error?.message || this.translate.instant('HTTP_ERRORS.REFUND.NOT_FOUND');
           break;
         case 0:
           // Requête jamais parvenue au serveur : l'appelant doit pouvoir distinguer ce cas d'un
           // refus, car la demande n'a peut-être pas abouti.
-          errorMessage = 'Serveur injoignable : le résultat de l\'opération est inconnu';
+          errorMessage = this.translate.instant('HTTP_ERRORS.UNREACHABLE_UNKNOWN_OUTCOME');
           break;
         case 500:
-          errorMessage = 'Erreur serveur. Veuillez réessayer plus tard.';
+          errorMessage = this.translate.instant('HTTP_ERRORS.SERVER');
           break;
       }
     }
 
     console.error('Refund Service Error:', errorMessage, error);
     return throwError(() => new Error(errorMessage));
-  }
+  };
 }

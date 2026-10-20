@@ -50,7 +50,7 @@ export class ImportComponent {
     { kind: 'group-types', icon: 'category', titleKey: 'IMPORT.GROUP_TYPES.TITLE', columnsKey: 'IMPORT.GROUP_TYPES.COLUMNS' },
     { kind: 'pricing', icon: 'price_change', titleKey: 'IMPORT.PRICING.TITLE', columnsKey: 'IMPORT.PRICING.COLUMNS' },
     { kind: 'teachers', icon: 'workspace_premium', titleKey: 'IMPORT.TEACHERS.TITLE', columnsKey: 'IMPORT.TEACHERS.COLUMNS' },
-    { kind: 'students', icon: 'school', titleKey: 'IMPORT.STUDENTS.TITLE', columnsKey: 'IMPORT.STUDENTS.COLUMNS' },
+    { kind: 'students', icon: 'school', titleKey: 'IMPORT.STUDENTS.TITLE', columnsKey: 'IMPORT.STUDENTS.COLUMNS', noteKey: 'IMPORT.STUDENTS.NOTE' },
     { kind: 'groups', icon: 'groups_3', titleKey: 'IMPORT.GROUPS.TITLE', columnsKey: 'IMPORT.GROUPS.COLUMNS', noteKey: 'IMPORT.GROUPS.NOTE' },
     { kind: 'enrolments', icon: 'how_to_reg', titleKey: 'IMPORT.ENROLMENTS.TITLE', columnsKey: 'IMPORT.ENROLMENTS.COLUMNS', noteKey: 'IMPORT.ENROLMENTS.NOTE' }
   ];

@@ -1,5 +1,6 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
+import { TranslateService } from '@ngx-translate/core';
 import { catchError, Observable, throwError } from 'rxjs';
 import { SchoolYear } from '../models/schoolYear/school-year';
 import { API_BASE_URL } from '../api-base-url';
@@ -19,6 +20,8 @@ import { API_BASE_URL } from '../api-base-url';
 export class SchoolYearService {
 
   private readonly baseUrl = `${API_BASE_URL}/api/school-years`;
+
+  private readonly translate = inject(TranslateService);
 
   constructor(private http: HttpClient) {}
 
@@ -102,34 +105,34 @@ export class SchoolYearService {
   /**
    * Gestion centralisée des erreurs HTTP
    */
-  private handleError(error: HttpErrorResponse): Observable<never> {
-    let errorMessage = 'Une erreur est survenue';
+  private handleError = (error: HttpErrorResponse): Observable<never> => {
+    let errorMessage: string = this.translate.instant('HTTP_ERRORS.GENERIC');
 
     if (error.error instanceof ErrorEvent) {
       // Erreur côté client
-      errorMessage = `Erreur: ${error.error.message}`;
+      errorMessage = this.translate.instant('HTTP_ERRORS.WITH_MESSAGE_COMPACT', { message: error.error.message });
     } else {
       // Erreur côté serveur
-      errorMessage = `Code: ${error.status}\nMessage: ${error.message}`;
+      errorMessage = this.translate.instant('HTTP_ERRORS.CODE_MESSAGE', { status: error.status, message: error.message });
 
       // Messages spécifiques selon le code HTTP
       switch (error.status) {
         case 404:
-          errorMessage = 'Année scolaire non trouvée';
+          errorMessage = this.translate.instant('HTTP_ERRORS.SCHOOL_YEAR.NOT_FOUND');
           break;
         case 400:
-          errorMessage = error.error?.message || 'Données invalides';
+          errorMessage = error.error?.message || this.translate.instant('HTTP_ERRORS.INVALID_DATA');
           break;
         case 409:
-          errorMessage = error.error?.message || 'Conflit avec l\'état actuel des années scolaires';
+          errorMessage = error.error?.message || this.translate.instant('HTTP_ERRORS.SCHOOL_YEAR.CONFLICT');
           break;
         case 500:
-          errorMessage = 'Erreur serveur. Veuillez réessayer plus tard.';
+          errorMessage = this.translate.instant('HTTP_ERRORS.SERVER');
           break;
       }
     }
 
     console.error('SchoolYear Service Error:', errorMessage, error);
     return throwError(() => new Error(errorMessage));
-  }
+  };
 }

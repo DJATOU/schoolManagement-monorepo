@@ -27,6 +27,8 @@ import { PaymentAllocationResult } from '../../../models/payment/payment-allocat
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { AdminOnlyDirective } from '../../../shared/admin-only.directive';
 import { PaymentReceiptPdfService } from '../../../services/payment-receipt-pdf.service';
+import { pdfInstant } from '../../../shared/pdf-i18n';
+import { currencySuffix, withCurrency } from '../../../shared/currency';
 import { PAYMENT_METHOD_OPTIONS } from '../../../utils/form-options';
 import { GroupChangeNoticeComponent } from '../../shared/group-change-notice/group-change-notice.component';
 
@@ -239,6 +241,11 @@ export class PaymentDialogComponent implements OnInit {
     this.paymentForm.get('amountPaid')!.valueChanges.subscribe(() => {
       this.refreshAllocationPreview();
     });
+  }
+
+  /** Suffixe du champ montant : « DA », « دج » en arabe. */
+  get currencySuffix(): string {
+    return currencySuffix(this.translate);
   }
 
   /** Indique si la case « paiement intégral » est cochée. */
@@ -828,7 +835,7 @@ export class PaymentDialogComponent implements OnInit {
   private successMessage(hasReceipt: boolean, allocation: PaymentAllocationResult): string {
     if (allocation.carryOvers.length > 0) {
       const destinations = allocation.carryOvers
-        .map(carryOver => `${carryOver.seriesName} (${carryOver.amount.toFixed(2)} DA)`)
+        .map(carryOver => `${carryOver.seriesName} (${withCurrency(carryOver.amount.toFixed(2), this.translate)})`)
         .join(', ');
       return this.translate.instant('payment.dialog.messages.successWithCarryOver', {
         allocated: allocation.amountAllocated.toFixed(2),
@@ -870,13 +877,15 @@ export class PaymentDialogComponent implements OnInit {
     const series = this.sessionSeries.find(s => s.id === paymentData.sessionSeriesId);
     const method = this.paymentMethods.find(m => m.value === paymentData.paymentMethod);
     const quote = this.quote;
+    // Libellés imprimés sur le reçu : dans la langue du document (français sous l'arabe).
+    const pdf = (key: string) => pdfInstant(this.translate, key);
 
     return {
       amountPaid: paymentData.amountPaid,
       groupName: group?.name ?? '',
-      seriesName: series?.name ?? this.translate.instant('payment.dialog.messages.unknownSeries'),
+      seriesName: series?.name ?? pdf('payment.dialog.messages.unknownSeries'),
       paymentMethodLabel: method
-        ? this.translate.instant(method.labelKey)
+        ? pdf(method.labelKey)
         : (paymentData.paymentMethod ?? ''),
       description: paymentData.paymentDescription,
       isCatchUp: !!quote?.catchUpOnly,

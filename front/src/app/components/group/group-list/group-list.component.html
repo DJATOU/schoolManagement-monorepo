@@ -2,7 +2,7 @@
   <mat-card-content>
     <div class="group-info">
       <div class="group-avatar">
-        <img *ngIf="groupPhotoUrl; else groupInitials" [appSecureImage]="groupPhotoUrl" alt="Photo du groupe" class="group-photo"
+        <img *ngIf="groupPhotoUrl; else groupInitials" [appSecureImage]="groupPhotoUrl" [alt]="'PROFILE_CARD.GROUP_PHOTO' | translate" class="group-photo"
           (error)="onImageError()" />
         <ng-template #groupInitials>
           <div class="initials-avatar" [style.background-color]="avatarColor">

@@ -1,0 +1,2563 @@
+{
+  "STUDENT_SEARCH": {
+    "SHOW_INACTIVE": "عرض التلاميذ المعطَّلين",
+    "INACTIVE_BADGE": "معطَّل",
+    "LATE_ONLY": "عرض المتأخرين فقط",
+    "FILTERS": "عوامل التصفية",
+    "GROUP_CHIP": "الفوج:",
+    "LEVEL_CHIP": "المستوى:",
+    "LEVEL": "المستوى",
+    "ALL_LEVELS": "كل المستويات",
+    "GROUP": "الفوج",
+    "ALL_GROUPS": "كل الأفواج",
+    "LOADING_MORE": "جارٍ التحميل...",
+    "ALL_DISPLAYED": "تم عرض كل التلاميذ ({{count}})",
+    "PAGE_RANGE_EMPTY": "0 من 0",
+    "PAGE_RANGE": "{{start}}-{{end}} من {{total}}"
+  },
+  "AUTH": {
+    "LOGIN": {
+      "TAGLINE": "سيّر مدرستك ببساطة: التلاميذ، الأفواج، الحضور والمدفوعات.",
+      "TITLE": "تسجيل الدخول",
+      "SUBTITLE": "أدخل بيانات الدخول للوصول إلى التطبيق.",
+      "USERNAME": "اسم المستخدم",
+      "USERNAME_REQUIRED": "اسم المستخدم إجباري.",
+      "PASSWORD": "كلمة المرور",
+      "PASSWORD_REQUIRED": "كلمة المرور إجبارية.",
+      "TOGGLE_PASSWORD": "إظهار/إخفاء كلمة المرور",
+      "SUBMIT": "دخول",
+      "ERROR": "اسم المستخدم أو كلمة المرور غير صحيحة."
+    },
+    "ROLES": {
+      "ADMIN": "مسؤول",
+      "VIEWER": "اطّلاع"
+    },
+    "USERS": {
+      "TITLE": "تسيير الحسابات",
+      "SUBTITLE": "إنشاء حسابات المستخدمين وتفعيلها أو تعطيلها وإعادة تعيين كلمات مرورها.",
+      "CREATE_TITLE": "حساب جديد",
+      "USERNAME": "اسم المستخدم",
+      "PASSWORD": "كلمة المرور",
+      "PASSWORD_HINT": "6 أحرف على الأقل",
+      "ROLE": "الدور",
+      "CREATE_SUBMIT": "إنشاء الحساب",
+      "LIST_TITLE": "الحسابات الموجودة",
+      "STATUS": "الحالة",
+      "ACTIONS": "الإجراءات",
+      "ENABLED_LABEL": "مفعَّل",
+      "DISABLED_LABEL": "معطَّل",
+      "TOGGLE_TOOLTIP": "تفعيل / تعطيل الحساب",
+      "RESET_PASSWORD": "إعادة تعيين كلمة المرور",
+      "EMPTY": "لا يوجد أي حساب.",
+      "CREATED": "تم إنشاء الحساب.",
+      "ENABLED": "تم تفعيل الحساب.",
+      "DISABLED": "تم تعطيل الحساب.",
+      "NEW_PASSWORD_PROMPT": "كلمة المرور الجديدة:",
+      "PASSWORD_RESET": "تمت إعادة تعيين كلمة المرور."
+    }
+  },
+  "IMPORT": {
+    "TITLE": "استيراد CSV",
+    "HINT": "استورد بياناتك من ملفات CSV (مع سطر العناوين). تُنشأ الأسطر الصحيحة، وتُعرض الأخطاء في قائمة.",
+    "BUTTON": "استيراد",
+    "IMPORTED": "المستوردة",
+    "ERRORS": "الأخطاء",
+    "LINE": "السطر",
+    "STUDENTS": {
+      "TITLE": "التلاميذ",
+      "COLUMNS": "الأعمدة: firstName, lastName, gender, level, establishment, phoneNumber, dateOfBirth (firstName و lastName إجباريان؛ dateOfBirth اختياري، بالصيغة YYYY-MM-DD، مثال 2010-05-15)",
+      "NOTE": "يعيد Excel بالفرنسية كتابة التواريخ بالصيغة DD/MM/YYYY: اجعل تنسيق العمود dateOfBirth «نص» قبل إدخال التواريخ، وإلا رُفض السطر. الخانة الفارغة تترك التلميذ بلا تاريخ ميلاد."
+    },
+    "TEACHERS": {
+      "TITLE": "الأساتذة",
+      "COLUMNS": "الأعمدة: firstName, lastName, specialization, phoneNumber, email (firstName و lastName إجباريان)"
+    },
+    "GROUPS": {
+      "TITLE": "الأفواج",
+      "COLUMNS": "الأعمدة: name, groupType, level, subject, teacherFirstName, teacherLastName, sessionNumberPerSerie, price (name و level و subject إجبارية)",
+      "NOTE": "يجب أن تكون المستويات والمواد والأنواع والأساتذة والأسعار موجودة مسبقًا. استورد الأساتذة والأسعار قبل الأفواج. يشير العمود price إلى سعر موجود بمبلغه: بدونه يُنشأ الفوج لكن لا يمكنه تحصيل أي دفعة. يُربط كل فوج بالسنة الدراسية الحالية."
+    },
+    "LEVELS": {
+      "TITLE": "المستويات",
+      "COLUMNS": "الأعمدة: name, levelCode, levelSequence (name إجباري؛ levelSequence = ترتيب الانتقال، يُستحسن ذكره)"
+    },
+    "SUBJECTS": {
+      "TITLE": "المواد",
+      "COLUMNS": "الأعمدة: name (إجباري)"
+    },
+    "ROOMS": {
+      "TITLE": "القاعات",
+      "COLUMNS": "الأعمدة: name, capacity (name إجباري)"
+    },
+    "GROUP_TYPES": {
+      "TITLE": "أنواع الأفواج",
+      "COLUMNS": "الأعمدة: name, size (name إجباري)"
+    },
+    "PRICING": {
+      "TITLE": "الأسعار (سعر الحصة)",
+      "COLUMNS": "الأعمدة: price (إجباري). يُربط السعر بعد ذلك بفوج من خلال الاستمارة."
+    },
+    "ENROLMENTS": {
+      "TITLE": "التسجيلات (تلميذ ← فوج)",
+      "COLUMNS": "الأعمدة: firstName, lastName, group, arrivalDate, phoneNumber (firstName و lastName و group و arrivalDate إجبارية؛ arrivalDate بالصيغة YYYY-MM-DD، مثال 2026-09-15؛ phoneNumber اختياري)",
+      "NOTE": "تُستورد بعد التلاميذ والأفواج. سطر واحد = تسجيل واحد: التلميذ الذي يتابع في فوجين له سطران. يُبحث عن الفوج باسمه في السنة الدراسية الحالية. لا يفيد phoneNumber إلا في التمييز بين تلميذين بالاسم نفسه؛ وإذا لم يطابق التلميذ الذي عُثر عليه، يُستورد السطر مع تنبيه. تاريخ الوصول إجباري: الحصص ابتداءً من ذلك اليوم مستحقة، وما قبله لا يعني التلميذ. المراقبة نفسها التي يجريها «إضافة تلميذ» (المستوى، السنة الدراسية، تسجيل جارٍ مسبقًا). لا تُنشأ إلا التسجيلات: لا حضور ولا غياب ولا دفع."
+    },
+    "WARNINGS": "التنبيهات"
+  },
+  "LIST_STATE": {
+    "LOADING_STUDENTS": "جارٍ تحميل التلاميذ...",
+    "LOADING_TEACHERS": "جارٍ تحميل الأساتذة...",
+    "LOADING_GROUPS": "جارٍ تحميل الأفواج...",
+    "EMPTY_STUDENTS": "لم يُعثر على أي تلميذ.",
+    "EMPTY_TEACHERS": "لم يُعثر على أي أستاذ.",
+    "EMPTY_GROUPS": "لم يُعثر على أي فوج."
+  },
+  "schoolYear": {
+    "selector": {
+      "label": "السنة الدراسية",
+      "tooltip": "اختر السنة الدراسية التي تريد الاطلاع عليها",
+      "current": "(الجارية)"
+    },
+    "readOnly": {
+      "banner": "اطلاع على سنة دراسية ماضية: هذه البيانات للقراءة فقط ولا يمكن تعديلها.",
+      "groupBanner": "ينتمي هذا الفوج إلى السنة الدراسية {{year}}: يمكن الاطلاع عليه لكنه مجمَّد. لم يعد ممكنًا تعديل تشكيلته ولا سلاسله ولا حصصه."
+    }
+  },
+  "parcours": {
+    "title": "المسار",
+    "groups": "الأفواج",
+    "none": "لا يوجد أي مسار متاح لهذا التلميذ."
+  },
+  "yearEnd": {
+    "title": "مساعد نهاية السنة",
+    "subtitle": "اختتام السنة الدراسية الجارية وفتح السنة الموالية",
+    "loadingPreview": "جارٍ تحميل المعاينة...",
+    "newYearSection": "إعدادات السنة الجديدة",
+    "studentsSection": "القرارات حسب التلميذ",
+    "newLabel": "تسمية السنة الجديدة",
+    "startDate": "تاريخ البداية",
+    "endDate": "تاريخ النهاية",
+    "filters": "عوامل التصفية",
+    "filterLevel": "المستوى",
+    "filterGroup": "الفوج",
+    "filterStudent": "التلميذ",
+    "filterStudentPlaceholder": "البحث بالاسم...",
+    "allLevels": "كل المستويات",
+    "allGroups": "كل الأفواج",
+    "clearFilters": "إعادة التعيين",
+    "studentsShown": "تلميذًا معروضًا",
+    "noStudentsFilter": "لا يوجد تلميذ يطابق عوامل التصفية.",
+    "student": "التلميذ",
+    "review": "للمراجعة",
+    "needsReview": "للمراجعة",
+    "needsReviewTooltip": "تلميذ في أعلى مستوى: اختر الإعادة أو المغادرة.",
+    "decision": "القرار",
+    "noStudents": "لا يوجد تلميذ للمعالجة.",
+    "restart": "البدء من جديد",
+    "run": "تنفيذ",
+    "decisions": {
+      "PROMOTION": "انتقال",
+      "REDOUBLEMENT": "إعادة السنة",
+      "DEPARTURE": "مغادرة"
+    },
+    "result": {
+      "title": "النتيجة",
+      "newYear": "السنة الجديدة",
+      "appliedCount": "التلاميذ المعالَجون",
+      "reviewList": "التلاميذ للمراجعة",
+      "noReview": "لا يوجد تلميذ للمراجعة."
+    }
+  },
+  "CATCH_UP": {
+    "CREATE": {
+      "TITLE": "طلب استدراك جديد",
+      "LEVEL": "المستوى",
+      "GROUP": "الفوج",
+      "SERIES": "السلسلة",
+      "SESSION_FILTER": "الحصة",
+      "ALL": "الكل",
+      "STUDENT": "التلميذ",
+      "STUDENT_FILTER": "البحث عن تلميذ…",
+      "NO_STUDENT": "لا يوجد تلميذ لهذه التصفية",
+      "ABSENCE": "الحصة الفائتة",
+      "SESSION": "الحصة",
+      "NO_ABSENCE": "لا يوجد أي غياب قابل للاستدراك لهذا التلميذ.",
+      "NOTES": "ملاحظات",
+      "SUBMIT": "إنشاء الطلب",
+      "LOAD_STUDENTS_ERROR": "تعذّر تحميل التلاميذ",
+      "LOAD_ABSENCES_ERROR": "تعذّر تحميل الغيابات",
+      "CREATE_ERROR": "تعذّر إنشاء طلب الاستدراك",
+      "CREATED": "تم إنشاء طلب الاستدراك"
+    },
+    "LIST": {
+      "TITLE": "طلبات الاستدراك",
+      "NEW": "طلب جديد",
+      "STATUS_FILTER": "التصفية حسب الحالة",
+      "ALL": "الكل",
+      "STATUS": {
+        "PENDING": "في الانتظار",
+        "SCHEDULED": "مبرمَج",
+        "COMPLETED": "منجَز",
+        "CANCELLED": "ملغى"
+      },
+      "COLUMNS": {
+        "STUDENT": "التلميذ",
+        "MISSED_SESSION": "الحصة الفائتة",
+        "STATUS": "الحالة",
+        "ACTIONS": "الإجراءات"
+      },
+      "SCHEDULE": "برمجة",
+      "COMPLETE": "إنجاز",
+      "LOAD_ERROR": "تعذّر تحميل الاستدراكات",
+      "COMPLETED": "تم إنجاز الاستدراك",
+      "CANCELLED": "تم إلغاء الاستدراك"
+    },
+    "SCHEDULE": {
+      "TITLE": "برمجة استدراك",
+      "MISSED_SESSION": "الحصة الفائتة:",
+      "CATCH_UP_SESSION": "حصة الاستدراك",
+      "SESSION_FALLBACK": "حصة",
+      "NO_SESSION": "لا توجد أي حصة متوافقة متاحة (السنة نفسها، نوع الفوج نفسه والسعر نفسه).",
+      "PAYMENT_HINT": "ستُربط الدفعة بحصة الاستدراك المختارة فقط.",
+      "LOAD_ERROR": "تعذّر تحميل حصص الاستدراك",
+      "GROUP_NOT_FOUND": "لم يُعثر على فوج الاستدراك لهذه الحصة",
+      "SCHEDULE_ERROR": "تعذّرت برمجة الاستدراك",
+      "SCHEDULED": "تمت برمجة الاستدراك"
+    }
+  },
+  "COMMON": {
+    "CLEAR": "مسح",
+    "SUBMIT": "إرسال",
+    "CANCEL": "إلغاء",
+    "REQUIRED_MESSAGE": "الخانات المؤشَّر عليها بنجمة (*) إجبارية.",
+    "FIRST_NAME": "الاسم",
+    "LAST_NAME": "اللقب",
+    "GENDER": "الجنس",
+    "MALE": "ذكر",
+    "FEMALE": "أنثى",
+    "UPLOAD_PHOTO": "تحميل صورة",
+    "NO_FILE_SELECTED": "لم يُختر أي ملف",
+    "CHOOSE_IMAGE": "اختيار صورة",
+    "EMAIL": "البريد الإلكتروني",
+    "PHONE": "رقم الهاتف",
+    "NATIONALITY": "الجنسية",
+    "COMMUNICATION": "وسيلة التواصل المفضَّلة",
+    "BIRTHDATE": "تاريخ الميلاد",
+    "BIRTHPLACE": "مكان الميلاد",
+    "BIRTHDATE_HINT": "DD/MM/YYYY (اليوم/الشهر/السنة)",
+    "BIRTHDATE_ERRORS": {
+      "REQUIRED": "تاريخ الميلاد إجباري.",
+      "INVALID": "تاريخ غير صحيح: أدخله بالصيغة DD/MM/YYYY.",
+      "FUTURE": "لا يمكن أن يكون تاريخ الميلاد في المستقبل."
+    },
+    "ADDRESS": "العنوان",
+    "CITY": "المدينة",
+    "LEVEL": "المستوى",
+    "SCHOOL": "المؤسسة",
+    "DESCRIPTION": "الوصف",
+    "CURRENCY_SUFFIX": "دج"
+  },
+  "LANGUAGE": {
+    "FRENCH": "الفرنسية",
+    "ENGLISH": "الإنجليزية"
+  },
+  "NAV": {
+    "MENU": "القائمة",
+    "GUIDE": "دليل الاستخدام",
+    "TABS": {
+      "STUDENTS": "التلاميذ",
+      "GROUPS": "الأفواج",
+      "TEACHERS": "الأساتذة"
+    },
+    "SEARCH": {
+      "PLACEHOLDER_STUDENT": "البحث عن تلميذ...",
+      "PLACEHOLDER_GROUP": "البحث عن فوج...",
+      "PLACEHOLDER_TEACHER": "البحث عن أستاذ...",
+      "PLACEHOLDER_GENERIC": "بحث...",
+      "NO_RESULT": "لا توجد نتيجة"
+    },
+    "USER": {
+      "ROLE": "مسؤول",
+      "AVATAR_ALT": "المسؤول"
+    },
+    "ACTIONS": {
+      "TOGGLE_THEME": "الوضع الداكن/الفاتح",
+      "SETTINGS": "الإعدادات",
+      "LOGOUT": "تسجيل الخروج"
+    },
+    "LOGO_ALT": "الشعار"
+  },
+  "SIDE_MENU": {
+    "BRAND_TITLE": "مسيّر المدرسة",
+    "BRAND_SUBTITLE": "القائمة الرئيسية",
+    "REGISTRATION": "التسجيل",
+    "STUDENTS": "التلاميذ",
+    "TEACHERS": "الأساتذة",
+    "GROUPS": "الأفواج",
+    "IMPORT": "استيراد CSV",
+    "FINANCIAL_MANAGEMENT": "التسيير المالي",
+    "PAYMENTS": "المدفوعات",
+    "DISCOUNTS": "التخفيضات",
+    "ACADEMIC_TRACKING": "المتابعة البيداغوجية",
+    "SESSIONS": "الحصص",
+    "CALENDAR": "الرزنامة",
+    "CATCH_UPS": "الاستدراكات",
+    "YEAR_END": "نهاية السنة / الانتقال",
+    "ACADEMIC_RESOURCES": "الموارد البيداغوجية",
+    "LEVELS": "المستويات",
+    "ROOMS": "القاعات",
+    "SUBJECTS": "المواد",
+    "GROUP_TYPES": "أنواع الأفواج",
+    "PRICING": "التسعيرة",
+    "REVENUE": "المداخيل",
+    "CATCH_UP_BILLING": "استدراكات تنتظر القرار",
+    "TEACHER_PAYROLL": "أجور الأساتذة"
+  },
+  "DATATABLE": {
+    "PRINT": "طباعة",
+    "CREATE": "إنشاء",
+    "DELETE": "حذف",
+    "EDIT": "تعديل",
+    "VIEW": "عرض",
+    "FILTER": "تصفية",
+    "FILTER_PLACEHOLDER": "نص",
+    "PRIMARY_INFORMATION": "المعلومات الأساسية",
+    "OTHER_INFORMATION": "معلومات أخرى",
+    "INFORMATION": "المعلومات",
+    "DISABLE_SUCCESS": "تم تعطيل العناصر بنجاح.",
+    "DISABLE_ERROR": "خطأ أثناء تعطيل العناصر.",
+    "SEARCH_PLACEHOLDER": "بحث…",
+    "TOTAL": "{{count}} عنصر",
+    "SELECTED": "{{count}} محدَّد",
+    "CLEAR_SELECTION": "إلغاء التحديد",
+    "NO_RESULTS": "لا توجد نتيجة",
+    "NO_RESULTS_HINT": "لا يوجد عنصر يطابق بحثك.",
+    "EMPTY": "لا يوجد أي عنصر",
+    "EMPTY_HINT": "أنشئ عنصرًا أول للبدء.",
+    "PRINT_EMPTY": "لا يوجد عنصر للطباعة.",
+    "PRINT_SELECTION": "طباعة التحديد ({{count}})",
+    "PRINT_ALL": "طباعة القائمة",
+    "PRINT_SUBTITLE_ALL": "{{count}} عنصر",
+    "PRINT_SUBTITLE_SELECTION": "التحديد: {{count}} عنصر",
+    "EDIT_DISABLED_HINT": "حدّد سطرًا واحدًا فقط لتعديله",
+    "VIEW_DISABLED_HINT": "حدّد سطرًا واحدًا فقط للاطلاع عليه",
+    "DELETE_DISABLED_HINT": "حدّد سطرًا واحدًا على الأقل لحذفه",
+    "ENTITIES": {
+      "level": {
+        "title": "المستويات",
+        "subtitle": "المستويات الدراسية وترتيب الانتقال بينها"
+      },
+      "room": {
+        "title": "القاعات",
+        "subtitle": "قاعات الدروس وسعتها"
+      },
+      "subject": {
+        "title": "المواد",
+        "subtitle": "المواد المدرَّسة في المؤسسة"
+      },
+      "groupType": {
+        "title": "أنواع الأفواج",
+        "subtitle": "فئات الأفواج وتعدادها"
+      },
+      "pricing": {
+        "title": "الأسعار",
+        "subtitle": "سعر الحصة وفترات الصلاحية"
+      }
+    }
+  },
+  "CONFIRMATION_DIALOG": {
+    "TITLE": "تأكيد الحذف",
+    "MESSAGE": "هل تريد فعلًا حذف {{count}} عنصر؟ لا يمكن التراجع عن هذا الإجراء.",
+    "CONFIRM": "نعم، احذف",
+    "CANCEL": "إلغاء",
+    "YES": "نعم",
+    "NO": "لا",
+    "DISABLE_STUDENT": {
+      "TITLE": "تعطيل تلميذ",
+      "MESSAGE": "هل تريد فعلًا تعطيل هذا التلميذ؟ سيُخفى من القوائم الجارية لكن سجلّه سيُحفظ.",
+      "CONFIRM": "نعم، عطّل",
+      "CANCEL": "إلغاء",
+      "SUCCESS": "تم تعطيل التلميذ بنجاح.",
+      "ERROR": "خطأ أثناء تعطيل التلميذ."
+    },
+    "DISABLE_TEACHER": {
+      "TITLE": "تعطيل أستاذ",
+      "MESSAGE": "هل تريد فعلًا تعطيل هذا الأستاذ؟ سيُخفى من القوائم الجارية لكن سجلّه سيُحفظ.",
+      "CONFIRM": "نعم، عطّل",
+      "CANCEL": "إلغاء",
+      "SUCCESS": "تم تعطيل الأستاذ بنجاح.",
+      "ERROR": "خطأ أثناء تعطيل الأستاذ."
+    },
+    "DISABLE_GROUP": {
+      "TITLE": "تعطيل فوج",
+      "MESSAGE": "هل تريد فعلًا تعطيل هذا الفوج؟ سيُخفى من القوائم الجارية لكن سجلّه (الحصص، الحضور، المدفوعات) سيُحفظ.",
+      "CONFIRM": "نعم، عطّل",
+      "CANCEL": "إلغاء",
+      "SUCCESS": "تم تعطيل الفوج بنجاح.",
+      "ERROR": "خطأ أثناء تعطيل الفوج."
+    },
+    "REMOVE_STUDENT_FROM_GROUP": {
+      "TITLE": "سحب التلميذ من الفوج",
+      "MESSAGE": "هل تريد فعلًا سحب هذا التلميذ من الفوج؟",
+      "CONFIRM": "نعم، اسحب",
+      "CANCEL": "إلغاء"
+    },
+    "DEACTIVATE_DISCOUNT": {
+      "TITLE": "تعطيل التخفيض",
+      "MESSAGE": "هل تريد فعلًا تعطيل هذا التخفيض؟",
+      "CONFIRM": "نعم، عطّل",
+      "CANCEL": "إلغاء"
+    }
+  },
+  "SESSION_MODAL": {
+    "VALIDATE_SUCCESS_TITLE": "تمت المصادقة على الحصة",
+    "VALIDATE_SUCCESS": "تمت المصادقة على الحصة بنجاح. هل تريد طباعة ورقة الحضور؟",
+    "PRINT_PDF": "طباعة PDF",
+    "CLOSE": "إغلاق",
+    "VALIDATE_ERROR": "فشلت المصادقة على الحصة. يرجى إعادة المحاولة.",
+    "DETAILS_TAB": "تفاصيل الحصة",
+    "ATTENDANCES_TAB": "الحضور",
+    "GROUP": "الفوج",
+    "ROOM": "القاعة",
+    "TEACHER": "الأستاذ",
+    "START": "البداية",
+    "END": "النهاية",
+    "DATE": "التاريخ",
+    "SCHEDULE": "التوقيت",
+    "STUDENTS": "التلاميذ",
+    "ADD_STUDENT": "إضافة تلميذ",
+    "CHECK_ALL": "تأشير الكل",
+    "JUSTIFIED": "مبرَّر",
+    "ADD_NOTE": "إضافة ملاحظة",
+    "CATCH_UP": "(استدراك)",
+    "OPEN_NEW_TAB": "فتح في علامة تبويب جديدة",
+    "EDIT": "تعديل الحصة",
+    "VALIDATE": "المصادقة على الحصة",
+    "NOT_STARTED_HINT": "لم تبدأ الحصة بعد: المصادقة ممكنة ابتداءً من {{day}} على الساعة {{time}}.",
+    "UNVALIDATE": "إلغاء المصادقة على الحصة",
+    "UNVALIDATE_TITLE": "إلغاء المصادقة على الحصة",
+    "UNVALIDATE_SUBJECT": "حصة {{day}} ({{group}}): ستُحذف كل أسطر حضورها، وتعود في انتظار المصادقة.",
+    "UNVALIDATE_SUCCESS": "أُلغيت المصادقة على الحصة (حُذف {{count}} سطر حضور): أصبحت من جديد في انتظار المصادقة.",
+    "UNVALIDATE_ERROR": "تعذّر تحميل أسباب إلغاء المصادقة.",
+    "SESSION_LABEL": "حصة {{day}} ({{group}})",
+    "CORRECTION": {
+      "MENU": "تصحيح",
+      "MENU_ARIA": "تصحيح سطر {{student}}",
+      "ADD_STUDENT": "إضافة تلميذ (تصحيح الحصة المصادَق عليها)",
+      "NOTE_ABSENT": "تسجيله غائبًا",
+      "NOTE_JUSTIFIED": "تسجيله غائبًا (مبرَّر)",
+      "NOTE_PRESENT": "تسجيله حاضرًا",
+      "JUSTIFICATION": "تعديل التبرير…",
+      "REMOVE": "حذف السطر",
+      "REMOVE_CATCH_UP": "حذف الاستدراك",
+      "ADD": {
+        "PRESENT": "إضافة: حاضر",
+        "ABSENT": "إضافة: غائب",
+        "JUSTIFIED": "إضافة: غائب (مبرَّر)"
+      },
+      "NO_LINE": "لا يوجد سطر",
+      "NO_LINE_HINT": "صودق على الحصة دون سطر لهذا التلميذ: «تصحيح» يسمح بإضافته.",
+      "TITLE_CHANGE": "تصحيح حضور",
+      "TITLE_REMOVE": "حذف سطر حضور",
+      "TITLE_CATCH_UP": "حذف استدراك",
+      "TITLE_ADD": "إضافة سطر حضور",
+      "SUBJECT": "{{session}} — {{student}}: {{change}}",
+      "LINE_REMOVED": "{{state}} ← حُذف السطر",
+      "CATCH_UP_REMOVED": "حُذف الاستدراك، وتعود الحصة الفائتة قابلة للاستدراك",
+      "LINE_ADDED": "إضافة، {{state}}",
+      "STATE_INLINE": {
+        "PRESENT": "حاضر",
+        "ABSENT": "غائب",
+        "JUSTIFIED": "غائب (مبرَّر)"
+      },
+      "STATE": {
+        "PRESENT": "حاضر",
+        "ABSENT": "غائب",
+        "JUSTIFIED": "غائب (مبرَّر)"
+      },
+      "STATE_TITLE": "إضافة {{student}}",
+      "STATE_LABEL": "حالة السطر",
+      "STATE_HINT": "الحصة مصادَق عليها: الإضافة تصحيح. تعرض المعاينة ما يتغير في المستحق قبل التأكيد.",
+      "STATE_NEXT": "متابعة",
+      "DONE": "تم تسجيل التصحيح: أُعيدت قراءة الورقة.",
+      "REASONS_ERROR": "تعذّر تحميل أسباب التصحيح."
+    },
+    "PRINT": "طباعة الحضور",
+    "DELETE": "حذف",
+    "DELETE_TITLE": "حذف الحصة",
+    "DELETE_MESSAGE": "ستُحذف الحصة من الرزنامة. وسيُعطَّل كذلك الحضور والمدفوعات المرتبطة بهذه الحصة، ويُعاد حساب المبالغ المستحقة تبعًا لذلك.",
+    "DELETE_CONFIRM": "حذف الحصة",
+    "DELETE_SUCCESS": "تم حذف الحصة بنجاح.",
+    "DELETE_ERROR": "خطأ أثناء حذف الحصة.",
+    "DELETE_FINISHED_HINT": "الحصة مصادَق عليها: ألغِ مصادقتها قبل حذفها.",
+    "CATCH_UP_PENDING": "في انتظار التحديد",
+    "CATCH_UP_PENDING_HINT": "استدراك في انتظار التحديد: حدّد الحصة الفائتة وهل كانت مدفوعة مسبقًا. لا يُفوتر شيء ما دام القرار لم يُتخذ. يمكنك المصادقة على الحصة دون انتظار.",
+    "CATCH_UP_HOST_BILLED": "مفوترة في عين المكان",
+    "CATCH_UP_HOST_BILLED_HINT": "لا ينتمي التلميذ إلى أي فوج من المستوى نفسه والمادة نفسها: لا مقعد محجوز له في مكان آخر، لذلك تُفوتر له الحصة في هذا الفوج.",
+    "LEFT_ON": "غادر في {{day}}",
+    "LEFT_ON_HINT": "غادر التلميذ الفوج، لكن هذه الحصة تقع ضمن فترة تسجيله: يبقى منتظَرًا حتى يوم مغادرته.",
+    "ROLL_CALL_ERROR": "تعذّر تحميل ورقة المناداة. أغلق الحصة وأعد فتحها.",
+    "ROLL_CALL_EMPTY_NO_ENROLMENT": "لا يوجد أي تلميذ مسجَّل في هذا الفوج.",
+    "ROLL_CALL_EMPTY_NOT_CONCERNED": "لا يوجد أي تلميذ مسجَّل في الفوج يوم {{day}}. الحصة لا تعني:",
+    "WINDOW_FROM": "مسجَّل ابتداءً من {{from}}",
+    "WINDOW_FROM_TO": "مسجَّل من {{from}} إلى {{to}}",
+    "WINDOW_UNDATED": "تسجيل دون تاريخ وصول",
+    "REJECTED_TITLE": "رُفضت المصادقة: {{count}} غياب خارج فترة التلاميذ.",
+    "REJECTED_HINT": "هؤلاء التلاميذ غير معنيين بالحصة: لا داعي لتسجيلهم غائبين. احذف هذه الأسطر، ثم صادِق من جديد.",
+    "REMOVE_REJECTED": "حذف هذه الأسطر ({{count}})"
+  },
+  "STUDENT_FORM": {
+    "TITLE": "تسجيل تلميذ",
+    "TABS": {
+      "PERSONAL": "المعلومات الشخصية",
+      "CONTACT": "معلومات الاتصال",
+      "ACADEMIC": "المعلومات الدراسية"
+    },
+    "AVERAGE": "المعدل",
+    "MESSAGES": {
+      "CREATED": "تم إنشاء التلميذ بنجاح.",
+      "CREATE_ERROR": "خطأ أثناء إنشاء التلميذ.",
+      "INVALID_FORM": "يرجى ملء كل الخانات الإجبارية.",
+      "LEVELS_ERROR": "خطأ أثناء تحميل المستويات."
+    }
+  },
+  "TEACHER_FORM": {
+    "TITLE": "تسجيل أستاذ",
+    "TABS": {
+      "PERSONAL": "المعلومات الشخصية",
+      "CONTACT": "معلومات الاتصال",
+      "PROFESSIONAL": "المعلومات المهنية"
+    },
+    "ADDRESS": "العنوان",
+    "CITY": "المدينة",
+    "SPECIALIZATION": "التخصص",
+    "EXPERIENCE": "سنوات الخبرة",
+    "NATIONALITY": "الجنسية",
+    "MARITAL_STATUS": "الحالة العائلية",
+    "SINGLE": "أعزب",
+    "MARRIED": "متزوج",
+    "COMMUNICATION": "تفضيلات التواصل",
+    "MESSAGES": {
+      "INVALID": "يرجى ملء كل الخانات الإجبارية بشكل صحيح.",
+      "CREATED": "تم إنشاء الأستاذ بنجاح!",
+      "CREATE_ERROR": "حدث خطأ أثناء إنشاء الأستاذ.",
+      "UPDATED": "تم تعديل الأستاذ بنجاح!",
+      "UPDATED_WITH_PHOTO": "تم تعديل الأستاذ بنجاح مع صورة.",
+      "PHOTO_UPLOAD_FAILED": "تم تعديل الأستاذ لكن فشل إرسال الصورة.",
+      "UPDATE_ERROR": "حدث خطأ أثناء تعديل الأستاذ.",
+      "LOAD_ERROR": "تعذّر تحميل بيانات الأستاذ."
+    }
+  },
+  "common": {
+    "clear": "مسح",
+    "description": "الوصف",
+    "cancel": "إلغاء",
+    "confirm": "تأكيد",
+    "close": "إغلاق",
+    "ok": "حسنًا",
+    "yes": "نعم",
+    "no": "لا",
+    "back": "رجوع"
+  },
+  "navigation": {
+    "language": "اللغة"
+  },
+  "dashboard": {
+    "title": "لوحة القيادة",
+    "subtitle": "إحصائيات المؤسسة",
+    "period": {
+      "year": "السنة",
+      "month": "الشهر",
+      "custom": "فترة",
+      "from": "من",
+      "to": "إلى",
+      "yearTooltip": "السنة الدراسية {{year}} (لا السنة الميلادية)، بما فيها تسجيلات الصيف"
+    },
+    "kpi": {
+      "activeStudents": "التلاميذ النشطون",
+      "teachers": "الأساتذة",
+      "groups": "الأفواج",
+      "activeGroups": "الأفواج النشطة",
+      "groupsTotal": "من أصل {{count}} منشأ",
+      "newStudents": "المسجَّلون الجدد",
+      "leaving": "المغادرون (المجموع)",
+      "catchUps": "الاستدراكات"
+    },
+    "sessions": {
+      "title": "الحصص",
+      "validated": "المصادَق عليها",
+      "scheduled": "المبرمَجة",
+      "deactivated": "الملغاة مصادقتها"
+    },
+    "attendance": {
+      "title": "الحضور",
+      "present": "الحاضرون",
+      "justified": "غيابات مبرَّرة",
+      "unjustified": "غيابات غير مبرَّرة",
+      "catchUps": "منها استدراكات",
+      "catchUpsNote": "تُحسب الاستدراكات ضمن الحاضرين: لا تُضاف إلى المجموع."
+    },
+    "gender": {
+      "title": "التوزيع حسب الجنس",
+      "male": "الذكور",
+      "female": "الإناث",
+      "maleShort": "ذ",
+      "femaleShort": "إ"
+    },
+    "print": "طباعة",
+    "loading": "جارٍ تحميل الإحصائيات…"
+  },
+  "sessionForm": {
+    "title": "إنشاء حصة",
+    "tabs": {
+      "details": "تفاصيل الحصة",
+      "timing": "البرمجة",
+      "identifiers": "المعرّفات",
+      "recurrence": "التكرار"
+    },
+    "fields": {
+      "title": "العنوان",
+      "sessionType": "نوع الحصة",
+      "description": "الوصف",
+      "sessionDateStart": "تاريخ البداية",
+      "chooseDate": "اختر تاريخًا",
+      "sessionTimeStart": "ساعة البداية",
+      "selectTime": "اختر ساعة",
+      "sessionDateEnd": "تاريخ النهاية",
+      "sessionTimeEnd": "ساعة النهاية",
+      "group": "الفوج",
+      "room": "القاعة",
+      "teacher": "الأستاذ",
+      "start": "البداية",
+      "end": "النهاية",
+      "hour": "الساعة",
+      "minute": "الدقيقة"
+    },
+    "sessionTypes": {
+      "COURS": "درس",
+      "EXERCICES": "تمارين",
+      "EXAMEN": "امتحان",
+      "REVISION": "مراجعة",
+      "AUTRE": "أخرى"
+    },
+    "actions": {
+      "save": "حفظ الحصة"
+    },
+    "messages": {
+      "created": "تم إنشاء الحصة بنجاح!",
+      "invalid": "يرجى ملء كل الخانات الإجبارية بشكل صحيح.",
+      "updated": "تم تعديل الحصة بنجاح.",
+      "updateError": "خطأ أثناء تعديل الحصة.",
+      "required": "هذه الخانة إجبارية.",
+      "saveError": "خطأ أثناء حفظ الحصة."
+    },
+    "subtitle": "برمج حصة واربطها بفوج",
+    "hints": {
+      "teacherAuto": "يُملأ مسبقًا حسب الفوج المختار",
+      "timingAuto": "يُقترح تاريخ النهاية وساعة النهاية (+2 سا) تلقائيًا انطلاقًا من البداية."
+    },
+    "editTitle": "تعديل الحصة",
+    "recurrence": {
+      "enable": "تكرار هذه الحصة",
+      "explanation": "يُنشئ الحصة نفسها على عدة أسابيع. التاريخ والساعات المدخلة في تبويب البرمجة هي أول موعد.",
+      "days": "أيام الأسبوع",
+      "daysRequired": "اختر يومًا واحدًا على الأقل.",
+      "until": "التكرار إلى غاية",
+      "untilHint": "آخر تاريخ ممكن، محسوبًا.",
+      "skipConflicts": "تجاهل المواعيد المشغولة مسبقًا",
+      "skipConflictsHint": "إذا لم تُؤشَّر، يكفي موعد واحد مشغول (القاعة أو الأستاذ) لإلغاء التكرار كله.",
+      "preview": "حساب الحصص",
+      "previewCount": "ستُنشأ {{count}} حصة",
+      "previewSkipped": "{{count}} مستبعدة لأن الموعد مشغول",
+      "previewUnknown": "لم يُحسب",
+      "previewError": "تعذّر حساب التكرار.",
+      "moreConflicts": "و{{count}} تعارض آخر",
+      "conflictRoom": "القاعة {{name}} مشغولة مسبقًا",
+      "conflictTeacher": "{{name}} لديه درس في هذا الموعد",
+      "incomplete": "أكمل الأيام وتاريخ نهاية التكرار.",
+      "created": "أُنشئت {{count}} حصة",
+      "createdWithConflicts": "أُنشئت {{count}} حصة، واستُبعدت {{skipped}} لأن الموعد مشغول",
+      "createError": "خطأ أثناء إنشاء الحصص المكررة.",
+      "weekDays": {
+        "MONDAY": "الإثنين",
+        "TUESDAY": "الثلاثاء",
+        "WEDNESDAY": "الأربعاء",
+        "THURSDAY": "الخميس",
+        "FRIDAY": "الجمعة",
+        "SATURDAY": "السبت",
+        "SUNDAY": "الأحد"
+      }
+    }
+  },
+  "groupForm": {
+    "title": "إنشاء فوج",
+    "requiredFields": "الخانات المؤشَّر عليها بنجمة (*) إجبارية.",
+    "tabs": {
+      "basicDetails": "المعلومات الأساسية",
+      "additionalDetails": "تفاصيل إضافية"
+    },
+    "fields": {
+      "name": "اسم الفوج",
+      "uploadPhoto": "تحميل صورة",
+      "noFile": "لم يُختر أي ملف",
+      "chooseImage": "اختيار صورة",
+      "groupType": "نوع الفوج",
+      "level": "المستوى",
+      "subject": "المادة",
+      "sessionNumberPerSerie": "الحصص في السلسلة",
+      "price": "السعر",
+      "teacher": "الأستاذ"
+    },
+    "actions": {
+      "save": "حفظ الفوج"
+    },
+    "messages": {
+      "createdWithPhoto": "تم إنشاء الفوج بنجاح مع صورة.",
+      "photoUploadFailed": "تم إنشاء الفوج لكن فشل إرسال الصورة.",
+      "created": "تم إنشاء الفوج بنجاح!",
+      "createError": "حدث خطأ أثناء إنشاء الفوج.",
+      "invalid": "يرجى إكمال كل الخانات الإجبارية."
+    }
+  },
+  "summary": {
+    "title": "الملخص"
+  },
+  "SUMMARY": {
+    "SECTIONS": {
+      "personalInformation": "المعلومات الشخصية",
+      "contactInformation": "معلومات الاتصال",
+      "academicInformation": "المعلومات الدراسية",
+      "basicInformation": "المعلومات الشخصية",
+      "professionalDetails": "المعلومات المهنية",
+      "sessionDetails": "تفاصيل الحصة",
+      "sessionTiming": "البرمجة",
+      "identifiers": "التعيين",
+      "additionalDetails": "تفاصيل إضافية",
+      "recurrence": "التكرار"
+    },
+    "FIELDS": {
+      "firstName": "الاسم",
+      "lastName": "اللقب",
+      "gender": "الجنس",
+      "email": "البريد الإلكتروني",
+      "phoneNumber": "رقم الهاتف",
+      "nationality": "الجنسية",
+      "communicationPreference": "وسيلة التواصل",
+      "dateOfBirth": "تاريخ الميلاد",
+      "placeOfBirth": "مكان الميلاد",
+      "address": "العنوان",
+      "city": "المدينة",
+      "level": "المستوى",
+      "establishment": "المؤسسة",
+      "averageScore": "المعدل",
+      "description": "الوصف",
+      "specialization": "التخصص",
+      "yearsOfExperience": "سنوات الخبرة",
+      "maritalStatus": "الحالة العائلية",
+      "title": "العنوان",
+      "sessionType": "نوع الحصة",
+      "start": "البداية",
+      "end": "النهاية",
+      "duration": "المدة",
+      "group": "الفوج",
+      "room": "القاعة",
+      "teacher": "الأستاذ",
+      "name": "اسم الفوج",
+      "groupType": "نوع الفوج",
+      "subject": "المادة",
+      "price": "السعر",
+      "sessionNumberPerSerie": "الحصص في السلسلة",
+      "photo": "الصورة",
+      "days": "الأيام",
+      "until": "إلى غاية",
+      "count": "عدد الحصص"
+    }
+  },
+  "tutorForm": {
+    "title": "إضافة ولي",
+    "field": {
+      "label": "إضافة ولي",
+      "hint": "انقر لإنشاء ولي وربطه"
+    },
+    "fields": {
+      "firstName": "الاسم",
+      "lastName": "اللقب",
+      "phoneNumber": "الهاتف",
+      "email": "البريد الإلكتروني",
+      "relationship": "صلة القرابة"
+    },
+    "relationships": {
+      "parent": "أحد الوالدين",
+      "guardian": "الوصي القانوني",
+      "other": "أخرى"
+    },
+    "actions": {
+      "save": "إضافة الولي"
+    },
+    "messages": {
+      "attached": "تمت إضافة الولي وربطه بالتلميذ.",
+      "error": "خطأ أثناء إنشاء الولي."
+    }
+  },
+  "tutor": {
+    "title": "الولي",
+    "name": "الاسم",
+    "phone": "الهاتف",
+    "email": "البريد الإلكتروني",
+    "relationship": "صلة القرابة",
+    "none": "لا يوجد ولي",
+    "flipHint": "عرض الولي",
+    "backHint": "رجوع",
+    "whatsappHint": "التواصل عبر WhatsApp",
+    "add": "إضافة ولي",
+    "change": "تغيير الولي",
+    "detach": "فك ربط الولي",
+    "detachTitle": "فك ربط الولي",
+    "detachMessage": "سيُفك ربط الولي بهذا التلميذ. تُحفظ بطاقة الولي وتبقى متاحة لتلاميذ آخرين.",
+    "detachConfirm": "فك الربط",
+    "attached": "تم ربط الولي بالتلميذ.",
+    "detached": "تم فك ربط الولي بالتلميذ.",
+    "attachError": "خطأ أثناء ربط الولي.",
+    "linkTitle": "ربط ولي",
+    "tabExisting": "ولي موجود",
+    "tabNew": "ولي جديد",
+    "searchPlaceholder": "البحث عن ولي…",
+    "noTutorFound": "لا يوجد أي ولي مسجَّل",
+    "noTutorFoundHint": "أنشئ وليًّا من تبويب «ولي جديد».",
+    "noSearchResult": "لا يوجد ولي يطابق البحث",
+    "existingHint": "مفيد للإخوة: أعد استعمال الولي نفسه بدل إنشائه من جديد.",
+    "attach": "ربط",
+    "create": "إنشاء وربط"
+  },
+  "discount": {
+    "title": "التخفيضات",
+    "subtitle": "التخفيضات الممنوحة للتلاميذ على فوج أو سلسلة أو حصة",
+    "add": "إضافة تخفيض",
+    "count": "{{count}} تخفيض",
+    "columns": {
+      "student": "التلميذ",
+      "scope": "النطاق",
+      "target": "الهدف",
+      "rate": "النسبة",
+      "actions": "الإجراءات"
+    },
+    "scopes": {
+      "GROUP": "فوج",
+      "SERIES": "سلسلة",
+      "SESSION": "حصة"
+    },
+    "exemption": "إعفاء",
+    "unknownStudent": "التلميذ رقم {{id}}",
+    "empty": "لا يوجد أي تخفيض مسجَّل",
+    "emptyHint": "أضف تخفيضًا لمنح تلميذ تخفيضًا في السعر.",
+    "loadError": "تعذّر تحميل التخفيضات",
+    "actions": {
+      "edit": "تعديل النسبة",
+      "delete": "حذف التخفيض"
+    },
+    "edit": {
+      "title": "تعديل النسبة",
+      "rate": "نسبة التخفيض",
+      "rateHint": "بين 0 % (دون تخفيض) و100 % (إعفاء كلي)",
+      "rateRequired": "النسبة إجبارية.",
+      "rateRange": "يجب أن تكون النسبة بين 0 و100.",
+      "currentRate": "النسبة الحالية: {{rate}}",
+      "save": "حفظ",
+      "saving": "جارٍ الحفظ…",
+      "success": "تم تعديل النسبة بنجاح",
+      "error": "خطأ أثناء تعديل النسبة"
+    },
+    "delete": {
+      "title": "حذف التخفيض",
+      "message": "سيُحذف هذا التخفيض نهائيًا. وسيُعاد حساب المبالغ المستحقة دونه.",
+      "confirm": "حذف",
+      "success": "تم حذف التخفيض بنجاح",
+      "error": "خطأ أثناء حذف التخفيض"
+    },
+    "dialog": {
+      "levelFilter": "المستوى (تصفية)",
+      "allLevels": "كل المستويات",
+      "group": "الفوج",
+      "loading": "جارٍ التحميل...",
+      "chooseGroupFirst": "اختر فوجًا أولًا",
+      "ratePercent": "النسبة (%)",
+      "rateHint": "من 0 إلى 100 (مثال: 50 = 50%)",
+      "saved": "تم حفظ التخفيض",
+      "saveError": "خطأ أثناء الحفظ"
+    }
+  },
+  "payment": {
+    "admin": {
+      "messages": {
+        "filtersCleared": "تم مسح عوامل التصفية بنجاح",
+        "loadError": "تعذّر تحميل المدفوعات. يرجى إعادة المحاولة.",
+        "filterOptionsError": "تعذّر تحميل بعض قوائم التصفية.",
+        "csvExported": "تم تصدير {{count}} سطر بصيغة CSV"
+      },
+      "page": {
+        "title": "تسيير المدفوعات",
+        "subtitle": "البحث في الدفعات وإدارتها",
+        "export": "تصدير",
+        "exportTooltip": "تصدير الأسطر المعروضة بصيغة CSV",
+        "correctionNotice": "تُصحَّح الدفعة من وصلها (إلغاء أو تصحيح)، في بطاقة التلميذ. تعرض الأسطر أدناه توزيعها حسب الحصة."
+      },
+      "filters": {
+        "title": "عوامل البحث",
+        "student": "التلميذ",
+        "group": "الفوج",
+        "series": "السلسلة",
+        "rowStatus": "حالة السطر",
+        "dateFrom": "تاريخ البداية",
+        "level": "المستوى",
+        "allMasculine": "الكل",
+        "allFeminine": "الكل",
+        "search": "بحث",
+        "clear": "مسح",
+        "dateTo": "تاريخ النهاية",
+        "studentPlaceholder": "اكتب اسمًا…",
+        "clearStudent": "مسح التلميذ",
+        "noStudent": "لا يوجد تلميذ في هذا النطاق",
+        "scopedByLevel": "{{count}} فوج لهذا المستوى",
+        "scopedByGroup": "{{count}} سلسلة لهذا الفوج",
+        "active": "عوامل التصفية المطبَّقة:",
+        "removeFilter": "إزالة هذه التصفية",
+        "session": "الحصة",
+        "sessionNeedsSeries": "اختر سلسلة أولًا",
+        "scopedBySeries": "{{count}} حصة في هذه السلسلة"
+      },
+      "table": {
+        "results": "النتائج",
+        "count": "{{count}} دفعة",
+        "id": "الرقم",
+        "student": "التلميذ",
+        "group": "الفوج",
+        "series": "السلسلة",
+        "session": "الحصة",
+        "catchUp": "استدراك",
+        "amount": "المبلغ",
+        "rowStatus": "الحالة",
+        "paymentStatus": "الدفع",
+        "createdAt": "أُنشئ في",
+        "actions": "الإجراءات",
+        "openStudent": "فتح بطاقة التلميذ",
+        "openGroup": "فتح بطاقة الفوج",
+        "loading": "جارٍ تحميل المدفوعات…",
+        "empty": "لا توجد دفعة تطابق عوامل التصفية.",
+        "refundedShare": "{{amount}} دج مسترجعة",
+        "refunded": "مسترجَع",
+        "netAmount": "المبلغ الصافي"
+      },
+      "rowStatus": {
+        "active": "نشط",
+        "inactive": "معطَّل",
+        "deleted": "محذوف",
+        "permanentlyDeleted": "محذوف نهائيًا"
+      },
+      "paymentStatus": {
+        "PENDING": "في الانتظار",
+        "IN_PROGRESS": "جارٍ",
+        "COMPLETED": "مسدَّد",
+        "CANCELLED": "ملغى",
+        "cancelledHint": "الدفع الأصلي ملغى: لم تعد هذه الدفعة تدخل في الأرصدة.",
+        "REFUNDED": "مسترجَع",
+        "refundedHint": "{{amount}} دج مسترجعة من هذه الدفعة: الحالة محسوبة بعد طرح الاسترجاعات."
+      },
+      "actions": {
+        "history": "عرض سجل التدقيق"
+      },
+      "audit": {
+        "title": "سجل الدفعة",
+        "by": "بواسطة {{actor}}",
+        "reason": "السبب",
+        "change": "قبل: {{from}} ← بعد: {{to}}",
+        "empty": "لا يوجد أي إجراء مسجَّل لهذه الدفعة.",
+        "error": "تعذّر تحميل سجل التدقيق.",
+        "actions": {
+          "MODIFIED": "تعديل المبلغ أو الحالة",
+          "DELETED": "حذف نهائي",
+          "REACTIVATED": "إعادة تفعيل"
+        },
+        "changesTitle": "تعديلات السطر",
+        "refunds": {
+          "title": "استرجاعات هذه الدفعة",
+          "empty": "لا يوجد أي استرجاع على هذه الدفعة.",
+          "error": "تعذّر تحميل الاسترجاعات.",
+          "noReason": "السبب غير مذكور",
+          "reprint": "إعادة طباعة الوصل",
+          "reprintAria": "إعادة طباعة وصل الاسترجاع {{number}}",
+          "reprintError": "تعذّرت طباعة وصل الاسترجاع. أعد المحاولة."
+        }
+      }
+    },
+    "dialog": {
+      "title": "إضافة دفعة",
+      "fields": {
+        "group": "الفوج",
+        "catchUp": "استدراك",
+        "sessionSeries": "سلسلة الحصص",
+        "amount": "المبلغ المدفوع",
+        "paymentMethod": "طريقة الدفع",
+        "description": "الوصف",
+        "fullSeries": "التسديد الكامل للسلسلة"
+      },
+      "methods": {
+        "cash": "نقدًا",
+        "cheque": "صك",
+        "card": "بطاقة بنكية",
+        "other": "أخرى"
+      },
+      "messages": {
+        "selectSeries": "يرجى اختيار سلسلة حصص قبل التأكيد.",
+        "unknownSeries": "سلسلة غير معروفة",
+        "overpayCatchUp": "يتجاوز المبلغ المدفوع مجموع {{sessions}} حصة استدراك بـ {{surplus}} دج. لا يمكن إجراء الدفع.",
+        "overpay": "يتجاوز المبلغ الباقي المستحق بـ {{surplus}} دج. الحد الأقصى القابل للتحصيل: {{max}} دج.",
+        "quoteError": "تعذّر حساب المبلغ المستحق لهذه السلسلة.",
+        "quoteMissing": "لم يُحسب المبلغ المستحق بعد. اختر فوجًا وسلسلة.",
+        "success": "تم تسجيل الدفعة. أُرسل الوصل إلى الطباعة.",
+        "successNoReceipt": "لم يُحصَّل أي مبلغ: لم يُنشأ أي وصل.",
+        "successWithCarryOver": "تم تسجيل الدفعة: {{allocated}} دج على السلسلة المختارة، و{{carried}} دج مرحَّلة إلى {{destinations}}.",
+        "invalidForm": "يرجى إكمال الخانات الإجبارية قبل التأكيد.",
+        "genericError": "تعذّر تسجيل الدفعة. يرجى إعادة المحاولة."
+      },
+      "notes": {
+        "catchUp": "حساب حصص الاستدراك"
+      },
+      "seriesSettledBadge": "مسدَّدة",
+      "seriesSettledTooltip": "سلسلة مسدَّدة مسبقًا: {{paid}} دج مدفوعة من أصل {{total}} دج مستحقة. لم يبق شيء للتحصيل.",
+      "hints": {
+        "sessionPrice": "مبلغ الحصة الواحدة: {{price}} دج",
+        "fullSeriesAmount": "رصيد السلسلة (سعر الحصة: {{price}} دج)",
+        "alreadyPaid": "المدفوع مسبقًا: {{paid}} دج · الباقي للدفع: {{remaining}} دج",
+        "fullSeriesUnavailable": "اختر فوجًا وسلسلة لتفعيل التسديد الكامل.",
+        "total": "السلسلة: {{sessions}} حصة × {{price}} دج = {{total}} دج",
+        "fullSeriesRemaining": "يسدّد السلسلة: {{remaining}} دج",
+        "alreadySettled": "هذه السلسلة مسدَّدة مسبقًا: لم يبق شيء للتحصيل.",
+        "excludedSessions": "{{excluded}} حصة غير مفوترة لهذا التلميذ",
+        "exclusionReason": "حصة سابقة للتسجيل",
+        "existingExcess": "فائض محصَّل مسبقًا: {{excess}} دج زيادة على التكلفة المفوترة للسلسلة."
+      },
+      "discount": {
+        "applied": "تخفيض بنسبة {{percent}} %: {{net}} دج للحصة بدل {{gross}} دج.",
+        "exempted": "تلميذ معفى (تخفيض 100 %): لا يُستحق أي مبلغ لهذه السلسلة."
+      },
+      "errors": {
+        "exceedsDue": "الحد الأقصى القابل للتحصيل: {{max}} دج. وما زاد عليه تنشئ الدفعة فائضًا.",
+        "mustBePositive": "أدخل مبلغًا أكبر من 0 دج: الدفعة المعدومة أو السالبة لا تحصّل شيئًا.",
+        "alreadySettled": "هذه السلسلة مسدَّدة مسبقًا: لم يبق شيء للتحصيل.",
+        "exemptedNothingDue": "هذا التلميذ معفى: لا يُستحق أي مبلغ لهذه السلسلة.",
+        "exceedsChain": "يمكن تحصيل {{max}} دج على الأكثر على سلسلة السلاسل هذه. أنزل المبلغ إلى {{max}} دج.",
+        "exceedsChainUnopened": "يمكن تحصيل {{max}} دج على الأكثر على سلسلة السلاسل هذه. السلسلة «{{series}}» لا تضم أي حصة: أنشئ حصصها أولًا لفتحها، ثم أعد الإدخال. ويمكنك أيضًا إنزال المبلغ إلى {{max}} دج."
+      },
+      "allocation": {
+        "title": "توزيع الدفعة",
+        "received": "المبلغ المستلم: {{amount}} دج",
+        "allocated": "على «{{series}}»: {{amount}} دج",
+        "carriedOver": "مرحَّل إلى «{{series}}»: {{amount}} دج",
+        "carriedOverTotal": "مجموع المرحَّل: {{amount}} دج"
+      }
+    },
+    "receipt": {
+      "title": "وصل دفع",
+      "fileName": "وصل",
+      "reference": "رقم {{reference}}",
+      "amountReceived": "المبلغ المستلم",
+      "amountFormat": "{{amount}} دج",
+      "catchUpBadge": "حصص استدراك",
+      "detailsHeading": "تفاصيل الدفعة",
+      "student": "التلميذ",
+      "group": "الفوج",
+      "series": "السلسلة",
+      "method": "طريقة الدفع",
+      "description": "الوصف",
+      "situationHeading": "وضعية السلسلة",
+      "seriesTotal": "تكلفة السلسلة",
+      "billableSessions": "الحصص المفوترة",
+      "totalPaid": "مجموع المدفوع إلى اليوم",
+      "remaining": "الباقي للدفع",
+      "allocationHeading": "توزيع الدفعة",
+      "allocated": "على «{{series}}»",
+      "carriedOverTo": "مرحَّل إلى «{{series}}»",
+      "carriedOverTotal": "مجموع المرحَّل",
+      "studentSignature": "توقيع التلميذ",
+      "adminSignature": "حصّله",
+      "footerNote": "لا يغطي هذا الوصل إلا الدفعة المذكورة أعلاه.",
+      "error": "تم تسجيل الدفعة، لكن تعذّر إنشاء الوصل.",
+      "cancelledStamp": "ملغى",
+      "cancelledOn": "أُلغي الوصل في {{date}}: لم يعد صالحًا كإثبات.",
+      "replacedBy": "استُبدل بالوصل {{number}}."
+    },
+    "encashments": {
+      "title": "الدفعات",
+      "empty": "لا توجد أي دفعة مسجَّلة لهذا التلميذ.",
+      "loadError": "تعذّر تحميل الدفعات.",
+      "status": {
+        "ACTIVE": "صالحة",
+        "CANCELLED": "ملغاة"
+      },
+      "catchUp": "استدراك",
+      "receivedBy": "حصّلها {{user}}",
+      "carriedOverTo": "مرحَّل إلى «{{series}}»: {{amount}} دج",
+      "cancelledOn": "أُلغيت في {{date}} بواسطة {{user}}",
+      "replaces": "تحل محل الوصل {{number}}",
+      "replacedBy": "استُبدلت بالوصل {{number}}",
+      "reprint": "إعادة طباعة الوصل",
+      "reprintAria": "إعادة طباعة الوصل {{number}}",
+      "reprintError": "تعذّرت إعادة طباعة الوصل."
+    },
+    "history": {
+      "fields": {
+        "groups": "الأفواج",
+        "series": "السلاسل"
+      },
+      "catchUpNotice": {
+        "title": "سلسلة استدراك",
+        "description": "لا تُعرض لهذه السلسلة إلا الحصص المؤشَّر عليها كاستدراك."
+      },
+      "labels": {
+        "status": "الحالة",
+        "totalCatchUp": "المجموع (استدراك)",
+        "total": "المجموع",
+        "paid": "المدفوع",
+        "remaining": "الباقي",
+        "catchUpPrefix": "استدراك",
+        "cash": "نقدًا",
+        "noDescription": "لا يوجد وصف",
+        "refunded": "مسترجَع",
+        "allocated": "مخصَّص",
+        "overpaid": "فائض",
+        "seriesCost": "تكلفة السلسلة",
+        "billableSessions": "الحصص القابلة للفوترة"
+      },
+      "status": {
+        "paid": "مدفوع",
+        "partiallyPaid": "مدفوع جزئيًا",
+        "unpaid": "غير مدفوع",
+        "notBilled": "غير مفوترة"
+      },
+      "excluded": {
+        "tag": "غير مفوترة",
+        "reason": "غير حاضر — حصة سابقة للتسجيل، غير مفوترة",
+        "summary": "{{count}} حصة غير مفوترة: لم يكن التلميذ حاضرًا فيها.",
+        "notADebt": "هذا ليس دَينًا.",
+        "catchUpBilled": "حصة محضورة في استدراك: مفوترة لأنها استُهلكت."
+      },
+      "table": {
+        "session": "الحصة",
+        "paymentDate": "تاريخ الدفع",
+        "amountPaid": "المبلغ المدفوع",
+        "paymentStatus": "حالة الدفع",
+        "empty": "لا يوجد أي سجل دفع متاح"
+      },
+      "actions": {
+        "print": "تصدير بصيغة PDF"
+      },
+      "pdf": {
+        "title": "سجل المدفوعات",
+        "student": "التلميذ",
+        "date": "التاريخ",
+        "catchUpOnly": "حصص الاستدراك فقط",
+        "billableSessions": "الحصص القابلة للفوترة: {{count}}",
+        "excludedSessions": "{{count}} حصة غير مفوترة: غير حاضر، سابقة للتسجيل. هذا ليس دَينًا.",
+        "details": "التفاصيل",
+        "studentSignature": "توقيع التلميذ",
+        "adminSignature": "توقيع الإدارة",
+        "page": "الصفحة",
+        "of": "من"
+      },
+      "loadError": "تعذّر تحميل سجل المدفوعات.",
+      "noGroup": "هذا التلميذ غير مسجَّل في أي فوج.",
+      "noSeries": "هذا الفوج لا يضم أي سلسلة.",
+      "exempted": "تلميذ معفى: لا يُستحق أي مبلغ لهذه السلسلة.",
+      "overpaidHint": "(مدفوع زيادة على المبلغ المستحق)",
+      "attendancePending": "{{status}} — حصة قادمة، لم يُسجَّل الحضور",
+      "pendingDecision": {
+        "tag": "في انتظار التحديد",
+        "reason": "استدراك في انتظار التحديد — لم تُقرَّر أي فوترة",
+        "hint": "يبقى تحديد الحصة الفائتة والقرار «مدفوعة مسبقًا». هذا ليس دَينًا."
+      }
+    },
+    "confirmation": {
+      "title": "تأكيد الدفع",
+      "summary": "ملخص الدفع",
+      "series": "السلسلة:",
+      "catchUpWarning": "⚠️ استدراك: الدفع عن كل حصة محضورة فقط",
+      "attendedSessions": "عدد الحصص المحضورة",
+      "billedSessions": "عدد الحصص المفوترة",
+      "pricePerSession": "سعر الحصة:",
+      "totalCost": "التكلفة الإجمالية:",
+      "catchUpNote": "ملاحظة: بالنسبة لتلميذ في استدراك، لا تُفوتر إلا الحصص التي حضرها.",
+      "alreadyPaid": "المبلغ المدفوع مسبقًا:",
+      "remaining": "المبلغ الباقي للدفع:",
+      "catchUpRule": "استدراك: يكون التلميذ منتظمًا بمجرد دفع كل حصة حضرها.",
+      "catchUpSettled": "✓ التلميذ منتظم في كل حصص استدراكه.",
+      "catchUpRulePaid": "استدراك: يكون التلميذ منتظمًا بمجرد أن يدفع كل حصة حضرها.",
+      "cancel": "إلغاء",
+      "confirm": "تأكيد"
+    }
+  },
+  "calendar": {
+    "buttons": {
+      "today": "اليوم",
+      "month": "شهر",
+      "week": "أسبوع",
+      "day": "يوم",
+      "list": "قائمة"
+    },
+    "filters": {
+      "title": "عوامل التصفية",
+      "active": "عوامل التصفية النشطة",
+      "removeLevel": "إزالة تصفية المستوى",
+      "removeSubject": "إزالة تصفية المادة",
+      "removeGroup": "إزالة تصفية الفوج",
+      "reset": "إعادة تعيين عوامل التصفية",
+      "byLevel": "التصفية حسب المستوى",
+      "bySubject": "التصفية حسب المادة",
+      "byGroup": "التصفية حسب الفوج",
+      "allLevels": "كل المستويات",
+      "allSubjects": "كل المواد",
+      "allGroups": "كل الأفواج",
+      "level": "المستوى",
+      "subject": "المادة"
+    }
+  },
+  "RESOURCE_FORM": {
+    "CREATE_TITLE": "إضافة — {{entity}}",
+    "EDIT_TITLE": "تعديل — {{entity}}",
+    "SAVE": "حفظ",
+    "UPDATE": "تحديث",
+    "ENTITY": {
+      "level": "مستوى",
+      "room": "قاعة",
+      "subject": "مادة",
+      "groupType": "نوع فوج",
+      "pricing": "سعر"
+    },
+    "TABS": {
+      "BASIC_INFO": "معلومات عامة",
+      "ROOM_DETAILS": "تفاصيل القاعة",
+      "GROUP_TYPE_DETAILS": "تفاصيل نوع الفوج"
+    },
+    "FIELDS": {
+      "NAME": "الاسم",
+      "LEVEL_CODE": "رمز المستوى",
+      "LEVEL_SEQUENCE": "الرتبة (ترتيب الانتقال)",
+      "LEVEL_SEQUENCE_PLACEHOLDER": "مثال: 1 للسنة الأولى، 2 للسنة الثانية...",
+      "LEVEL_SEQUENCE_HINT": "يحدد ترتيب الانتقال بين المستويات (1 = الأدنى).",
+      "CAPACITY": "السعة",
+      "TYPE": "النوع",
+      "NAME_REQUIRED": "الاسم إجباري",
+      "SIZE": "التعداد",
+      "SIZE_REQUIRED": "التعداد إجباري",
+      "PRICE": "السعر",
+      "VALIDITY_RANGE": "أدخل فترة الصلاحية",
+      "EFFECTIVE_DATE": "تاريخ السريان",
+      "EXPIRATION_DATE": "تاريخ الانتهاء"
+    },
+    "MESSAGES": {
+      "FORM_INVALID": "الاستمارة غير صحيحة.",
+      "level": {
+        "LOAD_ERROR": "خطأ أثناء تحميل المستوى.",
+        "UPDATED": "تم تحديث المستوى بنجاح.",
+        "UPDATE_ERROR": "خطأ أثناء تحديث المستوى.",
+        "CREATED": "تم إنشاء المستوى بنجاح.",
+        "CREATE_ERROR": "خطأ أثناء إنشاء المستوى."
+      },
+      "room": {
+        "LOAD_ERROR": "خطأ أثناء تحميل القاعة.",
+        "UPDATED": "تم تحديث القاعة بنجاح.",
+        "UPDATE_ERROR": "خطأ أثناء تحديث القاعة.",
+        "CREATED": "تم إنشاء القاعة بنجاح.",
+        "CREATE_ERROR": "خطأ أثناء إنشاء القاعة."
+      },
+      "subject": {
+        "LOAD_ERROR": "خطأ أثناء تحميل المادة.",
+        "UPDATED": "تم تحديث المادة بنجاح.",
+        "UPDATE_ERROR": "خطأ أثناء تحديث المادة.",
+        "CREATED": "تم إنشاء المادة بنجاح.",
+        "CREATE_ERROR": "خطأ أثناء إنشاء المادة."
+      },
+      "groupType": {
+        "LOAD_ERROR": "خطأ أثناء تحميل نوع الفوج.",
+        "UPDATED": "تم تحديث نوع الفوج بنجاح.",
+        "UPDATE_ERROR": "خطأ أثناء تحديث نوع الفوج.",
+        "CREATED": "تم إنشاء نوع الفوج بنجاح.",
+        "CREATE_ERROR": "خطأ أثناء إنشاء نوع الفوج."
+      },
+      "pricing": {
+        "LOAD_ERROR": "خطأ أثناء تحميل السعر.",
+        "UPDATED": "تم تحديث السعر بنجاح.",
+        "UPDATE_ERROR": "خطأ أثناء تحديث السعر.",
+        "CREATED": "تم إنشاء السعر بنجاح.",
+        "CREATE_ERROR": "خطأ أثناء إنشاء السعر."
+      }
+    }
+  },
+  "ADD_STUDENTS_DIALOG": {
+    "TITLE": "إضافة تلاميذ",
+    "SEARCH_PLACEHOLDER": "البحث عن تلميذ…",
+    "CLEAR_SEARCH": "مسح البحث",
+    "SELECT_ALL": "تحديد الكل",
+    "SHOWING": "{{shown}} من {{total}}",
+    "SELECTED_TITLE": "التحديد ({{count}})",
+    "CLEAR_SELECTION": "إفراغ التحديد",
+    "REMOVE": "سحب",
+    "JUMP_TO": "الانتقال إلى الحرف {{letter}}",
+    "NO_STUDENT": "لا يوجد أي تلميذ متاح",
+    "NO_RESULT": "لا يوجد تلميذ يطابق «{{term}}»",
+    "NO_RESULT_HINT": "تحقق من الإملاء أو امسح البحث.",
+    "ADD": "إضافة",
+    "ADD_COUNT": "إضافة ({{count}})"
+  },
+  "ADD_STUDENT_DIALOG": {
+    "TITLE": "اختيار تلميذ",
+    "EMPTY": "لا يوجد أي تلميذ متاح",
+    "ADD": "إضافة",
+    "BADGE_MEMBER": "عضو في الفوج",
+    "BADGE_CATCH_UP": "استدراك",
+    "HINT": "يُضاف عضو الفوج كحضور عادي؛ ويُحسب الآخرون في الاستدراك.",
+    "SEARCH_PLACEHOLDER": "البحث عن تلميذ…",
+    "CLEAR_SEARCH": "مسح البحث",
+    "CLEAR_SELECTION": "إلغاء التحديد",
+    "SHOWING": "{{shown}} من {{total}} تلميذ",
+    "NO_RESULT": "لا يوجد تلميذ يطابق «{{term}}»",
+    "NO_RESULT_HINT": "تحقق من الإملاء أو جرّب اللقب وحده."
+  },
+  "PAGINATOR": {
+    "ITEMS_PER_PAGE": "عدد العناصر في الصفحة:",
+    "NEXT_PAGE": "الصفحة التالية",
+    "PREVIOUS_PAGE": "الصفحة السابقة",
+    "FIRST_PAGE": "الصفحة الأولى",
+    "LAST_PAGE": "الصفحة الأخيرة",
+    "RANGE": "{{start}} – {{end}} من {{total}}",
+    "RANGE_EMPTY": "0 من {{total}}"
+  },
+  "EDIT_STUDENT": {
+    "TITLE": "تعديل التلميذ",
+    "SUBTITLE": "كل معلومات البطاقة قابلة للتعديل",
+    "SECTION_IDENTITY": "الهوية",
+    "SECTION_CONTACT": "الاتصال",
+    "SECTION_BIRTH": "الميلاد",
+    "SECTION_SCHOOL": "الدراسة",
+    "SECTION_TUTOR": "الولي",
+    "SECTION_PHOTO": "الصورة",
+    "PHOTO_CHOOSE": "اختيار صورة",
+    "PHOTO_NONE": "لم يُختر أي ملف",
+    "PHOTO_REMOVE": "حذف الصورة",
+    "NO_TUTOR": "لا يوجد ولي",
+    "TUTOR_NEW": "إنشاء ولي",
+    "TUTOR_HINT": "يمكن أن يشترك الإخوة في ولي واحد.",
+    "DESCRIPTION": "ملاحظات",
+    "SAVE": "حفظ",
+    "AVERAGE_RANGE": "يجب أن يكون المعدل بين 0 و100.",
+    "EMAIL_INVALID": "عنوان البريد الإلكتروني غير صحيح.",
+    "REQUIRED": "هذه الخانة إجبارية.",
+    "LEVEL_CHANGED": "تغيّر المستوى: تحقق من أفواج التلميذ، فقد تنتمي إلى المستوى القديم.",
+    "INVALID_HINT": "بعض الخانات تحتاج إلى تصحيح."
+  },
+  "EDIT_TEACHER": {
+    "TITLE": "تعديل الأستاذ",
+    "SUBTITLE": "كل معلومات البطاقة قابلة للتعديل",
+    "SECTION_IDENTITY": "الهوية",
+    "SECTION_CONTACT": "الاتصال",
+    "SECTION_PRO": "المعلومات المهنية",
+    "SPECIALIZATION": "التخصص",
+    "EXPERIENCE": "سنوات الخبرة",
+    "EXPERIENCE_MIN": "يجب أن يكون عدد السنوات موجبًا.",
+    "PHOTO_CHOOSE": "اختيار صورة",
+    "PHOTO_NONE": "لم يُختر أي ملف",
+    "PHOTO_REMOVE": "حذف الصورة",
+    "SAVE": "حفظ",
+    "REQUIRED": "هذه الخانة إجبارية.",
+    "EMAIL_INVALID": "عنوان البريد الإلكتروني غير صحيح.",
+    "INVALID_HINT": "بعض الخانات تحتاج إلى تصحيح."
+  },
+  "EDIT_GROUP": {
+    "TITLE": "تعديل الفوج",
+    "SUBTITLE": "إعدادات الفوج وفوترته",
+    "SECTION_GENERAL": "عام",
+    "SECTION_ORGANISATION": "التنظيم",
+    "NAME": "اسم الفوج",
+    "TYPE": "نوع الفوج",
+    "SUBJECT": "المادة",
+    "SESSIONS_PER_SERIE": "الحصص في السلسلة",
+    "PRICE": "سعر الحصة",
+    "TEACHER": "الأستاذ",
+    "PHOTO_CHOOSE": "اختيار صورة",
+    "PHOTO_NONE": "لم يُختر أي ملف",
+    "PHOTO_REMOVE": "حذف الصورة",
+    "PRICING_HINT": "سعر الحصة وعدد الحصص يحددان تكلفة الشهر.",
+    "SAVE": "حفظ",
+    "REQUIRED": "هذه الخانة إجبارية.",
+    "SESSIONS_MIN": "يجب أن تكون حصة واحدة على الأقل في السلسلة.",
+    "INVALID_HINT": "بعض الخانات تحتاج إلى تصحيح."
+  },
+  "PAYMENT_STATUS": {
+    "GOOD": "منتظم",
+    "LATE": "متأخر",
+    "EXEMPT": "معفى",
+    "NA": "غير متاح",
+    "tooltip": {
+      "title": "مدفوعات متأخرة",
+      "unpaidSession": "{{count}} حصة غير مدفوعة",
+      "unpaidSessions": "{{count}} حصص غير مدفوعة",
+      "remaining": "الباقي للدفع: {{amount}}",
+      "paidOfDue": "دُفع {{paid}} من أصل {{due}} مستحقة"
+    }
+  },
+  "revenue": {
+    "title": "التحصيلات",
+    "collected": "المحصَّل",
+    "expected": "المنتظَر",
+    "remaining": "الباقي للتحصيل",
+    "refundedHint": "منها {{amount}} دج مسترجعة، مطروحة مسبقًا",
+    "expectedHint": "بعد تطبيق التخفيضات",
+    "unassignedHint": "{{amount}} دج غير مربوطة بسلسلة",
+    "bySeries": "حسب السلسلة (شهر الدروس)",
+    "byMonth": "حسب شهر التحصيل",
+    "byMonthNote": "ما دخل الصندوق كل شهر، أيًّا كانت السلسلة المسدَّدة. لذلك تختلف المجاميع عن التوزيع حسب السلسلة.",
+    "noSeries": "لا توجد أي سلسلة لهذا الفوج.",
+    "noMonth": "لا يوجد أي تحصيل مسجَّل.",
+    "error": "تعذّر تحميل التحصيلات.",
+    "report": {
+      "title": "المداخيل",
+      "subtitle": "ما حصّلته المدرسة، موزَّعًا حسب المحور الذي تختاره",
+      "axis": "التوزيع حسب",
+      "export": "تصدير",
+      "exportTooltip": "تصدير الجدول بصيغة CSV",
+      "dateNote": "تصفّي التواريخ تاريخ التحصيل، لا تاريخ الحصص.",
+      "refundNote": "تُطرح الاسترجاعات من المجموع فقط: الاسترجاع مرتبط بدفعة، فيُنسب إلى فوج وسلسلة، لا إلى حصة ولا إلى شهر تحصيل.",
+      "empty": "لا يوجد أي تحصيل في هذا النطاق.",
+      "axes": {
+        "GROUP": "الفوج",
+        "SERIES": "السلسلة",
+        "SESSION": "الحصة",
+        "MONTH": "شهر التحصيل"
+      },
+      "totals": {
+        "collected": "المحصَّل الإجمالي",
+        "refunded": "المسترجَع",
+        "net": "المحصَّل الصافي"
+      },
+      "table": {
+        "share": "الحصة",
+        "collected": "المحصَّل",
+        "total": "المجموع الصافي",
+        "count": "{{count}} سطر",
+        "openGroup": "فتح بطاقة الفوج (المحصَّل مقابل المنتظَر)"
+      },
+      "messages": {
+        "loadError": "تعذّر تحميل المداخيل. يرجى إعادة المحاولة.",
+        "filterOptionsError": "تعذّر تحميل بعض قوائم التصفية."
+      }
+    },
+    "overpaid": "فائض",
+    "overpaidHint": "منها {{amount}} دج مدفوعة زيادة على المستحق"
+  },
+  "studentHistory": {
+    "attendance": {
+      "PRESENT": "حاضر",
+      "ABSENT": "غائب",
+      "UNKNOWN": "غير مسجَّل"
+    },
+    "payment": {
+      "PAID": "مدفوعة",
+      "PARTIAL": "جزئي",
+      "UNPAID": "غير مدفوع"
+    },
+    "seriesStatus": {
+      "FULL": "كامل",
+      "PARTIAL": "جزئي",
+      "UNPAID": "غير مدفوع"
+    },
+    "series": "السلسلة: {{name}}",
+    "catchUpSeries": "حصة استدراك: {{name}}",
+    "catchUpTag": "استدراك",
+    "catchUpBilledReason": "حصة محضورة في استدراك قبل التسجيل: مفوترة لأنها استُهلكت.",
+    "excludedTag": "غير مفوترة",
+    "excludedReason": "غير حاضر — حصة سابقة للتسجيل، غير مفوترة",
+    "excludedSummary": "{{count}} حصة غير مفوترة: لم يكن التلميذ حاضرًا فيها.",
+    "notADebt": "هذا ليس دَينًا.",
+    "billableSessions": "الحصص القابلة للفوترة",
+    "unitPrice": "{{price}} دج / حصة",
+    "beforeEnrolment": "قبل التسجيل",
+    "toSettle": "للتسديد",
+    "exemptedTag": "معفى",
+    "badge": {
+      "FULL": "مسدَّد",
+      "PARTIAL": "جزئي",
+      "EXEMPTED": "معفى",
+      "UNPAID": "غير مدفوع"
+    },
+    "amounts": {
+      "due": "المستحق",
+      "paid": "المدفوع",
+      "remaining": "الباقي",
+      "dueBreakdown": "{{count}} حصة × {{price}} دج = {{total}} دج",
+      "dueSessions": "{{count}} حصة مفوترة",
+      "paidSessions": "{{count}} حصة مسدَّدة",
+      "remainingSessions": "{{count}} حصة للتسديد",
+      "paidNetOfRefunds": "صافٍ بعد طرح {{amount}} دج مسترجعة"
+    },
+    "exempted": "معفى",
+    "refunded": "مسترجَع",
+    "noGroup": "لا يوجد أي فوج متاح لهذا التلميذ.",
+    "noSeries": "لا توجد أي سلسلة لهذا الفوج.",
+    "noSessionInSeries": "لا توجد أي حصة متاحة لهذه السلسلة.",
+    "table": {
+      "session": "الحصة",
+      "date": "التاريخ",
+      "attendance": "الحضور",
+      "justified": "مبرَّر",
+      "payment": "الدفع",
+      "amountPaid": "المبلغ المخصَّص",
+      "description": "الوصف",
+      "paymentDate": "تاريخ الدفع"
+    },
+    "legend": {
+      "presentPaid": "حاضر ومدفوع",
+      "absentPaid": "غائب ومدفوع",
+      "presentPartial": "حاضر ودفع جزئي",
+      "absentPartial": "غائب ودفع جزئي",
+      "presentUnpaid": "حاضر وغير مدفوع",
+      "unknownAttendance": "حضور غير مسجَّل",
+      "presentExempted": "حاضر ومعفى",
+      "catchUpSession": "حصة استدراك",
+      "excludedSession": "حصة غير مفوترة: غير حاضر، سابقة للتسجيل",
+      "paid": "حصة مسدَّدة",
+      "due": "حصة للتسديد",
+      "exempted": "حصة معفاة"
+    },
+    "dialog": {
+      "title": "السجل الكامل",
+      "print": "طباعة (PDF)",
+      "error": "خطأ أثناء استرجاع السجل الكامل."
+    },
+    "pdf": {
+      "title": "السجل الكامل للتلميذ",
+      "student": "التلميذ: {{name}}",
+      "date": "التاريخ: {{date}}",
+      "group": "الفوج: {{name}}",
+      "series": "السلسلة: {{name}}",
+      "seriesExempted": "السلسلة: {{name}} (معفى)",
+      "catchUpSeries": "حصة استدراك: {{name}}",
+      "catchUpSession": "حصة استدراك: {{name}}",
+      "seriesPayment": "الدفع: {{status}}",
+      "amountPaidOfTotal": "مجموع المدفوع: {{paid}} دج / {{total}} دج مستحقة",
+      "costBreakdown": "التكلفة: {{count}} حصة × {{price}} دج = {{amount}} دج",
+      "excludedSession": "غير مفوترة: {{name}}",
+      "excludedSessions": "{{count}} حصة غير مفوترة: غير حاضر، سابقة للتسجيل. هذا ليس دَينًا.",
+      "amountRefunded": "المبلغ المسترجَع: {{amount}} دج",
+      "amount": "{{amount}} دج",
+      "noGroup": "لا يوجد أي فوج متاح لهذا التلميذ.",
+      "noSessionInGroup": "لا يضم هذا الفوج أي حصة مصادَق عليها أو مدفوعة لهذا التلميذ.",
+      "noSessionInSeries": "لا توجد أي حصة متاحة لهذه السلسلة.",
+      "table": {
+        "session": "الحصة",
+        "date": "التاريخ",
+        "attendance": "الحضور",
+        "justified": "مبرَّر",
+        "description": "الوصف",
+        "paymentDate": "تاريخ الدفع",
+        "payment": "الدفع",
+        "amountPaid": "المبلغ المخصَّص"
+      },
+      "legend": {
+        "title": "دليل الألوان:",
+        "presentPaid": "حاضر ومدفوع",
+        "absentPaid": "غائب ومدفوع",
+        "presentPartial": "حاضر ودفع جزئي",
+        "absentPartial": "غائب ودفع جزئي",
+        "unknownAttendance": "حضور غير مسجَّل",
+        "presentUnpaid": "حاضر وغير مدفوع",
+        "presentExempted": "حاضر ومعفى",
+        "excludedSession": "حصة غير مفوترة: غير حاضر، سابقة للتسجيل",
+        "pendingDecisionSession": "استدراك في انتظار التحديد — لم تُقرَّر أي فوترة إلى اليوم",
+        "catchUpSession": "حصة استدراك (البادئة « حصة استدراك: »)"
+      },
+      "amountAllocatedAndOverpaid": "المخصَّص: {{allocated}} دج — الفائض: {{overpaid}} دج",
+      "pendingDecisionSession": "في انتظار التحديد: {{name}}",
+      "amountPaidNetOfTotal": "مجموع المدفوع، صافيًا من الاسترجاعات: {{paid}} دج / {{total}} دج مستحقة",
+      "refundLine": "الوثيقة {{number}} بتاريخ {{date}}: {{amount}} دج — {{reason}}",
+      "studentSignature": "توقيع التلميذ: ________________________",
+      "adminSignature": "توقيع الإدارة: ________________________",
+      "page": "الصفحة {{current}} من {{total}}"
+    },
+    "seriesLabel": "السلسلة",
+    "totalPaid": "مجموع المدفوع",
+    "allocated": "المخصَّص",
+    "overpaid": "الفائض",
+    "pendingDecisionTag": "في انتظار التحديد",
+    "pendingDecisionHint": "استدراك في انتظار التحديد: لا دَين ولا مجانية. يبقى تحديد الحصة الفائتة وقرار الفوترة.",
+    "billedAtHostGroup": "مفوترة في عين المكان",
+    "refunds": {
+      "noReason": "السبب غير مذكور",
+      "reprint": "إعادة طباعة الوصل",
+      "reprintAria": "إعادة طباعة وصل الاسترجاع {{number}}",
+      "reprintError": "تعذّرت طباعة وصل الاسترجاع. أعد المحاولة.",
+      "unavailable": "تعذّر تحميل تفاصيل الاسترجاعات."
+    }
+  },
+  "pricing": {
+    "table": {
+      "id": "الرقم",
+      "price": "سعر الحصة",
+      "effectiveDate": "تاريخ السريان",
+      "expirationDate": "تاريخ الانتهاء",
+      "description": "الوصف"
+    }
+  },
+  "GROUP_CARD": {
+    "otherYear": "سنة {{year}}",
+    "otherYearTooltip": "ينتمي هذا الفوج إلى سنة دراسية أخرى. لا يظهر في قائمة الأفواج المصفّاة حسب السنة المختارة. يبقى الاطلاع عليه ممكنًا، أما تعديله فمرفوض."
+  },
+  "series": {
+    "rename": {
+      "title": "إعادة تسمية السلسلة",
+      "label": "اسم السلسلة",
+      "hint": "يتبع الاسم المولَّد تلقائيًا الصيغة «الفوج - MM-YYYY-NNN». والاسم المخصَّص يحل محله نهائيًا.",
+      "tooltip": "إعادة تسمية السلسلة",
+      "success": "تمت إعادة تسمية السلسلة بنجاح.",
+      "error": "خطأ أثناء إعادة تسمية السلسلة.",
+      "errors": {
+        "required": "اسم السلسلة إجباري."
+      }
+    },
+    "detail": {
+      "backTooltip": "العودة إلى الفوج",
+      "downloadPdf": "تنزيل (PDF)",
+      "plannedSessions": "الحصص المقررة",
+      "createdSessions": "الحصص المنشأة",
+      "validatedCount": "المصادَق عليها",
+      "scheduledCount": "المبرمَجة",
+      "filter": "تصفية",
+      "filterPlaceholder": "العنوان، النوع، الأستاذ، القاعة…",
+      "empty": "لا توجد أي حصة في هذه السلسلة.",
+      "columns": {
+        "number": "الرقم",
+        "title": "العنوان",
+        "type": "النوع",
+        "teacher": "الأستاذ",
+        "room": "القاعة",
+        "date": "التاريخ",
+        "status": "الحالة",
+        "actions": "الإجراءات"
+      },
+      "status": {
+        "disabled": "معطَّلة",
+        "validated": "مصادَق عليها",
+        "scheduled": "مبرمَجة"
+      },
+      "openSession": "فتح الحصة",
+      "loadSeriesError": "خطأ أثناء تحميل السلسلة.",
+      "loadSessionsError": "خطأ أثناء تحميل الحصص."
+    }
+  },
+  "studentDiscounts": {
+    "title": "التخفيضات",
+    "upTo": "حتى {{percent}} %",
+    "exempt": "معفى",
+    "scope": {
+      "GROUP": "فوج",
+      "SERIES": "سلسلة",
+      "SESSION": "حصة"
+    }
+  },
+  "groupChange": {
+    "title": "تغيير فوج مُبلَّغ عنه",
+    "leftGroup": "الفوج المغادَر: {{group}} · {{count}} حصة محضورة في ذلك الشهر",
+    "joinedGroup": "الفوج الملتحَق به: {{group}} · {{count}} حصة محضورة في ذلك الشهر",
+    "hint": "للعلم: تبقى الفوترة دون تغيير، وتُحسب كل سلسلة على حدة. عدّل يدويًا عند الحاجة."
+  },
+  "refund": {
+    "dialog": {
+      "title": "تسجيل استرجاع",
+      "loading": "جارٍ تحميل مبالغ الدفعة…",
+      "amountPaid": "المبلغ المدفوع",
+      "alreadyRefunded": "المسترجَع مسبقًا",
+      "refundableCap": "الحد الأقصى القابل للاسترجاع",
+      "nothingRefundable": "استُرجعت هذه الدفعة كاملة: لم يبق شيء قابل للاسترجاع.",
+      "amountLabel": "المبلغ المراد استرجاعه",
+      "amountRequired": "المبلغ إجباري",
+      "amountTooSmall": "يجب أن يكون المبلغ 0,01 على الأقل",
+      "exceedsCap": "المبلغ أكبر من الحد الأقصى القابل للاسترجاع ({{cap}}).",
+      "reasonLabel": "سبب الاسترجاع",
+      "reasonPlaceholder": "مثال: فائض على سلسلة جانفي",
+      "reasonRequired": "السبب إجباري: كل خروج من الصندوق يجب أن يكون مبرَّرًا",
+      "submitButton": "استرجاع",
+      "confirmTitle": "تأكيد الاسترجاع",
+      "confirmAmount": "المبلغ المراد إرجاعه: {{amount}} دج",
+      "confirmReason": "السبب:",
+      "notReversible": "لا يمكن إلغاء هذه العملية داخل التطبيق.",
+      "confirmButton": "تأكيد واسترجاع",
+      "saved": "تم تسجيل الاسترجاع",
+      "savedAmount": "أُرجع {{amount}} دج إلى المستفيد.",
+      "printReceipt": "طباعة الوصل",
+      "downloadReceipt": "تنزيل الوصل",
+      "receiptFailed": "تم تسجيل الاسترجاع، لكن تعذّر إنشاء وصله. تبقى طباعته ممكنة من السجل الكامل للتلميذ.",
+      "amountPlaceholder": "مثال: 2000",
+      "reasonNote": "يظهر السبب على وصل الاسترجاع المسلَّم للأسرة.",
+      "back": "تعديل"
+    },
+    "receipt": {
+      "title": "وصل استرجاع",
+      "number": "الوثيقة رقم {{number}}",
+      "outflowNotice": "خروج من الصندوق",
+      "duplicate": "نسخة ثانية رقم {{rank}} — {{date}}",
+      "amountRefunded": "المبلغ المسترجَع",
+      "amountFormat": "{{amount}} دج",
+      "detailsHeading": "المستفيد",
+      "student": "التلميذ",
+      "group": "الفوج",
+      "series": "السلسلة",
+      "reason": "السبب",
+      "noReason": "السبب غير مذكور",
+      "paymentHeading": "الدفعة الأصلية",
+      "paymentAmount": "المبلغ المدفوع",
+      "paymentDate": "تاريخ الدفعة",
+      "beneficiarySignature": "توقيع المستفيد",
+      "adminSignature": "توقيع المسؤول",
+      "footerNote": "يشهد هذا الوصل بتسليم المبلغ المذكور. يُحتفظ به."
+    }
+  },
+  "justification": {
+    "dialog": {
+      "title": "تعديل التبرير",
+      "currentValue": "القيمة الحالية",
+      "justified": "مبرَّر",
+      "unjustified": "غير مبرَّر",
+      "notSet": "غير مسجَّل",
+      "newValue": "القيمة الجديدة",
+      "commentLabel": "تعليق (اختياري)",
+      "commentPlaceholder": "مثال: شهادة طبية سُلّمت يوم 12/03",
+      "commentTooLong": "يجب ألا يتجاوز التعليق 500 حرف",
+      "noFinancialEffect": "هذا التعديل لا يغيّر تكلفة السلسلة ولا المبلغ المستحق ولا وضعية الدفع.",
+      "submitButton": "حفظ",
+      "unchanged": "كان التبرير على هذه القيمة مسبقًا: لم يُعدَّل شيء.",
+      "saved": "تم تعديل التبرير.",
+      "noEffectTitle": "دون أثر على المبالغ.",
+      "noEffectText": "يفيد التبرير في المتابعة الانضباطية وفي الحق في الاستدراك. ولا يغيّر تكلفة السلسلة ولا المبلغ المستحق ولا وضعية الدفع.",
+      "savedValue": "القيمة المسجَّلة",
+      "commentHistoryNote": "يُحفظ التعليق في السجل: يشرح التصحيح إن اعتُرض عليه لاحقًا.",
+      "checkHistory": "تحقق من السجل أدناه قبل إعادة المحاولة.",
+      "loading": "جارٍ التحميل…"
+    },
+    "audit": {
+      "title": "سجل التعديلات",
+      "empty": "لا يوجد أي تعديل مسجَّل.",
+      "from": "من",
+      "to": "إلى",
+      "by": "بواسطة",
+      "noComment": "دون تعليق",
+      "lastModified": "عدّله {{author}} في {{date}}",
+      "emptyInitial": "لا يوجد أي تعديل مسجَّل: القيمة هي قيمة الإدخال الأول."
+    },
+    "billing": {
+      "stillBilled": "حصة محسوبة في تكلفة السلسلة؛ التبرير لا يغيّر المبلغ المستحق.",
+      "notInAmountDue": "حصة غير محسوبة في المستحق حتى اليوم.",
+      "purpose": "يفيد التبرير في المتابعة الانضباطية وفي الحق في الاستدراك؛ ولا يدخل في أي حساب للمبالغ."
+    },
+    "catchUp": {
+      "caughtUp": "مستدرَكة",
+      "caughtUpDetail": "استُدركت في {{date}} في الفوج {{group}}",
+      "missedSession": "الحصة الفائتة بتاريخ {{date}} ({{group}})",
+      "missedUnknown": "حصة فائتة غير محددة",
+      "billedElsewhere": "مفوترة مسبقًا في السلسلة {{series}} ({{group}})",
+      "notBilled": "غير مفوترة"
+    }
+  },
+  "CATCH_UP_BILLING": {
+    "LIST": {
+      "TITLE": "استدراكات تنتظر القرار",
+      "SUBTITLE": "كل سطر حصة محضورة لا يفوترها أحد بعد. حدّد الحصة الفائتة وهل كانت مدفوعة مسبقًا.",
+      "EMPTY": "لا يوجد أي استدراك في انتظار القرار.",
+      "RESOLVE": "تحديد",
+      "RESOLVE_HINT": "تحديد الحصة الفائتة وقرار الفوترة"
+    },
+    "DIALOG": {
+      "RESOLVE_TITLE": "تحديد فوترة استدراك",
+      "CORRECT_TITLE": "تصحيح فوترة استدراك",
+      "STEP_MISSED_SESSION": "1. أي حصة يُستدرك؟",
+      "STEP_ALREADY_PAID": "2. هل كانت هذه الحصة مدفوعة مسبقًا؟",
+      "ALREADY_PAID_HINT": "تبقى الفوترة مربوطة بالحصة الفائتة، في فوجها الأصلي. لا يوجد جواب محدَّد مسبقًا: القرار لك.",
+      "ALREADY_PAID_YES": "مدفوعة مسبقًا — لا تُعاد فوترتها",
+      "ALREADY_PAID_NO": "للفوترة",
+      "NO_ELIGIBLE_ABSENCE": "لا يوجد أي غياب للاستدراك في فوج من المستوى نفسه والمادة نفسها.",
+      "AUDIT_TITLE": "سجل القرارات",
+      "SAVE_RESOLUTION": "حفظ القرار",
+      "SAVE_CORRECTION": "حفظ التصحيح"
+    },
+    "FIELDS": {
+      "STUDENT": "التلميذ",
+      "HOST_SESSION": "الحصة المحضورة",
+      "HOST_GROUP": "فوج الاستقبال",
+      "MISSED_SESSION": "الحصة الفائتة",
+      "COMMENT": "تعليق",
+      "ACTIONS": "الإجراءات",
+      "LEVEL_SUBJECT": "المستوى {{level}} — المادة {{subject}}",
+      "LEVEL_SUBJECT_SHORT": "المستوى / المادة"
+    },
+    "AUDIT": {
+      "MISSED_SESSION": "الحصة الفائتة",
+      "ALREADY_PAID": "مدفوعة مسبقًا"
+    },
+    "MESSAGES": {
+      "RESOLVED": "تم حفظ قرار الفوترة.",
+      "CORRECTED": "تم حفظ التصحيح."
+    },
+    "ERRORS": {
+      "MISSING_CONTEXT": "هذا الاستدراك غير مربوط بتلميذ ولا بفوج: يتعذّر اقتراح حصة فائتة."
+    }
+  },
+  "correction": {
+    "subject": "الوصل {{number}} بمبلغ {{amount}} دج — {{series}} ({{group}})",
+    "reason": {
+      "DATA_ENTRY_ERROR": "خطأ في الإدخال",
+      "DOCUMENT_RECEIVED": "استلام وثيقة مبرِّرة",
+      "ARRIVAL_DATE_CORRECTED": "تصحيح تاريخ الوصول",
+      "STUDENT_LEFT": "مغادرة التلميذ",
+      "WRONG_STUDENT": "تحصيل على تلميذ خاطئ",
+      "WRONG_AMOUNT": "مبلغ مُدخل خطأً",
+      "OTHER": "أخرى"
+    },
+    "dialog": {
+      "reason": "السبب",
+      "reasonRequired": "اختر سبب التصحيح.",
+      "reasonText": "توضيح (اختياري)",
+      "reasonTextRequired": "اشرح في بضع كلمات",
+      "preview": "عرض المعاينة",
+      "previewTitle": "ما سيتغير",
+      "confirm": "تأكيد",
+      "back": "تعديل",
+      "stale": "تغيّرت البيانات منذ المعاينة: هذه هي المعاينة الجديدة. أعد قراءتها قبل التأكيد.",
+      "blockingRefund": "الاسترجاع {{number}} بتاريخ {{date}}: {{amount}} دج على «{{series}}»",
+      "error": "تعذّر إجراء التصحيح. أعد المحاولة.",
+      "mark": {
+        "label": "حضور التلميذ",
+        "none": "دون حضور (مفوترة)",
+        "present": "حاضر",
+        "absent": "غائب",
+        "hint": "تدخل في الفترة حصص مصادَق عليها مسبقًا دون حضور للتلميذ. إن تُركت هكذا فهي مفوترة: فمقعده كان محجوزًا. يمكنك تسجيله حاضرًا أو غائبًا: تتحدّث المعاينة تلقائيًا."
+      }
+    },
+    "preview": {
+      "amountsUnchanged": "لا يتغير أي مبلغ.",
+      "before": "قبل",
+      "after": "بعد",
+      "cost": "تكلفة السلسلة",
+      "dueSoFar": "المستحق حتى اليوم",
+      "paid": "المدفوع",
+      "remaining": "الباقي للدفع",
+      "status": "الوضعية",
+      "upToDate": "منتظم",
+      "late": "متأخر",
+      "effects": "آثار أخرى"
+    },
+    "cancel": {
+      "action": "إلغاء",
+      "aria": "إلغاء الدفعة {{number}}",
+      "title": "إلغاء الدفعة",
+      "done": "أُلغي الوصل {{number}}."
+    },
+    "correct": {
+      "action": "تصحيح",
+      "aria": "تصحيح الدفعة {{number}}",
+      "title": "تصحيح الدفعة",
+      "detailsDone": "صُحّح الوصل {{number}}.",
+      "replaced": "استُبدل الوصل {{original}} بالوصل {{replacement}}.",
+      "print": "طباعة الوصل الجديد"
+    },
+    "edit": {
+      "title": "تصحيح الوصل {{number}}",
+      "hint": "أدخل الدفعة كما كان ينبغي تسجيلها. تغيير المبلغ أو التلميذ أو الفوج أو السلسلة يستبدل الوصل؛ أما طريقة الدفع والملاحظة فتُصحَّحان دون وصل جديد.",
+      "loadError": "تعذّر تحميل جزء من القوائم.",
+      "amount": "المبلغ المستلم",
+      "amountRequired": "يُنتظر مبلغ موجب تمامًا.",
+      "group": "الفوج",
+      "student": "التلميذ",
+      "studentRequired": "اختر التلميذ الذي دفع.",
+      "series": "السلسلة المقصودة",
+      "seriesRequired": "اختر السلسلة المقصودة.",
+      "method": "طريقة الدفع",
+      "noMethod": "غير محددة",
+      "notes": "ملاحظة",
+      "unchanged": "لم يُعدَّل شيء حتى الآن.",
+      "next": "متابعة"
+    }
+  },
+  "enrolment": {
+    "list": {
+      "title": "التسجيلات: الوصول والمغادرة",
+      "empty": "لا يوجد أي تسجيل لهذه السنة.",
+      "loadError": "تعذّر تحميل التسجيلات.",
+      "open": "جارٍ",
+      "closed": "منتهٍ",
+      "arrival": "الوصول: {{date}}",
+      "departure": "المغادرة: {{date}}",
+      "correctArrival": "تصحيح الوصول",
+      "recordDeparture": "تسجيل المغادرة",
+      "correctDeparture": "تصحيح المغادرة",
+      "reopen": "إعادة الفتح",
+      "arrivalAria": "تصحيح تاريخ الوصول إلى «{{group}}»",
+      "departureAria": "تسجيل المغادرة من «{{group}}»",
+      "correctDepartureAria": "تصحيح تاريخ المغادرة من «{{group}}»",
+      "reopenAria": "إعادة فتح التسجيل في «{{group}}»"
+    },
+    "period": {
+      "open": "ابتداءً من {{arrival}}",
+      "closed": "من {{arrival}} إلى {{departure}}"
+    },
+    "correction": {
+      "subject": "{{student}} — «{{group}}»، {{period}}",
+      "dateRequired": "أدخل تاريخًا صحيحًا.",
+      "unchanged": "هذا هو التاريخ المسجَّل مسبقًا: لا شيء للتصحيح.",
+      "next": "عرض المعاينة",
+      "ARRIVAL": {
+        "title": "تصحيح تاريخ الوصول",
+        "date": "تاريخ الوصول الجديد",
+        "done": "صُحّح الوصول إلى «{{group}}»."
+      },
+      "DEPARTURE": {
+        "title": "تسجيل المغادرة",
+        "correctTitle": "تصحيح تاريخ المغادرة",
+        "date": "تاريخ المغادرة",
+        "dateHint": "آخر يوم يُنتظر فيه التلميذ: حصص ذلك اليوم لا تزال تعنيه.",
+        "removePresencesAfter": "حذف حضوره بعد هذا التاريخ أيضًا",
+        "removePresencesHint": "وإلا بقي وفُوتر كحصص محضورة. أما غياباته بعد المغادرة فتُحذف دائمًا.",
+        "done": "سُجّلت المغادرة من «{{group}}»."
+      },
+      "REOPEN": {
+        "title": "إعادة فتح التسجيل",
+        "done": "أُعيد فتح التسجيل في «{{group}}»."
+      }
+    },
+    "add": {
+      "groupsTitle": "التسجيل في أفواج",
+      "addGroups": "تسجيل",
+      "selectGroups": "الأفواج",
+      "arrival": "تاريخ الوصول",
+      "arrivalHint": "أول يوم يُنتظر فيه التلميذ؛ اليوم افتراضيًا.",
+      "alreadyEnrolled": "مسجَّل مسبقًا: {{names}}. لم يُسجَّل أي تسجيل.",
+      "unreachable": "تعذّر الوصول إلى الخادم",
+      "error": "تعذّر حفظ التسجيل."
+    },
+    "departure": {
+      "notEnrolled": "لم يعد لهذا التلميذ تسجيل مفتوح في هذا الفوج: أُعيد تحميل القائمة."
+    }
+  },
+  "journal": {
+    "title": "سجل التصحيحات",
+    "count": "{{count}} تصحيح",
+    "from": "من",
+    "to": "إلى",
+    "apply": "عرض",
+    "reset": "كل الفترات",
+    "print": "طباعة",
+    "printAria": "طباعة سجل التصحيحات للفترة المعروضة",
+    "empty": "لا يوجد أي تصحيح في هذه الفترة.",
+    "loadError": "تعذّر تحميل السجل.",
+    "printError": "تعذّرت طباعة السجل.",
+    "periodInvalid": "تاريخ النهاية يسبق تاريخ البداية.",
+    "noEffect": "دون أثر على المستحق",
+    "by": "بواسطة {{user}}",
+    "period": {
+      "between": "من {{from}} إلى {{to}}",
+      "from": "منذ {{from}}",
+      "to": "إلى غاية {{to}}",
+      "all": "كل الفترات"
+    },
+    "columns": {
+      "date": "التاريخ",
+      "correction": "التصحيح",
+      "effect": "الأثر على المستحق",
+      "reason": "السبب",
+      "by": "بواسطة"
+    },
+    "category": {
+      "ENCASHMENT": "دفعة",
+      "ENROLMENT": "تسجيل",
+      "ATTENDANCE": "حضور",
+      "JUSTIFICATION": "تبرير",
+      "CATCH_UP": "استدراك"
+    },
+    "generatedOn": "حُرّر في {{date}}",
+    "page": "الصفحة {{current}} / {{total}}",
+    "fileName": "سجل"
+  },
+  "teacherPayroll": {
+    "title": "أجور الأساتذة",
+    "subtitle": "حصة كل أستاذ مما حصّلته سلسلة فوجه، بالنسبة المختارة.",
+    "tabs": {
+      "payable": "للدفع",
+      "paid": "الأجور المدفوعة",
+      "rates": "النِّسب"
+    },
+    "filters": {
+      "teacher": "الأستاذ",
+      "group": "الفوج",
+      "all": "كل الأساتذة",
+      "allGroups": "كل الأفواج",
+      "status": "الحالة",
+      "allStatuses": "كل الحالات",
+      "from": "من",
+      "to": "إلى",
+      "reset": "مسح عوامل التصفية"
+    },
+    "columns": {
+      "group": "الفوج",
+      "series": "السلسلة",
+      "teacher": "الأستاذ",
+      "sessions": "الحصص المصادَق عليها",
+      "collectedNet": "المحصَّل الصافي",
+      "state": "الحالة",
+      "number": "رقم الأجر",
+      "paidAt": "التاريخ",
+      "groupSeries": "الفوج والسلسلة",
+      "nature": "الطبيعة",
+      "rate": "النسبة",
+      "base": "القاعدة المقتسمة",
+      "teacherAmount": "حصة الأستاذ",
+      "schoolAmount": "حصة المدرسة",
+      "status": "الوضعية"
+    },
+    "state": {
+      "PAYABLE": "للدفع",
+      "NOT_FINISHED": "جارية",
+      "NO_TEACHER": "دون أستاذ",
+      "NOTHING_COLLECTED": "لا تحصيل",
+      "TO_REGULARIZE": "للتسوية",
+      "PAID": "مدفوعة"
+    },
+    "status": {
+      "ACTIVE": "نشط",
+      "CANCELLED": "ملغى"
+    },
+    "nature": {
+      "INITIAL": "أجر",
+      "COMPLEMENT": "تكملة",
+      "DEDUCTION": "اقتطاع"
+    },
+    "payable": {
+      "hint": "تُدفع السلسلة عندما تُصادَق كل حصصها. وتبقى سلاسل السنة المغلقة معروضة ما دامت للدفع أو للتسوية.",
+      "empty": "لا توجد أي سلسلة للدفع ولا للتسوية.",
+      "noTeacher": "لا يوجد أستاذ",
+      "grossMinusRefunded": "{{gross}} دج مدفوعة − {{refunded}} دج مسترجعة",
+      "remaining": "{{count}} حصة للمصادقة قبل الدفع",
+      "noTeacherHint": "اربط أستاذًا بالفوج لدفع أجر السلسلة.",
+      "nothingHint": "لا شيء للاقتسام: لا تحصيل صافيًا على السلسلة.",
+      "deductionHint": "اقتطاع بمبلغ {{amount}} دج: أُرجع مال منذ الأجر {{number}}.",
+      "complementHint": "تكملة بمبلغ {{amount}} دج: وصل مال منذ الأجر {{number}}.",
+      "pay": "دفع",
+      "payAria": "دفع أجر السلسلة {{series}} للفوج {{group}}",
+      "regularize": "تسوية",
+      "regularizeAria": "تسوية أجر السلسلة {{series}} للفوج {{group}}",
+      "recorded": "سُجّل الأجر {{number}}: {{amount}} دج للأستاذ.",
+      "includePaid": "عرض السلاسل المدفوعة",
+      "planned": "({{count}} مقررة)",
+      "missing": "سلسلة غير مكتملة: {{count}} حصة مقررة لم تُنشأ بعد",
+      "paidHint": "الأجر {{number}}، منتظم: لا شيء للقيام به."
+    },
+    "paid": {
+      "empty": "لا يوجد أي أجر لعوامل التصفية هذه.",
+      "ofInitial": "تسوية للأجر {{number}}",
+      "replaces": "يحل محل {{number}}",
+      "by": "بواسطة {{user}}",
+      "netNow": "المحصَّل الصافي: {{amount}} دج",
+      "cancelledOn": "أُلغي في {{date}} بواسطة {{user}}",
+      "replacedBy": "استُبدل بـ {{number}}",
+      "teacherTotal": "مجموع المدفوع للأساتذة: {{amount}} دج",
+      "schoolTotal": "حصة المدرسة: {{amount}} دج",
+      "totalsHint": "لا تحسب المجاميع إلا الأجور النشطة ضمن التصفية؛ ويُطرح منها الاقتطاع."
+    },
+    "dialog": {
+      "payTitle": "دفع أجر الأستاذ",
+      "regularizeTitle": "تسوية الأجر",
+      "subject": "السلسلة «{{series}}» للفوج {{group}} — {{teacher}}",
+      "sessions": "{{validated}} حصة مصادَق عليها من أصل {{active}}",
+      "initialPayout": "الأجر الأصلي {{number}}",
+      "rate": "نسبة الأجر",
+      "rateOption": "{{label}} ({{percent}} %)",
+      "noRate": "لا توجد أي نسبة نشطة: أنشئ واحدة في تبويب النِّسب.",
+      "rateRequired": "اختر النسبة المطبَّقة.",
+      "note": "ملاحظة (اختيارية)",
+      "stale": "تغيّرت المبالغ منذ الحساب المعروض: هذا هو الحساب الجديد. أعد قراءته قبل التأكيد.",
+      "previewTitle": "حساب الأجر",
+      "composition": "المحصَّل: {{gross}} دج مدفوعة − {{refunded}} دج مسترجعة = {{net}} دج صافية.",
+      "calculation": "{{base}} دج × {{percent}} % = {{teacher}} دج لـ {{name}}.",
+      "regularizationBase": "المحصَّل الصافي الحالي {{net}} دج − المغطّى مسبقًا {{covered}} دج = {{base}} دج.",
+      "regularizationShare": "الحصة المستحقة للأستاذ من المحصَّل الحالي ({{percent}} %): {{due}} دج؛ المدفوع مسبقًا: {{paid}} دج.",
+      "complement": "تكملة تُدفع لـ {{name}}: {{amount}} دج.",
+      "deduction": "اقتطاع: على {{name}} أن يُرجع {{amount}} دج.",
+      "school": "حصة المدرسة: {{school}} دج.",
+      "frozen": "النسبة «{{label}}»: يحتفظ الأجر بنسخة منها، ولن يغيّره أي تعديل لاحق للنسبة.",
+      "preview": "حساب",
+      "confirm": "تسجيل الأجر",
+      "confirmDeduction": "تسجيل الاقتطاع",
+      "error": "تعذّر حساب الأجر. أعد المحاولة.",
+      "incomplete": "سلسلة غير مكتملة: {{count}} حصة من أصل {{planned}} مقررة لم تُنشأ بعد. يبقى الدفع ممكنًا؛ والمال المحصَّل لحصة تُضاف لاحقًا يمرّ عبر تسوية."
+    },
+    "correction": {
+      "cancelTitle": "إلغاء الأجر",
+      "replaceTitle": "إعادة الأجر بنسبة أخرى",
+      "replaceSubject": "الأجر {{number}}: {{amount}} دج لـ {{teacher}}، بالنسبة «{{label}}» ({{percent}} %)",
+      "replaceHint": "يُلغى الأجر ويُستبدل بأجر جديد، للأستاذ نفسه، على المحصَّل الحالي. ولدفع أجر أستاذ آخر: ألغِ ثم ادفع من جديد.",
+      "newRate": "النسبة الجديدة",
+      "noOtherRate": "لا توجد نسبة نشطة أخرى: أنشئ واحدة في تبويب النِّسب.",
+      "noteKept": "إن تُركت فارغة، تُعتمد ملاحظة الأجر الأصلي.",
+      "next": "متابعة",
+      "cancelled": "أُلغي الأجر {{number}}.",
+      "replaced": "استُبدل الأجر {{number}} بـ {{replacement}}.",
+      "subject": {
+        "INITIAL": "الأجر {{number}} بمبلغ {{amount}} دج لـ {{teacher}} ({{series}}، {{group}})",
+        "COMPLEMENT": "التكملة {{number}} بمبلغ {{amount}} دج لـ {{teacher}} ({{series}}، {{group}})",
+        "DEDUCTION": "الاقتطاع {{number}} بمبلغ {{amount}} دج من {{teacher}} ({{series}}، {{group}})"
+      },
+      "replaceAction": "إعادة بنسبة أخرى",
+      "replaceAria": "إعادة الأجر {{number}} بنسبة أخرى",
+      "cancelAction": "إلغاء الأجر",
+      "cancelAria": "إلغاء الأجر {{number}}"
+    },
+    "rates": {
+      "createTitle": "نسبة جديدة",
+      "editTitle": "تعديل النسبة",
+      "label": "التسمية",
+      "labelRequired": "التسمية إجبارية.",
+      "teacherPercent": "حصة الأستاذ",
+      "schoolPercent": "حصة المدرسة",
+      "schoolShare": "تحتفظ المدرسة بـ {{percent}} %",
+      "percentInvalid": "نسبة مئوية بين 0 و100 تمامًا، برقمين عشريين على الأكثر.",
+      "save": "حفظ",
+      "create": "إنشاء النسبة",
+      "frozenHint": "تعديل نسبة أو تعطيلها لا يغيّر أي أجر سبق دفعه: يحتفظ كل أجر بنسخة منها.",
+      "empty": "لا توجد أي نسبة: أنشئ الأولى لتتمكن من الدفع.",
+      "active": "نشطة",
+      "inactive": "معطَّلة",
+      "edit": "تعديل",
+      "editAria": "تعديل النسبة {{label}}",
+      "disable": "تعطيل",
+      "disableAria": "تعطيل النسبة {{label}}",
+      "created": "أُنشئت النسبة «{{label}}».",
+      "updated": "عُدّلت النسبة «{{label}}».",
+      "disabled": "عُطّلت النسبة «{{label}}»: لم تعد مقترحة."
+    },
+    "slip": {
+      "print": "طباعة الكشف",
+      "printError": "تعذّرت طباعة الكشف. أعد المحاولة من «الأجور المدفوعة».",
+      "reprint": "إعادة طباعة الكشف",
+      "reprintAria": "إعادة طباعة كشف الأجر {{number}}",
+      "cancelledStamp": "ملغى",
+      "title": {
+        "INITIAL": "كشف الأجر",
+        "COMPLEMENT": "كشف التكملة",
+        "DEDUCTION": "كشف الاقتطاع"
+      },
+      "number": "رقم {{number}}",
+      "paidOn": "بتاريخ {{date}}",
+      "duplicate": "نسخة ثانية رقم {{rank}} — {{date}}",
+      "cancelledOn": "أُلغي في {{date}} بواسطة {{user}}",
+      "replacedBy": "استُبدل بالأجر {{number}}",
+      "partiesHeading": "الأستاذ والسلسلة",
+      "calculationHeading": "الحساب",
+      "recordedBy": "سجّله {{user}}",
+      "footer": "وثيقة صندوق — نسخة للأستاذ ونسخة للمدرسة.",
+      "teacher": "الأستاذ",
+      "group": "الفوج",
+      "series": "السلسلة",
+      "rate": "النسبة",
+      "rateValue": "{{label}} ({{percent}} %)",
+      "initialPayout": "الأجر الأصلي",
+      "replaces": "يحل محل الأجر",
+      "collectedGross": "المحصَّل الإجمالي",
+      "refunded": "المسترجَع",
+      "collectedNet": "المحصَّل الصافي",
+      "calculation": "حصة الأستاذ",
+      "calculationValue": "{{base}} دج × {{percent}} % = {{teacher}} دج",
+      "baseDelta": "المحصَّل منذ الأجر السابق",
+      "deductionAmount": "المبلغ المستحق على الأستاذ",
+      "teacherAmount": "المبلغ المسلَّم للأستاذ",
+      "schoolAmount": "حصة المدرسة: {{amount}} دج",
+      "signatureTeacher": "توقيع الأستاذ",
+      "signatureSchool": "توقيع الإدارة",
+      "money": "{{amount}} دج"
+    },
+    "profile": {
+      "title": "الأجور",
+      "empty": "لا يوجد أي أجر مسجَّل لهذا الأستاذ.",
+      "total": "مجموع المدفوع: {{amount}} دج"
+    }
+  },
+  "GROUP_PROFILE": {
+    "PHOTO_ALT": "صورة الفوج",
+    "EDIT_TOOLTIP": "تعديل الفوج",
+    "PRINT_TOOLTIP": "طباعة البطاقة والتحصيلات والسلاسل (PDF)",
+    "DISABLE_TOOLTIP": "تعطيل الفوج (يُحفظ السجل)",
+    "INFO_TITLE": "معلومات الفوج",
+    "GROUP_TYPE": "نوع الفوج",
+    "SUBJECT": "المادة",
+    "SESSIONS_PER_SERIES": "الحصص في السلسلة",
+    "PRICE": "السعر",
+    "TEACHER": "الأستاذ",
+    "TEACHER_LINK_TOOLTIP": "عرض بطاقة الأستاذ",
+    "NO_DESCRIPTION": "لا يوجد وصف.",
+    "ADD_STUDENT": "إضافة تلميذ",
+    "STUDENTS": "التلاميذ",
+    "STUDENT_COUNT": "{{count}} تلميذ",
+    "STUDENT_FILTERED_COUNT": "{{filtered}} / {{count}} تلميذ",
+    "FILTER_PLACEHOLDER": "تصفية تلاميذ الفوج…",
+    "CLEAR_FILTER": "مسح التصفية",
+    "NO_MATCH": "لا يوجد تلميذ يطابق «{{filter}}»",
+    "SERIES": "السلاسل",
+    "SERIES_COUNT": "{{count}} سلسلة",
+    "OPEN_SERIES_TOOLTIP": "عرض حصص السلسلة",
+    "OPEN_SESSIONS_TOOLTIP": "عرض الحصص",
+    "MESSAGES": {
+      "STUDENTS_ADDED": "أُضيف {{count}} تلميذ إلى الفوج.",
+      "UPDATED": "تم تعديل الفوج بنجاح.",
+      "PHOTO_UPLOAD_ERROR": "خطأ أثناء تحميل الصورة.",
+      "UPDATE_ERROR": "خطأ أثناء تحديث الفوج."
+    },
+    "PDF": {
+      "SCHOOL_YEAR": "السنة الدراسية",
+      "STUDENTS_TABLE": "التلاميذ ({{count}})",
+      "REMARKS": "ملاحظات",
+      "REVENUE_LOAD_ERROR": "تعذّر تحميل التحصيلات.",
+      "REVENUE_EMPTY": "لا يوجد أي تحصيل مسجَّل لهذا الفوج.",
+      "COLLECTED_NET": "المحصَّل (صافٍ)",
+      "REFUNDED": "المسترجَع",
+      "UNASSIGNED": "غير مربوط بسلسلة",
+      "SUMMARY": "الخلاصة",
+      "SERIES_COLUMN": "السلسلة",
+      "REMAINING_COLUMN": "الباقي",
+      "BY_SERIES_NOTE": "يُحسب الباقي والفائض تلميذًا تلميذًا: الدفعة الزائدة لا تعوّض تأخر تلميذ آخر.",
+      "MONTH_COLUMN": "الشهر",
+      "BY_MONTH_NOTE": "ما دخل الصندوق كل شهر، أيًّا كانت السلسلة المسدَّدة: لذلك تختلف المجاميع عن التوزيع حسب السلسلة.",
+      "SERIES_TABLE": "السلاسل ({{count}})",
+      "START": "البداية",
+      "END": "النهاية",
+      "SESSIONS_CREATED": "الحصص المنشأة",
+      "PLANNED": "المقررة",
+      "VALIDATED": "المصادَق عليها"
+    }
+  },
+  "STUDENT_PROFILE": {
+    "PHOTO_ALT": "صورة التلميذ",
+    "EDIT_TOOLTIP": "تعديل الملف",
+    "PAYMENT_HISTORY_TOOLTIP": "سجل المدفوعات",
+    "ATTENDANCE_HISTORY_TOOLTIP": "سجل الحضور",
+    "FULL_HISTORY_TOOLTIP": "السجل الكامل",
+    "PRINT_TOOLTIP": "طباعة البطاقة (PDF)",
+    "DISABLE_TOOLTIP": "تعطيل الحساب",
+    "PERSONAL_INFO": "المعلومات الشخصية",
+    "PHONE": "الهاتف",
+    "ACADEMIC_INFO": "المعلومات الدراسية",
+    "AVERAGE": "المعدل",
+    "ADD_PAYMENT": "إضافة دفعة",
+    "MANAGE_GROUPS": "تسيير الأفواج",
+    "GROUPS_COUNT": "الأفواج ({{count}})",
+    "NO_GROUPS": "لا يوجد أي فوج حاليًا",
+    "ERRORS": {
+      "PAYMENT_EXCEEDS_SESSIONS": "لا يمكن إجراء الدفع لأنه يتجاوز تكلفة الحصص المنشأة حاليًا.",
+      "STUDENT_NOT_FOUND": "لم يُعثر على التلميذ.",
+      "GROUP_NOT_FOUND": "لم يُعثر على الفوج.",
+      "GENERIC_ERROR": "حدث خطأ. يرجى إعادة المحاولة لاحقًا.",
+      "GROUP_ALREADY_ASSOCIATED": "بعض الأفواج مرتبطة مسبقًا بالتلميذ.",
+      "INSUFFICIENT_SESSIONS": "عدد الحصص المنشأة غير كافٍ لتغطية الدفع.",
+      "INVALID_GROUP_LEVEL": "لم يُعثر على أي فوج يوافق مستوى التلميذ."
+    },
+    "MESSAGES": {
+      "CLOSE": "إغلاق",
+      "INVALID_STUDENT": "تلميذ غير صالح",
+      "NO_PAYMENT_GROUP": "لا يوجد أي فوج متاح للدفع",
+      "NO_GROUP_FOR_LEVEL": "لا يوجد أي فوج متاح لهذا المستوى.",
+      "ALL_GROUPS_ADDED": "أُضيفت كل أفواج هذا المستوى مسبقًا إلى هذا التلميذ.",
+      "UPDATED": "تم تعديل التلميذ بنجاح.",
+      "PHOTO_UPLOAD_ERROR": "خطأ أثناء تحميل الصورة.",
+      "UPDATE_ERROR": "خطأ أثناء تحديث التلميذ.",
+      "NOT_FOUND": "لم يُعثر على التلميذ.",
+      "FULL_HISTORY_ERROR": "خطأ أثناء استرجاع السجل الكامل."
+    },
+    "PDF": {
+      "GROUP_COLUMN": "الفوج",
+      "SUBJECT_COLUMN": "المادة"
+    }
+  },
+  "TEACHER_PROFILE": {
+    "PHOTO_ALT": "صورة الأستاذ",
+    "EDIT_TOOLTIP": "تعديل الملف",
+    "PRINT_TOOLTIP": "طباعة البطاقة (PDF)",
+    "DISABLE_TOOLTIP": "تعطيل الأستاذ (يُحفظ السجل)",
+    "PERSONAL_INFO": "المعلومات الشخصية",
+    "PHONE": "الهاتف",
+    "COMMUNICATION": "التواصل",
+    "PROFESSIONAL_INFO": "المعلومات المهنية",
+    "SPECIALIZATION": "التخصص",
+    "EXPERIENCE": "سنوات الخبرة",
+    "GROUPS_COUNT": "الأفواج المدرَّسة ({{count}})",
+    "NO_GROUPS": "لا يوجد أي فوج مدرَّس حاليًا",
+    "MESSAGES": {
+      "UPDATED": "تم تعديل الأستاذ بنجاح.",
+      "PHOTO_UPLOAD_ERROR": "خطأ أثناء تحميل الصورة.",
+      "UPDATE_ERROR": "خطأ أثناء تعديل الأستاذ."
+    }
+  },
+  "PROFILE_CARD": {
+    "PROFILE_PHOTO": "صورة الملف",
+    "STUDENT_PHOTO": "صورة التلميذ",
+    "GROUP_PHOTO": "صورة الفوج",
+    "SEND_EMAIL": "إرسال بريد إلكتروني",
+    "OPEN_WHATSAPP": "فتح WhatsApp",
+    "RECORD_DEPARTURE": "تسجيل المغادرة من الفوج",
+    "LEVEL": "المستوى: {{level}}",
+    "LEVEL_UNKNOWN": "المستوى: غير متاح",
+    "SPECIALIZATION": "التخصص: {{specialization}}"
+  },
+  "PROFILE_PDF": {
+    "PAGE": "الصفحة {{current}} / {{total}}",
+    "SIGNATURE": "التوقيع: ________________________",
+    "ADMINISTRATION": "الإدارة: ________________________",
+    "GROUP": "الفوج",
+    "GROUP_WITH_TYPE": "الفوج · {{type}}",
+    "STUDENT": "التلميذ",
+    "STUDENT_WITH_LEVEL": "التلميذ · {{level}}",
+    "TEACHER": "الأستاذ",
+    "TEACHER_WITH_SPECIALIZATION": "الأستاذ · {{specialization}}"
+  },
+  "NATIONALITY": {
+    "ALGERIENNE": "جزائرية",
+    "TUNISIENNE": "تونسية",
+    "MAROCAINE": "مغربية",
+    "LIBYENNE": "ليبية",
+    "MAURITANIENNE": "موريتانية",
+    "EGYPTIENNE": "مصرية",
+    "FRANCAISE": "فرنسية",
+    "ESPAGNOLE": "إسبانية",
+    "ITALIENNE": "إيطالية",
+    "ALLEMANDE": "ألمانية",
+    "BRITANNIQUE": "بريطانية",
+    "BELGE": "بلجيكية",
+    "SUISSE": "سويسرية",
+    "CANADIENNE": "كندية",
+    "AMERICAINE": "أمريكية",
+    "TURQUE": "تركية",
+    "SAOUDIENNE": "سعودية",
+    "EMIRATIE": "إماراتية",
+    "QATARIENNE": "قطرية",
+    "KOWEITIENNE": "كويتية",
+    "JORDANIENNE": "أردنية",
+    "LIBANAISE": "لبنانية",
+    "SYRIENNE": "سورية",
+    "IRAKIENNE": "عراقية",
+    "PALESTINIENNE": "فلسطينية",
+    "SENEGALAISE": "سنغالية",
+    "MALIENNE": "مالية",
+    "NIGERIENNE": "نيجرية",
+    "IVOIRIENNE": "إيفوارية",
+    "CAMEROUNAISE": "كاميرونية",
+    "CHINOISE": "صينية",
+    "INDIENNE": "هندية",
+    "OTHER": "أخرى"
+  },
+  "HTTP_ERRORS": {
+    "GENERIC": "حدث خطأ",
+    "SERVER": "خطأ في الخادم. يرجى إعادة المحاولة لاحقًا.",
+    "INVALID_DATA": "بيانات غير صحيحة",
+    "ADMIN_ONLY": "إجراء خاص بالمسؤولين",
+    "SESSION_EXPIRED": "انتهت الجلسة: أعد تسجيل الدخول",
+    "UNREACHABLE": "تعذّر الوصول إلى الخادم",
+    "UNREACHABLE_UNKNOWN_OUTCOME": "تعذّر الوصول إلى الخادم: نتيجة العملية غير معروفة",
+    "CORRECTION_REFUSED": "رُفض التصحيح",
+    "WITH_MESSAGE": "خطأ: {{message}}",
+    "WITH_MESSAGE_COMPACT": "خطأ: {{message}}",
+    "CODE": "الرمز: {{status}}",
+    "CODE_MESSAGE": "الرمز: {{status}}\nالرسالة: {{message}}",
+    "SESSION": {
+      "NOT_FOUND": "لم يُعثر على الحصة",
+      "UNVALIDATE_FAILED": "تعذّر إلغاء المصادقة على الحصة"
+    },
+    "ATTENDANCE": {
+      "DUPLICATE": "يوجد حضور مسجَّل مسبقًا لتلميذ أو أكثر في هذه الحصة.",
+      "SHEET_REFUSED": "رُفضت ورقة الحضور.",
+      "SHEET_FAILED": "تعذّر حفظ ورقة الحضور.",
+      "NOT_FOUND": "لم يُعثر على الحضور",
+      "CORRECTION_FAILED": "تعذّر تصحيح الحضور",
+      "AUDIT_LOAD_FAILED": "تعذّر تحميل سجل التعديلات",
+      "JUSTIFICATION_REFUSED": "رُفض التعديل",
+      "JUSTIFICATION_FAILED": "حدث خطأ أثناء التعديل"
+    },
+    "CATCH_UP_BILLING": {
+      "NOT_FOUND": "لم يُعثر على الاستدراك أو الحصة",
+      "ALREADY_RECORDED": "يوجد استدراك مسجَّل مسبقًا لهذه الحصة الفائتة"
+    },
+    "ENCASHMENT": {
+      "GENERIC": "حدث خطأ أثناء قراءة الدفعات",
+      "NOT_FOUND": "لم يُعثر على الدفعة"
+    },
+    "ENROLMENT": {
+      "GENERIC": "حدث خطأ أثناء قراءة التسجيلات",
+      "NOT_FOUND": "لم يُعثر على التسجيل"
+    },
+    "PAYMENT": {
+      "NOT_FOUND": "لم يُعثر على الدفع"
+    },
+    "REFUND": {
+      "GENERIC": "حدث خطأ أثناء الاسترجاع",
+      "REFUSED": "رُفض الاسترجاع",
+      "NOT_FOUND": "لم يُعثر على الدفعة أو الاسترجاع"
+    },
+    "SCHOOL_YEAR": {
+      "NOT_FOUND": "لم يُعثر على السنة الدراسية",
+      "CONFLICT": "تعارض مع الحالة الحالية للسنوات الدراسية"
+    },
+    "YEAR_END": {
+      "NOT_FOUND": "لم يُعثر على مورد نهاية السنة"
+    },
+    "PAY_RATE": {
+      "GENERIC": "حدث خطأ في قائمة النِّسب",
+      "REFUSED": "رُفضت النسبة",
+      "NOT_FOUND": "لم يُعثر على النسبة"
+    },
+    "PAYOUT": {
+      "GENERIC": "حدث خطأ في أجور الأساتذة",
+      "REFUSED": "رُفض الأجر",
+      "NOT_FOUND": "لم يُعثر على الأجر",
+      "CORRECTION_REFUSED": "رُفض تصحيح الأجر"
+    },
+    "USER": {
+      "USERNAME_TAKEN": "اسم المستخدم هذا مستعمل مسبقًا."
+    },
+    "STUDENT": {
+      "NOT_FOUND": "لم يُعثر على التلميذ"
+    }
+  },
+  "ATTENDANCE_HISTORY": {
+    "GROUPS": "الأفواج",
+    "SERIES": "السلاسل",
+    "LEGEND_PRESENT": "حاضر",
+    "LEGEND_JUSTIFIED": "غائب بمبرر",
+    "LEGEND_NOT_JUSTIFIED": "غائب دون مبرر",
+    "COL_SESSION": "الحصة",
+    "CATCH_UP_TAG": "(استدراك)",
+    "COL_DATE": "التاريخ",
+    "COL_PRESENT": "حاضر",
+    "COL_JUSTIFIED": "مبرَّر",
+    "JUSTIFICATION_NOTE": "يفيد التبرير في المتابعة الانضباطية وفي الحق في الاستدراك. ولا يدخل في أي حساب للمبالغ: الغياب لا يزيد أبدًا في المبلغ المستحق، والحصة الفائتة بعد التسجيل تبقى محسوبة في تكلفة السلسلة.",
+    "PRINT": "طباعة",
+    "UNKNOWN_SESSION": "حصة غير معروفة",
+    "PDF": {
+      "TITLE": "سجل الحضور",
+      "STUDENT": "التلميذ: {{name}}",
+      "DATE": "التاريخ: {{date}}",
+      "COL_DATE": "تاريخ الحصة",
+      "COL_PRESENCE": "الحضور",
+      "COL_JUSTIFIED": "مبرَّرة",
+      "COL_DESCRIPTION": "الوصف",
+      "NO_DATA": "لا توجد بيانات متاحة",
+      "NOT_AVAILABLE": "غير متوفر",
+      "STUDENT_SIGNATURE": "توقيع التلميذ: ________________________",
+      "ADMIN_SIGNATURE": "توقيع الإدارة: ________________________",
+      "PAGE": "الصفحة {{current}} من {{total}}"
+    }
+  },
+  "TEACHER_SEARCH": {
+    "ALL_DISPLAYED": "تم عرض كل الأساتذة ({{count}})",
+    "WITH_GROUPS_ONLY": "عرض الأساتذة الذين لهم أفواج فقط"
+  },
+  "GROUP_SEARCH": {
+    "ALL_DISPLAYED": "تم عرض كل الأفواج ({{count}})",
+    "ACTIVE_ONLY": "عرض النشطة فقط"
+  },
+  "GROUP_SELECTOR": {
+    "ARIA_LABEL": "تصفية الرزنامة حسب الفوج"
+  },
+  "LEVEL_TABLE": {
+    "NAME": "الاسم",
+    "LEVEL_CODE": "رمز المستوى",
+    "RANK": "الرتبة"
+  },
+  "VIEW_TOGGLE": {
+    "ARIA_LABEL": "طريقة العرض",
+    "CARDS_TOOLTIP": "العرض في بطاقات",
+    "CARDS": "بطاقات",
+    "LIST_TOOLTIP": "العرض في قائمة",
+    "LIST": "قائمة"
+  },
+  "LIST_HEADER": {
+    "LATE": "المتأخرون:",
+    "ENTITY": {
+      "students": "تلاميذ",
+      "groups": "أفواج",
+      "teachers": "أساتذة"
+    }
+  },
+  "DATEPICKER": {
+    "CALENDAR": "الرزنامة",
+    "OPEN_CALENDAR": "فتح الرزنامة",
+    "CLOSE_CALENDAR": "إغلاق الرزنامة",
+    "PREV_MONTH": "الشهر السابق",
+    "NEXT_MONTH": "الشهر التالي",
+    "PREV_YEAR": "السنة السابقة",
+    "NEXT_YEAR": "السنة التالية",
+    "PREV_MULTI_YEAR": "الـ 24 سنة السابقة",
+    "NEXT_MULTI_YEAR": "الـ 24 سنة التالية",
+    "SWITCH_TO_MONTH_VIEW": "اختيار تاريخ",
+    "SWITCH_TO_MULTI_YEAR_VIEW": "اختيار الشهر والسنة",
+    "START_DATE": "تاريخ البداية",
+    "END_DATE": "تاريخ النهاية"
+  },
+  "SESSION_ATTENDANCE_PDF": {
+    "TITLE_FALLBACK": "الحصة",
+    "SECTION_TITLE": "ورقة الحضور",
+    "GENERATED_ON": "أُنشئت الورقة في {{date}}",
+    "VALIDATED": "حصة مصادق عليها",
+    "NOT_VALIDATED": "حصة غير مصادق عليها",
+    "GROUP": "الفوج",
+    "ROOM": "القاعة",
+    "TEACHER": "الأستاذ",
+    "TYPE": "النوع",
+    "START": "البداية",
+    "END": "النهاية",
+    "COL_NUMBER": "الرقم",
+    "COL_STUDENT": "التلميذ",
+    "COL_PRESENCE": "الحضور",
+    "COL_JUSTIFIED": "مبرَّر",
+    "COL_NOTE": "ملاحظة",
+    "NO_STUDENTS": "لا يوجد أي تلميذ في هذه الحصة.",
+    "CATCH_UP_NAME": "{{name}}  (استدراك)",
+    "PRESENT": "حاضر",
+    "ABSENT": "غائب",
+    "LEGEND_ABSENT_UNJUSTIFIED": "غائب / غير مبرَّر",
+    "LEGEND_JUSTIFIED": "غياب مبرَّر",
+    "SUMMARY_TOTAL": "المجموع",
+    "SUMMARY_PRESENT": "الحاضرون",
+    "SUMMARY_ABSENT": "الغائبون",
+    "SUMMARY_JUSTIFIED": "المبرَّرون",
+    "TEACHER_SIGNATURE": "الأستاذ: ________________________"
+  },
+  "SERIES_SESSIONS_PDF": {
+    "TITLE_FALLBACK": "السلسلة",
+    "GROUP_SUBTITLE": "الفوج · {{name}}",
+    "GENERATED_ON": "أُنشئ في {{date}}",
+    "SECTION_TITLE": "الحصص",
+    "GROUP": "الفوج",
+    "PLANNED": "الحصص المقرَّرة",
+    "CREATED": "الحصص المنشأة",
+    "COMPLETED": "الحصص المنتهية",
+    "START": "البداية",
+    "END": "النهاية",
+    "COL_NUMBER": "الرقم",
+    "COL_TITLE": "العنوان",
+    "COL_TYPE": "النوع",
+    "COL_TEACHER": "الأستاذ",
+    "COL_ROOM": "القاعة",
+    "COL_DATE": "التاريخ",
+    "COL_STATUS": "الحالة",
+    "NO_SESSIONS": "لا توجد أي حصة في هذه السلسلة.",
+    "VALIDATED": "مصادق عليها",
+    "SCHEDULED": "مبرمجة",
+    "TEACHER_SIGNATURE": "الأستاذ: ________________________"
+  },
+  "RESOURCE_TABLE": {
+    "NAME": "الاسم",
+    "CAPACITY": "السعة",
+    "SIZE": "التعداد"
+  }
+}

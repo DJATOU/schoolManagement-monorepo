@@ -21,6 +21,7 @@ import { ProfilePdfService } from '../../../services/profile-pdf.service';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { AdminOnlyDirective } from '../../../shared/admin-only.directive';
 import { resolveLocale } from '../../../shared/locale';
+import { inPdfLanguage, pdfInstant } from '../../../shared/pdf-i18n';
 import { parseJavaDate } from '../../../shared/java-date';
 
 interface ColumnDefenition {
@@ -183,14 +184,14 @@ export class ReusableDatatableComponent  implements OnInit{
   }
   
   showSuccessMessage(message: string): void {
-    this.snackBar.open(message, 'OK', {
+    this.snackBar.open(message, this.translate.instant('common.ok'), {
       duration: 3000,
       panelClass: ['snack-bar-success']
     });
   }
 
   showErrorMessage(message: string): void {
-    this.snackBar.open(message, 'OK', {
+    this.snackBar.open(message, this.translate.instant('common.ok'), {
       duration: 3000,
       panelClass: ['snack-bar-error']
     });
@@ -210,18 +211,30 @@ export class ReusableDatatableComponent  implements OnInit{
       return;
     }
 
-    const onSelection = this.selection.hasValue();
-    const subtitle = this.translate.instant(
-      onSelection ? 'DATATABLE.PRINT_SUBTITLE_SELECTION' : 'DATATABLE.PRINT_SUBTITLE_ALL',
-      { count: rows.length });
+    // Le PDF suit l'interface en français / anglais et sort en français sinon (arabe). Les
+    // cellules sont calculées par l'écran appelant (dates de tarif avec ses noms de mois) : elles
+    // sont donc produites l'interface momentanément dans la langue du PDF. Un en-tête de colonne
+    // qui n'est pas une clé est rendu tel quel, comme à l'écran.
+    const printed = inPdfLanguage(this.translate, () => {
+      const t = (key: string, params?: object) => pdfInstant(this.translate, key, params);
+      const title = this.entityLabel('title', t) || this.dataType;
+      return {
+        title,
+        subtitle: t(
+          this.selection.hasValue() ? 'DATATABLE.PRINT_SUBTITLE_SELECTION' : 'DATATABLE.PRINT_SUBTITLE_ALL',
+          { count: rows.length }),
+        tableColumns: this.columns.map(c => (c.header ? t(c.header) : c.header)),
+        tableRows: rows.map(row => this.columns.map(c => this.display(c.cell(row))))
+      };
+    });
 
     this.profilePdfService.generateProfilePdf({
-      title: this.entityTitle,
-      subtitle,
+      title: printed.title,
+      subtitle: printed.subtitle,
       sections: [],
-      tableTitle: this.entityTitle,
-      tableColumns: this.columns.map(c => c.header),
-      tableRows: rows.map(row => this.columns.map(c => this.display(c.cell(row))))
+      tableTitle: printed.title,
+      tableColumns: printed.tableColumns,
+      tableRows: printed.tableRows
     });
   }
 
@@ -242,15 +255,19 @@ export class ReusableDatatableComponent  implements OnInit{
 
   /** Titre de la page, dérivé du type d'entité (repli sur le type brut). */
   get entityTitle(): string {
-    const key = `DATATABLE.ENTITIES.${this.dataType}.title`;
-    const label = this.translate.instant(key);
-    return label === key ? this.dataType : label;
+    return this.entityLabel('title') || this.dataType;
   }
 
   /** Sous-titre explicatif de la page. */
   get entitySubtitle(): string {
-    const key = `DATATABLE.ENTITIES.${this.dataType}.subtitle`;
-    const label = this.translate.instant(key);
+    return this.entityLabel('subtitle');
+  }
+
+  /** Libellé `DATATABLE.ENTITIES.<type>.<field>`, chaîne vide si la clé n'existe pas. */
+  private entityLabel(field: 'title' | 'subtitle',
+                      t: (key: string) => string = key => this.translate.instant(key)): string {
+    const key = `DATATABLE.ENTITIES.${this.dataType}.${field}`;
+    const label = t(key);
     return label === key ? '' : label;
   }
 

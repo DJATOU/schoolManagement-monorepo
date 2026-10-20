@@ -3,6 +3,7 @@ import {
   HttpClientTestingModule,
   HttpTestingController,
 } from '@angular/common/http/testing';
+import { TranslateModule } from '@ngx-translate/core';
 import { ImportResult, ImportService } from '../import.service';
 import { API_BASE_URL } from '../../api-base-url';
 
@@ -17,7 +18,7 @@ describe('ImportService - inscriptions', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      imports: [HttpClientTestingModule],
+      imports: [HttpClientTestingModule, TranslateModule.forRoot()],
       providers: [ImportService],
     });
     service = TestBed.inject(ImportService);

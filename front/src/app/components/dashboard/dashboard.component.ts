@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ElementRef, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
@@ -6,6 +6,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatDatepickerModule } from '@angular/material/datepicker';
+import { provideTranslatedDatepickerIntl } from '../../shared/translated-datepicker-intl';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -17,6 +18,7 @@ import { SchoolYear } from '../../models/schoolYear/school-year';
 import { Subject, takeUntil } from 'rxjs';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
+import { inPdfLanguage, pdfInstant, pdfLanguage } from '../../shared/pdf-i18n';
 
 interface Kpi {
   label: string;
@@ -32,6 +34,7 @@ type RangePreset = 'year' | 'month' | 'custom';
 @Component({
   selector: 'app-dashboard',
   standalone: true,
+  providers: [provideTranslatedDatepickerIntl()],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.scss',
   imports: [
@@ -68,7 +71,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   constructor(private dashboardService: DashboardService,
               private translate: TranslateService,
-              private schoolYearContext: SchoolYearContextService) {}
+              private schoolYearContext: SchoolYearContextService,
+              private cdr: ChangeDetectorRef) {}
 
   ngOnInit(): void {
     // Recharge les statistiques à chaque changement d'année sélectionnée.
@@ -185,28 +189,46 @@ export class DashboardComponent implements OnInit, OnDestroy {
     ];
   }
 
-  /** Exporte le tableau de bord affiché en PDF (capture visuelle fidèle). */
+  /**
+   * Exporte le tableau de bord affiché en PDF (capture visuelle fidèle).
+   *
+   * <p>Comme les autres documents, le PDF suit l'interface en français / anglais et sort en
+   * français sous l'arabe : l'écran est rendu dans la langue du PDF le temps de cloner la page
+   * (synchrone, rien n'est peint entre-temps), puis la langue est rétablie. Le clone est mis en
+   * `lang` / `dir` de cette langue pour que sa mise en page soit celle d'un écran français.</p>
+   */
   async printPdf(): Promise<void> {
     const el = this.dashboardContent?.nativeElement;
     if (!el) return;
 
-    // Masquer la barre de filtre/boutons pendant la capture (optionnel : on capture tel quel)
-    const canvas = await html2canvas(el, {
-      scale: 2,
-      backgroundColor: '#ffffff',
-      useCORS: true,
-      onclone: (doc) => {
-        // Neutralise l'animation fade-in (sinon le clone est capturé à opacity 0 → délavé)
-        doc.querySelectorAll('.fade-in').forEach((node) => {
-          const elem = node as HTMLElement;
-          elem.style.opacity = '1';
-          elem.style.animation = 'none';
-        });
-        // Masque la barre de filtre/boutons dans le PDF
-        const filter = doc.querySelector('.period-filter') as HTMLElement | null;
-        if (filter) filter.style.display = 'none';
-      }
+    const language = pdfLanguage(this.translate);
+    const capture = inPdfLanguage(this.translate, () => {
+      this.refreshForCapture();
+      // html2canvas clone le document dès l'appel, avant sa première attente : la langue peut être
+      // rétablie dès qu'il rend la main.
+      // Masquer la barre de filtre/boutons pendant la capture (optionnel : on capture tel quel)
+      return this.renderCanvas(el, {
+        scale: 2,
+        backgroundColor: '#ffffff',
+        useCORS: true,
+        onclone: (doc) => {
+          doc.documentElement.lang = language;
+          doc.documentElement.dir = 'ltr';
+          // Neutralise l'animation fade-in (sinon le clone est capturé à opacity 0 → délavé)
+          doc.querySelectorAll('.fade-in').forEach((node) => {
+            const elem = node as HTMLElement;
+            elem.style.opacity = '1';
+            elem.style.animation = 'none';
+          });
+          // Masque la barre de filtre/boutons dans le PDF
+          const filter = doc.querySelector('.period-filter') as HTMLElement | null;
+          if (filter) filter.style.display = 'none';
+        }
+      });
     });
+    // Retour à la langue de l'écran : indicateurs et gabarit.
+    this.refreshForCapture();
+    const canvas = await capture;
 
     const imgData = canvas.toDataURL('image/png');
     const pdf = new jsPDF('p', 'mm', 'a4');
@@ -230,8 +252,21 @@ export class DashboardComponent implements OnInit, OnDestroy {
       heightLeft -= (pageHeight - margin * 2);
     }
 
-    const title = this.translate.instant('dashboard.title');
+    const title = pdfInstant(this.translate, 'dashboard.title');
     pdf.save(`${title}_${this.stats?.from || ''}_${this.stats?.to || ''}.pdf`);
+  }
+
+  /** Recalcule les libellés des indicateurs dans la langue courante et met l'écran à jour. */
+  private refreshForCapture(): void {
+    if (this.stats) {
+      this.buildKpis(this.stats);
+    }
+    this.cdr.detectChanges();
+  }
+
+  /** Capture html2canvas, isolée pour être remplacée en test. */
+  private renderCanvas(el: HTMLElement, options: Parameters<typeof html2canvas>[1]): Promise<HTMLCanvasElement> {
+    return html2canvas(el, options);
   }
 
   private fmt(d: Date): string {

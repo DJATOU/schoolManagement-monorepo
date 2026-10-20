@@ -14,6 +14,7 @@ import { DeleteCommand } from '../../shared/reusable-datatable/DeleteCommand';
 })
 export class LevelTableComponent implements DeleteCommand{
   observable: Observable<any[]> = new Observable<any[]>();
+  // En-têtes : clés traduites par le tableau réutilisable (« ID » reste tel quel).
   columns = [
     {
       columnDef: 'id',
@@ -22,22 +23,22 @@ export class LevelTableComponent implements DeleteCommand{
     },
     {
       columnDef: 'name',
-      header: 'Name',
+      header: 'LEVEL_TABLE.NAME',
       cell: (element: Level) => `${element.name}`,
     },
     {
       columnDef: 'levelCode',
-      header: 'Level code',
+      header: 'LEVEL_TABLE.LEVEL_CODE',
       cell: (element: Level) => `${element.levelCode}`,
     },
     {
       columnDef: 'levelSequence',
-      header: 'Rang',
+      header: 'LEVEL_TABLE.RANK',
       cell: (element: Level) => `${element.levelSequence ?? '—'}`,
     },
     {
       columnDef: 'description',
-      header: 'Description',
+      header: 'COMMON.DESCRIPTION',
       cell: (element: Level) => `${element.description}`,
     },
   ];

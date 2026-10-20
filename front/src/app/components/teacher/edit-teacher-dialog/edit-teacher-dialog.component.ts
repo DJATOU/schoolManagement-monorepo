@@ -8,17 +8,20 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatDatepickerModule } from '@angular/material/datepicker';
+import { provideTranslatedDatepickerIntl } from '../../../shared/translated-datepicker-intl';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatTabsModule } from '@angular/material/tabs';
 import { TeacherService } from '../../../services/teacher.service';
-import { COMMUNICATION_OPTIONS, DEFAULT_NATIONALITY, NATIONALITIES } from '../../../utils/form-options';
+import { COMMUNICATION_OPTIONS, DEFAULT_NATIONALITY, NATIONALITIES, nationalityLabelKey } from '../../../utils/form-options';
 import { TranslateModule } from '@ngx-translate/core';
 import { SubjectService } from '../../../services/subject.service';
 import { Subject } from '../../../models/subject/subject';
 import { AdminOnlyDirective } from '../../../shared/admin-only.directive';
 import { SecureImageDirective } from '../../../shared/secure-image.directive';
+import { provideDayFirstDateAdapter } from '../../../shared/day-first-date-adapter';
+import { parseIsoDay, toIsoDay } from '../../../shared/iso-day';
 
 @Component({
   selector: 'app-edit-teacher-dialog',
@@ -41,6 +44,8 @@ import { SecureImageDirective } from '../../../shared/secure-image.directive';
   ,
     SecureImageDirective
   ],
+  // Saisie JJ/MM/AAAA et lecture de « yyyy-MM-dd » au jour local.
+  providers: [provideTranslatedDatepickerIntl(), provideDayFirstDateAdapter()],
   templateUrl: './edit-teacher-dialog.component.html',
   styleUrls: ['./edit-teacher-dialog.component.scss']
 })
@@ -55,6 +60,10 @@ export class EditTeacherDialogComponent implements OnInit {
 
   readonly communicationOptions = COMMUNICATION_OPTIONS;
   readonly nationalities = NATIONALITIES;
+  /** Libellé traduit d'une nationalité ; la valeur enregistrée reste la chaîne française. */
+  readonly nationalityLabelKey = nationalityLabelKey;
+  /** Borne du datepicker : une date de naissance n'est pas dans le futur. */
+  readonly today = new Date();
   subjects: Subject[] = [];
 
   constructor(
@@ -71,11 +80,9 @@ export class EditTeacherDialogComponent implements OnInit {
       error: (error) => console.error('Error loading subjects:', error)
     });
 
-    // Convertir dateOfBirth en objet Date si c'est une chaîne
-    let dateOfBirth: Date | null = null;
-    if (this.data.teacher.dateOfBirth) {
-      dateOfBirth = new Date(this.data.teacher.dateOfBirth);
-    }
+    // « yyyy-MM-dd » → minuit local du même jour (new Date(chaîne) lirait minuit UTC : la veille
+    // à l'ouest de Greenwich).
+    const dateOfBirth = parseIsoDay(this.data.teacher.dateOfBirth);
 
     this.editTeacherForm = this.fb.group({
       firstName: [this.data.teacher.firstName, Validators.required],
@@ -142,12 +149,12 @@ export class EditTeacherDialogComponent implements OnInit {
       return;
     }
 
-    const formValues = this.editTeacherForm.value;
-
-    // Convertir dateOfBirth en format ISO string si c'est un objet Date
-    if (formValues.dateOfBirth instanceof Date) {
-      formValues.dateOfBirth = formValues.dateOfBirth.toISOString();
-    }
+    const formValues = {
+      ...this.editTeacherForm.value,
+      // Jour du calendrier « yyyy-MM-dd », jamais toISOString() : l'instant UTC, enregistré dans
+      // le fuseau du serveur, reculait d'un jour.
+      dateOfBirth: toIsoDay(this.editTeacherForm.value.dateOfBirth)
+    };
 
     const updatedTeacher: Teacher = {
       ...this.data.teacher,

@@ -84,7 +84,9 @@ export class StudentCardComponent implements OnInit {
         firstName: this.student.firstName,
         lastName: this.student.lastName,
         photo: this.student.photo || '',
-        subtitle: `Level: ${this.student.levelName || 'N/A'}`,
+        // Sous-titre traduit par la carte : il suit le changement de langue.
+        subtitleKey: this.student.levelName ? 'PROFILE_CARD.LEVEL' : 'PROFILE_CARD.LEVEL_UNKNOWN',
+        subtitleParams: { level: this.student.levelName },
         email: this.student.email || '',
         phoneNumber: this.student.phoneNumber || '',
       };

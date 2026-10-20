@@ -22,17 +22,17 @@ export class RoomTableComponent implements DeleteCommand{
     },
     {
       columnDef: 'name',
-      header: 'Name',
+      header: 'RESOURCE_TABLE.NAME',
       cell: (element: Room) => `${element.name}`,
     },
     {
       columnDef: 'capacity',
-      header: 'Capacity',
+      header: 'RESOURCE_TABLE.CAPACITY',
       cell: (element: Room) => `${element.capacity}`,
     },
     {
       columnDef: 'description',
-      header: 'Description',
+      header: 'COMMON.DESCRIPTION',
       cell: (element: Room) => `${element.description}`,
     },
   ];

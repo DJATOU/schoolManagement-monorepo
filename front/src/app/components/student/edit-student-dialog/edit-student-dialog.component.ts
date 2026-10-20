@@ -12,16 +12,19 @@ import { StudentService } from '../services/student.service';
 import { Level } from '../../../models/level/level';
 import { MatSelectModule } from '@angular/material/select';
 import { MatDatepickerModule } from '@angular/material/datepicker';
-import { MatNativeDateModule, provideNativeDateAdapter } from '@angular/material/core';
+import { provideTranslatedDatepickerIntl } from '../../../shared/translated-datepicker-intl';
+import { MatNativeDateModule } from '@angular/material/core';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatTabsModule } from '@angular/material/tabs';
 import { TranslateModule } from '@ngx-translate/core';
 import { TutorService } from '../../../services/tutor.service';
 import { Tutor } from '../../../models/tutor/tutor';
 import { LinkTutorDialogComponent } from '../../tutor/link-tutor-dialog/link-tutor-dialog.component';
-import { COMMUNICATION_OPTIONS, NATIONALITIES } from '../../../utils/form-options';
+import { COMMUNICATION_OPTIONS, NATIONALITIES, nationalityLabelKey } from '../../../utils/form-options';
 import { AdminOnlyDirective } from '../../../shared/admin-only.directive';
 import { SecureImageDirective } from '../../../shared/secure-image.directive';
+import { provideDayFirstDateAdapter } from '../../../shared/day-first-date-adapter';
+import { parseIsoDay, toIsoDay } from '../../../shared/iso-day';
 
 /**
  * Dialogue de modification d'un étudiant.
@@ -57,8 +60,9 @@ import { SecureImageDirective } from '../../../shared/secure-image.directive';
     SecureImageDirective
   ],
   // Fournit le DateAdapter au niveau du composant : nécessaire pour le
-  // datepicker « Date de naissance » dans ce dialog (Angular 17 standalone).
-  providers: [provideNativeDateAdapter()],
+  // datepicker « Date de naissance » dans ce dialog (Angular 17 standalone). Saisie JJ/MM/AAAA
+  // et lecture de « yyyy-MM-dd » au jour local.
+  providers: [provideTranslatedDatepickerIntl(), provideDayFirstDateAdapter()],
   templateUrl: './edit-student-dialog.component.html',
   styleUrls: ['./edit-student-dialog.component.scss']
 })
@@ -75,6 +79,10 @@ export class EditStudentDialogComponent implements OnInit {
 
   readonly communicationOptions = COMMUNICATION_OPTIONS;
   readonly nationalities = NATIONALITIES;
+  /** Libellé traduit d'une nationalité ; la valeur enregistrée reste la chaîne française. */
+  readonly nationalityLabelKey = nationalityLabelKey;
+  /** Borne du datepicker : une date de naissance n'est pas dans le futur. */
+  readonly today = new Date();
 
   constructor(
     public dialogRef: MatDialogRef<EditStudentDialogComponent>,
@@ -87,11 +95,9 @@ export class EditStudentDialogComponent implements OnInit {
   ) { }
 
   ngOnInit(): void {
-    // Convertir dateOfBirth en objet Date si c'est une chaîne de caractères
-    let dateOfBirth: Date | null = null;
-    if (this.data.student.dateOfBirth) {
-      dateOfBirth = new Date(this.data.student.dateOfBirth);
-    }
+    // « yyyy-MM-dd » → minuit local du même jour (new Date(chaîne) lirait minuit UTC : la veille
+    // à l'ouest de Greenwich).
+    const dateOfBirth = parseIsoDay(this.data.student.dateOfBirth);
 
     this.editStudentForm = this.fb.group({
       // Identité
@@ -228,12 +234,13 @@ export class EditStudentDialogComponent implements OnInit {
       return;
     }
 
-    const formValues: Partial<Student> = this.editStudentForm.value;
-
-    // Convertir dateOfBirth en format ISO string si c'est un objet Date
-    if (formValues.dateOfBirth instanceof Date) {
-      formValues.dateOfBirth = formValues.dateOfBirth.toISOString() as any;
-    }
+    const formValues: Partial<Student> = {
+      ...this.editStudentForm.value,
+      // Jour du calendrier « yyyy-MM-dd », jamais toISOString() : l'instant UTC, enregistré dans
+      // le fuseau du serveur, reculait d'un jour. Vide → null → non envoyé (voir ci-dessous) :
+      // le serveur garde la date enregistrée.
+      dateOfBirth: toIsoDay(this.editStudentForm.value.dateOfBirth)
+    };
 
     const updatedStudent: Student = { ...this.data.student };
 

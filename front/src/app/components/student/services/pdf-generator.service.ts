@@ -6,7 +6,7 @@ import { TranslateService } from '@ngx-translate/core';
 import { StudentFullHistoryDTO } from '../domain/StudentFullHistoryDTO';
 import { SessionHistoryDTO } from '../../../models/session/SessionHistoryDTO';
 import { StudentRefund } from '../../../models/refund/refund';
-import { resolveLocale } from '../../../shared/locale';
+import { pdfInstant, pdfLocale } from '../../../shared/pdf-i18n';
 import {
   countBillableSessions,
   countExcludedSessions,
@@ -40,12 +40,12 @@ export class PdfGeneratorService {
 
   /** Raccourci de traduction pour les clés de l'historique étudiant. */
   private t(key: string, params?: Record<string, unknown>): string {
-    return this.translate.instant(`studentHistory.${key}`, params);
+    return pdfInstant(this.translate, `studentHistory.${key}`, params);
   }
 
-  /** Locale courante, pour le formatage des dates du document. */
+  /** Locale du document (français sous une interface en arabe), pour ses dates et montants. */
   private get locale(): string {
-    return resolveLocale(this.translate.currentLang);
+    return pdfLocale(this.translate);
   }
 
   /** Date formatée selon la langue active (et non selon celle du navigateur). */
@@ -79,7 +79,7 @@ export class PdfGeneratorService {
       return '—';
     }
     const key = `studentHistory.${group}.${code}`;
-    const translated = this.translate.instant(key);
+    const translated = pdfInstant(this.translate, key);
     return translated === key ? code : translated;
   }
 
@@ -158,8 +158,8 @@ export class PdfGeneratorService {
               { text: this.t('pdf.legend.presentExempted') }
             ],
             [
-              { text: 'Rattrapage', bold: true },
-              { text: 'Session de rattrapage (préfixe « Session de rattrapage: »)' }
+              { text: this.t('catchUpTag'), bold: true },
+              { text: this.t('pdf.legend.catchUpSession') }
             ],
             // Séance écartée du prorata : la légende la nomme, car à l'impression noir et
             // blanc son fond gris ne se distingue pas de « présence non renseignée ».
@@ -181,12 +181,12 @@ export class PdfGeneratorService {
       {
         columns: [
           {
-            text: 'Signature de l\'Étudiant : ________________________',
+            text: this.t('pdf.studentSignature'),
             alignment: 'left',
             margin: [0, 50, 0, 0]
           },
           {
-            text: 'Signature de l\'Administration : ________________________',
+            text: this.t('pdf.adminSignature'),
             alignment: 'right',
             margin: [0, 50, 0, 0]
           }
@@ -240,7 +240,7 @@ export class PdfGeneratorService {
       },
       footer: (currentPage: number, pageCount: number): Content => {
         return {
-          text: `Page ${currentPage} sur ${pageCount}`,
+          text: this.t('pdf.page', { current: currentPage, total: pageCount }),
           alignment: 'center',
           fontSize: 10,
           margin: [0, 10, 0, 0]
@@ -508,7 +508,7 @@ export class PdfGeneratorService {
       // « Oui / Non » communs à l'application, hors de `studentHistory.` : passés par `t()`, ils
       // s'imprimaient sous leur clé brute (« studentHistory.common.no »).
       const justificationText = session.attendanceStatus === 'ABSENT'
-        ? this.translate.instant(session.isJustified ? 'common.yes' : 'common.no')
+        ? pdfInstant(this.translate, session.isJustified ? 'common.yes' : 'common.no')
         : '';
 
       // Statut de paiement : une séance écartée n'en a pas. Le code « UNPAID » que le

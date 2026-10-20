@@ -4,6 +4,7 @@ import pdfMake from 'pdfmake/build/pdfmake';
 import pdfFonts from 'pdfmake/build/vfs_fonts';
 import { Content, TDocumentDefinitions } from 'pdfmake/interfaces';
 import { RefundReceipt } from '../models/refund/refund';
+import { pdfInstant, pdfLanguage } from '../shared/pdf-i18n';
 
 /**
  * Génère le reçu d'un remboursement, prêt à imprimer et à remettre au bénéficiaire.
@@ -346,7 +347,7 @@ export class RefundReceiptPdfService {
   }
 
   private t(key: string, params?: Record<string, unknown>): string {
-    return this.clean(this.translate.instant(key, params));
+    return this.clean(pdfInstant(this.translate, key, params));
   }
 
   /**
@@ -381,7 +382,8 @@ export class RefundReceiptPdfService {
     }).format(new Date(value)));
   }
 
+  /** Locale du document : 'en-GB' en anglais, 'fr-FR' sinon (arabe compris, voir pdf-i18n). */
   private locale(): string {
-    return this.translate.currentLang === 'en' ? 'en-GB' : 'fr-FR';
+    return pdfLanguage(this.translate) === 'en' ? 'en-GB' : 'fr-FR';
   }
 }

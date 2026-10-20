@@ -10,6 +10,7 @@ import { CatchUpRequest } from '../../../models/catchUp/catch-up-request';
 import { CatchUpDialogComponent } from '../catch-up-dialog/catch-up-dialog.component';
 import { CatchUpCreateDialogComponent } from '../catch-up-create-dialog/catch-up-create-dialog.component';
 import { AdminOnlyDirective } from '../../../shared/admin-only.directive';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-catch-up-list',
@@ -22,42 +23,43 @@ import { AdminOnlyDirective } from '../../../shared/admin-only.directive';
     MatSnackBarModule,
     MatDialogModule,
     AdminOnlyDirective,
+    TranslateModule,
   ],
   template: `
     <div class="header">
-      <h2>Demandes de rattrapage</h2>
+      <h2>{{ 'CATCH_UP.LIST.TITLE' | translate }}</h2>
       <button mat-raised-button color="primary" (click)="openCreateDialog()" appAdminOnly>
-        Nouvelle demande
+        {{ 'CATCH_UP.LIST.NEW' | translate }}
       </button>
     </div>
     <div class="filters">
-      <mat-select placeholder="Filtrer par statut" [(value)]="statusFilter" (valueChange)="applyFilter()">
-        <mat-option value="ALL">Tous</mat-option>
-        <mat-option value="PENDING">En attente</mat-option>
-        <mat-option value="SCHEDULED">Planifié</mat-option>
-        <mat-option value="COMPLETED">Complété</mat-option>
-        <mat-option value="CANCELLED">Annulé</mat-option>
+      <mat-select [placeholder]="'CATCH_UP.LIST.STATUS_FILTER' | translate" [(value)]="statusFilter" (valueChange)="applyFilter()">
+        <mat-option value="ALL">{{ 'CATCH_UP.LIST.ALL' | translate }}</mat-option>
+        <mat-option value="PENDING">{{ 'CATCH_UP.LIST.STATUS.PENDING' | translate }}</mat-option>
+        <mat-option value="SCHEDULED">{{ 'CATCH_UP.LIST.STATUS.SCHEDULED' | translate }}</mat-option>
+        <mat-option value="COMPLETED">{{ 'CATCH_UP.LIST.STATUS.COMPLETED' | translate }}</mat-option>
+        <mat-option value="CANCELLED">{{ 'CATCH_UP.LIST.STATUS.CANCELLED' | translate }}</mat-option>
       </mat-select>
     </div>
     <table mat-table [dataSource]="filteredRequests" class="mat-elevation-z8">
       <ng-container matColumnDef="student">
-        <th mat-header-cell *matHeaderCellDef>Étudiant</th>
+        <th mat-header-cell *matHeaderCellDef>{{ 'CATCH_UP.LIST.COLUMNS.STUDENT' | translate }}</th>
         <td mat-cell *matCellDef="let req">{{ req.studentName || req.studentId }}</td>
       </ng-container>
       <ng-container matColumnDef="originalSession">
-        <th mat-header-cell *matHeaderCellDef>Session manquée</th>
+        <th mat-header-cell *matHeaderCellDef>{{ 'CATCH_UP.LIST.COLUMNS.MISSED_SESSION' | translate }}</th>
         <td mat-cell *matCellDef="let req">{{ req.originalSessionName || req.originalSessionId }}</td>
       </ng-container>
       <ng-container matColumnDef="status">
-        <th mat-header-cell *matHeaderCellDef>Statut</th>
+        <th mat-header-cell *matHeaderCellDef>{{ 'CATCH_UP.LIST.COLUMNS.STATUS' | translate }}</th>
         <td mat-cell *matCellDef="let req">{{ req.status }}</td>
       </ng-container>
       <ng-container matColumnDef="actions">
-        <th mat-header-cell *matHeaderCellDef>Actions</th>
+        <th mat-header-cell *matHeaderCellDef>{{ 'CATCH_UP.LIST.COLUMNS.ACTIONS' | translate }}</th>
         <td mat-cell *matCellDef="let req">
-          <button mat-button color="primary" (click)="openScheduleDialog(req)" [disabled]="req.status !== 'PENDING'" appAdminOnly>Planifier</button>
-          <button mat-button color="accent" (click)="complete(req)" [disabled]="req.status !== 'SCHEDULED'" appAdminOnly>Compléter</button>
-          <button mat-button color="warn" (click)="cancel(req)" appAdminOnly>Annuler</button>
+          <button mat-button color="primary" (click)="openScheduleDialog(req)" [disabled]="req.status !== 'PENDING'" appAdminOnly>{{ 'CATCH_UP.LIST.SCHEDULE' | translate }}</button>
+          <button mat-button color="accent" (click)="complete(req)" [disabled]="req.status !== 'SCHEDULED'" appAdminOnly>{{ 'CATCH_UP.LIST.COMPLETE' | translate }}</button>
+          <button mat-button color="warn" (click)="cancel(req)" appAdminOnly>{{ 'common.cancel' | translate }}</button>
         </td>
       </ng-container>
       <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
@@ -79,7 +81,8 @@ export class CatchUpListComponent implements OnInit {
   constructor(
     private catchUpService: CatchUpService,
     private snackBar: MatSnackBar,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private translate: TranslateService
   ) {}
 
   ngOnInit(): void {
@@ -100,7 +103,7 @@ export class CatchUpListComponent implements OnInit {
         this.requests = requests;
         this.applyFilter();
       },
-      error: () => this.snackBar.open('Impossible de charger les rattrapages', 'Fermer', { duration: 4000 })
+      error: () => this.snackBar.open(this.translate.instant('CATCH_UP.LIST.LOAD_ERROR'), this.translate.instant('common.close'), { duration: 4000 })
     });
   }
 
@@ -129,7 +132,7 @@ export class CatchUpListComponent implements OnInit {
   complete(request: CatchUpRequest): void {
     this.catchUpService.completeCatchUp(request.id!).subscribe({
       next: () => {
-        this.snackBar.open('Rattrapage complété', 'Fermer', { duration: 3000 });
+        this.snackBar.open(this.translate.instant('CATCH_UP.LIST.COMPLETED'), this.translate.instant('common.close'), { duration: 3000 });
         this.loadRequests();
       }
     });
@@ -138,7 +141,7 @@ export class CatchUpListComponent implements OnInit {
   cancel(request: CatchUpRequest): void {
     this.catchUpService.cancelCatchUp(request.id!).subscribe({
       next: () => {
-        this.snackBar.open('Rattrapage annulé', 'Fermer', { duration: 3000 });
+        this.snackBar.open(this.translate.instant('CATCH_UP.LIST.CANCELLED'), this.translate.instant('common.close'), { duration: 3000 });
         this.loadRequests();
       }
     });

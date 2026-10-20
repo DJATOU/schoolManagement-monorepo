@@ -1,5 +1,8 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpTestingController } from '@angular/common/http/testing';
+import { TranslateService } from '@ngx-translate/core';
+import frTranslations from '../../assets/i18n/fr.json';
+import enTranslations from '../../assets/i18n/en.json';
 
 import { CorrectionJournalService } from './correction-journal.service';
 import { setupServiceTestBed } from '../../testing/setup';
@@ -15,6 +18,10 @@ describe('CorrectionJournalService', () => {
 
   beforeEach(() => {
     setupServiceTestBed();
+    // Messages d'erreur traduits : les assertions portent sur le texte français affiché.
+    const translate = TestBed.inject(TranslateService);
+    translate.setTranslation('fr', frTranslations);
+    translate.use('fr');
     service = TestBed.inject(CorrectionJournalService);
     http = TestBed.inject(HttpTestingController);
   });
@@ -60,6 +67,27 @@ describe('CorrectionJournalService', () => {
       'Action réservée aux administrateurs',
       'Serveur injoignable',
       'Le journal n\'a pas pu être chargé.'
+    ]);
+  });
+
+  it('en anglais, les messages du navigateur sont en anglais ; le motif du serveur reste tel quel', () => {
+    const translate = TestBed.inject(TranslateService);
+    translate.setTranslation('en', enTranslations);
+    translate.use('en');
+    const messages: string[] = [];
+    const fail = (status: number, body: object | null): void => {
+      service.getJournal(42).subscribe({ error: (err: Error) => messages.push(err.message) });
+      http.expectOne(`${API_BASE_URL}/api/students/42/journal`).flush(body, { status, statusText: 'x' });
+    };
+    fail(400, { message: 'Période invalide : du 31/01/2030 au 10/01/2030, la fin précède le début.' });
+    fail(403, {});
+    fail(0, null);
+    fail(500, {});
+    expect(messages).toEqual([
+      'Période invalide : du 31/01/2030 au 10/01/2030, la fin précède le début.',
+      'Action restricted to administrators',
+      'Server unreachable',
+      'The correction log could not be loaded.'
     ]);
   });
 });

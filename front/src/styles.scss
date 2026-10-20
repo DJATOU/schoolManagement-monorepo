@@ -28,6 +28,19 @@ app-root {
   height: 100%;
 }
 
+/* Interface en arabe : police qui a réellement les lettres arabes, en romain et en gras (même
+   pile que le guide, $arabic-font). Les icônes gardent « Material Icons » (règle .material-icons
+   posée sur l'élément lui-même). L'espacement des lettres que Material applique aux boutons,
+   onglets et titres casse la liaison des lettres arabes : il est neutralisé en arabe seulement. */
+html[lang='ar'] body,
+html[lang='ar'] .mat-typography {
+  font-family: 'Noto Naskh Arabic', 'Geeza Pro', 'Segoe UI', Tahoma, Arial, sans-serif;
+}
+
+html[lang='ar'] body *:not(mat-icon):not(.material-icons) {
+  letter-spacing: normal !important;
+}
+
 
 /*@media (min-width: 1400px) {
   body {

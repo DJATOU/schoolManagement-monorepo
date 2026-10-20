@@ -18,10 +18,10 @@
     <tbody>
       <tr *ngFor="let row of rows(change)" [class.cp-changed]="changed(row)">
         <th scope="row">{{ row.labelKey | translate }}</th>
-        <td>{{ row.before | number:'1.2-2' }} {{ currencySuffix }}</td>
+        <td>{{ row.before | number:'1.2-2' | appCurrency }}</td>
         <td>
           <span *ngIf="changed(row)" class="cp-arrow" aria-hidden="true">→</span>
-          {{ row.after | number:'1.2-2' }} {{ currencySuffix }}
+          {{ row.after | number:'1.2-2' | appCurrency }}
         </td>
       </tr>
       <tr [class.cp-changed]="change.before.late !== change.after.late">

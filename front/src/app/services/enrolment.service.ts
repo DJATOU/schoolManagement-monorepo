@@ -1,5 +1,6 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
+import { TranslateService } from '@ngx-translate/core';
 import { catchError, Observable, throwError } from 'rxjs';
 import { API_BASE_URL } from '../api-base-url';
 import { AttendanceMarks, CorrectionReason, CorrectionResponse } from '../models/correction/correction';
@@ -24,6 +25,8 @@ import { CorrectionStep } from './encashment.service';
 export class EnrolmentService {
 
   private readonly baseUrl = `${API_BASE_URL}/api`;
+
+  private readonly translate = inject(TranslateService);
 
   constructor(private http: HttpClient) {}
 
@@ -84,31 +87,31 @@ export class EnrolmentService {
    * Gestion centralisée des erreurs HTTP : le motif du serveur est conservé quand il en porte un,
    * avec l'Aperçu joint à un refus pour Aperçu périmé.
    */
-  private handleError(error: HttpErrorResponse): Observable<never> {
-    let errorMessage = 'Une erreur est survenue lors de la lecture des inscriptions';
+  private handleError = (error: HttpErrorResponse): Observable<never> => {
+    let errorMessage: string = this.translate.instant('HTTP_ERRORS.ENROLMENT.GENERIC');
 
     if (error.error instanceof ErrorEvent) {
-      errorMessage = `Erreur : ${error.error.message}`;
+      errorMessage = this.translate.instant('HTTP_ERRORS.WITH_MESSAGE', { message: error.error.message });
     } else {
       switch (error.status) {
         case 400:
         case 409:
-          errorMessage = error.error?.message || 'Correction refusée';
+          errorMessage = error.error?.message || this.translate.instant('HTTP_ERRORS.CORRECTION_REFUSED');
           break;
         case 401:
-          errorMessage = 'Session expirée : reconnectez-vous';
+          errorMessage = this.translate.instant('HTTP_ERRORS.SESSION_EXPIRED');
           break;
         case 403:
-          errorMessage = 'Action réservée aux administrateurs';
+          errorMessage = this.translate.instant('HTTP_ERRORS.ADMIN_ONLY');
           break;
         case 404:
-          errorMessage = error.error?.message || 'Inscription introuvable';
+          errorMessage = error.error?.message || this.translate.instant('HTTP_ERRORS.ENROLMENT.NOT_FOUND');
           break;
         case 0:
-          errorMessage = 'Serveur injoignable';
+          errorMessage = this.translate.instant('HTTP_ERRORS.UNREACHABLE');
           break;
         case 500:
-          errorMessage = 'Erreur serveur. Veuillez réessayer plus tard.';
+          errorMessage = this.translate.instant('HTTP_ERRORS.SERVER');
           break;
       }
     }
@@ -117,5 +120,5 @@ export class EnrolmentService {
     const body = error.error ?? {};
     return throwError(() => new CorrectionError(errorMessage, error.status, body.errorCode ?? null,
       body.preview ?? null, body.previewToken ?? null, body.blockingRefunds ?? []));
-  }
+  };
 }

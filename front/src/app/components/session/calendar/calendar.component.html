@@ -5,32 +5,32 @@
       <button type="button" class="filters-toggle" [class.is-open]="filtersOpen"
         (click)="toggleFilters()" [attr.aria-expanded]="filtersOpen" aria-controls="calendar-filters-panel">
         <mat-icon class="filters-toggle-icon">tune</mat-icon>
-        <span class="filters-toggle-label">Filtres</span>
+        <span class="filters-toggle-label">{{ 'calendar.filters.title' | translate }}</span>
         <span class="filters-count" *ngIf="activeFiltersCount() > 0">{{ activeFiltersCount() }}</span>
         <mat-icon class="filters-chevron">{{ filtersOpen ? 'expand_less' : 'expand_more' }}</mat-icon>
       </button>
 
       <!-- Rappel des filtres actifs en mat-chips (panneau fermé) -->
-      <mat-chip-set class="filters-chips" *ngIf="!filtersOpen && activeFiltersCount() > 0" aria-label="Filtres actifs">
+      <mat-chip-set class="filters-chips" *ngIf="!filtersOpen && activeFiltersCount() > 0" [attr.aria-label]="'calendar.filters.active' | translate">
         <mat-chip *ngIf="(selectedLevel.value ?? 0) !== 0" (removed)="selectedLevel.setValue(0)">
           <mat-icon matChipAvatar>school</mat-icon>
           {{ getSelectedLevelName() }}
-          <button matChipRemove aria-label="Retirer le filtre niveau"><mat-icon>cancel</mat-icon></button>
+          <button matChipRemove [attr.aria-label]="'calendar.filters.removeLevel' | translate"><mat-icon>cancel</mat-icon></button>
         </mat-chip>
         <mat-chip *ngIf="(selectedSubject.value ?? 0) !== 0" (removed)="selectedSubject.setValue(0)">
           <mat-icon matChipAvatar>menu_book</mat-icon>
           {{ getSelectedSubjectName() }}
-          <button matChipRemove aria-label="Retirer le filtre matière"><mat-icon>cancel</mat-icon></button>
+          <button matChipRemove [attr.aria-label]="'calendar.filters.removeSubject' | translate"><mat-icon>cancel</mat-icon></button>
         </mat-chip>
         <mat-chip *ngIf="(selectedGroup.value ?? 0) !== 0" (removed)="selectedGroup.setValue(0)">
           <mat-icon matChipAvatar>groups</mat-icon>
           {{ getSelectedGroupName() }}
-          <button matChipRemove aria-label="Retirer le filtre groupe"><mat-icon>cancel</mat-icon></button>
+          <button matChipRemove [attr.aria-label]="'calendar.filters.removeGroup' | translate"><mat-icon>cancel</mat-icon></button>
         </mat-chip>
       </mat-chip-set>
 
       <button mat-button class="filters-clear" *ngIf="activeFiltersCount() > 0"
-        (click)="resetFilters()" matTooltip="Réinitialiser les filtres">
+        (click)="resetFilters()" [matTooltip]="'calendar.filters.reset' | translate">
         <mat-icon>restart_alt</mat-icon>
       </button>
     </div>
@@ -45,12 +45,12 @@
           [class.filter-active]="(selectedLevel.value ?? 0) !== 0">
           <mat-icon matPrefix class="filter-field-icon">school</mat-icon>
           <mat-select [formControl]="selectedLevel" panelClass="calendar-filter-panel"
-            aria-label="Filtrer par niveau"
+            [aria-label]="'calendar.filters.byLevel' | translate"
             [matTooltip]="getSelectedLevelName()" matTooltipClass="group-selector-tooltip">
             <mat-select-trigger>
               <span class="filter-value">{{ getSelectedLevelName() }}</span>
             </mat-select-trigger>
-            <mat-option [value]="0">Tous les niveaux</mat-option>
+            <mat-option [value]="0">{{ 'calendar.filters.allLevels' | translate }}</mat-option>
             <mat-option *ngFor="let level of levels" [value]="level.id">
               <span class="option-label">{{ level.name }}</span>
               <mat-icon class="option-check" *ngIf="selectedLevel.value === level.id">check</mat-icon>
@@ -62,12 +62,12 @@
           [class.filter-active]="(selectedSubject.value ?? 0) !== 0">
           <mat-icon matPrefix class="filter-field-icon">menu_book</mat-icon>
           <mat-select [formControl]="selectedSubject" panelClass="calendar-filter-panel"
-            aria-label="Filtrer par matière"
+            [aria-label]="'calendar.filters.bySubject' | translate"
             [matTooltip]="getSelectedSubjectName()" matTooltipClass="group-selector-tooltip">
             <mat-select-trigger>
               <span class="filter-value">{{ getSelectedSubjectName() }}</span>
             </mat-select-trigger>
-            <mat-option [value]="0">Toutes les matières</mat-option>
+            <mat-option [value]="0">{{ 'calendar.filters.allSubjects' | translate }}</mat-option>
             <mat-option *ngFor="let subject of subjects" [value]="subject.id">
               <span class="option-label">{{ subject.name }}</span>
               <mat-icon class="option-check" *ngIf="selectedSubject.value === subject.id">check</mat-icon>
@@ -79,15 +79,15 @@
           [class.filter-active]="(selectedGroup.value ?? 0) !== 0">
           <mat-icon matPrefix class="filter-field-icon">groups</mat-icon>
           <mat-select [formControl]="selectedGroup" panelClass="calendar-filter-panel"
-            aria-label="Filtrer par groupe"
+            [aria-label]="'calendar.filters.byGroup' | translate"
             [matTooltip]="getSelectedGroupName()" matTooltipClass="group-selector-tooltip">
             <mat-select-trigger>
               <span class="filter-value">{{ getSelectedGroupName() }}</span>
             </mat-select-trigger>
             <mat-option *ngFor="let group of filteredGroups" [value]="group.id"
               [class.all-groups-option]="group.id === 0"
-              [matTooltip]="group.name" matTooltipClass="group-selector-tooltip" matTooltipShowDelay="400">
-              <span class="option-label">{{ group.name }}</span>
+              [matTooltip]="groupLabel(group)" matTooltipClass="group-selector-tooltip" matTooltipShowDelay="400">
+              <span class="option-label">{{ groupLabel(group) }}</span>
               <mat-icon class="option-check" *ngIf="selectedGroup.value === group.id">check</mat-icon>
             </mat-option>
           </mat-select>

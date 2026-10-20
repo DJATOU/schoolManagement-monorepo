@@ -9,6 +9,7 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { finalize } from 'rxjs/operators';
 import { Payout, PayoutList, payoutNature } from '../../../models/payroll/payroll';
 import { AmountPipe } from '../../../pipes/amount.pipe';
+import { currencySuffix } from '../../../shared/currency';
 import { PayoutSlipPdfService } from '../../../services/payout-slip-pdf.service';
 import { TeacherPayoutService } from '../../../services/teacher-payout.service';
 
@@ -38,7 +39,10 @@ import { TeacherPayoutService } from '../../../services/teacher-payout.service';
 export class TeacherPayoutsComponent implements OnChanges {
   @Input() teacherId: number | null | undefined;
 
-  readonly currencySuffix = 'DA';
+  /** Suffixe monétaire de l'écran : « DA », « دج » en arabe. */
+  get currencySuffix(): string {
+    return currencySuffix(this.translate);
+  }
 
   list: PayoutList | null = null;
   loading = false;

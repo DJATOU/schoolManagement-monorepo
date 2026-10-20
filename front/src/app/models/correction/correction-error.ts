@@ -1,4 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
+import { TranslateService } from '@ngx-translate/core';
 
 import { BlockingRefund, CorrectionPreview } from './correction';
 
@@ -29,9 +30,12 @@ export class CorrectionError extends Error {
   }
 }
 
-/** Ce qu'un refus dit quand le serveur n'a rien rédigé : propre à ce qui est corrigé. */
+/**
+ * Ce qu'un refus dit quand le serveur n'a rien rédigé : propre à ce qui est corrigé. Ce sont des
+ * clés de traduction, résolues dans la langue de l'interface.
+ */
 export interface CorrectionErrorMessages {
-  /** 404 sans motif : « Séance introuvable ». */
+  /** 404 sans motif : clé de « Séance introuvable ». */
   notFound: string;
   /** Statut sans message dédié. */
   fallback: string;
@@ -40,38 +44,40 @@ export interface CorrectionErrorMessages {
 /**
  * Refus HTTP d'une correction, tel que l'écran l'affiche : le motif du serveur quand il en porte un
  * (400, 404, 409), sinon un message par statut ; l'Aperçu, son jeton et les remboursements joints
- * sont conservés.
+ * sont conservés. Le motif du serveur est transmis tel quel ; les messages propres au navigateur
+ * sont traduits.
  */
-export function correctionErrorOf(error: HttpErrorResponse, messages: CorrectionErrorMessages): CorrectionError {
+export function correctionErrorOf(error: HttpErrorResponse, messages: CorrectionErrorMessages,
+                                  translate: TranslateService): CorrectionError {
   const body = error.error ?? {};
   const serverMessage: string | null = typeof body.message === 'string' && body.message.trim().length > 0
     ? body.message : null;
   let message: string;
   if (error.error instanceof ErrorEvent) {
-    message = `Erreur : ${error.error.message}`;
+    message = translate.instant('HTTP_ERRORS.WITH_MESSAGE', { message: error.error.message });
   } else {
     switch (error.status) {
       case 400:
       case 409:
-        message = serverMessage ?? 'Correction refusée';
+        message = serverMessage ?? translate.instant('HTTP_ERRORS.CORRECTION_REFUSED');
         break;
       case 401:
-        message = 'Session expirée : reconnectez-vous';
+        message = translate.instant('HTTP_ERRORS.SESSION_EXPIRED');
         break;
       case 403:
-        message = 'Action réservée aux administrateurs';
+        message = translate.instant('HTTP_ERRORS.ADMIN_ONLY');
         break;
       case 404:
-        message = serverMessage ?? messages.notFound;
+        message = serverMessage ?? translate.instant(messages.notFound);
         break;
       case 0:
-        message = 'Serveur injoignable';
+        message = translate.instant('HTTP_ERRORS.UNREACHABLE');
         break;
       case 500:
-        message = 'Erreur serveur. Veuillez réessayer plus tard.';
+        message = translate.instant('HTTP_ERRORS.SERVER');
         break;
       default:
-        message = messages.fallback;
+        message = translate.instant(messages.fallback);
     }
   }
   return new CorrectionError(message, error.status, body.errorCode ?? null, body.preview ?? null,

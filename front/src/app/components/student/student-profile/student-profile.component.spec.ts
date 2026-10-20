@@ -13,6 +13,10 @@ import { StudentJournalComponent } from '../student-journal/student-journal.comp
 import { StudentService } from '../services/student.service';
 import { AuthService } from '../../../services/auth.service';
 import { By } from '@angular/platform-browser';
+import { ProfilePdfService } from '../../../services/profile-pdf.service';
+import { TranslateService } from '@ngx-translate/core';
+import frTranslations from '../../../../assets/i18n/fr.json';
+import enTranslations from '../../../../assets/i18n/en.json';
 
 /**
  * Fiche d'un étudiant, ouverte sur l'identifiant porté par l'URL.
@@ -24,11 +28,16 @@ import { By } from '@angular/platform-browser';
 describe('StudentProfileComponent', () => {
   let component: StudentProfileComponent;
   let fixture: ComponentFixture<StudentProfileComponent>;
+  let translate: TranslateService;
 
   beforeEach(async () => {
     await setupComponentTestBed(StudentProfileComponent, {
       providers: activatedRouteProviders({ id: '42' })
     });
+    translate = TestBed.inject(TranslateService);
+    translate.setTranslation('fr', frTranslations);
+    translate.setTranslation('en', enTranslations);
+    translate.use('fr');
     fixture = TestBed.createComponent(StudentProfileComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
@@ -136,7 +145,7 @@ describe('StudentProfileComponent', () => {
 
       component.onSubmitGroups();
 
-      expect(snackBar).toHaveBeenCalledWith(message, 'Close', jasmine.any(Object));
+      expect(snackBar).toHaveBeenCalledWith(message, 'Fermer', jasmine.any(Object));
     });
 
     it('le dialogue rend groupes et date ; l\'inscription part avec eux', () => {
@@ -162,6 +171,110 @@ describe('StudentProfileComponent', () => {
       expect(groups).toHaveBeenCalledWith(42, component.selectedSchoolYearId ?? undefined);
       expect(encashments.reload).toHaveBeenCalled();
       expect(component.studentFullName).toBe(`${component.student!.firstName} ${component.student!.lastName}`);
+    });
+  });
+
+  /** Date de naissance : 2010-05-15 s'affiche 15/05/2010, à l'écran comme dans le PDF, quel que soit le fuseau. */
+  describe('date de naissance', () => {
+    beforeEach(() => {
+      component.student = aStudent({ id: 42, dateOfBirth: '2010-05-15' });
+      component.loading = false;
+      fixture.detectChanges();
+    });
+
+    it('fiche : 15/05/2010', () => {
+      expect(fixture.nativeElement.textContent).toContain('15/05/2010');
+    });
+
+    it('PDF : 15/05/2010', () => {
+      const pdf = spyOn(TestBed.inject(ProfilePdfService), 'generateProfilePdf');
+      component.printProfilePdf();
+      const rows = pdf.calls.mostRecent().args[0].sections.flatMap(section => section.rows);
+      expect(rows.find(row => row.label === 'Date de naissance')?.value).toBe('15/05/2010');
+    });
+  });
+
+  /**
+   * Langue de la fiche : le français reste celui d'avant l'externalisation des libellés, l'anglais
+   * suit la langue choisie. Sexe et nationalité sont affichés par leur libellé, la valeur
+   * enregistrée ne change pas. Le PDF est en français pour toute langue autre que l'anglais.
+   */
+  describe('langue de la fiche', () => {
+    beforeEach(() => {
+      component.student = aStudent({ id: 42, gender: 'M', nationality: 'Algérienne' });
+      component.loading = false;
+      fixture.detectChanges();
+    });
+
+    const text = (): string => (fixture.nativeElement.textContent as string).replace(/\s+/g, ' ');
+
+    it('français : libellés identiques à ceux d\'avant', () => {
+      expect(text()).toContain('Informations personnelles');
+      expect(text()).toContain('Informations académiques');
+      expect(text()).toContain('Établissement');
+      expect(text()).toContain('Ajouter un paiement');
+      expect(text()).toContain('Gérer les groupes');
+      expect(text()).toContain('Groupes (0)');
+      expect(text()).toContain('Aucun groupe pour le moment');
+      expect(text()).toContain('Algérienne');
+    });
+
+    it('anglais : libellés anglais, sexe et nationalité traduits', () => {
+      translate.use('en');
+      fixture.detectChanges();
+      expect(text()).toContain('Personal information');
+      expect(text()).toContain('Add a payment');
+      expect(text()).toContain('Groups (0)');
+      expect(text()).toContain('No groups yet');
+      expect(text()).toContain('Male');
+      expect(text()).toContain('Algerian');
+      expect(text()).not.toContain('Aucun groupe pour le moment');
+      // La donnée enregistrée reste la chaîne française.
+      expect(component.student?.nationality).toBe('Algérienne');
+    });
+
+    it('sexe : « M » et « male » donnent le même libellé, une valeur inconnue reste telle quelle', () => {
+      expect(component.genderLabel('M')).toBe('Masculin');
+      expect(component.genderLabel('female')).toBe('Féminin');
+      expect(component.genderLabel('X')).toBe('X');
+      expect(component.nationalityLabel('Ancienne saisie')).toBe('Ancienne saisie');
+    });
+
+    function pdfLabels(): string[] {
+      const pdf = spyOn(TestBed.inject(ProfilePdfService), 'generateProfilePdf');
+      component.printProfilePdf();
+      const doc = pdf.calls.mostRecent().args[0];
+      return [doc.subtitle ?? '', doc.tableTitle ?? '', ...doc.sections.map(section => section.heading),
+        ...doc.sections.flatMap(section => section.rows.map(row => row.label)), ...(doc.tableColumns ?? [])];
+    }
+
+    it('PDF en français sous le français', () => {
+      const labels = pdfLabels();
+      expect(labels).toContain('Étudiant · 2AS');
+      expect(labels).toContain('Informations personnelles');
+      expect(labels).toContain('Sexe');
+      expect(labels).toContain('Moyenne');
+      expect(labels).toContain('Groupes (0)');
+      expect(labels).toContain('Groupe');
+    });
+
+    it('PDF en français sous une langue autre que fr / en', () => {
+      translate.setTranslation('ar', {});
+      translate.use('ar');
+      const labels = pdfLabels();
+      expect(labels).toContain('Informations personnelles');
+      expect(labels).toContain('Téléphone');
+      expect(labels).toContain('Groupes (0)');
+    });
+
+    it('PDF en anglais sous l\'anglais', () => {
+      translate.use('en');
+      const labels = pdfLabels();
+      expect(labels).toContain('Student · 2AS');
+      expect(labels).toContain('Personal information');
+      expect(labels).toContain('Gender');
+      expect(labels).toContain('Groups (0)');
+      expect(labels).not.toContain('Informations personnelles');
     });
   });
 });

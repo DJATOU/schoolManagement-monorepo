@@ -2,8 +2,8 @@
   <!-- TOPBAR (sticky) -->
   <div class="topbar">
     <div class="topbar-main">
-      <app-list-header [count]="totalStudents" [entityName]="'students'"
-        [filterLabel]="'Afficher uniquement les retards'" [lateCount]="latePaymentCount"
+      <app-list-header [count]="totalStudents" [entityName]="'LIST_HEADER.ENTITY.students' | translate"
+        [filterLabel]="'STUDENT_SEARCH.LATE_ONLY' | translate" [lateCount]="latePaymentCount"
         (filterChange)="onLateFilterChange($event)">
       </app-list-header>
 
@@ -18,7 +18,7 @@
 
         <button mat-button class="filter-button" (click)="toggleFilters()">
           <mat-icon>filter_list</mat-icon>
-          Filtres
+          {{ 'STUDENT_SEARCH.FILTERS' | translate }}
           <span class="filter-count" *ngIf="getActiveFiltersCount() > 0">{{ getActiveFiltersCount() }}</span>
         </button>
 
@@ -30,13 +30,13 @@
     <!-- Filter chips when filters are hidden -->
     <div class="filter-chips" *ngIf="!filtersVisible && getActiveFiltersCount() > 0">
       <div class="filter-tag" *ngIf="selectedGroupId">
-        <span>Groupe: {{ getGroupName(selectedGroupId) }}</span>
+        <span>{{ 'STUDENT_SEARCH.GROUP_CHIP' | translate }} {{ getGroupName(selectedGroupId) }}</span>
         <button mat-icon-button (click)="clearGroupFilter()" class="remove-filter">
           <mat-icon>close</mat-icon>
         </button>
       </div>
       <div class="filter-tag" *ngIf="selectedLevelId">
-        <span>Niveau: {{ getLevelName(selectedLevelId) }}</span>
+        <span>{{ 'STUDENT_SEARCH.LEVEL_CHIP' | translate }} {{ getLevelName(selectedLevelId) }}</span>
         <button mat-icon-button (click)="clearLevelFilter()" class="remove-filter">
           <mat-icon>close</mat-icon>
         </button>
@@ -47,7 +47,7 @@
     <div class="filter-panel-backdrop" *ngIf="filtersVisible" (click)="toggleFilters()"></div>
     <div class="filter-panel" [class.visible]="filtersVisible">
       <div class="filter-panel-header">
-        <h3>Filtres</h3>
+        <h3>{{ 'STUDENT_SEARCH.FILTERS' | translate }}</h3>
         <button mat-icon-button (click)="toggleFilters()">
           <mat-icon>close</mat-icon>
         </button>
@@ -55,9 +55,9 @@
 
       <div class="filter-panel-content">
         <mat-form-field appearance="outline" class="filter-field">
-          <mat-label>Niveau</mat-label>
+          <mat-label>{{ 'STUDENT_SEARCH.LEVEL' | translate }}</mat-label>
           <mat-select [(ngModel)]="selectedLevelId" (selectionChange)="onLevelFilterChange()">
-            <mat-option [value]="null">Tous les niveaux</mat-option>
+            <mat-option [value]="null">{{ 'STUDENT_SEARCH.ALL_LEVELS' | translate }}</mat-option>
             <mat-option *ngFor="let level of levels" [value]="level.id">
               {{ level.name }}
             </mat-option>
@@ -65,9 +65,9 @@
         </mat-form-field>
 
         <mat-form-field appearance="outline" class="filter-field">
-          <mat-label>Groupe</mat-label>
+          <mat-label>{{ 'STUDENT_SEARCH.GROUP' | translate }}</mat-label>
           <mat-select [(ngModel)]="selectedGroupId" (selectionChange)="onGroupFilterChange()">
-            <mat-option [value]="null">Tous les groupes</mat-option>
+            <mat-option [value]="null">{{ 'STUDENT_SEARCH.ALL_GROUPS' | translate }}</mat-option>
             <mat-option *ngFor="let group of filteredGroups" [value]="group.id">
               {{ group.name }}
             </mat-option>
@@ -112,12 +112,12 @@
       <!-- Loading indicator for infinite scroll -->
       <div class="loading-more" *ngIf="isLoadingMore">
         <mat-spinner diameter="32"></mat-spinner>
-        <span>Chargement...</span>
+        <span>{{ 'STUDENT_SEARCH.LOADING_MORE' | translate }}</span>
       </div>
 
       <!-- End of list indicator -->
       <div class="end-of-list" *ngIf="!hasMoreData && displayedStudents.length > 0">
-        <span>Tous les étudiants affichés ({{displayedStudents.length}})</span>
+        <span>{{ 'STUDENT_SEARCH.ALL_DISPLAYED' | translate: { count: displayedStudents.length } }}</span>
       </div>
     </ng-container>
 

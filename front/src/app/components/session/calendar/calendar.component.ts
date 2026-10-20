@@ -20,13 +20,30 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatChipsModule } from '@angular/material/chips';
 import { CommonModule } from '@angular/common';
 import { MatMenuModule } from '@angular/material/menu';
-import { TranslateService } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { GroupService } from '../../../services/group.service';
 import { LevelService } from '../../../services/level.service';
 import { SubjectService } from '../../../services/subject.service';
 import { Group } from '../../../models/group/group';
 import { Level } from '../../../models/level/level';
 import { Subject as SubjectModel } from '../../../models/subject/subject';
+import frLocale from '@fullcalendar/core/locales/fr';
+import arDzLocale from '@fullcalendar/core/locales/ar-dz';
+
+/**
+ * Langue et sens d'écriture de FullCalendar pour une langue de l'interface : « ar-dz » (mois
+ * algériens, chiffres latins) et droite-à-gauche pour l'arabe ; inconnue → français.
+ */
+export function calendarLanguageOptions(lang: string | null | undefined): Pick<CalendarOptions, 'locale' | 'direction'> {
+  switch (lang) {
+    case 'en':
+      return { locale: 'en', direction: 'ltr' };
+    case 'ar':
+      return { locale: 'ar-dz', direction: 'rtl' };
+    default:
+      return { locale: 'fr', direction: 'ltr' };
+  }
+}
 
 @Component({
   selector: 'app-calendar',
@@ -46,6 +63,7 @@ import { Subject as SubjectModel } from '../../../models/subject/subject';
     MatChipsModule,
     CommonModule,
     MatMenuModule,
+    TranslateModule,
   ],
   standalone: true
 })
@@ -66,8 +84,9 @@ export class CalendarComponent implements OnInit, AfterViewInit {
   // Panneau de filtres repliable (fermé par défaut pour libérer la hauteur)
   filtersOpen = false;
 
+  // Option « Tous les groupes » : son libellé est traduit à l'affichage (voir groupLabel).
   private readonly allGroupsOption: Group = {
-    id: 0, name: 'Tous les groupes', groupTypeId: 0, levelId: 0,
+    id: 0, name: '', groupTypeId: 0, levelId: 0,
     subjectId: 0, sessionNumberPerSerie: 0, priceId: 0, teacherId: 0
   };
 
@@ -92,7 +111,9 @@ export class CalendarComponent implements OnInit, AfterViewInit {
     this.calendarOptions = {
       plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin, listPlugin],
       initialView: 'dayGridMonth',
-      locale: this.translate.currentLang,
+      // FullCalendar n'embarque que l'anglais : les autres langues sont fournies ici.
+      locales: [frLocale, arDzLocale],
+      ...calendarLanguageOptions(this.translate.currentLang),
       // « auto » : la grille prend sa hauteur naturelle et c'est la carte qui défile.
       // Avec « 100% », les six semaines d'un mois comme août 2026 devaient tenir dans la
       // hauteur disponible : la dernière ligne était comprimée à quelques pixels et ses
@@ -130,7 +151,7 @@ export class CalendarComponent implements OnInit, AfterViewInit {
       if (this.calendarOptions) {
         this.calendarOptions = {
           ...this.calendarOptions,
-          locale: lang,
+          ...calendarLanguageOptions(lang),
           buttonText: {
             today: this.translate.instant('calendar.buttons.today'),
             month: this.translate.instant('calendar.buttons.month'),
@@ -203,23 +224,30 @@ export class CalendarComponent implements OnInit, AfterViewInit {
    */
   getSelectedGroupName(): string {
     const current = this.filteredGroups.find(g => g.id === this.selectedGroup.value);
-    return current?.name ?? 'Tous les groupes';
+    return current ? this.groupLabel(current) : this.translate.instant('calendar.filters.allGroups');
+  }
+
+  /** Libellé d'une option de groupe : l'option « Tous les groupes » est traduite. */
+  groupLabel(group: Group): string {
+    return group.id === 0 ? this.translate.instant('calendar.filters.allGroups') : group.name;
   }
 
   /**
    * Nom du niveau sélectionné (libellé court par défaut).
    */
   getSelectedLevelName(): string {
-    if ((this.selectedLevel.value ?? 0) === 0) return 'Niveau';
-    return this.levels.find(l => l.id === this.selectedLevel.value)?.name ?? 'Niveau';
+    const fallback: string = this.translate.instant('calendar.filters.level');
+    if ((this.selectedLevel.value ?? 0) === 0) return fallback;
+    return this.levels.find(l => l.id === this.selectedLevel.value)?.name ?? fallback;
   }
 
   /**
    * Nom de la matière sélectionnée (libellé court par défaut).
    */
   getSelectedSubjectName(): string {
-    if ((this.selectedSubject.value ?? 0) === 0) return 'Matière';
-    return this.subjects.find(s => s.id === this.selectedSubject.value)?.name ?? 'Matière';
+    const fallback: string = this.translate.instant('calendar.filters.subject');
+    if ((this.selectedSubject.value ?? 0) === 0) return fallback;
+    return this.subjects.find(s => s.id === this.selectedSubject.value)?.name ?? fallback;
   }
 
   /**

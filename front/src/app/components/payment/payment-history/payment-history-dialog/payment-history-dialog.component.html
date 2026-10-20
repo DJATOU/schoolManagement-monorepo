@@ -130,7 +130,7 @@
 
       <ng-container matColumnDef="paymentDate">
         <th mat-header-cell *matHeaderCellDef>{{ 'payment.history.table.paymentDate' | translate }}</th>
-        <td mat-cell *matCellDef="let payment"> {{ payment.paymentDate ? (payment.paymentDate | date: 'mediumDate') : '—' }} </td>
+        <td mat-cell *matCellDef="let payment"> {{ payment.paymentDate ? (payment.paymentDate | appDate: 'mediumDate') : '—' }} </td>
       </ng-container>
 
       <ng-container matColumnDef="amountPaid">

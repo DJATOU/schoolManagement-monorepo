@@ -6,6 +6,9 @@ import { DashboardStats } from '../../models/dashboard/dashboard-stats';
 import { TranslateService } from '@ngx-translate/core';
 import { API_BASE_URL } from '../../api-base-url';
 import { setupComponentTestBed } from '../../../testing/setup';
+import frTranslations from '../../../assets/i18n/fr.json';
+import enTranslations from '../../../assets/i18n/en.json';
+import arTranslations from '../../../assets/i18n/ar.json';
 
 describe('DashboardComponent', () => {
   let component: DashboardComponent;
@@ -91,6 +94,61 @@ describe('DashboardComponent', () => {
     const details = Array.from(fixture.nativeElement.querySelectorAll('.kpi-detail') as NodeListOf<HTMLElement>)
       .map(el => el.textContent?.trim());
     expect(details).toEqual(['sur 14 créés']);
+  });
+
+  /**
+   * Export PDF : une capture de l'écran. Sous l'arabe, comme les autres documents, elle sort en
+   * français ; l'écran revient à l'arabe aussitôt la page clonée.
+   */
+  describe('export PDF', () => {
+    let translate: TranslateService;
+
+    beforeEach(() => {
+      translate = TestBed.inject(TranslateService);
+      translate.setTranslation('fr', frTranslations);
+      translate.setTranslation('en', enTranslations);
+      translate.setTranslation('ar', arTranslations);
+    });
+
+    /** Ce que voit la capture : langue, libellé d'un indicateur, texte de la page, attributs du clone. */
+    async function capture(lang: string): Promise<{ lang: string; kpi: string; page: string; clone: Document }> {
+      translate.use(lang);
+      flushStats();
+      let seen = { lang: '', kpi: '', page: '', clone: document.implementation.createHTMLDocument('clone') };
+      spyOn(component as never, 'renderCanvas').and.callFake(((_el: HTMLElement, options: { onclone: (doc: Document) => void }) => {
+        options.onclone(seen.clone);
+        seen = { ...seen, lang: translate.currentLang, kpi: component.kpis[2].label,
+          page: (fixture.nativeElement as HTMLElement).textContent ?? '' };
+        // Arrête l'export ici : seule la capture est vérifiée, pas la composition jsPDF.
+        return Promise.reject(new Error('capture checked'));
+      }) as never);
+      await expectAsync(component.printPdf()).toBeRejectedWithError('capture checked');
+      return seen;
+    }
+
+    it('interface en arabe : capture en français et en LTR, écran rétabli en arabe', async () => {
+      const seen = await capture('ar');
+
+      expect(seen.lang).toBe('fr');
+      expect(seen.kpi).toBe(frTranslations.dashboard.kpi.activeGroups);
+      expect(seen.page).toContain(frTranslations.dashboard.kpi.activeGroups);
+      expect(seen.page).not.toMatch(/[\u0600-\u06FF]/);
+      expect(seen.clone.documentElement.lang).toBe('fr');
+      expect(seen.clone.documentElement.dir).toBe('ltr');
+      expect(translate.currentLang).toBe('ar');
+      expect(component.kpis[2].label).toBe(arTranslations.dashboard.kpi.activeGroups);
+    });
+
+    it('interface en français : capture telle que l\'écran, sans changement de langue', async () => {
+      translate.use('fr');
+      const changes: string[] = [];
+      translate.onLangChange.subscribe(event => changes.push(event.lang));
+      const seen = await capture('fr');
+
+      expect(seen.lang).toBe('fr');
+      expect(seen.kpi).toBe(frTranslations.dashboard.kpi.activeGroups);
+      expect(changes).toEqual([]);
+    });
   });
 
   it('pct() et maleRate() ne divisent jamais par zéro', () => {

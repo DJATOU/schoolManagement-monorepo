@@ -892,4 +892,92 @@ class CsvImportServiceTest {
             verify(studentRepository, never()).save(any());
         }
     }
+
+    // ------------------------------------------------------------------
+    // Date de naissance des élèves
+    // ------------------------------------------------------------------
+
+    /**
+     * Colonne facultative {@code dateOfBirth}, au format strict AAAA-MM-JJ. Elle était ignorée en
+     * silence : tout élève importé arrivait sans date de naissance, même si le fichier la portait.
+     */
+    @Nested
+    @DisplayName("Date de naissance des élèves")
+    class DateDeNaissanceDesEleves {
+
+        private StudentEntity savedStudent() {
+            ArgumentCaptor<StudentEntity> saved = ArgumentCaptor.forClass(StudentEntity.class);
+            verify(studentRepository).save(saved.capture());
+            return saved.getValue();
+        }
+
+        @Test
+        @DisplayName("date AAAA-MM-JJ valide : enregistrée telle quelle")
+        void dateValide() {
+            ImportResultDTO result = service.importStudents(csv(
+                    "firstName,lastName,level,dateOfBirth\nLéa,Haddad,1er année,2010-05-15\n"));
+
+            assertThat(result.getErrors()).isEmpty();
+            assertThat(result.getImported()).isEqualTo(1);
+            assertThat(savedStudent().getDateOfBirth()).isEqualTo(LocalDate.of(2010, 5, 15));
+        }
+
+        @Test
+        @DisplayName("cellule vide : élève importé sans date de naissance")
+        void celluleVide() {
+            ImportResultDTO result = service.importStudents(csv(
+                    "firstName,lastName,level,dateOfBirth\nLéa,Haddad,1er année,\n"));
+
+            assertThat(result.getErrors()).isEmpty();
+            assertThat(result.getImported()).isEqualTo(1);
+            assertThat(savedStudent().getDateOfBirth()).isNull();
+        }
+
+        @Test
+        @DisplayName("colonne absente : élève importé sans date de naissance")
+        void colonneAbsente() {
+            ImportResultDTO result = service.importStudents(csv(
+                    "firstName,lastName,level\nLéa,Haddad,1er année\n"));
+
+            assertThat(result.getErrors()).isEmpty();
+            assertThat(result.getImported()).isEqualTo(1);
+            assertThat(savedStudent().getDateOfBirth()).isNull();
+        }
+
+        @Test
+        @DisplayName("date JJ/MM/AAAA (réécrite par Excel) : ligne refusée, format et astuce « Texte » indiqués")
+        void dateJourMoisAnnee() {
+            ImportResultDTO result = service.importStudents(csv(
+                    "firstName,lastName,level,dateOfBirth\nLéa,Haddad,1er année,15/05/2010\n"));
+
+            assertThat(result.getImported()).isZero();
+            assertThat(result.getErrors()).singleElement().satisfies(error -> {
+                assertThat(error.getLine()).isEqualTo(2);
+                assertThat(error.getMessage()).contains("AAAA-MM-JJ").contains("Texte");
+            });
+            verify(studentRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("jour inexistant (2010-02-30) : refusé, pas corrigé")
+        void jourInexistant() {
+            ImportResultDTO result = service.importStudents(csv(
+                    "firstName,lastName,level,dateOfBirth\nLéa,Haddad,1er année,2010-02-30\n"));
+
+            assertThat(result.getImported()).isZero();
+            assertThat(result.getErrors()).singleElement()
+                    .extracting(ImportResultDTO.ImportError::getLine).isEqualTo(2);
+            verify(studentRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("en-tête « DateOfBirth » (casse différente) : reconnu")
+        void enTeteCasseDifferente() {
+            ImportResultDTO result = service.importStudents(csv(
+                    "firstName,lastName,level,DateOfBirth\nLéa,Haddad,1er année,2010-05-15\n"));
+
+            assertThat(result.getErrors()).isEmpty();
+            assertThat(savedStudent().getDateOfBirth()).isEqualTo(LocalDate.of(2010, 5, 15));
+        }
+    }
 }

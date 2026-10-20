@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
@@ -11,7 +11,7 @@ import { MatInputModule } from '@angular/material/input';
 import { ReactiveFormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { AdminOnlyDirective } from '../../../shared/admin-only.directive';
 
 @Component({
@@ -34,6 +34,8 @@ export class SubjectFormComponent {
 
   /** Identifiant de la matière en cours de modification (null en mode création). */
   editingId: number | null = null;
+
+  private readonly translate = inject(TranslateService);
 
   constructor(
     private fb: FormBuilder,
@@ -59,7 +61,7 @@ export class SubjectFormComponent {
           name: subject.name ?? '',
           description: subject.description ?? ''
         }),
-        error: () => this.showErrorMessage('Erreur lors du chargement de la matière.')
+        error: () => this.showErrorMessage(this.translate.instant('RESOURCE_FORM.MESSAGES.subject.LOAD_ERROR'))
       });
     }
   }
@@ -108,12 +110,12 @@ export class SubjectFormComponent {
             // Mode modification : mise à jour de la matière existante.
             this.subjectService.updateSubject(this.editingId, subject).subscribe({
               next: () => {
-                this.showSuccessMessage('Matière mise à jour avec succès.');
+                this.showSuccessMessage(this.translate.instant('RESOURCE_FORM.MESSAGES.subject.UPDATED'));
                 this.router.navigate(['/subject/table']);
               },
               error: (error) => {
                 console.error('Error updating subject:', error);
-                this.showErrorMessage('Erreur lors de la mise à jour de la matière.');
+                this.showErrorMessage(this.translate.instant('RESOURCE_FORM.MESSAGES.subject.UPDATE_ERROR'));
               }
             });
           } else {
@@ -121,11 +123,11 @@ export class SubjectFormComponent {
               next: (created) => {
                 console.log('Subject created:', created);
                 this.onClearForm();
-                this.showSuccessMessage('Subject created successfully.');
+                this.showSuccessMessage(this.translate.instant('RESOURCE_FORM.MESSAGES.subject.CREATED'));
               },
               error: (error) => {
                 console.error('Error creating subject:', error);
-                this.showErrorMessage('Error creating subject.');
+                this.showErrorMessage(this.translate.instant('RESOURCE_FORM.MESSAGES.subject.CREATE_ERROR'));
               }
             });
           }
@@ -135,7 +137,7 @@ export class SubjectFormComponent {
       });
     } else {
       console.warn('Form is not valid');
-      this.showErrorMessage('Form is not valid.');
+      this.showErrorMessage(this.translate.instant('RESOURCE_FORM.MESSAGES.FORM_INVALID'));
     }
   }
 
@@ -144,14 +146,14 @@ export class SubjectFormComponent {
   }
 
   showSuccessMessage(message: string): void {
-    this.snackBar.open(message, 'OK', {
+    this.snackBar.open(message, this.translate.instant('common.ok'), {
       duration: 3000,
       panelClass: ['snack-bar-success']
     });
   }
 
   showErrorMessage(message: string): void {
-    this.snackBar.open(message, 'OK', {
+    this.snackBar.open(message, this.translate.instant('common.ok'), {
       duration: 3000,
       panelClass: ['snack-bar-error']
     });

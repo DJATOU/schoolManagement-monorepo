@@ -15,7 +15,7 @@
     <div class="pf-header pf-header--group">
       <div class="pf-identity">
         <div class="pf-avatar pf-avatar--square">
-          <img *ngIf="groupPhotoUrl; else groupInitials" [appSecureImage]="groupPhotoUrl" alt="Photo du groupe"
+          <img *ngIf="groupPhotoUrl; else groupInitials" [appSecureImage]="groupPhotoUrl" [alt]="'GROUP_PROFILE.PHOTO_ALT' | translate"
             (error)="onImageError()">
           <ng-template #groupInitials>
             <div class="pf-initials" [style.background-color]="avatarColor">{{ getInitials() }}</div>
@@ -30,7 +30,7 @@
       </div>
 
       <div class="pf-header-buttons">
-        <button mat-icon-button class="pf-hb pf-hb-edit" (click)="onEditGroup()" matTooltip="Modifier le groupe"
+        <button mat-icon-button class="pf-hb pf-hb-edit" (click)="onEditGroup()" [matTooltip]="'GROUP_PROFILE.EDIT_TOOLTIP' | translate"
           [disabled]="(writeDisabled$ | async) ?? false">
           <mat-icon>edit</mat-icon>
         </button>
@@ -38,11 +38,11 @@
              séries, imprimer trop tôt produirait des pages vides. -->
         <button mat-icon-button class="pf-hb pf-hb-print" (click)="printGroupPdf()"
           [disabled]="loadingStudents || loadingSeries || loadingRevenue"
-          matTooltip="Imprimer la fiche, les encaissements et les séries (PDF)">
+          [matTooltip]="'GROUP_PROFILE.PRINT_TOOLTIP' | translate">
           <mat-icon>print</mat-icon>
         </button>
         <button mat-icon-button class="pf-hb pf-hb-danger" (click)="onDisable()"
-          matTooltip="Désactiver le groupe (historique conservé)"
+          [matTooltip]="'GROUP_PROFILE.DISABLE_TOOLTIP' | translate"
           [disabled]="(writeDisabled$ | async) ?? false">
           <mat-icon>block</mat-icon>
         </button>
@@ -53,22 +53,22 @@
     <div class="pf-body">
       <div class="pf-grid">
         <section class="pf-section">
-          <h3 class="pf-section-title"><mat-icon>info</mat-icon>Informations sur le groupe</h3>
-          <div class="pf-row"><mat-icon>category</mat-icon><span class="pf-label">Type de groupe</span><span class="pf-value">{{ group.groupTypeName || group.groupTypeId || '—' }}</span></div>
-          <div class="pf-row"><mat-icon>school</mat-icon><span class="pf-label">Niveau</span><span class="pf-value">{{ group.levelName || group.levelId || '—' }}</span></div>
-          <div class="pf-row"><mat-icon>menu_book</mat-icon><span class="pf-label">Matière</span><span class="pf-value">{{ group.subjectName || group.subjectId || '—' }}</span></div>
-          <div class="pf-row"><mat-icon>event_repeat</mat-icon><span class="pf-label">Sessions par série</span><span class="pf-value">{{ group.sessionNumberPerSerie || '—' }}</span></div>
-          <div class="pf-row"><mat-icon>payments</mat-icon><span class="pf-label">Prix</span><span class="pf-value">{{ group.priceAmount || group.pricing?.price || '—' }}</span></div>
+          <h3 class="pf-section-title"><mat-icon>info</mat-icon>{{ 'GROUP_PROFILE.INFO_TITLE' | translate }}</h3>
+          <div class="pf-row"><mat-icon>category</mat-icon><span class="pf-label">{{ 'GROUP_PROFILE.GROUP_TYPE' | translate }}</span><span class="pf-value">{{ group.groupTypeName || group.groupTypeId || '—' }}</span></div>
+          <div class="pf-row"><mat-icon>school</mat-icon><span class="pf-label">{{ 'COMMON.LEVEL' | translate }}</span><span class="pf-value">{{ group.levelName || group.levelId || '—' }}</span></div>
+          <div class="pf-row"><mat-icon>menu_book</mat-icon><span class="pf-label">{{ 'GROUP_PROFILE.SUBJECT' | translate }}</span><span class="pf-value">{{ group.subjectName || group.subjectId || '—' }}</span></div>
+          <div class="pf-row"><mat-icon>event_repeat</mat-icon><span class="pf-label">{{ 'GROUP_PROFILE.SESSIONS_PER_SERIES' | translate }}</span><span class="pf-value">{{ group.sessionNumberPerSerie || '—' }}</span></div>
+          <div class="pf-row"><mat-icon>payments</mat-icon><span class="pf-label">{{ 'GROUP_PROFILE.PRICE' | translate }}</span><span class="pf-value">{{ group.priceAmount || group.pricing?.price || '—' }}</span></div>
           <div class="pf-row" [class.pf-row--clickable]="group.teacherId" (click)="goToTeacher()"
-            [matTooltip]="group.teacherId ? 'Voir la fiche de l\'enseignant' : ''">
-            <mat-icon>person</mat-icon><span class="pf-label">Enseignant</span><span class="pf-value">{{ group.teacherName || '—' }}</span>
+            [matTooltip]="group.teacherId ? ('GROUP_PROFILE.TEACHER_LINK_TOOLTIP' | translate) : ''">
+            <mat-icon>person</mat-icon><span class="pf-label">{{ 'GROUP_PROFILE.TEACHER' | translate }}</span><span class="pf-value">{{ group.teacherName || '—' }}</span>
           </div>
         </section>
 
         <section class="pf-section">
-          <h3 class="pf-section-title"><mat-icon>description</mat-icon>Description</h3>
+          <h3 class="pf-section-title"><mat-icon>description</mat-icon>{{ 'COMMON.DESCRIPTION' | translate }}</h3>
           <div class="pf-row pf-row--block">
-            <span class="pf-value">{{ group.description || 'Aucune description.' }}</span>
+            <span class="pf-value">{{ group.description || ('GROUP_PROFILE.NO_DESCRIPTION' | translate) }}</span>
           </div>
         </section>
       </div>
@@ -82,7 +82,7 @@
       <div class="pf-actions">
         <button mat-flat-button class="pf-action-primary" (click)="addStudentToGroup()"
           [disabled]="(readOnly$ | async) ?? false">
-          <mat-icon>person_add</mat-icon> Ajouter un étudiant
+          <mat-icon>person_add</mat-icon> {{ 'GROUP_PROFILE.ADD_STUDENT' | translate }}
         </button>
       </div>
     </div>
@@ -92,10 +92,10 @@
   <mat-accordion class="pf-accordion">
     <mat-expansion-panel *ngIf="!loadingStudents" [expanded]="true" class="student-panel">
       <mat-expansion-panel-header>
-        <mat-panel-title><mat-icon>group</mat-icon>Étudiants</mat-panel-title>
+        <mat-panel-title><mat-icon>group</mat-icon>{{ 'GROUP_PROFILE.STUDENTS' | translate }}</mat-panel-title>
         <mat-panel-description>
-          <span *ngIf="!studentFilter">{{ students.length }} étudiant(s)</span>
-          <span *ngIf="studentFilter">{{ filteredStudents.length }} / {{ students.length }} étudiant(s)</span>
+          <span *ngIf="!studentFilter">{{ 'GROUP_PROFILE.STUDENT_COUNT' | translate: { count: students.length } }}</span>
+          <span *ngIf="studentFilter">{{ 'GROUP_PROFILE.STUDENT_FILTERED_COUNT' | translate: { filtered: filteredStudents.length, count: students.length } }}</span>
         </mat-panel-description>
       </mat-expansion-panel-header>
       <div class="student-list-container">
@@ -104,9 +104,9 @@
           *ngIf="showStudentFilter">
           <mat-icon matPrefix>search</mat-icon>
           <input matInput [(ngModel)]="studentFilter" (ngModelChange)="applyStudentFilter()"
-            placeholder="Filtrer les étudiants du groupe…">
+            [placeholder]="'GROUP_PROFILE.FILTER_PLACEHOLDER' | translate">
           <button matSuffix mat-icon-button *ngIf="studentFilter" (click)="clearStudentFilter()"
-            matTooltip="Effacer le filtre">
+            [matTooltip]="'GROUP_PROFILE.CLEAR_FILTER' | translate">
             <mat-icon>close</mat-icon>
           </button>
         </mat-form-field>
@@ -116,7 +116,7 @@
 
         <div class="no-student-match" *ngIf="filteredStudents.length === 0 && students.length > 0">
           <mat-icon>person_off</mat-icon>
-          <span>Aucun étudiant ne correspond à « {{ studentFilter }} »</span>
+          <span>{{ 'GROUP_PROFILE.NO_MATCH' | translate: { filter: studentFilter } }}</span>
         </div>
 
         <!-- Pagination : 5 étudiants par page par défaut -->
@@ -135,7 +135,7 @@
       <mat-expansion-panel-header>
         <mat-panel-title><mat-icon>account_balance_wallet</mat-icon>{{ 'revenue.title' | translate }}</mat-panel-title>
         <mat-panel-description *ngIf="revenue">
-          {{ revenue.collected | number:'1.0-2' }} DA
+          {{ revenue.collected | number:'1.0-2' | appCurrency }}
         </mat-panel-description>
       </mat-expansion-panel-header>
 
@@ -151,19 +151,19 @@
         <div class="revenue-kpis">
           <div class="revenue-kpi revenue-kpi--collected">
             <span class="kpi-label">{{ 'revenue.collected' | translate }}</span>
-            <span class="kpi-value">{{ revenue.collected | number:'1.0-2' }} DA</span>
+            <span class="kpi-value">{{ revenue.collected | number:'1.0-2' | appCurrency }}</span>
             <span class="kpi-hint" *ngIf="revenue.refunded > 0">
               {{ 'revenue.refundedHint' | translate: { amount: (revenue.refunded | number:'1.0-2') } }}
             </span>
           </div>
           <div class="revenue-kpi revenue-kpi--expected">
             <span class="kpi-label">{{ 'revenue.expected' | translate }}</span>
-            <span class="kpi-value">{{ revenue.expected | number:'1.0-2' }} DA</span>
+            <span class="kpi-value">{{ revenue.expected | number:'1.0-2' | appCurrency }}</span>
             <span class="kpi-hint">{{ 'revenue.expectedHint' | translate }}</span>
           </div>
           <div class="revenue-kpi revenue-kpi--remaining">
             <span class="kpi-label">{{ 'revenue.remaining' | translate }}</span>
-            <span class="kpi-value">{{ revenue.remaining | number:'1.0-2' }} DA</span>
+            <span class="kpi-value">{{ revenue.remaining | number:'1.0-2' | appCurrency }}</span>
             <!-- Trop-perçu affiché à part : il est compris dans l'encaissé mais ne
                  correspond à aucune séance due, donc il ne réduit pas le reste à recouvrer. -->
             <span class="kpi-hint kpi-hint--overpaid" *ngIf="revenue.overpaid > 0">
@@ -183,7 +183,7 @@
             <span class="revenue-series__name">{{ serie.seriesName }}</span>
             <span class="revenue-series__amounts">
               <strong>{{ serie.collected | number:'1.0-2' }}</strong>
-              / {{ serie.expected | number:'1.0-2' }} DA
+              / {{ serie.expected | number:'1.0-2' | appCurrency }}
             </span>
           </div>
           <div class="revenue-bar" [matTooltip]="collectionRate(serie.collected, serie.expected) + ' %'">
@@ -191,10 +191,10 @@
           </div>
           <p class="revenue-series__balance" *ngIf="serie.remaining > 0 || serie.overpaid > 0">
             <span *ngIf="serie.remaining > 0">
-              {{ 'revenue.remaining' | translate }} : {{ serie.remaining | number:'1.0-2' }} DA
+              {{ 'revenue.remaining' | translate }} : {{ serie.remaining | number:'1.0-2' | appCurrency }}
             </span>
             <span class="revenue-overpaid" *ngIf="serie.overpaid > 0">
-              {{ 'revenue.overpaid' | translate }} : {{ serie.overpaid | number:'1.0-2' }} DA
+              {{ 'revenue.overpaid' | translate }} : {{ serie.overpaid | number:'1.0-2' | appCurrency }}
             </span>
           </p>
           <ul class="revenue-sessions" *ngIf="serie.sessions.length > 0">
@@ -205,7 +205,7 @@
                   · {{ session.sessionDate | date:'dd/MM/yyyy' }}
                 </span>
               </span>
-              <span class="revenue-session__amount">{{ session.collected | number:'1.0-2' }} DA</span>
+              <span class="revenue-session__amount">{{ session.collected | number:'1.0-2' | appCurrency }}</span>
             </li>
           </ul>
         </div>
@@ -223,7 +223,7 @@
         <ul class="revenue-months">
           <li *ngFor="let month of revenue.months">
             <span>{{ monthLabel(month) }}</span>
-            <strong>{{ month.collected | number:'1.0-2' }} DA</strong>
+            <strong>{{ month.collected | number:'1.0-2' | appCurrency }}</strong>
           </li>
         </ul>
       </ng-container>
@@ -231,17 +231,17 @@
 
     <mat-expansion-panel *ngIf="!loadingSeries" class="series-panel">
       <mat-expansion-panel-header>
-        <mat-panel-title><mat-icon>layers</mat-icon>Séries</mat-panel-title>
-        <mat-panel-description>{{ series.length }} série(s)</mat-panel-description>
+        <mat-panel-title><mat-icon>layers</mat-icon>{{ 'GROUP_PROFILE.SERIES' | translate }}</mat-panel-title>
+        <mat-panel-description>{{ 'GROUP_PROFILE.SERIES_COUNT' | translate: { count: series.length } }}</mat-panel-description>
       </mat-expansion-panel-header>
       <div class="series-list">
         <ul>
           <li *ngFor="let serie of pagedSeries">
             <div class="serie-item serie-item--clickable" (click)="openSeries(serie)"
-                 matTooltip="Voir les sessions de la série">
+                 [matTooltip]="'GROUP_PROFILE.OPEN_SERIES_TOOLTIP' | translate">
               <span class="serie-name">
                 <mat-icon>layers</mat-icon>
-                {{ serie.name }} ({{ serie.dateCreation | date }})
+                {{ serie.name }} ({{ serie.dateCreation | appDate }})
               </span>
               <div class="serie-buttons">
                 <button mat-icon-button (click)="renameSeries(serie); $event.stopPropagation()"
@@ -250,7 +250,7 @@
                   <mat-icon>edit</mat-icon>
                 </button>
                 <button mat-icon-button color="primary" (click)="openSeries(serie); $event.stopPropagation()"
-                        matTooltip="Voir les sessions">
+                        [matTooltip]="'GROUP_PROFILE.OPEN_SESSIONS_TOOLTIP' | translate">
                   <mat-icon>open_in_new</mat-icon>
                 </button>
               </div>

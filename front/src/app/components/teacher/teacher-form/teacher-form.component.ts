@@ -9,20 +9,23 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatDatepickerModule } from '@angular/material/datepicker';
+import { provideTranslatedDatepickerIntl } from '../../../shared/translated-datepicker-intl';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatIconModule } from '@angular/material/icon';
 import { MatOptionModule } from '@angular/material/core';
 import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { ReactiveFormsModule } from '@angular/forms';
-import { CommonModule, DatePipe } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatCardModule } from '@angular/material/card';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
-import { COMMUNICATION_OPTIONS, DEFAULT_NATIONALITY, GENDER_LABEL_KEYS, MARITAL_STATUS_LABEL_KEYS, NATIONALITIES } from '../../../utils/form-options';
+import { COMMUNICATION_OPTIONS, DEFAULT_NATIONALITY, GENDER_LABEL_KEYS, MARITAL_STATUS_LABEL_KEYS, NATIONALITIES, nationalityLabelKey } from '../../../utils/form-options';
 import { SubjectService } from '../../../services/subject.service';
 import { Subject } from '../../../models/subject/subject';
 import { AdminOnlyDirective } from '../../../shared/admin-only.directive';
+import { provideDayFirstDateAdapter } from '../../../shared/day-first-date-adapter';
+import { formatDayFirst, parseIsoDay, toIsoDay } from '../../../shared/iso-day';
 
 @Component({
   selector: 'app-teacher-form',
@@ -46,16 +49,21 @@ import { AdminOnlyDirective } from '../../../shared/admin-only.directive';
   ],
   templateUrl: './teacher-form.component.html',
   styleUrls: ['./teacher-form.component.scss'],
-  providers: [TeacherService, DatePipe]
+  // Saisie JJ/MM/AAAA, et lecture de la date reçue au jour local.
+  providers: [provideTranslatedDatepickerIntl(), TeacherService, ...provideDayFirstDateAdapter()]
 })
 export class TeacherFormComponent implements OnInit {
   selectedFile: File | null = null;
   teacherForm: FormGroup;
   teacherId: number | null = null;
   isEditMode = false;
+  /** Borne du datepicker : une date de naissance n'est pas dans le futur. */
+  readonly today = new Date();
 
   readonly communicationOptions = COMMUNICATION_OPTIONS;
   readonly nationalities = NATIONALITIES;
+  /** Libellé traduit d'une nationalité ; la valeur enregistrée reste la chaîne française. */
+  readonly nationalityLabelKey = nationalityLabelKey;
   subjects: Subject[] = [];
 
   constructor(
@@ -66,8 +74,7 @@ export class TeacherFormComponent implements OnInit {
     private snackBar: MatSnackBar,
     private route: ActivatedRoute,
     private router: Router,
-    private translate: TranslateService,
-    private datePipe: DatePipe
+    private translate: TranslateService
   ) {
     this.teacherForm = this.fb.group({
       basicInformation: this.fb.group({
@@ -130,7 +137,8 @@ export class TeacherFormComponent implements OnInit {
             phoneNumber: teacher.phoneNumber,
             nationality: teacher.nationality || DEFAULT_NATIONALITY,
             communicationPreference: teacher.communicationPreference,
-            dateOfBirth: teacher.dateOfBirth,
+            // « yyyy-MM-dd » (ou ancien horodatage) → jour local : le datepicker refusait l'horodatage.
+            dateOfBirth: parseIsoDay(teacher.dateOfBirth),
             placeOfBirth: teacher.placeOfBirth,
             address: teacher.address,
             city: '' // Ajouter si disponible dans le model
@@ -179,7 +187,7 @@ export class TeacherFormComponent implements OnInit {
       },
       {
         label: 'contactInformation - dateOfBirth',
-        value: this.datePipe.transform(value('contactInformation.dateOfBirth'), 'd MMMM y') ?? ''
+        value: formatDayFirst(value('contactInformation.dateOfBirth'))
       },
       { label: 'contactInformation - placeOfBirth', value: value('contactInformation.placeOfBirth') },
       { label: 'contactInformation - address', value: value('contactInformation.address') },
@@ -214,7 +222,9 @@ export class TeacherFormComponent implements OnInit {
           id: this.teacherId,
           ...this.teacherForm.get('basicInformation')?.value,
           ...this.teacherForm.get('contactInformation')?.value,
-          ...this.teacherForm.get('professionalDetails')?.value
+          ...this.teacherForm.get('professionalDetails')?.value,
+          // Jour du calendrier « yyyy-MM-dd » : ni objet Date (sérialisé en instant UTC), ni horodatage.
+          dateOfBirth: toIsoDay(this.teacherForm.get('contactInformation.dateOfBirth')?.value)
         };
 
         // Une modification écrase des données existantes : elle mérite la même
@@ -277,7 +287,13 @@ export class TeacherFormComponent implements OnInit {
             Object.keys(this.teacherForm.value).forEach(groupKey => {
               const group = this.teacherForm.get(groupKey) as FormGroup;
               Object.keys(group.controls).forEach(key => {
-                const value = group.get(key)?.value;
+                // Jour du calendrier « yyyy-MM-dd » (String(Date) envoyait « Wed Feb 20 1985… »).
+                const value = key === 'dateOfBirth' ? toIsoDay(group.get(key)?.value) : group.get(key)?.value;
+                // Un champ vide n'est pas envoyé : FormData le transformerait en chaîne « null »
+                // (après « Effacer »), que le serveur refuse pour un champ numérique.
+                if (value === null || value === undefined || value === '') {
+                  return;
+                }
                 formDataToSubmit.append(key, value);
               });
             });

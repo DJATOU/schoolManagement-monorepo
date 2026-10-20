@@ -14,6 +14,8 @@ import { StudentRefund } from '../../../../models/refund/refund';
 import { AmountPipe } from '../../../../pipes/amount.pipe';
 import { RefundService } from '../../../../services/refund.service';
 import { RefundReceiptPdfService } from '../../../../services/refund-receipt-pdf.service';
+import { LocalizedDatePipe } from '../../../../pipes/localized-date.pipe';
+import { CurrencySuffixPipe } from '../../../../pipes/currency-suffix.pipe';
 
 interface PaymentDetailAudit {
   id: number;
@@ -68,7 +70,7 @@ export interface PaymentDetailHistoryData {
             <div class="refund-head">
               <mat-icon class="refund-icon" aria-hidden="true">undo</mat-icon>
               <span class="refund-number">{{ refund.refundNumber }}</span>
-              <span class="refund-amount">{{ refund.amount | amount }} DA</span>
+              <span class="refund-amount">{{ refund.amount | amount | appCurrency }}</span>
             </div>
             <div class="small">
               {{ refund.refundDate | date: 'dd/MM/yyyy' }}
@@ -109,7 +111,7 @@ export interface PaymentDetailHistoryData {
               {{ actionLabel(item.action) }}
               <span class="actor">{{ 'payment.admin.audit.by' | translate: { actor: item.performedBy } }}</span>
             </div>
-            <div matListItemLine>{{ item.timestamp | date:'medium' }}</div>
+            <div matListItemLine>{{ item.timestamp | appDate:'medium' }}</div>
             <div matListItemLine class="small">
               {{ 'payment.admin.audit.reason' | translate }} : {{ item.reason || '—' }}
             </div>
@@ -152,7 +154,8 @@ export interface PaymentDetailHistoryData {
     .refund-reprint { margin-top: 6px; }
   `],
   imports: [CommonModule, MatDialogModule, MatListModule, MatIconModule,
-    MatProgressSpinnerModule, MatButtonModule, TranslateModule, AmountPipe]
+    MatProgressSpinnerModule, MatButtonModule, TranslateModule, AmountPipe,
+    LocalizedDatePipe, CurrencySuffixPipe]
 })
 export class PaymentDetailHistoryDialogComponent implements OnInit {
   history: PaymentDetailAudit[] = [];

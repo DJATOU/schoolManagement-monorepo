@@ -9,6 +9,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatDatepickerModule } from '@angular/material/datepicker';
+import { provideTranslatedDatepickerIntl } from '../../../shared/translated-datepicker-intl';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -27,6 +28,7 @@ import { PaymentDetailHistoryDialogComponent } from './dialogs/payment-detail-hi
 import { RefundCreateDialogComponent } from '../../payment/refund-create-dialog/refund-create-dialog.component';
 import { Refund } from '../../../models/refund/refund';
 import { AmountPipe, formatAmount } from '../../../pipes/amount.pipe';
+import { currencySuffix } from '../../../shared/currency';
 import { LevelService } from '../../../services/level.service';
 import { SessionService } from '../../../services/SessionService';
 import { SeriesService } from '../../../services/series.service';
@@ -69,6 +71,7 @@ interface PaymentDetailView {
 @Component({
   selector: 'app-payment-management',
   standalone: true,
+  providers: [provideTranslatedDatepickerIntl()],
   templateUrl: './payment-management.component.html',
   styleUrls: ['./payment-management.component.scss'],
   imports: [
@@ -101,8 +104,10 @@ export class PaymentManagementComponent implements OnInit {
   displayedColumns: string[] = ['id', 'student', 'group', 'series', 'session', 'amount', 'status',
     'paymentStatus', 'dateCreation', 'actions'];
 
-  /** Suffixe monétaire, aligné sur le reste de l'application (« 6 000 DA »). */
-  readonly currencySuffix = 'DA';
+  /** Suffixe monétaire de l'écran : « 6 000 DA », « 6 000 دج » en arabe. */
+  get currencySuffix(): string {
+    return currencySuffix(this.translate);
+  }
   dataSource = new MatTableDataSource<PaymentDetailView>([]);
   filterForm: FormGroup;
 

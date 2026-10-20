@@ -1,5 +1,6 @@
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
+import { TranslateService } from '@ngx-translate/core';
 import { catchError, Observable, throwError } from 'rxjs';
 
 import { API_BASE_URL } from '../api-base-url';
@@ -26,6 +27,8 @@ import {
 export class CatchUpBillingService {
 
   private readonly baseUrl = `${API_BASE_URL}/api/catch-up-billing`;
+
+  private readonly translate = inject(TranslateService);
 
   constructor(private http: HttpClient) {}
 
@@ -96,32 +99,32 @@ export class CatchUpBillingService {
    * manquante, séance manquée sans série, rattrapage déjà enregistré — là où un message générique
    * laisserait l'administrateur sans action corrective.</p>
    */
-  private handleError(error: HttpErrorResponse): Observable<never> {
-    let errorMessage = 'Une erreur est survenue';
+  private handleError = (error: HttpErrorResponse): Observable<never> => {
+    let errorMessage: string = this.translate.instant('HTTP_ERRORS.GENERIC');
 
     if (error.error instanceof ErrorEvent) {
-      errorMessage = `Erreur: ${error.error.message}`;
+      errorMessage = this.translate.instant('HTTP_ERRORS.WITH_MESSAGE_COMPACT', { message: error.error.message });
     } else {
-      errorMessage = `Code: ${error.status}\nMessage: ${error.message}`;
+      errorMessage = this.translate.instant('HTTP_ERRORS.CODE_MESSAGE', { status: error.status, message: error.message });
 
       switch (error.status) {
         case 404:
-          errorMessage = error.error?.message || 'Rattrapage ou séance non trouvé';
+          errorMessage = error.error?.message || this.translate.instant('HTTP_ERRORS.CATCH_UP_BILLING.NOT_FOUND');
           break;
         case 400:
-          errorMessage = error.error?.message || 'Données invalides';
+          errorMessage = error.error?.message || this.translate.instant('HTTP_ERRORS.INVALID_DATA');
           break;
         case 409:
           errorMessage = error.error?.message
-            || 'Un rattrapage est déjà enregistré pour cette séance manquée';
+            || this.translate.instant('HTTP_ERRORS.CATCH_UP_BILLING.ALREADY_RECORDED');
           break;
         case 500:
-          errorMessage = 'Erreur serveur. Veuillez réessayer plus tard.';
+          errorMessage = this.translate.instant('HTTP_ERRORS.SERVER');
           break;
       }
     }
 
     console.error('CatchUpBilling Service Error:', errorMessage, error);
     return throwError(() => new Error(errorMessage));
-  }
+  };
 }

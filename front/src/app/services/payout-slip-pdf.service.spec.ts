@@ -2,6 +2,8 @@ import { TestBed } from '@angular/core/testing';
 import { TranslateService } from '@ngx-translate/core';
 import { TDocumentDefinitions } from 'pdfmake/interfaces';
 import frTranslations from '../../assets/i18n/fr.json';
+import enTranslations from '../../assets/i18n/en.json';
+import arTranslations from '../../assets/i18n/ar.json';
 import { payout, slip } from '../../testing/payroll-fixtures';
 import { setupServiceTestBed } from '../../testing/setup';
 import { PayoutSlipPdfService } from './payout-slip-pdf.service';
@@ -30,13 +32,16 @@ function texts(doc: TDocumentDefinitions): string[] {
 describe('PayoutSlipPdfService', () => {
   let service: PayoutSlipPdfService;
   let output: jasmine.SpyObj<PdfOutputService>;
+  let translate: TranslateService;
 
   beforeEach(() => {
     output = jasmine.createSpyObj<PdfOutputService>('PdfOutputService', ['print', 'imageDataUrl']);
     output.imageDataUrl.and.resolveTo('');
     setupServiceTestBed({ providers: [{ provide: PdfOutputService, useValue: output }] });
-    const translate = TestBed.inject(TranslateService);
+    translate = TestBed.inject(TranslateService);
     translate.setTranslation('fr', frTranslations);
+    translate.setTranslation('en', enTranslations);
+    translate.setTranslation('ar', arTranslations);
     translate.use('fr');
     service = TestBed.inject(PayoutSlipPdfService);
   });
@@ -60,6 +65,26 @@ describe('PayoutSlipPdfService', () => {
     expect(all).toContain('Signature de l\'administration');
     expect(all).not.toContain('DUPLICATA');
     expect(all).not.toContain('{{');
+  });
+
+  it('interface en arabe : bordereau en français, chiffres latins, aucun caractère arabe', () => {
+    translate.use('ar');
+    const all = texts(service.buildDocument(slip({ issuanceRank: 2 }), '')).join('\n');
+
+    expect(all).toContain('Bordereau de paie');
+    expect(all).toContain('72 000,00 DA × 60 % = 43 200,00 DA');
+    expect(all).toContain('Signature de l\'enseignant');
+    expect(all).toMatch(/DUPLICATA n° 2 — /);
+    expect(all).not.toMatch(/[\u0600-\u06FF]/);
+  });
+
+  it('interface en anglais : bordereau en anglais', () => {
+    translate.use('en');
+    const all = texts(service.buildDocument(slip(), '')).join('\n');
+
+    expect(all).toContain(enTranslations.teacherPayroll.slip.title.INITIAL);
+    expect(all).toContain('72,000.00');
+    expect(all).not.toContain('Bordereau de paie');
   });
 
   it('original sans tampon ; réimpression : DUPLICATA et son rang', () => {

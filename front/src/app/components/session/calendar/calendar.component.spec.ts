@@ -3,7 +3,9 @@ import { MatDialogConfig, MatDialogRef } from '@angular/material/dialog';
 import { EventApi, EventClickArg } from '@fullcalendar/core';
 import { of } from 'rxjs';
 
-import { CalendarComponent } from './calendar.component';
+import { TranslateService } from '@ngx-translate/core';
+
+import { CalendarComponent, calendarLanguageOptions } from './calendar.component';
 import { setupComponentTestBed } from '../../../../testing/setup';
 import { aSession } from '../../../../testing/fixtures';
 import { SessionService } from '../../../services/SessionService';
@@ -31,6 +33,30 @@ describe('CalendarComponent', () => {
     expect(component.calendarOptions!.plugins?.length).toBe(4);
     // Hauteur « auto » : la grille prend sa hauteur naturelle, la carte défile.
     expect(component.calendarOptions!.height).toBe('auto');
+  });
+
+  it('fournit les locales fr et ar-dz, et suit la langue de l\'interface (arabe en droite-à-gauche)', () => {
+    const codes = (component.calendarOptions!.locales ?? []).map(l => l.code);
+    expect(codes).toEqual(['fr', 'ar-dz']);
+
+    const translate = TestBed.inject(TranslateService);
+    translate.use('ar');
+    expect(component.calendarOptions!.locale).toBe('ar-dz');
+    expect(component.calendarOptions!.direction).toBe('rtl');
+
+    translate.use('en');
+    expect(component.calendarOptions!.locale).toBe('en');
+    expect(component.calendarOptions!.direction).toBe('ltr');
+
+    translate.use('fr');
+    expect(component.calendarOptions!.locale).toBe('fr');
+    expect(component.calendarOptions!.direction).toBe('ltr');
+  });
+
+  it('calendarLanguageOptions() ramène une langue inconnue au français', () => {
+    expect(calendarLanguageOptions(undefined)).toEqual({ locale: 'fr', direction: 'ltr' });
+    expect(calendarLanguageOptions('de')).toEqual({ locale: 'fr', direction: 'ltr' });
+    expect(calendarLanguageOptions('ar')).toEqual({ locale: 'ar-dz', direction: 'rtl' });
   });
 
   it('démarre avec les filtres repliés et sur « tous les groupes »', () => {

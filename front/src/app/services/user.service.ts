@@ -1,5 +1,6 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
+import { TranslateService } from '@ngx-translate/core';
 import { Observable, catchError, throwError } from 'rxjs';
 import { API_BASE_URL } from '../api-base-url';
 import { Role, UserAccount } from '../models/auth/auth.model';
@@ -11,6 +12,8 @@ import { Role, UserAccount } from '../models/auth/auth.model';
 @Injectable({ providedIn: 'root' })
 export class UserService {
   private readonly apiUrl = `${API_BASE_URL}/api/v1/users`;
+
+  private readonly translate = inject(TranslateService);
 
   constructor(private http: HttpClient) {}
 
@@ -40,13 +43,13 @@ export class UserService {
       .pipe(catchError(this.handleError));
   }
 
-  private handleError(error: HttpErrorResponse): Observable<never> {
-    let message = 'Une erreur est survenue';
+  private handleError = (error: HttpErrorResponse): Observable<never> => {
+    let message: string = this.translate.instant('HTTP_ERRORS.GENERIC');
     if (error.status === 409) {
-      message = error.error?.message || 'Cet identifiant est déjà utilisé.';
+      message = error.error?.message || this.translate.instant('HTTP_ERRORS.USER.USERNAME_TAKEN');
     } else if (error.error?.message) {
       message = error.error.message;
     }
     return throwError(() => new Error(message));
-  }
+  };
 }

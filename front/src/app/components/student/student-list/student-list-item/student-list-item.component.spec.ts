@@ -4,6 +4,9 @@ import { Router } from '@angular/router';
 import { StudentListItemComponent } from './student-list-item.component';
 import { setupComponentTestBed } from '../../../../../testing/setup';
 import { aPaymentStatus, aStudent } from '../../../../../testing/fixtures';
+import { TranslateService } from '@ngx-translate/core';
+import frTranslations from '../../../../../assets/i18n/fr.json';
+import enTranslations from '../../../../../assets/i18n/en.json';
 
 /**
  * `student` est une entrée obligatoire, déréférencée par `ngOnInit`.
@@ -79,5 +82,21 @@ describe('StudentListItemComponent', () => {
     withoutStatus.detectChanges();
 
     expect(withoutStatus.componentInstance.getPaymentIcon()).toBe('');
+  });
+
+  it('traduit le bouton de départ (infobulle et libellé accessible), en français comme avant puis en anglais', () => {
+    const translate = TestBed.inject(TranslateService);
+    translate.setTranslation('fr', frTranslations);
+    translate.setTranslation('en', enTranslations);
+    translate.use('fr');
+    fixture.componentRef.setInput('showDeleteButton', true);
+    fixture.detectChanges();
+    const departure = () => fixture.nativeElement.querySelector('.disable-button') as HTMLElement;
+
+    expect(departure().getAttribute('aria-label')).toBe('Enregistrer le départ du groupe');
+
+    translate.use('en');
+    fixture.detectChanges();
+    expect(departure().getAttribute('aria-label')).toBe('Record departure from the group');
   });
 });

@@ -1,7 +1,9 @@
 import { Injectable } from '@angular/core';
+import { TranslateService } from '@ngx-translate/core';
 import pdfMake from 'pdfmake/build/pdfmake';
 import pdfFonts from 'pdfmake/build/vfs_fonts';
 import { Content, TableCell, TDocumentDefinitions } from 'pdfmake/interfaces';
+import { pdfInstant, pdfLocale } from '../shared/pdf-i18n';
 
 /** Informations de la série imprimée. */
 export interface SeriesPdfInfo {
@@ -39,8 +41,13 @@ export class SeriesSessionsPdfService {
   private static readonly AMBER = '#f59e0b';
   private static readonly GREY = '#64748b';
 
-  constructor() {
+  constructor(private translate: TranslateService) {
     (pdfMake as any).vfs = pdfFonts.pdfMake.vfs;
+  }
+
+  /** Libellé du document : langue de l'interface en français / anglais, français sinon. */
+  private t(key: string, params?: object): string {
+    return pdfInstant(this.translate, key, params);
   }
 
   /** Génère et ouvre le PDF de la liste des sessions d'une série. */
@@ -49,7 +56,7 @@ export class SeriesSessionsPdfService {
       this.buildHeader(info),
       this.buildDivider(),
       this.buildSeriesInfo(info),
-      { text: 'Sessions', style: 'sectionHeader' },
+      { text: this.t('SERIES_SESSIONS_PDF.SECTION_TITLE'), style: 'sectionHeader' },
       this.buildSessionsTable(sessions),
       this.buildSignatures()
     ];
@@ -69,8 +76,14 @@ export class SeriesSessionsPdfService {
       defaultStyle: { fontSize: 11 },
       footer: (current: number, total: number): Content => ({
         columns: [
-          { text: 'Généré le ' + new Date().toLocaleString('fr-FR'), fontSize: 8, color: SeriesSessionsPdfService.GREY, margin: [40, 8, 0, 0] },
-          { text: `Page ${current} / ${total}`, alignment: 'right', fontSize: 8, color: SeriesSessionsPdfService.GREY, margin: [0, 8, 40, 0] }
+          {
+            text: this.t('SERIES_SESSIONS_PDF.GENERATED_ON', { date: new Date().toLocaleString(pdfLocale(this.translate)) }),
+            fontSize: 8, color: SeriesSessionsPdfService.GREY, margin: [40, 8, 0, 0]
+          },
+          {
+            text: this.t('PROFILE_PDF.PAGE', { current, total }),
+            alignment: 'right', fontSize: 8, color: SeriesSessionsPdfService.GREY, margin: [0, 8, 40, 0]
+          }
         ]
       })
     };
@@ -85,11 +98,17 @@ export class SeriesSessionsPdfService {
       columns: [
         {
           stack: [
-            { text: info.name || 'Série', style: 'header' },
-            { text: info.groupName ? `Groupe · ${info.groupName}` : '', style: 'subtitle' }
+            { text: info.name || this.t('SERIES_SESSIONS_PDF.TITLE_FALLBACK'), style: 'header' },
+            {
+              text: info.groupName ? this.t('SERIES_SESSIONS_PDF.GROUP_SUBTITLE', { name: info.groupName }) : '',
+              style: 'subtitle'
+            }
           ]
         },
-        { text: new Date().toLocaleDateString('fr-FR'), alignment: 'right', fontSize: 9, color: SeriesSessionsPdfService.GREY, margin: [0, 8, 0, 0] }
+        {
+          text: new Date().toLocaleDateString(pdfLocale(this.translate)),
+          alignment: 'right', fontSize: 9, color: SeriesSessionsPdfService.GREY, margin: [0, 8, 0, 0]
+        }
       ]
     };
   }
@@ -112,16 +131,16 @@ export class SeriesSessionsPdfService {
         widths: ['25%', '25%', '25%', '25%'],
         body: [
           [
-            ...row('Groupe', info.groupName || '—'),
-            ...row('Sessions prévues', this.num(info.totalSessions))
+            ...row(this.t('SERIES_SESSIONS_PDF.GROUP'), info.groupName || '—'),
+            ...row(this.t('SERIES_SESSIONS_PDF.PLANNED'), this.num(info.totalSessions))
           ],
           [
-            ...row('Sessions créées', this.num(info.numberOfSessionsCreated)),
-            ...row('Sessions terminées', this.num(info.sessionsCompleted))
+            ...row(this.t('SERIES_SESSIONS_PDF.CREATED'), this.num(info.numberOfSessionsCreated)),
+            ...row(this.t('SERIES_SESSIONS_PDF.COMPLETED'), this.num(info.sessionsCompleted))
           ],
           [
-            ...row('Début', this.fmtDate(info.serieTimeStart)),
-            ...row('Fin', this.fmtDate(info.serieTimeEnd))
+            ...row(this.t('SERIES_SESSIONS_PDF.START'), this.fmtDate(info.serieTimeStart)),
+            ...row(this.t('SERIES_SESSIONS_PDF.END'), this.fmtDate(info.serieTimeEnd))
           ]
         ]
       },
@@ -137,20 +156,20 @@ export class SeriesSessionsPdfService {
 
   private buildSessionsTable(sessions: SeriesSessionRow[]): Content {
     const header: TableCell[] = [
-      { text: 'N°', style: 'tableHeader' },
-      { text: 'Titre', style: 'tableHeader' },
-      { text: 'Type', style: 'tableHeader' },
-      { text: 'Enseignant', style: 'tableHeader' },
-      { text: 'Salle', style: 'tableHeader' },
-      { text: 'Date', style: 'tableHeader' },
-      { text: 'Statut', style: 'tableHeader' }
+      { text: this.t('SERIES_SESSIONS_PDF.COL_NUMBER'), style: 'tableHeader' },
+      { text: this.t('SERIES_SESSIONS_PDF.COL_TITLE'), style: 'tableHeader' },
+      { text: this.t('SERIES_SESSIONS_PDF.COL_TYPE'), style: 'tableHeader' },
+      { text: this.t('SERIES_SESSIONS_PDF.COL_TEACHER'), style: 'tableHeader' },
+      { text: this.t('SERIES_SESSIONS_PDF.COL_ROOM'), style: 'tableHeader' },
+      { text: this.t('SERIES_SESSIONS_PDF.COL_DATE'), style: 'tableHeader' },
+      { text: this.t('SERIES_SESSIONS_PDF.COL_STATUS'), style: 'tableHeader' }
     ];
 
     const body: TableCell[][] = [header];
 
     if (!sessions || sessions.length === 0) {
       body.push([
-        { text: 'Aucune session dans cette série.', italics: true, color: SeriesSessionsPdfService.GREY, colSpan: 7, alignment: 'center', margin: [4, 10, 4, 10] },
+        { text: this.t('SERIES_SESSIONS_PDF.NO_SESSIONS'), italics: true, color: SeriesSessionsPdfService.GREY, colSpan: 7, alignment: 'center', margin: [4, 10, 4, 10] },
         {}, {}, {}, {}, {}, {}
       ]);
     } else {
@@ -165,7 +184,7 @@ export class SeriesSessionsPdfService {
           { text: s.roomName || '—', fillColor: fill, margin: [6, 8, 6, 8] },
           { text: this.fmtDate(s.sessionTimeStart), fillColor: fill, margin: [6, 8, 6, 8] },
           {
-            text: finished ? 'Validée' : 'Programmée',
+            text: this.t(finished ? 'SERIES_SESSIONS_PDF.VALIDATED' : 'SERIES_SESSIONS_PDF.SCHEDULED'),
             bold: true,
             color: finished ? SeriesSessionsPdfService.GREEN : SeriesSessionsPdfService.AMBER,
             alignment: 'center',
@@ -195,8 +214,8 @@ export class SeriesSessionsPdfService {
   private buildSignatures(): Content {
     return {
       columns: [
-        { text: 'Enseignant : ________________________', margin: [0, 40, 0, 0] },
-        { text: 'Administration : ________________________', alignment: 'right', margin: [0, 40, 0, 0] }
+        { text: this.t('SERIES_SESSIONS_PDF.TEACHER_SIGNATURE'), margin: [0, 40, 0, 0] },
+        { text: this.t('PROFILE_PDF.ADMINISTRATION'), alignment: 'right', margin: [0, 40, 0, 0] }
       ]
     };
   }
@@ -209,7 +228,7 @@ export class SeriesSessionsPdfService {
     if (!value) { return '—'; }
     const d = new Date(value);
     if (isNaN(d.getTime())) { return '—'; }
-    return d.toLocaleString('fr-FR', {
+    return d.toLocaleString(pdfLocale(this.translate), {
       day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
     });
   }

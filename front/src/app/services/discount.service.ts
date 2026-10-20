@@ -1,4 +1,5 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
+import { TranslateService } from '@ngx-translate/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { catchError, Observable, throwError } from 'rxjs';
 import { API_BASE_URL } from '../api-base-url';
@@ -18,6 +19,8 @@ import { Discount, DiscountRequest } from '../models/discount/student-discount';
 })
 export class DiscountService {
   private apiUrl = `${API_BASE_URL}/api/discounts`;
+
+  private readonly translate = inject(TranslateService);
 
   constructor(private http: HttpClient) {}
 
@@ -55,14 +58,14 @@ export class DiscountService {
     return this.http.delete<void>(`${this.apiUrl}/${id}`).pipe(catchError(this.handleError));
   }
 
-  private handleError(error: HttpErrorResponse): Observable<never> {
-    let message = 'Une erreur est survenue';
+  private handleError = (error: HttpErrorResponse): Observable<never> => {
+    let message: string = this.translate.instant('HTTP_ERRORS.GENERIC');
     if (error.error instanceof ErrorEvent) {
-      message = `Erreur: ${error.error.message}`;
+      message = this.translate.instant('HTTP_ERRORS.WITH_MESSAGE_COMPACT', { message: error.error.message });
     } else {
-      message = error.error?.message || `Code: ${error.status}`;
+      message = error.error?.message || this.translate.instant('HTTP_ERRORS.CODE', { status: error.status });
     }
     console.error('Discount Service Error:', message, error);
     return throwError(() => new Error(message));
-  }
+  };
 }

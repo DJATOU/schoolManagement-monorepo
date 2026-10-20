@@ -12,6 +12,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatOptionModule } from '@angular/material/core';
 import { TranslateModule } from '@ngx-translate/core';
 import { AdminOnlyDirective } from '../../../shared/admin-only.directive';
+import { CurrencySuffixPipe } from '../../../pipes/currency-suffix.pipe';
 
 @Component({
   selector: 'app-payment-confirmation-dialog',
@@ -28,7 +29,8 @@ import { AdminOnlyDirective } from '../../../shared/admin-only.directive';
     MatSelectModule,
     MatOptionModule,
     TranslateModule,
-    AdminOnlyDirective
+    AdminOnlyDirective,
+    CurrencySuffixPipe
   ]
 })
 export class PaymentConfirmationDialogComponent {

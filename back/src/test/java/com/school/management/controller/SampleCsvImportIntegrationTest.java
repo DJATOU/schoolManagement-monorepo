@@ -141,6 +141,8 @@ class SampleCsvImportIntegrationTest {
             assertThat(student.getLevel().getName()).isEqualTo(row.get("level"));
             assertThat(student.getEstablishment()).isEqualTo(emptyToNull(row.get("establishment")));
             assertThat(student.getPhoneNumber()).isEqualTo(emptyToNull(row.get("phoneNumber")));
+            assertThat(student.getDateOfBirth()).isEqualTo(emptyToNull(row.get("dateOfBirth")) == null
+                    ? null : LocalDate.parse(row.get("dateOfBirth")));
         }
 
         Map<String, GroupEntity> groupByName = groups.findAll().stream()
@@ -201,6 +203,11 @@ class SampleCsvImportIntegrationTest {
         assertThat(byName.get("Théo Lounis").get("establishment").asText()).isEqualTo("Lycée Émir Abdelkader");
         assertThat(byName.get("Léa Haddad").get("gender").asText()).isEqualTo("F");
         assertThat(byName.get("Léa Haddad").get("phoneNumber").asText()).isEqualTo("0550000102");
+        // Jour du calendrier, en chaîne yyyy-MM-dd : ni nombre de millisecondes, ni tableau.
+        String leaBirth = rows("7-eleves.csv").stream()
+                .filter(row -> "Léa".equals(row.get("firstName")) && "Haddad".equals(row.get("lastName")))
+                .findFirst().orElseThrow().get("dateOfBirth");
+        assertThat(byName.get("Léa Haddad").get("dateOfBirth").asText()).isEqualTo(leaBirth);
     }
 
     // ------------------------------------------------------------------

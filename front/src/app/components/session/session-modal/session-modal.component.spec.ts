@@ -24,6 +24,7 @@ import { GroupService } from '../../../services/group.service';
 import { JustificationEditDialogComponent } from '../../attendance/justification-edit-dialog/justification-edit-dialog.component';
 import { AddStudentDialogComponent } from '../add-student-dialog/add-student-dialog.component';
 import { AttendanceStateDialogComponent } from '../attendance-state-dialog/attendance-state-dialog.component';
+import frTranslations from '../../../../assets/i18n/fr.json';
 
 /**
  * Fiche détaillée d'une séance, ouverte depuis le calendrier.
@@ -113,7 +114,8 @@ describe('SessionModalComponent — feuille d\'appel', () => {
         WINDOW_FROM: 'à partir du {{from}}',
         WINDOW_FROM_TO: 'du {{from}} au {{to}}',
         WINDOW_UNDATED: 'non datée'
-      }
+      },
+      common: { ok: frTranslations.common.ok }
     });
     translate.use('fr');
     http = TestBed.inject(HttpTestingController);
@@ -304,11 +306,14 @@ describe('SessionModalComponent — feuille d\'appel', () => {
       });
       const translate = TestBed.inject(TranslateService);
       translate.setTranslation('fr', {
+        // Messages d'erreur des services HTTP, affichés tels quels par la modale.
+        HTTP_ERRORS: frTranslations.HTTP_ERRORS,
         SESSION_MODAL: {
           UNVALIDATE_SUBJECT: 'Séance du {{day}} ({{group}})',
           UNVALIDATE_SUCCESS: 'Dévalidée : {{count}} ligne(s)',
           UNVALIDATE_ERROR: 'Motifs non chargés'
-        }
+        },
+        common: { ok: frTranslations.common.ok }
       });
       translate.use('fr');
       http = TestBed.inject(HttpTestingController);
@@ -436,6 +441,7 @@ describe('SessionModalComponent — feuille d\'appel', () => {
       spyOn(TestBed.inject(AuthService), 'hasRole').and.returnValue(admin);
       const translate = TestBed.inject(TranslateService);
       translate.setTranslation('fr', {
+        HTTP_ERRORS: frTranslations.HTTP_ERRORS,
         SESSION_MODAL: {
           SESSION_LABEL: 'Séance du {{day}} ({{group}})',
           CORRECTION: {
@@ -449,7 +455,7 @@ describe('SessionModalComponent — feuille d\'appel', () => {
             REASONS_ERROR: 'Motifs non chargés'
           }
         },
-        common: { close: 'Fermer' }
+        common: { close: 'Fermer', ok: frTranslations.common.ok }
       });
       translate.use('fr');
       http = TestBed.inject(HttpTestingController);
@@ -769,7 +775,8 @@ describe('SessionModalComponent — séance pas encore commencée', () => {
     spyOn(TestBed.inject(AuthService), 'hasRole').and.returnValue(true);
     const translate = TestBed.inject(TranslateService);
     translate.setTranslation('fr', {
-      SESSION_MODAL: { NOT_STARTED_HINT: 'Validation possible à partir du {{day}} à {{time}}' }
+      SESSION_MODAL: { NOT_STARTED_HINT: 'Validation possible à partir du {{day}} à {{time}}' },
+      common: { ok: frTranslations.common.ok }
     }, true);
     translate.use('fr');
     const fixture = TestBed.createComponent(SessionModalComponent);

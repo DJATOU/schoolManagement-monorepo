@@ -123,12 +123,21 @@ $accent: #c7b9ff;
       min-height: 48px !important;
       border: none;
       background: transparent;
-      text-align: left;
+      text-align: start;
       width: 100%;
 
       &:hover {
         background-color: rgba(255, 255, 255, 0.15) !important;
         transform: translateX(4px);
+      }
+
+      // Arabe : le léger décalage au survol et le liseré du lien actif suivent le sens de lecture.
+      :host-context([dir='rtl']) &:hover {
+        transform: translateX(-4px);
+      }
+
+      :host-context([dir='rtl']) &.active-link {
+        box-shadow: inset -3px 0 0 $accent;
       }
 
       &.active-link {
@@ -147,7 +156,7 @@ $accent: #c7b9ff;
         width: 24px;
         min-width: 24px;
         height: 24px;
-        margin-right: 1.5rem; // Espacement entre icône et texte
+        margin-inline-end: 1.5rem; // Espacement entre icône et texte
         display: flex;
         align-items: center;
         justify-content: center;
@@ -228,7 +237,7 @@ $accent: #c7b9ff;
     padding: 0.6rem 1rem !important;
     
     .item-icon {
-      margin-right: 1rem;
+      margin-inline-end: 1rem;
       font-size: 20px;
     }
   }

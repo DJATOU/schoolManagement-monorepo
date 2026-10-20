@@ -8,6 +8,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatRadioModule } from '@angular/material/radio';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { JustificationAudit, JustificationUpdateResult } from '../../../models/Attendance/justification';
 import { AttendanceService } from '../../../services/attendance.service';
 
@@ -51,7 +52,8 @@ export interface JustificationEditDialogData {
     MatButtonModule,
     MatIconModule,
     MatRadioModule,
-    MatProgressSpinnerModule
+    MatProgressSpinnerModule,
+    TranslateModule
   ]
 })
 export class JustificationEditDialogComponent implements OnInit {
@@ -74,6 +76,7 @@ export class JustificationEditDialogComponent implements OnInit {
   constructor(
     private fb: FormBuilder,
     private attendanceService: AttendanceService,
+    private translate: TranslateService,
     public dialogRef: MatDialogRef<JustificationEditDialogComponent, JustificationUpdateResult | undefined>,
     @Inject(MAT_DIALOG_DATA) public data: JustificationEditDialogData
   ) {
@@ -120,7 +123,7 @@ export class JustificationEditDialogComponent implements OnInit {
         this.errorMessage = err.message;
         // Serveur injoignable : la modification a peut-être abouti. Le dire, plutôt que d'annoncer un
         // échec qui pousserait à recommencer sans vérifier.
-        this.outcomeUnknown = err.message.includes('inconnu');
+        this.outcomeUnknown = err.message === this.translate.instant('HTTP_ERRORS.UNREACHABLE_UNKNOWN_OUTCOME');
         // La piste est rechargée : elle dira si la modification a finalement été enregistrée.
         this.loadAuditTrail();
       }
@@ -130,9 +133,9 @@ export class JustificationEditDialogComponent implements OnInit {
   /** Libellé d'une valeur de justification. */
   valueLabel(value: boolean | null): string {
     if (value === null || value === undefined) {
-      return 'Non renseignée';
+      return this.translate.instant('justification.dialog.notSet');
     }
-    return value ? 'Justifiée' : 'Non justifiée';
+    return this.translate.instant(value ? 'justification.dialog.justified' : 'justification.dialog.unjustified');
   }
 
   private loadAuditTrail(): void {

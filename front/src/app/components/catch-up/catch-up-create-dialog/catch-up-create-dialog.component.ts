@@ -7,7 +7,8 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { LocalizedDatePipe } from '../../../pipes/localized-date.pipe';
 import { catchError, throwError } from 'rxjs';
 import { CatchUpService } from '../../../services/catch-up.service';
 import { StudentService } from '../../student/services/student.service';
@@ -44,7 +45,8 @@ import { AdminOnlyDirective } from '../../../shared/admin-only.directive';
     MatSelectModule,
     MatSnackBarModule,
     TranslateModule,
-    AdminOnlyDirective
+    AdminOnlyDirective,
+    LocalizedDatePipe
   ],
   template: `
     <h2 mat-dialog-title>{{ 'CATCH_UP.CREATE.TITLE' | translate }}</h2>
@@ -81,7 +83,7 @@ import { AdminOnlyDirective } from '../../../shared/admin-only.directive';
             <mat-option [value]="null">{{ 'CATCH_UP.CREATE.ALL' | translate }}</mat-option>
             <mat-option *ngFor="let s of sessions" [value]="s.id">
               {{ s.title || ('CATCH_UP.CREATE.SESSION' | translate) }}
-              <ng-container *ngIf="s.sessionTimeStart"> — {{ s.sessionTimeStart | date:'mediumDate' }}</ng-container>
+              <ng-container *ngIf="s.sessionTimeStart"> — {{ s.sessionTimeStart | appDate:'mediumDate' }}</ng-container>
             </mat-option>
           </mat-select>
         </mat-form-field>
@@ -102,7 +104,7 @@ import { AdminOnlyDirective } from '../../../shared/admin-only.directive';
         <mat-select formControlName="attendanceId">
           <mat-option *ngFor="let a of filteredAbsences" [value]="a.attendanceId">
             {{ a.sessionTitle || ('CATCH_UP.CREATE.SESSION' | translate) }}
-            <ng-container *ngIf="a.sessionDate"> — {{ a.sessionDate | date:'mediumDate' }}</ng-container>
+            <ng-container *ngIf="a.sessionDate"> — {{ a.sessionDate | appDate:'mediumDate' }}</ng-container>
             <ng-container *ngIf="a.groupName"> ({{ a.groupName }})</ng-container>
           </mat-option>
         </mat-select>
@@ -155,7 +157,8 @@ export class CatchUpCreateDialogComponent implements OnInit {
     private levelService: LevelService,
     private sessionService: SessionService,
     private snackBar: MatSnackBar,
-    private dialogRef: MatDialogRef<CatchUpCreateDialogComponent>
+    private dialogRef: MatDialogRef<CatchUpCreateDialogComponent>,
+    private translate: TranslateService
   ) {
     this.form = this.fb.group({
       levelId: [null],
@@ -185,7 +188,7 @@ export class CatchUpCreateDialogComponent implements OnInit {
         this.allStudents = students || [];
         this.setStudentSource(this.allStudents);
       },
-      error: () => this.snackBar.open('Impossible de charger les étudiants', 'Fermer', { duration: 4000 })
+      error: () => this.snackBar.open(this.translate.instant('CATCH_UP.CREATE.LOAD_STUDENTS_ERROR'), this.translate.instant('common.close'), { duration: 4000 })
     });
   }
 
@@ -263,7 +266,7 @@ export class CatchUpCreateDialogComponent implements OnInit {
     this.catchUpService.getEligibleAbsences(studentId)
       .pipe(
         catchError(error => {
-          this.snackBar.open('Impossible de charger les absences', 'Fermer', { duration: 4000 });
+          this.snackBar.open(this.translate.instant('CATCH_UP.CREATE.LOAD_ABSENCES_ERROR'), this.translate.instant('common.close'), { duration: 4000 });
           return throwError(() => error);
         })
       )
@@ -303,13 +306,13 @@ export class CatchUpCreateDialogComponent implements OnInit {
     this.catchUpService.createCatchUpRequest(request)
       .pipe(
         catchError(error => {
-          const msg = error?.error?.message || 'Impossible de créer la demande de rattrapage';
-          this.snackBar.open(msg, 'Fermer', { duration: 5000 });
+          const msg = error?.error?.message || this.translate.instant('CATCH_UP.CREATE.CREATE_ERROR');
+          this.snackBar.open(msg, this.translate.instant('common.close'), { duration: 5000 });
           return throwError(() => error);
         })
       )
       .subscribe(created => {
-        this.snackBar.open('Demande de rattrapage créée', 'Fermer', { duration: 3000 });
+        this.snackBar.open(this.translate.instant('CATCH_UP.CREATE.CREATED'), this.translate.instant('common.close'), { duration: 3000 });
         this.dialogRef.close(created);
       });
   }

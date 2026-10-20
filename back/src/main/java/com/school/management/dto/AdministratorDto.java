@@ -1,11 +1,13 @@
 package com.school.management.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.validation.constraints.Email;
 import lombok.Value;
+import org.springframework.format.annotation.DateTimeFormat;
 
 import java.io.Serializable;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.Date;
 
 /**
  * DTO for {@link com.school.management.persistance.AdministratorEntity}
@@ -25,7 +27,9 @@ public class AdministratorDto implements Serializable {
     @Email
     String email;
     String phoneNumber;
-    Date dateOfBirth;
+    @DateTimeFormat(pattern = "yyyy-MM-dd")
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
+    LocalDate dateOfBirth;
     String placeOfBirth;
     String address;
     byte[] photo;

@@ -5,6 +5,7 @@ import { Content, TableCell, TDocumentDefinitions } from 'pdfmake/interfaces';
 import { CorrectionJournal, JournalEntry } from '../models/correction/journal';
 import { formatCalendarDay } from '../utils/calendar-day';
 import { formatJournalInstant } from '../utils/journal-format';
+import { pdfInstant } from '../shared/pdf-i18n';
 import { pdfSafeText } from '../utils/pdf-print';
 import { PdfOutputService } from './pdf-output.service';
 
@@ -191,6 +192,6 @@ export class CorrectionJournalPdfService {
   }
 
   private t(key: string, params?: Record<string, unknown>): string {
-    return pdfSafeText(this.translate.instant(key, params));
+    return pdfSafeText(pdfInstant(this.translate, key, params));
   }
 }

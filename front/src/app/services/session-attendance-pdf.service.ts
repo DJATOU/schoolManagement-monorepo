@@ -1,7 +1,9 @@
 import { Injectable } from '@angular/core';
+import { TranslateService } from '@ngx-translate/core';
 import pdfMake from 'pdfmake/build/pdfmake';
 import pdfFonts from 'pdfmake/build/vfs_fonts';
 import { Content, TableCell, TDocumentDefinitions } from 'pdfmake/interfaces';
+import { pdfInstant, pdfLocale } from '../shared/pdf-i18n';
 
 /** Ligne étudiant utilisée pour la feuille de présence. */
 export interface SessionAttendanceStudentRow {
@@ -42,8 +44,13 @@ export class SessionAttendancePdfService {
   private static readonly RED = '#e60000';
   private static readonly GREY = '#64748b';
 
-  constructor() {
+  constructor(private translate: TranslateService) {
     (pdfMake as any).vfs = pdfFonts.pdfMake.vfs;
+  }
+
+  /** Libellé du document : langue de l'interface en français / anglais, français sinon. */
+  private t(key: string, params?: object): string {
+    return pdfInstant(this.translate, key, params);
   }
 
   /**
@@ -58,7 +65,7 @@ export class SessionAttendancePdfService {
       this.buildHeader(info, validated),
       this.buildDivider(),
       this.buildSessionInfo(info),
-      { text: 'Feuille de présence', style: 'sectionHeader' },
+      { text: this.t('SESSION_ATTENDANCE_PDF.SECTION_TITLE'), style: 'sectionHeader' },
       this.buildStudentsTable(students, validated),
       this.buildLegend(),
       this.buildSummary(students, validated),
@@ -81,8 +88,14 @@ export class SessionAttendancePdfService {
       defaultStyle: { fontSize: 11 },
       footer: (current: number, total: number): Content => ({
         columns: [
-          { text: 'Feuille générée le ' + new Date().toLocaleString('fr-FR'), fontSize: 8, color: SessionAttendancePdfService.GREY, margin: [40, 8, 0, 0] },
-          { text: `Page ${current} / ${total}`, alignment: 'right', fontSize: 8, color: SessionAttendancePdfService.GREY, margin: [0, 8, 40, 0] }
+          {
+            text: this.t('SESSION_ATTENDANCE_PDF.GENERATED_ON', { date: new Date().toLocaleString(pdfLocale(this.translate)) }),
+            fontSize: 8, color: SessionAttendancePdfService.GREY, margin: [40, 8, 0, 0]
+          },
+          {
+            text: this.t('PROFILE_PDF.PAGE', { current, total }),
+            alignment: 'right', fontSize: 8, color: SessionAttendancePdfService.GREY, margin: [0, 8, 40, 0]
+          }
         ]
       })
     };
@@ -94,14 +107,14 @@ export class SessionAttendancePdfService {
 
   /** Bandeau de titre avec l'état (validée / non validée). */
   private buildHeader(info: SessionAttendanceInfo, validated: boolean): Content {
-    const statusText = validated ? 'Session validée' : 'Session non validée';
+    const statusText = this.t(validated ? 'SESSION_ATTENDANCE_PDF.VALIDATED' : 'SESSION_ATTENDANCE_PDF.NOT_VALIDATED');
     const statusColor = validated ? SessionAttendancePdfService.GREEN : SessionAttendancePdfService.AMBER;
 
     return {
       columns: [
         {
           stack: [
-            { text: info.title || 'Session', style: 'header' },
+            { text: info.title || this.t('SESSION_ATTENDANCE_PDF.TITLE_FALLBACK'), style: 'header' },
             { text: info.sessionType || '', style: 'subtitle' }
           ]
         },
@@ -114,7 +127,10 @@ export class SessionAttendancePdfService {
               },
               layout: 'noBorders'
             },
-            { text: new Date().toLocaleDateString('fr-FR'), alignment: 'right', fontSize: 9, color: SessionAttendancePdfService.GREY, margin: [0, 6, 0, 0] }
+            {
+              text: new Date().toLocaleDateString(pdfLocale(this.translate)),
+              alignment: 'right', fontSize: 9, color: SessionAttendancePdfService.GREY, margin: [0, 6, 0, 0]
+            }
           ],
           alignment: 'right'
         }
@@ -141,16 +157,16 @@ export class SessionAttendancePdfService {
         widths: ['22%', '28%', '22%', '28%'],
         body: [
           [
-            ...row('Groupe', info.groupName || '—'),
-            ...row('Salle', info.roomName || '—')
+            ...row(this.t('SESSION_ATTENDANCE_PDF.GROUP'), info.groupName || '—'),
+            ...row(this.t('SESSION_ATTENDANCE_PDF.ROOM'), info.roomName || '—')
           ],
           [
-            ...row('Enseignant', info.teacherName || '—'),
-            ...row('Type', info.sessionType || '—')
+            ...row(this.t('SESSION_ATTENDANCE_PDF.TEACHER'), info.teacherName || '—'),
+            ...row(this.t('SESSION_ATTENDANCE_PDF.TYPE'), info.sessionType || '—')
           ],
           [
-            ...row('Début', this.fmtDate(info.sessionTimeStart)),
-            ...row('Fin', this.fmtDate(info.sessionTimeEnd))
+            ...row(this.t('SESSION_ATTENDANCE_PDF.START'), this.fmtDate(info.sessionTimeStart)),
+            ...row(this.t('SESSION_ATTENDANCE_PDF.END'), this.fmtDate(info.sessionTimeEnd))
           ]
         ]
       },
@@ -167,24 +183,24 @@ export class SessionAttendancePdfService {
   /** Tableau des étudiants. Présence/justification remplies si validée, sinon cases vides. */
   private buildStudentsTable(students: SessionAttendanceStudentRow[], validated: boolean): Content {
     const header = [
-      { text: 'N°', style: 'tableHeader' },
-      { text: 'Étudiant', style: 'tableHeader' },
-      { text: 'Présence', style: 'tableHeader' },
-      { text: 'Justifié', style: 'tableHeader' },
-      { text: 'Note', style: 'tableHeader' }
+      { text: this.t('SESSION_ATTENDANCE_PDF.COL_NUMBER'), style: 'tableHeader' },
+      { text: this.t('SESSION_ATTENDANCE_PDF.COL_STUDENT'), style: 'tableHeader' },
+      { text: this.t('SESSION_ATTENDANCE_PDF.COL_PRESENCE'), style: 'tableHeader' },
+      { text: this.t('SESSION_ATTENDANCE_PDF.COL_JUSTIFIED'), style: 'tableHeader' },
+      { text: this.t('SESSION_ATTENDANCE_PDF.COL_NOTE'), style: 'tableHeader' }
     ];
 
     const body: TableCell[][] = [header];
 
     if (!students || students.length === 0) {
       body.push([
-        { text: 'Aucun étudiant dans cette session.', italics: true, color: SessionAttendancePdfService.GREY, colSpan: 5, alignment: 'center', margin: [4, 10, 4, 10] },
+        { text: this.t('SESSION_ATTENDANCE_PDF.NO_STUDENTS'), italics: true, color: SessionAttendancePdfService.GREY, colSpan: 5, alignment: 'center', margin: [4, 10, 4, 10] },
         {}, {}, {}, {}
       ]);
     } else {
       students.forEach((s, i) => {
         const fill = i % 2 === 0 ? '#f8fafc' : '#ffffff';
-        const nameText = s.isCatchUp ? `${s.fullName}  (Rattrapage)` : s.fullName;
+        const nameText = s.isCatchUp ? this.t('SESSION_ATTENDANCE_PDF.CATCH_UP_NAME', { name: s.fullName }) : s.fullName;
 
         body.push([
           { text: String(i + 1), alignment: 'center', fillColor: fill, margin: [4, 8, 4, 8] },
@@ -219,7 +235,7 @@ export class SessionAttendancePdfService {
     }
     const present = !!s.isPresent;
     return {
-      text: present ? 'Présent' : 'Absent',
+      text: this.t(present ? 'SESSION_ATTENDANCE_PDF.PRESENT' : 'SESSION_ATTENDANCE_PDF.ABSENT'),
       alignment: 'center',
       bold: true,
       color: present ? SessionAttendancePdfService.GREEN : SessionAttendancePdfService.RED,
@@ -238,7 +254,7 @@ export class SessionAttendancePdfService {
     }
     const justified = !!s.isJustified;
     return {
-      text: justified ? 'Oui' : 'Non',
+      text: this.t(justified ? 'common.yes' : 'common.no'),
       alignment: 'center',
       bold: true,
       color: justified ? SessionAttendancePdfService.AMBER : SessionAttendancePdfService.RED,
@@ -258,9 +274,9 @@ export class SessionAttendancePdfService {
       table: {
         widths: [12, 'auto', 12, 'auto', 12, 'auto'],
         body: [[
-          ...cell(SessionAttendancePdfService.GREEN, 'Présent'),
-          ...cell(SessionAttendancePdfService.RED, 'Absent / Non justifié'),
-          ...cell(SessionAttendancePdfService.AMBER, 'Absence justifiée')
+          ...cell(SessionAttendancePdfService.GREEN, this.t('SESSION_ATTENDANCE_PDF.PRESENT')),
+          ...cell(SessionAttendancePdfService.RED, this.t('SESSION_ATTENDANCE_PDF.LEGEND_ABSENT_UNJUSTIFIED')),
+          ...cell(SessionAttendancePdfService.AMBER, this.t('SESSION_ATTENDANCE_PDF.LEGEND_JUSTIFIED'))
         ]]
       },
       layout: 'noBorders',
@@ -282,10 +298,10 @@ export class SessionAttendancePdfService {
       table: {
         widths: ['*', '*', '*', '*'],
         body: [[
-          this.summaryCell('Total', String(total), SessionAttendancePdfService.PRIMARY),
-          this.summaryCell('Présents', String(present), SessionAttendancePdfService.GREEN),
-          this.summaryCell('Absents', String(absent), SessionAttendancePdfService.RED),
-          this.summaryCell('Justifiés', String(justified), SessionAttendancePdfService.AMBER)
+          this.summaryCell(this.t('SESSION_ATTENDANCE_PDF.SUMMARY_TOTAL'), String(total), SessionAttendancePdfService.PRIMARY),
+          this.summaryCell(this.t('SESSION_ATTENDANCE_PDF.SUMMARY_PRESENT'), String(present), SessionAttendancePdfService.GREEN),
+          this.summaryCell(this.t('SESSION_ATTENDANCE_PDF.SUMMARY_ABSENT'), String(absent), SessionAttendancePdfService.RED),
+          this.summaryCell(this.t('SESSION_ATTENDANCE_PDF.SUMMARY_JUSTIFIED'), String(justified), SessionAttendancePdfService.AMBER)
         ]]
       },
       layout: 'noBorders',
@@ -307,8 +323,8 @@ export class SessionAttendancePdfService {
   private buildSignatures(): Content {
     return {
       columns: [
-        { text: 'Enseignant : ________________________', margin: [0, 40, 0, 0] },
-        { text: 'Administration : ________________________', alignment: 'right', margin: [0, 40, 0, 0] }
+        { text: this.t('SESSION_ATTENDANCE_PDF.TEACHER_SIGNATURE'), margin: [0, 40, 0, 0] },
+        { text: this.t('PROFILE_PDF.ADMINISTRATION'), alignment: 'right', margin: [0, 40, 0, 0] }
       ]
     };
   }
@@ -317,7 +333,7 @@ export class SessionAttendancePdfService {
     if (!value) { return '—'; }
     const d = new Date(value);
     if (isNaN(d.getTime())) { return '—'; }
-    return d.toLocaleString('fr-FR', {
+    return d.toLocaleString(pdfLocale(this.translate), {
       day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
     });
   }

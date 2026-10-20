@@ -7,8 +7,12 @@ import { TranslateHttpLoader } from '@ngx-translate/http-loader';
 import { HttpClient, HTTP_INTERCEPTORS } from '@angular/common/http';
 import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
 import { MatPaginatorIntl } from '@angular/material/paginator';
+import { MatDatepickerIntl } from '@angular/material/datepicker';
 import { AuthInterceptor } from './services/auth.interceptor';
 import { TranslatedPaginatorIntl } from './shared/translated-paginator-intl';
+import { TranslatedDatepickerIntl } from './shared/translated-datepicker-intl';
+import { Directionality } from '@angular/cdk/bidi';
+import { AppDirectionality } from './shared/app-directionality';
 
 /**
  * Configuration globale de l'application
@@ -33,6 +37,11 @@ export const appConfig: ApplicationConfig = {
     { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true },
     // Libellés des paginateurs Material traduits (FR/EN) au lieu de l'anglais par défaut.
     { provide: MatPaginatorIntl, useClass: TranslatedPaginatorIntl },
+    // Libellés du sélecteur de date (ouvrir le calendrier, mois précédent…) traduits de même.
+    { provide: MatDatepickerIntl, useClass: TranslatedDatepickerIntl },
+    // Sens d'écriture modifiable à chaud (arabe ↔ français/anglais sans recharger la page) :
+    // overlays, dialogues, menus et sidenav suivent la langue choisie.
+    { provide: Directionality, useExisting: AppDirectionality },
     importProvidersFrom(
       TranslateModule.forRoot({
         defaultLanguage: 'fr',

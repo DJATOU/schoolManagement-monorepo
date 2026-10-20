@@ -1,5 +1,6 @@
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
+import { TranslateService } from '@ngx-translate/core';
 import { catchError, Observable, throwError } from 'rxjs';
 import { Student } from '../domain/student';
 import { API_BASE_URL } from '../../../api-base-url';
@@ -15,6 +16,8 @@ import { ApiResponse } from '../../../models/response';
 export class StudentService {
   private apiUrl = `${API_BASE_URL}/api/students`;
   private apiUrl2 = `${API_BASE_URL}/api/student-groups`;
+  private readonly translate = inject(TranslateService);
+
   constructor(private http: HttpClient) { }
 
   /**
@@ -206,31 +209,31 @@ export class StudentService {
   /**
    * Gestion centralisée des erreurs HTTP (même schéma que PaymentService.handleError).
    */
-  private handleError(error: HttpErrorResponse): Observable<never> {
-    let errorMessage = 'Une erreur est survenue';
+  private handleError = (error: HttpErrorResponse): Observable<never> => {
+    let errorMessage: string = this.translate.instant('HTTP_ERRORS.GENERIC');
 
     if (error.error instanceof ErrorEvent) {
       // Erreur côté client
-      errorMessage = `Erreur: ${error.error.message}`;
+      errorMessage = this.translate.instant('HTTP_ERRORS.WITH_MESSAGE_COMPACT', { message: error.error.message });
     } else {
       // Erreur côté serveur
-      errorMessage = `Code: ${error.status}\nMessage: ${error.message}`;
+      errorMessage = this.translate.instant('HTTP_ERRORS.CODE_MESSAGE', { status: error.status, message: error.message });
 
       // Messages spécifiques selon le code HTTP
       switch (error.status) {
         case 404:
-          errorMessage = 'Étudiant non trouvé';
+          errorMessage = this.translate.instant('HTTP_ERRORS.STUDENT.NOT_FOUND');
           break;
         case 400:
-          errorMessage = error.error?.message || 'Données invalides';
+          errorMessage = error.error?.message || this.translate.instant('HTTP_ERRORS.INVALID_DATA');
           break;
         case 500:
-          errorMessage = 'Erreur serveur. Veuillez réessayer plus tard.';
+          errorMessage = this.translate.instant('HTTP_ERRORS.SERVER');
           break;
       }
     }
 
     console.error('Student Service Error:', errorMessage, error);
     return throwError(() => new Error(errorMessage));
-  }
+  };
 }

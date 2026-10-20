@@ -36,6 +36,12 @@ describe('NavigationComponent', () => {
     expect(component.searchControl.value).toBe('');
   });
 
+  it('propose les trois langues, chacune nommée dans sa propre langue', () => {
+    expect(component.languages.map(l => [l.code, l.name])).toEqual([
+      ['fr', 'Français'], ['en', 'English'], ['ar', 'العربية']
+    ]);
+  });
+
   it('initialsOf() prend au plus deux initiales', () => {
     expect(component.initialsOf('Amina Belkacem')).toBe('AB');
     expect(component.initialsOf('Amina')).toBe('AM');

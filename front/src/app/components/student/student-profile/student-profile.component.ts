@@ -38,21 +38,25 @@ import { AdminOnlyDirective } from '../../../shared/admin-only.directive';
 import { AuthService } from '../../../services/auth.service';
 import { LinkTutorDialogComponent } from '../../tutor/link-tutor-dialog/link-tutor-dialog.component';
 import { SecureImageDirective } from '../../../shared/secure-image.directive';
+import { formatDayFirst } from '../../../shared/iso-day';
 import { GroupChangeNoticeComponent } from '../../shared/group-change-notice/group-change-notice.component';
 import { HasRoleDirective } from '../../../shared/has-role.directive';
 import { StudentEncashmentsComponent } from '../student-encashments/student-encashments.component';
 import { StudentEnrolmentsComponent } from '../student-enrolments/student-enrolments.component';
 import { StudentJournalComponent } from '../student-journal/student-journal.component';
 import { enrolmentRefusalMessage } from '../../../utils/enrolment-refusal';
+import { genderLabelKey, nationalityLabelKey } from '../../../utils/form-options';
+import { pdfInstant } from '../../../shared/pdf-i18n';
 
+/** Code d'erreur → clé de traduction du message, traduit au moment de l'affichage. */
 const errorMessages = {
-  PAYMENT_EXCEEDS_SESSIONS: "Le paiement ne peut pas être effectué car il dépasse le coût des sessions actuellement créées.",
-  STUDENT_NOT_FOUND: "L'étudiant n'a pas été trouvé.",
-  GROUP_NOT_FOUND: "Le groupe n'a pas été trouvé.",
-  GENERIC_ERROR: "Une erreur est survenue. Veuillez réessayer plus tard.",
-  GROUP_ALREADY_ASSOCIATED: "Certains groupes sont déjà associés à l'étudiant.",
-  INSUFFICIENT_SESSIONS: "Le nombre de sessions créées est insuffisant pour couvrir le paiement.",
-  INVALID_GROUP_LEVEL: "Aucun groupe correspondant au niveau de l'étudiant n'a été trouvé.",
+  PAYMENT_EXCEEDS_SESSIONS: 'STUDENT_PROFILE.ERRORS.PAYMENT_EXCEEDS_SESSIONS',
+  STUDENT_NOT_FOUND: 'STUDENT_PROFILE.ERRORS.STUDENT_NOT_FOUND',
+  GROUP_NOT_FOUND: 'STUDENT_PROFILE.ERRORS.GROUP_NOT_FOUND',
+  GENERIC_ERROR: 'STUDENT_PROFILE.ERRORS.GENERIC_ERROR',
+  GROUP_ALREADY_ASSOCIATED: 'STUDENT_PROFILE.ERRORS.GROUP_ALREADY_ASSOCIATED',
+  INSUFFICIENT_SESSIONS: 'STUDENT_PROFILE.ERRORS.INSUFFICIENT_SESSIONS',
+  INVALID_GROUP_LEVEL: 'STUDENT_PROFILE.ERRORS.INVALID_GROUP_LEVEL',
 };
 
 @Component({
@@ -156,24 +160,26 @@ export class StudentProfileComponent implements OnInit {
   printProfilePdf(): void {
     if (!this.student) return;
     const s = this.student;
+    const t = (key: string, params?: object) => pdfInstant(this.translate, key, params);
+    const genderKey = genderLabelKey(s.gender);
 
     const sections = [
       {
-        heading: 'Informations personnelles',
+        heading: t('STUDENT_PROFILE.PERSONAL_INFO'),
         rows: [
-          { label: 'Sexe', value: s.gender },
-          { label: 'Email', value: s.email },
-          { label: 'Téléphone', value: s.phoneNumber },
-          { label: 'Date de naissance', value: s.dateOfBirth ? new Date(s.dateOfBirth).toLocaleDateString('fr-FR') : null },
-          { label: 'Lieu de naissance', value: s.placeOfBirth }
+          { label: t('COMMON.GENDER'), value: genderKey ? t(genderKey) : s.gender },
+          { label: t('COMMON.EMAIL'), value: s.email },
+          { label: t('STUDENT_PROFILE.PHONE'), value: s.phoneNumber },
+          { label: t('COMMON.BIRTHDATE'), value: formatDayFirst(s.dateOfBirth) || null },
+          { label: t('COMMON.BIRTHPLACE'), value: s.placeOfBirth }
         ]
       },
       {
-        heading: 'Informations académiques',
+        heading: t('STUDENT_PROFILE.ACADEMIC_INFO'),
         rows: [
-          { label: 'Niveau', value: s.levelName },
-          { label: 'Établissement', value: s.establishment },
-          { label: 'Moyenne', value: s.averageScore }
+          { label: t('COMMON.LEVEL'), value: s.levelName },
+          { label: t('COMMON.SCHOOL'), value: s.establishment },
+          { label: t('STUDENT_PROFILE.AVERAGE'), value: s.averageScore }
         ]
       }
     ];
@@ -181,22 +187,24 @@ export class StudentProfileComponent implements OnInit {
     // Section tuteur (affichée uniquement si un tuteur est rattaché).
     if (this.tutor) {
       sections.push({
-        heading: 'Tuteur',
+        heading: t('tutor.title'),
         rows: [
-          { label: 'Nom', value: `${this.tutor.firstName} ${this.tutor.lastName}` },
-          { label: 'Lien de parenté', value: this.tutor.relationship ?? null },
-          { label: 'Téléphone', value: this.tutor.phoneNumber ?? null },
-          { label: 'Email', value: this.tutor.email ?? null }
+          { label: t('tutor.name'), value: `${this.tutor.firstName} ${this.tutor.lastName}` },
+          { label: t('tutor.relationship'), value: this.tutor.relationship ?? null },
+          { label: t('tutor.phone'), value: this.tutor.phoneNumber ?? null },
+          { label: t('tutor.email'), value: this.tutor.email ?? null }
         ]
       });
     }
 
     this.profilePdfService.generateProfilePdf({
       title: `${s.firstName} ${s.lastName}`,
-      subtitle: s.levelName ? `Étudiant · ${s.levelName}` : 'Étudiant',
+      subtitle: s.levelName
+        ? t('PROFILE_PDF.STUDENT_WITH_LEVEL', { level: s.levelName })
+        : t('PROFILE_PDF.STUDENT'),
       sections,
-      tableTitle: `Groupes (${this.studentGroups.length})`,
-      tableColumns: ['#', 'Groupe', 'Niveau', 'Matière'],
+      tableTitle: t('STUDENT_PROFILE.GROUPS_COUNT', { count: this.studentGroups.length }),
+      tableColumns: ['#', t('STUDENT_PROFILE.PDF.GROUP_COLUMN'), t('COMMON.LEVEL'), t('STUDENT_PROFILE.PDF.SUBJECT_COLUMN')],
       tableRows: this.studentGroups.map((g, i) => [
         i + 1,
         g.name,
@@ -211,7 +219,7 @@ export class StudentProfileComponent implements OnInit {
     if (studentId) {
       this.loadStudentData(studentId);
     } else {
-      this.showError(errorMessages.STUDENT_NOT_FOUND);
+      this.showError(this.translate.instant(errorMessages.STUDENT_NOT_FOUND));
     }
     this.loadSelectOptions();
     this.loadAllGroups(); // Ajouté pour charger les groupes
@@ -241,7 +249,7 @@ export class StudentProfileComponent implements OnInit {
       },
       error: () => {
         this.loading = false;
-        this.showError(errorMessages.STUDENT_NOT_FOUND);
+        this.showError(this.translate.instant(errorMessages.STUDENT_NOT_FOUND));
       }
     });
   }
@@ -334,7 +342,7 @@ export class StudentProfileComponent implements OnInit {
         },
         error: error => {
           console.error('Error fetching level:', error); // Log pour vérifier les erreurs
-          this.showError(errorMessages.GENERIC_ERROR);
+          this.showError(this.translate.instant(errorMessages.GENERIC_ERROR));
           this.updateUI();
         }
       });
@@ -455,7 +463,7 @@ export class StudentProfileComponent implements OnInit {
           this.studentGroups = groups;
         },
         error: () => {
-          this.showError(errorMessages.GENERIC_ERROR);
+          this.showError(this.translate.instant(errorMessages.GENERIC_ERROR));
         }
       });
     }
@@ -469,7 +477,7 @@ export class StudentProfileComponent implements OnInit {
         this.allGroups = groups;
       },
       error: () => {
-        this.showError(errorMessages.GENERIC_ERROR);
+        this.showError(this.translate.instant(errorMessages.GENERIC_ERROR));
       }
     });
   }
@@ -480,7 +488,7 @@ export class StudentProfileComponent implements OnInit {
         this.allGroupTypes = groupTypes;
       },
       error: () => {
-        this.showError(errorMessages.GENERIC_ERROR);
+        this.showError(this.translate.instant(errorMessages.GENERIC_ERROR));
       }
     });
   }
@@ -496,7 +504,7 @@ export class StudentProfileComponent implements OnInit {
       if (this.student?.id !== undefined) {
         this.studentService.addGroupsToStudent(this.student.id, groupIds, arrival).subscribe({
           next: (response: ApiResponse) => {
-            this.snackBar.open(response.message, 'Close', {
+            this.snackBar.open(response.message, this.translate.instant('STUDENT_PROFILE.MESSAGES.CLOSE'), {
               duration: 3000,
               panelClass: ['success-snackbar']
             });
@@ -511,7 +519,7 @@ export class StudentProfileComponent implements OnInit {
           }
         });
       } else {
-        this.showError(errorMessages.STUDENT_NOT_FOUND);
+        this.showError(this.translate.instant(errorMessages.STUDENT_NOT_FOUND));
       }
     }
   }
@@ -538,6 +546,23 @@ export class StudentProfileComponent implements OnInit {
     return `${this.student?.firstName ?? ''} ${this.student?.lastName ?? ''}`.trim();
   }
 
+  /** Date de naissance JJ/MM/AAAA, comme à la saisie : découpée, sans conversion de fuseau. */
+  get birthDateLabel(): string {
+    return formatDayFirst(this.student?.dateOfBirth);
+  }
+
+  /** Libellé traduit du sexe (« M » / « male » → Masculin) ; valeur brute si le code est inconnu. */
+  genderLabel(code: string | null | undefined): string {
+    const key = genderLabelKey(code);
+    return key ? this.translate.instant(key) : code ?? '';
+  }
+
+  /** Libellé traduit d'une nationalité enregistrée ; valeur brute si elle est hors liste. */
+  nationalityLabel(value: string | null | undefined): string {
+    const key = nationalityLabelKey(value);
+    return key ? this.translate.instant(key) : value ?? '';
+  }
+
   /**
    * Une arrivée, un départ ou une réouverture corrigés : les groupes suivis, et les montants des
    * versements, ont pu changer.
@@ -548,7 +573,7 @@ export class StudentProfileComponent implements OnInit {
   }
 
   private showError(message: string): void {
-    this.snackBar.open(message, 'Close', {
+    this.snackBar.open(message, this.translate.instant('STUDENT_PROFILE.MESSAGES.CLOSE'), {
       duration: 5000,
       panelClass: ['error-snackbar']
     });
@@ -556,7 +581,7 @@ export class StudentProfileComponent implements OnInit {
 
   openPaymentDialog(): void {
     if (!this.student?.id) {
-      this.showError('Invalid student');
+      this.showError(this.translate.instant('STUDENT_PROFILE.MESSAGES.INVALID_STUDENT'));
       return;
     }
 
@@ -564,7 +589,7 @@ export class StudentProfileComponent implements OnInit {
     this.groupService.getGroupsForPayment(this.student.id).subscribe({
       next: (allGroups) => {
         if (allGroups.length === 0) {
-          this.showError('No group available for payment');
+          this.showError(this.translate.instant('STUDENT_PROFILE.MESSAGES.NO_PAYMENT_GROUP'));
           return;
         }
 
@@ -594,7 +619,7 @@ export class StudentProfileComponent implements OnInit {
       },
       error: (err) => {
         console.error('Error fetching groups for payment', err);
-        this.showError(errorMessages.GENERIC_ERROR);
+        this.showError(this.translate.instant(errorMessages.GENERIC_ERROR));
       }
     });
   }
@@ -608,7 +633,7 @@ export class StudentProfileComponent implements OnInit {
 
     if (groupsForLevel.length === 0) {
       // Aucun groupe disponible pour le niveau de l'étudiant
-      this.showErrorMessage('Aucun groupe disponible pour ce niveau.');
+      this.showErrorMessage(this.translate.instant('STUDENT_PROFILE.MESSAGES.NO_GROUP_FOR_LEVEL'));
       return;
     }
 
@@ -619,7 +644,7 @@ export class StudentProfileComponent implements OnInit {
 
     if (possibleGroups.length === 0) {
       // Tous les groupes de ce niveau ont déjà été ajoutés à l'étudiant
-      this.showErrorMessage('Tous les groupes de ce niveau ont déjà été ajoutés à cet étudiant.');
+      this.showErrorMessage(this.translate.instant('STUDENT_PROFILE.MESSAGES.ALL_GROUPS_ADDED'));
       return;
     }
 
@@ -682,23 +707,23 @@ export class StudentProfileComponent implements OnInit {
                   this.student = { ...updatedStudent, photo: filename };
                   this.refreshPhotoUrl();
                   this.loadStudentData(updatedStudent.id!);
-                  this.showSuccessMessage('Étudiant modifié avec succès.');
+                  this.showSuccessMessage(this.translate.instant('STUDENT_PROFILE.MESSAGES.UPDATED'));
                 },
                 error: (error: any) => {
                   console.error('Error uploading photo:', error);
-                  this.showErrorMessage('Erreur lors du téléchargement de la photo.');
+                  this.showErrorMessage(this.translate.instant('STUDENT_PROFILE.MESSAGES.PHOTO_UPLOAD_ERROR'));
                 }
               });
             } else {
               this.student = updatedStudent;
               this.refreshPhotoUrl();
               this.loadStudentLevel();
-              this.showSuccessMessage('Étudiant modifié avec succès.');
+              this.showSuccessMessage(this.translate.instant('STUDENT_PROFILE.MESSAGES.UPDATED'));
             }
           },
           error: (error) => {
             console.error('Error updating student:', error);
-            this.showErrorMessage('Erreur lors de la mise à jour de l\'étudiant.');
+            this.showErrorMessage(this.translate.instant('STUDENT_PROFILE.MESSAGES.UPDATE_ERROR'));
           },
         });
       } else {
@@ -760,7 +785,7 @@ export class StudentProfileComponent implements OnInit {
    */
   openFullHistoryDialog(): void {
     if (!this.student?.id) {
-      this.showErrorMessage('Étudiant introuvable.');
+      this.showErrorMessage(this.translate.instant('STUDENT_PROFILE.MESSAGES.NOT_FOUND'));
       return;
     }
     this.dialog.open(StudentFullHistoryDialogComponent, {
@@ -779,23 +804,23 @@ export class StudentProfileComponent implements OnInit {
         },
         error: (error) => {
           console.error('Error fetching full history:', error);
-          this.showErrorMessage('Erreur lors de la récupération de l\'historique complet.');
+          this.showErrorMessage(this.translate.instant('STUDENT_PROFILE.MESSAGES.FULL_HISTORY_ERROR'));
         }
       });
     } else {
-      this.showErrorMessage('Étudiant introuvable.');
+      this.showErrorMessage(this.translate.instant('STUDENT_PROFILE.MESSAGES.NOT_FOUND'));
     }
   }
 
   showSuccessMessage(message: string): void {
-    this.snackBar.open(message, 'OK', {
+    this.snackBar.open(message, this.translate.instant('common.ok'), {
       duration: 3000,
       panelClass: ['snack-bar-success']
     });
   }
 
   showErrorMessage(message: string): void {
-    this.snackBar.open(message, 'OK', {
+    this.snackBar.open(message, this.translate.instant('common.ok'), {
       duration: 3000,
       panelClass: ['snack-bar-error']
     });

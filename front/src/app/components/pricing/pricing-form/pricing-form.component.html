@@ -1,25 +1,25 @@
 <form [formGroup]="pricingForm" (ngSubmit)="onSubmit()" class="form-container fade-in">
     <h2 class="form-title">{{ (editingId ? 'RESOURCE_FORM.EDIT_TITLE' : 'RESOURCE_FORM.CREATE_TITLE') | translate: { entity: 'RESOURCE_FORM.ENTITY.pricing' | translate } }}</h2>
     <mat-tab-group class="tab-group">
-      <mat-tab label="Basic Information">
+      <mat-tab [label]="'RESOURCE_FORM.TABS.BASIC_INFO' | translate">
         <div class="tab-content">
           <mat-form-field appearance="fill">
-            <mat-label>Price</mat-label>
+            <mat-label>{{ 'RESOURCE_FORM.FIELDS.PRICE' | translate }}</mat-label>
             <input matInput formControlName="price" type="number"/>
           </mat-form-field>
   
           <mat-form-field>
-            <mat-label>Enter the validity date range</mat-label>
+            <mat-label>{{ 'RESOURCE_FORM.FIELDS.VALIDITY_RANGE' | translate }}</mat-label>
             <mat-date-range-input [rangePicker]="picker">
-              <input matStartDate placeholder="Effective date" formControlName="effectiveDate">
-              <input matEndDate placeholder="Expiration date" formControlName="expirationDate">
+              <input matStartDate [placeholder]="'RESOURCE_FORM.FIELDS.EFFECTIVE_DATE' | translate" formControlName="effectiveDate">
+              <input matEndDate [placeholder]="'RESOURCE_FORM.FIELDS.EXPIRATION_DATE' | translate" formControlName="expirationDate">
             </mat-date-range-input>
             <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
             <mat-date-range-picker #picker></mat-date-range-picker>
           </mat-form-field>
   
           <mat-form-field appearance="fill">
-            <mat-label>Description</mat-label>
+            <mat-label>{{ 'COMMON.DESCRIPTION' | translate }}</mat-label>
             <textarea matInput formControlName="description"></textarea>
           </mat-form-field>
         </div>
@@ -28,7 +28,7 @@
   
     <div class="button-container">
       <button mat-raised-button color="primary" type="submit" class="submit-button" appAdminOnly>{{ (editingId ? 'RESOURCE_FORM.UPDATE' : 'RESOURCE_FORM.SAVE') | translate }}</button>
-      <button mat-raised-button color="accent" type="button" class="clear-button" (click)="onClearForm()">Clear</button>
+      <button mat-raised-button color="accent" type="button" class="clear-button" (click)="onClearForm()">{{ 'COMMON.CLEAR' | translate }}</button>
     </div>
   </form>
   

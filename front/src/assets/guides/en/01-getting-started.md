@@ -26,7 +26,7 @@ To leave: click your name at the top right, then **Logout**.
 - **Students**, **Groups**, **Teachers**: choose what you are looking for, then type at least two letters in the search box.
 - The **book** icon opens this guide.
 - **School year**: the year shown everywhere.
-- **Your name**: light or dark mode, language (**French**, **English**), **Account management**, **Logout**.
+- **Your name**: light or dark mode, language (**Français**, **English**, **العربية**), **Account management**, **Logout**.
 
 > [!TIP]
 > To open Lucas Lefebvre's profile: **Students** tab, type "Luc", then pick "Lucas Lefebvre" in the suggestions.
@@ -81,7 +81,7 @@ To get going quickly, load your lists with **Registration › CSV Import**, in t
 
 1. Levels, Subjects, Rooms, Group types
 2. Prices (the price of one session)
-3. Teachers, then Students
+3. Teachers, then Students (optional dateOfBirth, YYYY-MM-DD, column as **Text** in Excel)
 4. Groups: they name a level, a subject, a teacher and a price already imported
 5. Enrolments: one student, one group and an arrival date per row
 
@@ -94,7 +94,7 @@ Each file starts with a header row. The screen then shows how many rows were imp
 
 ## Importing enrolments
 
-The enrolments file places students in their groups, like **Ajouter un étudiant** on the group's page (this button keeps its French label), with the same checks: level, school year, enrolment already open.
+The enrolments file places students in their groups, like **Add a student** on the group's page, with the same checks: level, school year, enrolment already open.
 
 - One row per enrolment: a student attending two groups has two rows.
 - The group is looked up by name, in the **current** year.

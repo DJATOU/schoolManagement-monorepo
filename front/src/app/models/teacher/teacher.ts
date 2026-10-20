@@ -7,7 +7,8 @@ export interface Teacher {
   gender: string;
   email: string;
   phoneNumber: string;
-  dateOfBirth: Date | string;  // Consider using Date type or providing a utility to convert to Date when needed
+  /** Jour du calendrier `yyyy-MM-dd` (ni heure ni fuseau) ; lire et écrire via `shared/iso-day`. */
+  dateOfBirth: string | null;
   placeOfBirth: string;
   address?: string;            // Optional based on your usage
   city?: string;               // Optional

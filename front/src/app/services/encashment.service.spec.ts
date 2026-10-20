@@ -1,5 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpTestingController } from '@angular/common/http/testing';
+import { TranslateService } from '@ngx-translate/core';
+import frTranslations from '../../assets/i18n/fr.json';
 
 import { EncashmentService } from './encashment.service';
 import { setupServiceTestBed } from '../../testing/setup';
@@ -18,6 +20,10 @@ describe('EncashmentService', () => {
 
   beforeEach(() => {
     setupServiceTestBed();
+    // Messages d'erreur traduits : les assertions portent sur le texte français affiché.
+    const translate = TestBed.inject(TranslateService);
+    translate.setTranslation('fr', frTranslations);
+    translate.use('fr');
     service = TestBed.inject(EncashmentService);
     http = TestBed.inject(HttpTestingController);
   });

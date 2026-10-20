@@ -17,6 +17,7 @@ import { Group } from '../../../../models/group/group';
 import { PayableSeries, Payout } from '../../../../models/payroll/payroll';
 import { Teacher } from '../../../../models/teacher/teacher';
 import { AmountPipe, formatAmount } from '../../../../pipes/amount.pipe';
+import { currencySuffix } from '../../../../shared/currency';
 import { GroupService } from '../../../../services/group.service';
 import { PayoutSlipPdfService } from '../../../../services/payout-slip-pdf.service';
 import { TeacherPayRateService } from '../../../../services/teacher-pay-rate.service';
@@ -55,7 +56,10 @@ import { PayoutDialogComponent, PayoutDialogData } from '../payout-dialog/payout
   styleUrls: ['../teacher-payroll.shared.scss']
 })
 export class PayableTabComponent implements OnInit {
-  readonly currencySuffix = 'DA';
+  /** Suffixe monétaire de l'écran : « DA », « دج » en arabe. */
+  get currencySuffix(): string {
+    return currencySuffix(this.translate);
+  }
   readonly displayedColumns = ['group', 'series', 'teacher', 'sessions', 'collected', 'state', 'actions'];
 
   readonly filterForm: FormGroup;

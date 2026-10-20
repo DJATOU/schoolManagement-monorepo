@@ -46,6 +46,10 @@ import { HasRoleDirective } from '../../../shared/has-role.directive';
 import { RevenueService } from '../../../services/revenue.service';
 import { GroupRevenue, SeriesRevenue } from '../../../models/revenue/group-revenue';
 import { resolveLocale } from '../../../shared/locale';
+import { pdfInstant, pdfLocale } from '../../../shared/pdf-i18n';
+import { pdfWithCurrency } from '../../../shared/currency';
+import { LocalizedDatePipe } from '../../../pipes/localized-date.pipe';
+import { CurrencySuffixPipe } from '../../../pipes/currency-suffix.pipe';
 
 @Component({
   selector: 'app-group-profile',
@@ -71,7 +75,9 @@ import { resolveLocale } from '../../../shared/locale';
     TranslateModule
   ,
     SecureImageDirective,
-    HasRoleDirective
+    HasRoleDirective,
+    LocalizedDatePipe,
+    CurrencySuffixPipe
   ]
 })
 export class GroupProfileComponent implements OnInit {
@@ -192,25 +198,28 @@ export class GroupProfileComponent implements OnInit {
     }
     extraPages.push(this.seriesPdfPage());
 
+    const t = (key: string, params?: object) => pdfInstant(this.translate, key, params);
     this.profilePdfService.generateProfilePdf({
       title: g.name,
-      subtitle: g.groupTypeName ? `Groupe · ${g.groupTypeName}` : 'Groupe',
+      subtitle: g.groupTypeName
+        ? t('PROFILE_PDF.GROUP_WITH_TYPE', { type: g.groupTypeName })
+        : t('PROFILE_PDF.GROUP'),
       sections: [
         {
-          heading: 'Informations sur le groupe',
+          heading: t('GROUP_PROFILE.INFO_TITLE'),
           rows: [
-            { label: 'Type de groupe', value: g.groupTypeName || g.groupTypeId },
-            { label: 'Niveau', value: g.levelName || g.levelId },
-            { label: 'Matière', value: g.subjectName || g.subjectId },
-            { label: 'Année scolaire', value: g.schoolYearLabel },
-            { label: 'Sessions par série', value: g.sessionNumberPerSerie },
-            { label: 'Prix', value: g.priceAmount || g.pricing?.price },
-            { label: 'Enseignant', value: g.teacherName }
+            { label: t('GROUP_PROFILE.GROUP_TYPE'), value: g.groupTypeName || g.groupTypeId },
+            { label: t('COMMON.LEVEL'), value: g.levelName || g.levelId },
+            { label: t('GROUP_PROFILE.SUBJECT'), value: g.subjectName || g.subjectId },
+            { label: t('GROUP_PROFILE.PDF.SCHOOL_YEAR'), value: g.schoolYearLabel },
+            { label: t('GROUP_PROFILE.SESSIONS_PER_SERIES'), value: g.sessionNumberPerSerie },
+            { label: t('GROUP_PROFILE.PRICE'), value: g.priceAmount || g.pricing?.price },
+            { label: t('GROUP_PROFILE.TEACHER'), value: g.teacherName }
           ]
         }
       ],
-      tableTitle: `Étudiants (${this.students.length})`,
-      tableColumns: ['#', 'Nom', 'Prénom', 'Remarques'],
+      tableTitle: t('GROUP_PROFILE.PDF.STUDENTS_TABLE', { count: this.students.length }),
+      tableColumns: ['#', t('COMMON.LAST_NAME'), t('COMMON.FIRST_NAME'), t('GROUP_PROFILE.PDF.REMARKS')],
       tableRows: this.students.map((s, i) => [
         i + 1,
         s.lastName,
@@ -229,40 +238,42 @@ export class GroupProfileComponent implements OnInit {
    * recouvrer sont agrégés par étudiant, donc ne se compensent pas.</p>
    */
   private revenuePdfPage(): PdfExtraPage {
+    const t = (key: string, params?: object) => pdfInstant(this.translate, key, params);
     const r = this.revenue;
     if (!r) {
       return {
-        heading: 'Encaissements',
+        heading: t('revenue.title'),
         subtitle: this.group?.name,
         emptyMessage: this.revenueError
-          ? 'Les encaissements n\'ont pas pu être chargés.'
-          : 'Aucun encaissement enregistré pour ce groupe.'
+          ? t('GROUP_PROFILE.PDF.REVENUE_LOAD_ERROR')
+          : t('GROUP_PROFILE.PDF.REVENUE_EMPTY')
       };
     }
 
     const rows: PdfInfoRow[] = [
-      { label: 'Encaissé (net)', value: this.amount(r.collected) },
-      { label: 'Attendu', value: this.amount(r.expected) },
-      { label: 'Reste à encaisser', value: this.amount(r.remaining) }
+      { label: t('GROUP_PROFILE.PDF.COLLECTED_NET'), value: this.amount(r.collected) },
+      { label: t('revenue.expected'), value: this.amount(r.expected) },
+      { label: t('revenue.remaining'), value: this.amount(r.remaining) }
     ];
     if (r.refunded > 0) {
-      rows.push({ label: 'Remboursé', value: this.amount(r.refunded) });
+      rows.push({ label: t('GROUP_PROFILE.PDF.REFUNDED'), value: this.amount(r.refunded) });
     }
     if (r.overpaid > 0) {
-      rows.push({ label: 'Trop-perçu', value: this.amount(r.overpaid) });
+      rows.push({ label: t('revenue.overpaid'), value: this.amount(r.overpaid) });
     }
     if (r.unassignedToSeries > 0) {
-      rows.push({ label: 'Non rattaché à une série', value: this.amount(r.unassignedToSeries) });
+      rows.push({ label: t('GROUP_PROFILE.PDF.UNASSIGNED'), value: this.amount(r.unassignedToSeries) });
     }
 
     return {
-      heading: 'Encaissements',
+      heading: t('revenue.title'),
       subtitle: this.group?.name,
-      sections: [{ heading: 'Synthèse', rows }],
+      sections: [{ heading: t('GROUP_PROFILE.PDF.SUMMARY'), rows }],
       tables: [
         {
-          title: 'Par série (mois de cours)',
-          columns: ['#', 'Série', 'Encaissé', 'Attendu', 'Reste', 'Trop-perçu'],
+          title: t('revenue.bySeries'),
+          columns: ['#', t('GROUP_PROFILE.PDF.SERIES_COLUMN'), t('revenue.collected'), t('revenue.expected'),
+            t('GROUP_PROFILE.PDF.REMAINING_COLUMN'), t('revenue.overpaid')],
           rows: r.series.map((s, i) => [
             i + 1,
             s.seriesName,
@@ -271,13 +282,13 @@ export class GroupProfileComponent implements OnInit {
             this.amount(s.remaining),
             s.overpaid > 0 ? this.amount(s.overpaid) : ''
           ]),
-          note: 'Reste et trop-perçu sont calculés étudiant par étudiant : un versement excédentaire ne compense pas le retard d\'un autre.'
+          note: t('GROUP_PROFILE.PDF.BY_SERIES_NOTE')
         },
         {
-          title: 'Par mois d\'encaissement',
-          columns: ['#', 'Mois', 'Encaissé'],
-          rows: r.months.map((m, i) => [i + 1, this.monthLabel(m), this.amount(m.collected)]),
-          note: 'Ce qui est entré en caisse chaque mois, quelle que soit la série soldée : les totaux diffèrent donc de la ventilation par série.'
+          title: t('revenue.byMonth'),
+          columns: ['#', t('GROUP_PROFILE.PDF.MONTH_COLUMN'), t('revenue.collected')],
+          rows: r.months.map((m, i) => [i + 1, this.monthLabel(m, pdfLocale(this.translate)), this.amount(m.collected)]),
+          note: t('GROUP_PROFILE.PDF.BY_MONTH_NOTE')
         }
       ]
     };
@@ -285,17 +296,19 @@ export class GroupProfileComponent implements OnInit {
 
   /** Page « Séries » du PDF : avancement de chaque série du groupe. */
   private seriesPdfPage(): PdfExtraPage {
-    const dateFormat = new Intl.DateTimeFormat(resolveLocale(this.translate.currentLang));
+    const t = (key: string, params?: object) => pdfInstant(this.translate, key, params);
+    const dateFormat = new Intl.DateTimeFormat(pdfLocale(this.translate));
     const formatDate = (value?: string) => (value ? dateFormat.format(new Date(value)) : '');
 
     return {
-      heading: 'Séries',
+      heading: t('GROUP_PROFILE.SERIES'),
       subtitle: this.group?.name,
-      emptyMessage: 'Aucune série pour ce groupe.',
+      emptyMessage: t('revenue.noSeries'),
       tables: [
         {
-          title: `Séries (${this.series.length})`,
-          columns: ['#', 'Série', 'Début', 'Fin', 'Séances créées', 'Prévues', 'Validées'],
+          title: t('GROUP_PROFILE.PDF.SERIES_TABLE', { count: this.series.length }),
+          columns: ['#', t('GROUP_PROFILE.PDF.SERIES_COLUMN'), t('GROUP_PROFILE.PDF.START'), t('GROUP_PROFILE.PDF.END'),
+            t('GROUP_PROFILE.PDF.SESSIONS_CREATED'), t('GROUP_PROFILE.PDF.PLANNED'), t('GROUP_PROFILE.PDF.VALIDATED')],
           rows: this.series.map((s, i) => [
             i + 1,
             s.name,
@@ -310,11 +323,11 @@ export class GroupProfileComponent implements OnInit {
     };
   }
 
-  /** Montant formaté avec le suffixe monétaire utilisé partout dans l'application. */
+  /** Montant formaté pour le PDF, avec le suffixe monétaire du document (« DA » sous l'arabe). */
   private amount(value: number): string {
-    return `${value.toLocaleString(resolveLocale(this.translate.currentLang), {
+    return pdfWithCurrency(value.toLocaleString(pdfLocale(this.translate), {
       maximumFractionDigits: 2
-    }).replace(/[\u202F\u00A0]/g, ' ')} DA`;
+    }).replace(/[\u202F\u00A0]/g, ' '), this.translate);
   }
 
   ngOnInit(): void {
@@ -441,11 +454,14 @@ export class GroupProfileComponent implements OnInit {
     });
   }
 
-  /** Libellé d'un mois d'encaissement (« septembre 2026 »). */
-  monthLabel(month: { year: number; month: number }): string {
+  /**
+   * Libellé d'un mois d'encaissement (« septembre 2026 »), dans la langue de l'interface par
+   * défaut ; le PDF passe sa propre locale.
+   */
+  monthLabel(month: { year: number; month: number },
+    locale: string = resolveLocale(this.translate.currentLang)): string {
     const date = new Date(month.year, month.month - 1, 1);
-    return date.toLocaleDateString(resolveLocale(this.translate.currentLang),
-      { month: 'long', year: 'numeric' });
+    return date.toLocaleDateString(locale, { month: 'long', year: 'numeric' });
   }
 
   /** Part encaissée d'une série, en pourcentage de l'attendu (0 si rien n'est attendu). */
@@ -593,7 +609,7 @@ export class GroupProfileComponent implements OnInit {
             this.groupService.addStudentsToGroup(this.group!.id!, selection.studentIds, selection.arrival).subscribe({
               next: () => {
                 this.loadStudents(this.group!.id!); // Recharger la liste après ajout
-                this.showSuccessMessage(`${count} étudiant(s) ajouté(s) au groupe.`);
+                this.showSuccessMessage(this.translate.instant('GROUP_PROFILE.MESSAGES.STUDENTS_ADDED', { count }));
               },
               error: (error: ApiError) => {
                 console.error('Error adding students to group:', error);
@@ -633,22 +649,22 @@ export class GroupProfileComponent implements OnInit {
                   this.group = { ...updatedGroup, photo: filename };
                   this.refreshPhotoUrl();
                   this.loadGroupData(updatedGroup.id!);
-                  this.showSuccessMessage('Groupe modifié avec succès.');
+                  this.showSuccessMessage(this.translate.instant('GROUP_PROFILE.MESSAGES.UPDATED'));
                 },
                 error: (error) => {
                   console.error('Error uploading photo:', error);
-                  this.showErrorMessage('Erreur lors du téléchargement de la photo.');
+                  this.showErrorMessage(this.translate.instant('GROUP_PROFILE.MESSAGES.PHOTO_UPLOAD_ERROR'));
                 }
               });
             } else {
               this.group = updatedGroup;
               this.refreshPhotoUrl();
-              this.showSuccessMessage('Groupe modifié avec succès.');
+              this.showSuccessMessage(this.translate.instant('GROUP_PROFILE.MESSAGES.UPDATED'));
             }
           },
           error: (error) => {
             console.error('Erreur lors de la mise à jour du groupe :', error);
-            this.showErrorMessage('Erreur lors de la mise à jour du groupe.');
+            this.showErrorMessage(this.translate.instant('GROUP_PROFILE.MESSAGES.UPDATE_ERROR'));
           },
         });
       } else {
@@ -792,14 +808,14 @@ export class GroupProfileComponent implements OnInit {
   }
 
   showSuccessMessage(message: string): void {
-    this.snackBar.open(message, 'Fermer', {
+    this.snackBar.open(message, this.translate.instant('common.close'), {
       duration: 3000,
       panelClass: ['snack-bar-success']
     });
   }
 
   showErrorMessage(message: string): void {
-    this.snackBar.open(message, 'Fermer', {
+    this.snackBar.open(message, this.translate.instant('common.close'), {
       duration: 3000,
       panelClass: ['snack-bar-error']
     });

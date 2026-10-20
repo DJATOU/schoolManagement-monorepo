@@ -3,7 +3,7 @@
     <mat-icon>fact_check</mat-icon>
   </div>
   <div class="dlg-hero-text">
-    <h2 class="dlg-title">Modifier la justification</h2>
+    <h2 class="dlg-title">{{ 'justification.dialog.title' | translate }}</h2>
     <span class="dlg-subtitle" *ngIf="data.sessionName">
       {{ data.sessionName }}<ng-container *ngIf="data.sessionDate">
         — {{ data.sessionDate | date:'dd/MM/yyyy' }}</ng-container>
@@ -21,38 +21,36 @@
   <div class="notice neutral">
     <mat-icon>info</mat-icon>
     <div>
-      <strong>Sans effet sur les montants.</strong>
-      La justification sert au suivi disciplinaire et au droit au rattrapage. Elle ne change ni le
-      coût de la série, ni le montant dû, ni le statut de paiement.
+      <strong>{{ 'justification.dialog.noEffectTitle' | translate }}</strong>
+      {{ 'justification.dialog.noEffectText' | translate }}
     </div>
   </div>
 
   <form [formGroup]="form" id="justificationForm" (ngSubmit)="submit()">
 
-    <span class="field-label">Valeur enregistrée</span>
+    <span class="field-label">{{ 'justification.dialog.savedValue' | translate }}</span>
     <p class="current-value">{{ valueLabel(data.justified) }}</p>
 
-    <span class="field-label">Nouvelle valeur</span>
+    <span class="field-label">{{ 'justification.dialog.newValue' | translate }}</span>
     <!--
       Choix explicite entre deux libellés textuels, et non une simple case à cocher : « justifiée » et
       « non justifiée » sont deux affirmations distinctes, alors qu'une case décochée se confond avec
       une valeur jamais renseignée.
     -->
     <mat-radio-group formControlName="justified" class="radio-group">
-      <mat-radio-button [value]="true">Justifiée</mat-radio-button>
-      <mat-radio-button [value]="false">Non justifiée</mat-radio-button>
+      <mat-radio-button [value]="true">{{ 'justification.dialog.justified' | translate }}</mat-radio-button>
+      <mat-radio-button [value]="false">{{ 'justification.dialog.unjustified' | translate }}</mat-radio-button>
     </mat-radio-group>
 
-    <label class="field-label" for="justificationComment">Commentaire (facultatif)</label>
+    <label class="field-label" for="justificationComment">{{ 'justification.dialog.commentLabel' | translate }}</label>
     <mat-form-field appearance="outline" class="full">
       <textarea matInput id="justificationComment" formControlName="comment" rows="3"
                 maxlength="500"
-                placeholder="Ex. : certificat médical remis le 12/03"></textarea>
+                [placeholder]="'justification.dialog.commentPlaceholder' | translate"></textarea>
       <mat-hint align="end">{{ form.get('comment')?.value?.length || 0 }} / 500</mat-hint>
     </mat-form-field>
     <p class="hint-note">
-      Le commentaire est conservé dans l'historique : il explique la correction si elle est contestée
-      plus tard.
+      {{ 'justification.dialog.commentHistoryNote' | translate }}
     </p>
   </form>
 
@@ -65,20 +63,20 @@
   <!-- Résultat inconnu, distinct d'un échec : la modification a peut-être abouti. -->
   <div class="notice unknown" *ngIf="outcomeUnknown">
     <mat-icon>help_outline</mat-icon>
-    <span>{{ errorMessage }} Vérifier l'historique ci-dessous avant de réessayer.</span>
+    <span>{{ errorMessage }} {{ 'justification.dialog.checkHistory' | translate }}</span>
   </div>
 
   <!-- Piste d'audit : c'est elle qui permet de répondre à une contestation de parent. -->
   <div class="audit-section">
-    <span class="field-label">Historique des modifications</span>
+    <span class="field-label">{{ 'justification.audit.title' | translate }}</span>
 
     <div class="loading" *ngIf="loadingAudit">
       <mat-spinner diameter="20"></mat-spinner>
-      <span>Chargement…</span>
+      <span>{{ 'justification.dialog.loading' | translate }}</span>
     </div>
 
     <p class="audit-empty" *ngIf="!loadingAudit && auditTrail.length === 0">
-      Aucune modification enregistrée : la valeur est celle de la saisie initiale.
+      {{ 'justification.audit.emptyInitial' | translate }}
     </p>
 
     <ul class="audit-list" *ngIf="!loadingAudit && auditTrail.length > 0">
@@ -89,7 +87,7 @@
           </span>
           <span class="audit-stamp">{{ entry.performedAt | date:'dd/MM/yyyy HH:mm' }}</span>
         </div>
-        <div class="audit-author">par {{ entry.performedBy }}</div>
+        <div class="audit-author">{{ 'justification.audit.by' | translate }} {{ entry.performedBy }}</div>
         <div class="audit-comment" *ngIf="entry.comment">« {{ entry.comment }} »</div>
       </li>
     </ul>
@@ -100,7 +98,7 @@
 <mat-dialog-actions class="dlg-actions">
   <span class="spacer"></span>
   <button mat-stroked-button type="button" (click)="dialogRef.close()" [disabled]="submitting">
-    Annuler
+    {{ 'common.cancel' | translate }}
   </button>
   <!--
     La validation reste possible même sans changement de valeur : le serveur répond alors un succès
@@ -109,6 +107,6 @@
   <button mat-flat-button type="submit" form="justificationForm" color="primary"
           [disabled]="!canSubmit">
     <mat-spinner diameter="18" *ngIf="submitting"></mat-spinner>
-    <span *ngIf="!submitting">Enregistrer</span>
+    <span *ngIf="!submitting">{{ 'justification.dialog.submitButton' | translate }}</span>
   </button>
 </mat-dialog-actions>

@@ -2,7 +2,7 @@
   <!-- TOPBAR (sticky) -->
   <div class="topbar">
     <div class="topbar-main">
-      <app-list-header [count]="totalTeachers" [entityName]="'teachers'" [filterLabel]="'Show with groups only'"
+      <app-list-header [count]="totalTeachers" [entityName]="'LIST_HEADER.ENTITY.teachers' | translate" [filterLabel]="'TEACHER_SEARCH.WITH_GROUPS_ONLY' | translate"
         (filterChange)="onHasGroupsFilterChange($event)">
       </app-list-header>
 
@@ -36,7 +36,7 @@
 
       <!-- Fin de liste : seulement quand la page montre tous les enseignants -->
       <div class="end-of-list" *ngIf="displayedTeachers.length === totalTeachers">
-        <span>Tous les enseignants affichés ({{displayedTeachers.length}})</span>
+        <span>{{ 'TEACHER_SEARCH.ALL_DISPLAYED' | translate: { count: displayedTeachers.length } }}</span>
       </div>
     </ng-container>
 

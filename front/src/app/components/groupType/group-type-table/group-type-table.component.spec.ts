@@ -1,5 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpTestingController } from '@angular/common/http/testing';
+import { TranslateService } from '@ngx-translate/core';
+import frTranslations from '../../../../assets/i18n/fr.json';
+import arTranslations from '../../../../assets/i18n/ar.json';
 
 import { GroupTypeTableComponent } from './group-type-table.component';
 import { API_BASE_URL } from '../../../api-base-url';
@@ -39,5 +42,22 @@ describe('GroupTypeTableComponent', () => {
     expect(rows.length).toBe(1);
     expect(rows[0].textContent).toContain('Petit groupe');
     expect(rows[0].textContent).toContain('8');
+  });
+
+  it('traduit ses en-têtes en français et en arabe', () => {
+    const translate = TestBed.inject(TranslateService);
+    translate.setTranslation('fr', frTranslations);
+    translate.setTranslation('ar', arTranslations);
+    const headers = (): string[] => Array.from(
+      fixture.nativeElement.querySelectorAll('th[mat-header-cell]') as NodeListOf<HTMLElement>
+    ).map(th => (th.textContent ?? '').trim()).filter(text => text.length > 0);
+
+    translate.use('fr');
+    fixture.detectChanges();
+    expect(headers()).toEqual(['ID', 'Nom', 'Effectif', 'Description']);
+
+    translate.use('ar');
+    fixture.detectChanges();
+    expect(headers()).toEqual(['ID', 'الاسم', 'التعداد', 'الوصف']);
   });
 });

@@ -4,6 +4,7 @@ import pdfMake from 'pdfmake/build/pdfmake';
 import { TDocumentDefinitions } from 'pdfmake/interfaces';
 import frTranslations from '../../assets/i18n/fr.json';
 import enTranslations from '../../assets/i18n/en.json';
+import arTranslations from '../../assets/i18n/ar.json';
 
 import { RefundReceiptPdfService } from './refund-receipt-pdf.service';
 import { RefundReceipt } from '../models/refund/refund';
@@ -79,6 +80,7 @@ describe('RefundReceiptPdfService', () => {
     translate = TestBed.inject(TranslateService);
     translate.setTranslation('fr', frTranslations);
     translate.setTranslation('en', enTranslations);
+    translate.setTranslation('ar', arTranslations);
     translate.use('fr');
     service = TestBed.inject(RefundReceiptPdfService);
   });
@@ -95,6 +97,15 @@ describe('RefundReceiptPdfService', () => {
     const texts = await textsOf(receipt());
 
     expect(texts).toContain('Document no. REMB-2026-0007');
+  });
+
+  it('prints the receipt in French, Latin digits and no Arabic character, when the UI is Arabic', async () => {
+    translate.use('ar');
+    const texts = await textsOf(receipt({ issuanceRank: 2 }));
+    expect(texts).toContain('Pièce n° REMB-2026-0007');
+    expect(texts.some(text => text.startsWith('DUPLICATA n° 2'))).toBeTrue();
+    expect(texts.some(text => text.includes('400,00'))).toBeTrue();
+    expect(texts.join(' ')).not.toMatch(/[\u0600-\u06FF]/);
   });
 
   it('leaves no unresolved template in the document, duplicate mention included', async () => {

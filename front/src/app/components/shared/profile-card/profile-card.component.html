@@ -26,7 +26,7 @@
           <!-- Avatar -->
           <div class="card-avatar">
             <img *ngIf="profilePhotoUrl && !hasImageError; else initialsTemplate" [appSecureImage]="profilePhotoUrl"
-              alt="Photo de profil" (error)="onImageError($event)">
+              [alt]="'PROFILE_CARD.PROFILE_PHOTO' | translate" (error)="onImageError($event)">
             <ng-template #initialsTemplate>
               <div class="initials-avatar" [style.background-color]="avatarColor">
                 {{ getInitials() }}
@@ -37,18 +37,18 @@
           <!-- Name and subtitle -->
           <div class="card-info">
             <span class="card-name">{{ profile.firstName }} {{ profile.lastName }}</span>
-            <span class="card-subtitle">{{ profile.subtitle }}</span>
+            <span class="card-subtitle">{{ profile.subtitleKey ? (profile.subtitleKey | translate: profile.subtitleParams) : profile.subtitle }}</span>
           </div>
         </div>
 
         <!-- Actions -->
         <mat-card-actions class="card-actions">
           <button mat-icon-button class="action-btn" (click)="sendEmail($event)" [disabled]="!profile.email"
-            matTooltip="Envoyer un email">
+            [matTooltip]="'PROFILE_CARD.SEND_EMAIL' | translate">
             <mat-icon>email</mat-icon>
           </button>
           <button mat-icon-button class="action-btn" (click)="callPhone($event)" [disabled]="!profile.phoneNumber"
-            matTooltip="Ouvrir WhatsApp">
+            [matTooltip]="'PROFILE_CARD.OPEN_WHATSAPP' | translate">
             <mat-icon>phone</mat-icon>
           </button>
         </mat-card-actions>

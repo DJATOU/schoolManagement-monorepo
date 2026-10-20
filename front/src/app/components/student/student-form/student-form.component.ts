@@ -2,8 +2,9 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatCard, MatCardContent, MatCardHeader, MatCardTitle } from '@angular/material/card';
-import { DateAdapter, MAT_DATE_FORMATS, MAT_DATE_LOCALE, MatNativeDateModule, MatOption, NativeDateAdapter } from '@angular/material/core';
+import { MatNativeDateModule, MatOption } from '@angular/material/core';
 import { MatDatepickerModule } from '@angular/material/datepicker';
+import { provideTranslatedDatepickerIntl } from '../../../shared/translated-datepicker-intl';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
@@ -22,8 +23,10 @@ import { SummaryDialogComponent } from '../../summary-dialog/summary-dialog.comp
 import { AddTutorDialogComponent } from '../../tutor/add-tutor-dialog/add-tutor-dialog.component';
 import { Tutor } from '../../../models/tutor/tutor';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
-import { COMMUNICATION_OPTIONS, DEFAULT_NATIONALITY, NATIONALITIES } from '../../../utils/form-options';
+import { COMMUNICATION_OPTIONS, DEFAULT_NATIONALITY, NATIONALITIES, nationalityLabelKey } from '../../../utils/form-options';
 import { AdminOnlyDirective } from '../../../shared/admin-only.directive';
+import { provideDayFirstDateAdapter } from '../../../shared/day-first-date-adapter';
+import { formatDayFirst, toIsoDay } from '../../../shared/iso-day';
 
 @Component({
   selector: 'app-student',
@@ -56,33 +59,24 @@ import { AdminOnlyDirective } from '../../../shared/admin-only.directive';
   templateUrl: './student-form.component.html',
   styleUrls: ['./student-form.component.scss'],
   providers: [
+    provideTranslatedDatepickerIntl(),
     StudentService,
-    { provide: DateAdapter, useClass: NativeDateAdapter },
-    { provide: MAT_DATE_LOCALE, useValue: 'us-US' },
-    {
-      provide: MAT_DATE_FORMATS,
-      useValue: {
-        parse: {
-          dateInput: 'LL'
-        },
-        display: {
-          dateInput: 'LL',
-          monthYearLabel: 'MMM YYYY',
-          dateA11yLabel: 'LL',
-          monthYearA11yLabel: 'MMMM YYYY'
-        }
-      }
-    }
+    // Saisie JJ/MM/AAAA : NativeDateAdapter lisait le mois en tête (format américain).
+    ...provideDayFirstDateAdapter()
   ]
 })
 export class StudentFormComponent implements OnInit {
   selectedFile: File | null = null;
   levels: Level[] = [];
   studentForm!: FormGroup;
+  /** Borne du datepicker : une date de naissance n'est pas dans le futur. */
+  readonly today = new Date();
   selectedTutor: Tutor | null = null;
 
   readonly communicationOptions = COMMUNICATION_OPTIONS;
   readonly nationalities = NATIONALITIES;
+  /** Libellé traduit d'une nationalité ; la valeur enregistrée reste la chaîne française. */
+  readonly nationalityLabelKey = nationalityLabelKey;
 
   constructor(
     private fb: FormBuilder,
@@ -200,12 +194,19 @@ export class StudentFormComponent implements OnInit {
       const group = this.studentForm.get(groupKey) as FormGroup;
       Object.keys(group.controls).forEach((key) => {
         const value = group.get(key)?.value;
+        // Un champ vide n'est pas envoyé : FormData le transformerait en chaîne « null »
+        // (après « Effacer »), que le serveur refuse pour un champ numérique.
+        if (value === null || value === undefined || value === '') {
+          return;
+        }
         if (key === 'level') {
           formDataToSubmit.append('levelId', value);
-        } else if (key === 'dateOfBirth' && value instanceof Date) {
-          // Format date as yyyy-MM-dd for backend
-          const formattedDate = this.formatDateForBackend(value);
-          formDataToSubmit.append(key, formattedDate);
+        } else if (key === 'dateOfBirth') {
+          // Jour du calendrier yyyy-MM-dd, lu dans les composantes locales (jamais d'instant UTC).
+          const day = toIsoDay(value);
+          if (day) {
+            formDataToSubmit.append(key, day);
+          }
         } else {
           formDataToSubmit.append(key, value);
         }
@@ -220,12 +221,6 @@ export class StudentFormComponent implements OnInit {
     return formDataToSubmit;
   }
 
-  private formatDateForBackend(date: Date): string {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  }
 
   private flattenFormData(data: any, parentKey: string = ''): { label: string; value: any }[] {
     let result: { label: string; value: any }[] = [];
@@ -235,7 +230,7 @@ export class StudentFormComponent implements OnInit {
 
       if (value instanceof Date) {
         // Afficher la date au format lisible plutôt que l'objet Date brut
-        value = this.formatDateForBackend(value);
+        value = formatDayFirst(value);
         result.push({ label: newKey, value });
       } else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
         result = result.concat(this.flattenFormData(value, newKey));

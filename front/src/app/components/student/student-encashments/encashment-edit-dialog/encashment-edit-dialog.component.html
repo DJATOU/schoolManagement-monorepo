@@ -8,7 +8,7 @@
     <mat-form-field appearance="outline">
       <mat-label>{{ 'correction.edit.amount' | translate }}</mat-label>
       <input matInput type="number" min="0" step="any" formControlName="amount" required>
-      <span matTextSuffix>DA</span>
+      <span matTextSuffix>{{ currencySuffix }}</span>
       <mat-error>{{ 'correction.edit.amountRequired' | translate }}</mat-error>
     </mat-form-field>
 

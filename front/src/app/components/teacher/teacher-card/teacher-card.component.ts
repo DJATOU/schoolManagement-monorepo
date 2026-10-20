@@ -23,7 +23,9 @@ export class TeacherCardComponent implements OnInit {
       firstName: this.teacher.firstName,
       lastName: this.teacher.lastName,
       photo: this.teacher.photo,
-      subtitle: `Specialization: ${this.teacher.specialization}`,
+      // Sous-titre traduit par la carte : il suit le changement de langue.
+      subtitleKey: 'PROFILE_CARD.SPECIALIZATION',
+      subtitleParams: { specialization: `${this.teacher.specialization}` },
       email: this.teacher.email,
       phoneNumber: this.teacher.phoneNumber,
     };

@@ -4,6 +4,11 @@ import { Router } from '@angular/router';
 import { ProfileCardComponent } from './profile-card.component';
 import { setupComponentTestBed } from '../../../../testing/setup';
 import { aPaymentStatus, aProfile } from '../../../../testing/fixtures';
+import { By } from '@angular/platform-browser';
+import { MatTooltip } from '@angular/material/tooltip';
+import { TranslateService } from '@ngx-translate/core';
+import frTranslations from '../../../../assets/i18n/fr.json';
+import enTranslations from '../../../../assets/i18n/en.json';
 
 /**
  * `profile` et `profileType` sont des entrées obligatoires que `ngOnInit` déréférence
@@ -85,5 +90,32 @@ describe('ProfileCardComponent', () => {
 
     expect(component.isFlipped).toBeTrue();
     expect(stopPropagation).toHaveBeenCalled();
+  });
+
+  /** Infobulles et sous-titre traduits : en français sous l'interface française, l'anglais suit la langue. */
+  it('traduit infobulles et sous-titre, en français puis en anglais', () => {
+    const translate = TestBed.inject(TranslateService);
+    translate.setTranslation('fr', frTranslations);
+    translate.setTranslation('en', enTranslations);
+    translate.use('fr');
+    fixture.componentRef.setInput('profile', aProfile({ subtitleKey: 'PROFILE_CARD.LEVEL', subtitleParams: { level: '2AS' } }));
+    fixture.detectChanges();
+    const tooltips = () => fixture.debugElement.queryAll(By.directive(MatTooltip))
+      .map(element => element.injector.get(MatTooltip).message);
+    const subtitle = () => (fixture.nativeElement.querySelector('.card-subtitle') as HTMLElement).textContent?.trim();
+
+    expect(tooltips()).toContain('Envoyer un email');
+    expect(tooltips()).toContain('Ouvrir WhatsApp');
+    expect(subtitle()).toBe('Niveau : 2AS');
+
+    translate.use('en');
+    fixture.detectChanges();
+    expect(tooltips()).toContain('Send an email');
+    expect(tooltips()).toContain('Open WhatsApp');
+    expect(subtitle()).toBe('Level: 2AS');
+  });
+
+  it('sans clé de sous-titre, affiche le sous-titre tel quel', () => {
+    expect((fixture.nativeElement.querySelector('.card-subtitle') as HTMLElement).textContent?.trim()).toBe('Niveau : 2AS');
   });
 });

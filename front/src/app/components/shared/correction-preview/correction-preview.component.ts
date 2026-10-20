@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, Input, TemplateRef } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { TranslateModule } from '@ngx-translate/core';
+import { CurrencySuffixPipe } from '../../../pipes/currency-suffix.pipe';
 import {
   AmountSnapshot,
   CorrectionEffect,
@@ -31,7 +32,7 @@ interface AmountRow {
 @Component({
   selector: 'app-correction-preview',
   standalone: true,
-  imports: [CommonModule, MatIconModule, TranslateModule],
+  imports: [CommonModule, MatIconModule, TranslateModule, CurrencySuffixPipe],
   templateUrl: './correction-preview.component.html',
   styleUrls: ['./correction-preview.component.scss']
 })
@@ -43,8 +44,6 @@ export class CorrectionPreviewComponent {
    * (noter présent ou absent une séance désignée par l'effet). L'Aperçu n'en sait rien d'autre.
    */
   @Input() effectAction: TemplateRef<{ $implicit: CorrectionEffect }> | null = null;
-
-  readonly currencySuffix = 'DA';
 
   /** Montants affichés d'une Série, dans l'ordre de l'exigence 4.1. */
   rows(change: SeriesAmountChange): AmountRow[] {

@@ -3,6 +3,7 @@ import { MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { MatSnackBar, MatSnackBarRef, TextOnlySnackBar } from '@angular/material/snack-bar';
 import { of, throwError } from 'rxjs';
 
+import { TranslateService } from '@ngx-translate/core';
 import { StudentEncashmentsComponent } from './student-encashments.component';
 import { EncashmentService } from '../../../services/encashment.service';
 import { PaymentReceiptPdfService } from '../../../services/payment-receipt-pdf.service';
@@ -181,6 +182,20 @@ describe('StudentEncashmentsComponent', () => {
     expect(printed.cancellation).toBeUndefined();
     expect(component.reprintingId).toBeNull();
     expect(encashments.getStudentEncashments).toHaveBeenCalledTimes(1);
+  });
+
+  it('interface en arabe : le mode de règlement est imprimé en français, l\'écran le garde en arabe', () => {
+    const translate = TestBed.inject(TranslateService);
+    translate.setTranslation('fr', { payment: { dialog: { methods: { cash: 'Espèces' } } } }, true);
+    translate.setTranslation('ar', { payment: { dialog: { methods: { cash: 'نقدًا' } } } }, true);
+    translate.use('ar');
+    showFor();
+    encashments.getEncashment.and.returnValue(of(anEncashment()));
+
+    buttons('.enc-reprint')[0].click();
+
+    expect(receiptPdf.generateAndPrint.calls.mostRecent().args[0].paymentMethodLabel).toBe('Espèces');
+    expect(component.methodLabel(anEncashment())).toBe('نقدًا');
   });
 
   it('un versement annulé depuis le chargement ressort avec le tampon « ANNULÉ », et la liste se recharge', () => {

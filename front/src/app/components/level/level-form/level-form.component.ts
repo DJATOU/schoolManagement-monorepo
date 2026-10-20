@@ -1,5 +1,5 @@
 import { HttpClientModule } from '@angular/common/http';
-import { Component, OnInit, ViewEncapsulation } from '@angular/core';
+import { Component, OnInit, ViewEncapsulation, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -10,7 +10,7 @@ import { LevelService } from '../../../services/level.service';
 import { SummaryDialogComponent } from '../../summary-dialog/summary-dialog.component';
 import { MatTab, MatTabGroup } from '@angular/material/tabs';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { AdminOnlyDirective } from '../../../shared/admin-only.directive';
 
 @Component({
@@ -48,6 +48,8 @@ export class LevelFormComponent implements OnInit {
     description: ['']
   });
 
+  private readonly translate = inject(TranslateService);
+
   constructor(private fb: FormBuilder,
     private levelService: LevelService,
     public dialog: MatDialog,
@@ -69,7 +71,7 @@ export class LevelFormComponent implements OnInit {
             description: level.description ?? ''
           });
         },
-        error: () => this.showErrorMessage('Erreur lors du chargement du niveau.')
+        error: () => this.showErrorMessage(this.translate.instant('RESOURCE_FORM.MESSAGES.level.LOAD_ERROR'))
       });
     }
   }
@@ -122,24 +124,24 @@ export class LevelFormComponent implements OnInit {
             // Mode édition : mise à jour du niveau existant (dont son rang).
             this.levelService.updateLevel(this.editingId, level).subscribe({
               next: () => {
-                this.showSuccessMessage('Niveau mis à jour avec succès.');
+                this.showSuccessMessage(this.translate.instant('RESOURCE_FORM.MESSAGES.level.UPDATED'));
                 this.router.navigate(['/level/table']);
               },
               error: (error) => {
                 console.error('Error updating level:', error);
-                this.showErrorMessage('Erreur lors de la mise à jour du niveau.');
+                this.showErrorMessage(this.translate.instant('RESOURCE_FORM.MESSAGES.level.UPDATE_ERROR'));
               }
             });
           } else {
             this.levelService.createLevel(level).subscribe({
               next: (created) => {
                 console.log('Level created:', created);
-                this.showSuccessMessage('Level created successfully.');
+                this.showSuccessMessage(this.translate.instant('RESOURCE_FORM.MESSAGES.level.CREATED'));
                 this.onClearForm();
               },
               error: (error) => {
                 console.error('Error creating level:', error);
-                this.showErrorMessage('Error creating level.');
+                this.showErrorMessage(this.translate.instant('RESOURCE_FORM.MESSAGES.level.CREATE_ERROR'));
               }
             });
           }
@@ -149,7 +151,7 @@ export class LevelFormComponent implements OnInit {
       });
     } else {
       console.warn('Form is not valid');
-      this.showErrorMessage('The form is not valid.');
+      this.showErrorMessage(this.translate.instant('RESOURCE_FORM.MESSAGES.FORM_INVALID'));
     }
   }
 
@@ -158,14 +160,14 @@ export class LevelFormComponent implements OnInit {
   }
 
   showSuccessMessage(message: string): void {
-    this.snackBar.open(message, 'OK', {
+    this.snackBar.open(message, this.translate.instant('common.ok'), {
       duration: 3000,
       panelClass: ['snack-bar-success']
     });
   }
 
   showErrorMessage(message: string): void {
-    this.snackBar.open(message, 'OK', {
+    this.snackBar.open(message, this.translate.instant('common.ok'), {
       duration: 3000,
       panelClass: ['snack-bar-error']
     });

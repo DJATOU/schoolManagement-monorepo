@@ -1,18 +1,18 @@
 <form [formGroup]="groupTypeForm" (ngSubmit)="onSubmit()" class="form-container fade-in">
   <h2 class="form-title">{{ (editingId ? 'RESOURCE_FORM.EDIT_TITLE' : 'RESOURCE_FORM.CREATE_TITLE') | translate: { entity: 'RESOURCE_FORM.ENTITY.groupType' | translate } }}</h2>
   <mat-tab-group class="tab-group">
-    <mat-tab label="Group Type Details">
+    <mat-tab [label]="'RESOURCE_FORM.TABS.GROUP_TYPE_DETAILS' | translate">
       <div class="tab-content" formGroupName="groupTypeDetails">
         <mat-form-field appearance="fill">
-          <mat-label>Type</mat-label>
+          <mat-label>{{ 'RESOURCE_FORM.FIELDS.TYPE' | translate }}</mat-label>
           <input matInput formControlName="name">
-          <mat-error *ngIf="groupTypeForm.get('groupTypeDetails.name')?.invalid">Name is required</mat-error>
+          <mat-error *ngIf="groupTypeForm.get('groupTypeDetails.name')?.invalid">{{ 'RESOURCE_FORM.FIELDS.NAME_REQUIRED' | translate }}</mat-error>
         </mat-form-field>
       
         <mat-form-field appearance="fill">
-          <mat-label>Size</mat-label>
+          <mat-label>{{ 'RESOURCE_FORM.FIELDS.SIZE' | translate }}</mat-label>
           <input matInput type="number" formControlName="size">
-          <mat-error *ngIf="groupTypeForm.get('groupTypeDetails.size')?.errors?.['required']">Size is required</mat-error>
+          <mat-error *ngIf="groupTypeForm.get('groupTypeDetails.size')?.errors?.['required']">{{ 'RESOURCE_FORM.FIELDS.SIZE_REQUIRED' | translate }}</mat-error>
         </mat-form-field>
       </div>
     </mat-tab>
@@ -20,6 +20,6 @@
   
   <div class="button-container">
     <button mat-raised-button color="primary" type="submit" class="submit-button" appAdminOnly>{{ (editingId ? 'RESOURCE_FORM.UPDATE' : 'RESOURCE_FORM.SAVE') | translate }}</button>
-    <button mat-raised-button color="accent" type="button" class="clear-button" (click)="onClearForm()">Clear</button>
+    <button mat-raised-button color="accent" type="button" class="clear-button" (click)="onClearForm()">{{ 'COMMON.CLEAR' | translate }}</button>
   </div>
 </form>

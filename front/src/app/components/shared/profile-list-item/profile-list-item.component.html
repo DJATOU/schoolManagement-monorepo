@@ -2,7 +2,7 @@
   <div class="student-card-content">
     <div class="student-avatar">
       <img *ngIf="profilePhotoUrl && !hasImageError; else avatarInitials" [appSecureImage]="profilePhotoUrl"
-        alt="Photo de profil" class="profile-photo" (error)="onImageError()">
+        [alt]="'PROFILE_CARD.PROFILE_PHOTO' | translate" class="profile-photo" (error)="onImageError()">
       <ng-template #avatarInitials>
         <div class="initials-avatar" [style.background-color]="avatarColor">{{ getInitials() }}</div>
       </ng-template>
@@ -15,14 +15,14 @@
       <button mat-icon-button
               color="primary"
               (click)="openEmail($event)"
-              matTooltip="Envoyer un email"
+              [matTooltip]="'PROFILE_CARD.SEND_EMAIL' | translate"
               [disabled]="!profile.email">
         <mat-icon>email</mat-icon>
       </button>
       <button mat-icon-button
               color="accent"
               (click)="openWhatsApp($event)"
-              matTooltip="Ouvrir WhatsApp"
+              [matTooltip]="'PROFILE_CARD.OPEN_WHATSAPP' | translate"
               [disabled]="!profile.phoneNumber">
         <mat-icon>phone</mat-icon>
       </button>
