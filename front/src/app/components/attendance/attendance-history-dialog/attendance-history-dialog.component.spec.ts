@@ -8,6 +8,8 @@ import arTranslations from '../../../../assets/i18n/ar.json';
 
 import { AttendanceHistoryDialogComponent } from './attendance-history-dialog.component';
 import { createDialogRefSpy, DialogRefSpy, matDialogProviders, setupComponentTestBed } from '../../../../testing/setup';
+import { PdfOutputService } from '../../../services/pdf-output.service';
+import { choosePrintLanguage } from '../../../../testing/print-language';
 
 /**
  * Historique d'assiduité d'un étudiant.
@@ -73,6 +75,34 @@ describe('AttendanceHistoryDialogComponent', () => {
       const footer = (captured.footer as (current: number, total: number) => Content)(1, 2);
       return JSON.stringify(captured.content) + JSON.stringify(footer);
     }
+
+    it('menu « العربية » sous le français : page HTML arabe imprimée, jamais pdfmake', async () => {
+      translate.use('fr');
+      component.studentName = 'Amina Belkacem';
+      component.sessionSeries = [{ id: 7, name: 'Maths 1B - 02-2030-001' } as never];
+      component.selectedSeries = 7;
+      component.attendanceHistory.data = [
+        { id: 1, isPresent: true, sessionTitle: 'Séance 1', sessionName: 'Séance 1', sessionDate: '2030-02-03T09:00:00' }
+      ];
+      fixture.detectChanges();
+      spyOn(component as never, 'convertImageToBase64').and.returnValue(Promise.resolve('') as never);
+      const createPdf = spyOn(pdfMake, 'createPdf');
+      const printed: string[] = [];
+      const original = PdfOutputService.printHtmlDocument;
+      PdfOutputService.printHtmlDocument = html => { printed.push(html); return Promise.resolve(); };
+      try {
+        choosePrintLanguage(fixture, 'mat-dialog-actions', 'ar');
+        await fixture.whenStable();
+      } finally {
+        PdfOutputService.printHtmlDocument = original;
+      }
+      expect(createPdf).not.toHaveBeenCalled();
+      expect(printed.length).toBe(1);
+      expect(printed[0]).toContain('dir="rtl"');
+      expect(printed[0]).toContain(arTranslations.ATTENDANCE_HISTORY.PDF.TITLE);
+      expect(printed[0]).toContain('<bdi dir="ltr">Amina Belkacem</bdi>');
+      expect(translate.currentLang).toBe('fr');
+    });
 
     it('français : libellés d\'aujourd\'hui', async () => {
       const text = await printedIn('fr');

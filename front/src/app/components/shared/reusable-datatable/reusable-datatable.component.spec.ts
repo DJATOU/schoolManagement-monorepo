@@ -9,6 +9,8 @@ import { setupComponentTestBed } from '../../../../testing/setup';
 import frTranslations from '../../../../assets/i18n/fr.json';
 import enTranslations from '../../../../assets/i18n/en.json';
 import arTranslations from '../../../../assets/i18n/ar.json';
+import { pdfLanguage } from '../../../shared/pdf-i18n';
+import { choosePrintLanguage } from '../../../../testing/print-language';
 
 /**
  * Le tableau réutilisable est piloté entièrement par ses entrées : les colonnes et
@@ -107,6 +109,32 @@ describe('ReusableDatatableComponent', () => {
       expect(pdf.title).toBe(enTranslations.DATATABLE.ENTITIES.level.title);
       expect(pdf.tableColumns).toEqual([enTranslations.LEVEL_TABLE.NAME, 'ID']);
       expect(pdf.tableRows).toEqual([['Première année', 'langue en']]);
+    });
+
+    it('bouton « Imprimer » sous l\'arabe : document en arabe, cellules calculées en arabe', () => {
+      translate.use('ar');
+      fixture.detectChanges();
+      let printedIn = '';
+      generate.and.callFake(() => { printedIn = pdfLanguage(translate); });
+      (fixture.nativeElement.querySelector('.toolbar-actions button.dt-btn') as HTMLButtonElement).click();
+      const pdf = generate.calls.mostRecent().args[0];
+      expect(printedIn).toBe('ar');
+      expect(pdf.title).toBe(arTranslations.DATATABLE.ENTITIES.level.title);
+      expect(pdf.tableColumns).toEqual([arTranslations.LEVEL_TABLE.NAME, 'ID']);
+      expect(pdf.tableRows).toEqual([['Première année', 'langue ar']]);
+    });
+
+    it('menu « English » sous le français : document et cellules en anglais, écran inchangé', () => {
+      translate.use('fr');
+      fixture.detectChanges();
+      let printedIn = '';
+      generate.and.callFake(() => { printedIn = pdfLanguage(translate); });
+      choosePrintLanguage(fixture, '.toolbar-actions', 'en');
+      const pdf = generate.calls.mostRecent().args[0];
+      expect(printedIn).toBe('en');
+      expect(pdf.tableColumns).toEqual([enTranslations.LEVEL_TABLE.NAME, 'ID']);
+      expect(pdf.tableRows).toEqual([['Première année', 'langue en']]);
+      expect(translate.currentLang).toBe('fr');
     });
   });
 

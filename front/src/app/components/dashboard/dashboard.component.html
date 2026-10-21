@@ -18,9 +18,13 @@
           <button class="preset" [class.active]="activePreset === 'month'" (click)="applyPreset('month')">{{ 'dashboard.period.month' | translate }}</button>
           <button class="preset" [class.active]="activePreset === 'custom'" (click)="activePreset = 'custom'">{{ 'dashboard.period.custom' | translate }}</button>
         </div>
-        <button mat-stroked-button class="print-btn" (click)="printPdf()" [disabled]="loading || !stats">
+        <button mat-stroked-button class="print-btn" (click)="printPdf(dashboardLanguage.screenLanguage)"
+          [disabled]="loading || !stats">
           <mat-icon>print</mat-icon>{{ 'dashboard.print' | translate }}
         </button>
+        <!-- Capture d'écran téléchargée en PDF dans les trois langues : pas de boîte d'impression. -->
+        <app-print-language-menu #dashboardLanguage="printLanguageMenu" [arabicOpensPrintDialog]="false"
+          [disabled]="loading || !stats" (selected)="printPdf($event)"></app-print-language-menu>
       </div>
 
       <div class="custom-range" *ngIf="activePreset === 'custom'">

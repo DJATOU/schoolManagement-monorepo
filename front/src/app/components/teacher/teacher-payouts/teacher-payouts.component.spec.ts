@@ -5,6 +5,9 @@ import { TeacherPayoutService } from '../../../services/teacher-payout.service';
 import { payout, slip } from '../../../../testing/payroll-fixtures';
 import { setupComponentTestBed } from '../../../../testing/setup';
 import { TeacherPayoutsComponent } from './teacher-payouts.component';
+import { TranslateService } from '@ngx-translate/core';
+import { pdfLanguage } from '../../../shared/pdf-i18n';
+import { choosePrintLanguage } from '../../../../testing/print-language';
 
 describe('TeacherPayoutsComponent', () => {
   let fixture: ComponentFixture<TeacherPayoutsComponent>;
@@ -66,5 +69,23 @@ describe('TeacherPayoutsComponent', () => {
     expect(payouts.issueSlip).toHaveBeenCalledWith(40);
     expect(slipPdf.print).toHaveBeenCalledWith(slip({ issuanceRank: 2 }));
     expect(component.printingId).toBeNull();
+  });
+
+  it('menu de langue : le bordereau sort dans la langue choisie', async () => {
+    const translate = TestBed.inject(TranslateService);
+    translate.use('fr');
+    payouts.getTeacherPayouts.and.returnValue(of({ payouts: [payout()], teacherTotal: 43200, schoolTotal: 28800 }));
+    payouts.issueSlip.and.returnValue(of(slip({ issuanceRank: 2 })));
+    let printedIn = '';
+    slipPdf.print.and.callFake(() => {
+      printedIn = pdfLanguage(translate);
+      return Promise.resolve();
+    });
+    show(5);
+    choosePrintLanguage(fixture, '.tpo-actions', 'ar');
+    await fixture.whenStable();
+    expect(slipPdf.print).toHaveBeenCalledWith(slip({ issuanceRank: 2 }));
+    expect(printedIn).toBe('ar');
+    expect(translate.currentLang).toBe('fr');
   });
 });

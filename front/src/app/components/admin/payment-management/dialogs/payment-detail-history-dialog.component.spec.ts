@@ -10,6 +10,8 @@ import { matDialogProviders, setupComponentTestBed } from '../../../../../testin
 import { RefundService } from '../../../../services/refund.service';
 import { RefundReceiptPdfService } from '../../../../services/refund-receipt-pdf.service';
 import { RefundReceipt, StudentRefund } from '../../../../models/refund/refund';
+import { pdfLanguage } from '../../../../shared/pdf-i18n';
+import { choosePrintLanguage } from '../../../../../testing/print-language';
 
 /** Espaces de groupement (U+202F en français) ramenées à une espace ordinaire. */
 const plain = (text: string | null | undefined): string => (text ?? '').replace(/\s+/g, ' ').trim();
@@ -149,5 +151,21 @@ describe('PaymentDetailHistoryDialogComponent', () => {
 
     expect(snackBar.open).toHaveBeenCalledWith(
       'Le reçu de remboursement n\'a pas pu être imprimé. Réessayez.', 'Fermer', jasmine.any(Object));
+  });
+
+  it('menu de langue : le reçu de remboursement sort dans la langue choisie', async () => {
+    await open({ id: 5, paymentId: 9 }, [refund()]);
+    const translate = TestBed.inject(TranslateService);
+    refundService.issueReceipt.and.returnValue(of(receipt));
+    let printedIn = '';
+    receiptPdf.generateAndPrint.and.callFake(() => {
+      printedIn = pdfLanguage(translate);
+      return Promise.resolve();
+    });
+    choosePrintLanguage(fixture, (fixture.nativeElement as HTMLElement).querySelector('.refund-reprint')!.parentElement!, 'en');
+    await fixture.whenStable();
+    expect(receiptPdf.generateAndPrint).toHaveBeenCalledWith(receipt);
+    expect(printedIn).toBe('en');
+    expect(translate.currentLang).toBe('fr');
   });
 });

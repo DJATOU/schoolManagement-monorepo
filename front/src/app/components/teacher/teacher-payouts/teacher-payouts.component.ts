@@ -12,6 +12,8 @@ import { AmountPipe } from '../../../pipes/amount.pipe';
 import { currencySuffix } from '../../../shared/currency';
 import { PayoutSlipPdfService } from '../../../services/payout-slip-pdf.service';
 import { TeacherPayoutService } from '../../../services/teacher-payout.service';
+import { PrintLanguage, runInPrintLanguage } from '../../../shared/pdf-i18n';
+import { PrintLanguageMenuComponent } from '../../shared/print-language-menu/print-language-menu.component';
 
 /**
  * Panneau « Paies » de la fiche d'un enseignant : ce qui lui a été versé, et le total (spec
@@ -31,7 +33,8 @@ import { TeacherPayoutService } from '../../../services/teacher-payout.service';
     MatProgressSpinnerModule,
     MatSnackBarModule,
     TranslateModule,
-    AmountPipe
+    AmountPipe,
+    PrintLanguageMenuComponent
   ],
   templateUrl: './teacher-payouts.component.html',
   styleUrls: ['./teacher-payouts.component.scss']
@@ -83,13 +86,19 @@ export class TeacherPayoutsComponent implements OnChanges {
     return payoutNature(payout);
   }
 
-  reprint(payout: Payout): void {
+  /**
+   * Réimprime le bordereau d'une paie.
+   *
+   * @param lang langue choisie au moment d'imprimer ; sans choix, la règle des documents
+   *             (voir pdfLanguage)
+   */
+  reprint(payout: Payout, lang?: PrintLanguage): void {
     if (this.printingId !== null) {
       return;
     }
     this.printingId = payout.id;
     this.payoutService.issueSlip(payout.id).pipe(finalize(() => this.printingId = null)).subscribe({
-      next: slip => this.slipPdf.print(slip).catch(() => this.printFailed()),
+      next: slip => runInPrintLanguage(this.translate, lang, () => this.slipPdf.print(slip)).catch(() => this.printFailed()),
       error: () => this.printFailed()
     });
   }

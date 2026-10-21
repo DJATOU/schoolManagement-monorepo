@@ -1,10 +1,11 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
 import pdfMake from 'pdfmake/build/pdfmake';
 import pdfFonts from 'pdfmake/build/vfs_fonts';
 import { Content, TDocumentDefinitions } from 'pdfmake/interfaces';
 import { RefundReceipt } from '../models/refund/refund';
-import { pdfInstant, pdfLanguage } from '../shared/pdf-i18n';
+import { bindPrintLanguage, pdfInstant, pdfLanguage, withPrintLanguage } from '../shared/pdf-i18n';
+import { PdfOutputService } from './pdf-output.service';
 
 /**
  * Génère le reçu d'un remboursement, prêt à imprimer et à remettre au bénéficiaire.
@@ -38,6 +39,8 @@ export class RefundReceiptPdfService {
   private static readonly PRIMARY_SOFT = '#dc2626';
   private static readonly GREY = '#64748b';
 
+  private readonly output = inject(PdfOutputService);
+
   constructor(private translate: TranslateService) {
     (pdfMake as any).vfs = pdfFonts.pdfMake.vfs;
   }
@@ -49,10 +52,18 @@ export class RefundReceiptPdfService {
    * ouvre un onglet via `window.open`, que le navigateur bloque en l'absence de clic direct — le cas
    * ici, l'appel suivant la réponse HTTP. En cas d'échec, le reçu est téléchargé afin qu'il ne soit
    * jamais perdu : l'argent est déjà sorti de la caisse, le justificatif doit exister.</p>
+   *
+   * <p>En arabe, le même reçu est imprimé par le navigateur (page de droite à gauche).</p>
    */
   async generateAndPrint(receipt: RefundReceipt): Promise<void> {
+    // Langue lue avant toute attente : le choix de l'appelant ne survit pas au chargement du logo.
+    const lang = pdfLanguage(this.translate);
     const logo = await this.loadLogo();
-    const doc = this.buildDocument(receipt, logo);
+    const built = withPrintLanguage(lang, () => this.buildDocument(receipt, logo));
+    if (lang === 'ar') {
+      return this.output.printHtml(built, this.title(receipt));
+    }
+    const doc = bindPrintLanguage(this.translate, built, lang);
 
     pdfMake.createPdf(doc).getBlob((blob: Blob) => {
       try {
@@ -63,17 +74,34 @@ export class RefundReceiptPdfService {
     });
   }
 
-  /** Télécharge le reçu sans passer par l'impression. */
+  /**
+   * Télécharge le reçu sans passer par l'impression.
+   *
+   * <p>En arabe, le navigateur produit le document : la boîte d'impression s'ouvre, et « Enregistrer
+   * en PDF » donne le fichier.</p>
+   */
   async download(receipt: RefundReceipt): Promise<void> {
+    const lang = pdfLanguage(this.translate);
     const logo = await this.loadLogo();
-    pdfMake.createPdf(this.buildDocument(receipt, logo)).download(receipt.fileName);
+    const built = withPrintLanguage(lang, () => this.buildDocument(receipt, logo));
+    if (lang === 'ar') {
+      return this.output.printHtml(built, this.title(receipt));
+    }
+    pdfMake.createPdf(bindPrintLanguage(this.translate, built, lang)).download(receipt.fileName);
+  }
+
+  /** Nom proposé par « Enregistrer en PDF » : celui du fichier, sans son extension. */
+  private title(receipt: RefundReceipt): string {
+    return receipt.fileName.replace(/\.pdf$/i, '');
   }
 
   /**
    * Reçu au format A5 : il tient sur une demi-feuille, format habituel d'un justificatif remis en
    * main propre, et deux reçus s'impriment sur une A4.
+   *
+   * <p>Public pour être vérifié sans passer par l'impression.</p>
    */
-  private buildDocument(receipt: RefundReceipt, logo: string): TDocumentDefinitions {
+  buildDocument(receipt: RefundReceipt, logo: string): TDocumentDefinitions {
     return {
       pageSize: 'A5',
       pageMargins: [32, 32, 32, 40],
@@ -382,8 +410,12 @@ export class RefundReceiptPdfService {
     }).format(new Date(value)));
   }
 
-  /** Locale du document : 'en-GB' en anglais, 'fr-FR' sinon (arabe compris, voir pdf-i18n). */
+  /**
+   * Locale du document : 'en-GB' en anglais, 'ar-DZ' en arabe (chiffres latins, comme à l'écran),
+   * 'fr-FR' sinon.
+   */
   private locale(): string {
-    return pdfLanguage(this.translate) === 'en' ? 'en-GB' : 'fr-FR';
+    const lang = pdfLanguage(this.translate);
+    return lang === 'en' ? 'en-GB' : lang === 'ar' ? 'ar-DZ' : 'fr-FR';
   }
 }

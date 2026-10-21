@@ -22,8 +22,8 @@ export function currencySuffix(translate: TranslateService): string {
 }
 
 /**
- * Suffixe monétaire dans la langue du PDF : « DA » sous une interface en arabe, comme le reste du
- * document (voir `pdfLanguage`).
+ * Suffixe monétaire dans la langue du document (voir `pdfLanguage`) : « دج » pour un document en
+ * arabe, « DA » sinon — y compris sous une interface en arabe, hors d'un choix de langue.
  */
 export function pdfCurrencySuffix(translate: TranslateService): string {
   return orDefault(pdfInstant(translate, CURRENCY_SUFFIX_KEY));
@@ -37,7 +37,10 @@ export function withCurrency(amount: CurrencyAmount, translate: TranslateService
   return append(amount, currencySuffix(translate));
 }
 
-/** {@link withCurrency} dans la langue du PDF : jamais « دج », que la police des PDF ne dessine pas. */
+/**
+ * {@link withCurrency} dans la langue du document : « دج » seulement pour un document en arabe,
+ * produit par le navigateur ; jamais dans un PDF pdfmake, dont la police ne le dessine pas.
+ */
 export function pdfWithCurrency(amount: CurrencyAmount, translate: TranslateService): string {
   return append(amount, pdfCurrencySuffix(translate));
 }

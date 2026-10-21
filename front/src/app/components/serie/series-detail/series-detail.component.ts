@@ -20,6 +20,8 @@ import { Session } from '../../../models/session/session';
 import { SessionSeries } from '../../../models/sessionSerie/sessionSerie';
 import { SessionModalComponent } from '../../session/session-modal/session-modal.component';
 import { SeriesSessionsPdfService } from '../../../services/series-sessions-pdf.service';
+import { PrintLanguage, runInPrintLanguage } from '../../../shared/pdf-i18n';
+import { PrintLanguageMenuComponent } from '../../shared/print-language-menu/print-language-menu.component';
 
 /**
  * Détail d'une série : affiche les informations de la série et la liste de ses
@@ -41,7 +43,8 @@ import { SeriesSessionsPdfService } from '../../../services/series-sessions-pdf.
     MatTooltipModule,
     MatProgressSpinnerModule,
     MatChipsModule,
-    TranslateModule
+    TranslateModule,
+    PrintLanguageMenuComponent
   ],
   templateUrl: './series-detail.component.html',
   styleUrls: ['./series-detail.component.scss']
@@ -177,9 +180,15 @@ export class SeriesDetailComponent implements OnInit {
     });
   }
 
-  /** Télécharge la liste des sessions de la série au format PDF. */
-  downloadPdf(): void {
-    this.seriesSessionsPdfService.generate(
+  /**
+   * Télécharge la liste des sessions de la série au format PDF. En arabe, le navigateur produit le
+   * document : la boîte d'impression s'ouvre, « Enregistrer au format PDF » donne le fichier.
+   *
+   * @param lang langue choisie au moment d'imprimer ; sans choix, la règle des documents
+   *             (voir pdfLanguage)
+   */
+  downloadPdf(lang?: PrintLanguage): void {
+    runInPrintLanguage(this.translate, lang, () => this.seriesSessionsPdfService.generate(
       {
         name: this.series?.name,
         groupName: this.groupName(),
@@ -198,7 +207,7 @@ export class SeriesDetailComponent implements OnInit {
         sessionTimeEnd: s.sessionTimeEnd,
         isFinished: s.isFinished
       }))
-    );
+    )).catch((err: unknown) => console.error('Impression de la série impossible :', err));
   }
 
   /** Retour vers le profil du groupe. */

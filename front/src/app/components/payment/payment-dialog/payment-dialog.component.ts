@@ -27,7 +27,7 @@ import { PaymentAllocationResult } from '../../../models/payment/payment-allocat
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { AdminOnlyDirective } from '../../../shared/admin-only.directive';
 import { PaymentReceiptPdfService } from '../../../services/payment-receipt-pdf.service';
-import { pdfInstant } from '../../../shared/pdf-i18n';
+import { PrintLanguage, pdfInstant, printLanguageOf, withPrintLanguage } from '../../../shared/pdf-i18n';
 import { currencySuffix, withCurrency } from '../../../shared/currency';
 import { PAYMENT_METHOD_OPTIONS } from '../../../utils/form-options';
 import { GroupChangeNoticeComponent } from '../../shared/group-change-notice/group-change-notice.component';
@@ -57,6 +57,11 @@ interface ReceiptContext {
    * gonflerait le cumul et minorerait le reste à payer dès qu'un report a lieu.</p>
    */
   seriesAlreadyPaid?: number;
+  /**
+   * Langue du reçu : celle de l'écran au moment du versement. Le reçu s'imprime sans autre geste,
+   * il n'y a donc pas de choix à proposer.
+   */
+  language: PrintLanguage;
 }
 
 /** Une part de versement reportée sur une série, telle que prévue avant validation. */
@@ -877,10 +882,13 @@ export class PaymentDialogComponent implements OnInit {
     const series = this.sessionSeries.find(s => s.id === paymentData.sessionSeriesId);
     const method = this.paymentMethods.find(m => m.value === paymentData.paymentMethod);
     const quote = this.quote;
-    // Libellés imprimés sur le reçu : dans la langue du document (français sous l'arabe).
-    const pdf = (key: string) => pdfInstant(this.translate, key);
+    // Libellés imprimés sur le reçu : dans la langue du document, celle de l'écran (le reçu
+    // s'imprime sans autre geste, il n'y a pas de choix à proposer).
+    const language = printLanguageOf(this.translate);
+    const pdf = (key: string) => withPrintLanguage(language, () => pdfInstant(this.translate, key));
 
     return {
+      language,
       amountPaid: paymentData.amountPaid,
       groupName: group?.name ?? '',
       seriesName: series?.name ?? pdf('payment.dialog.messages.unknownSeries'),
@@ -925,7 +933,7 @@ export class PaymentDialogComponent implements OnInit {
 
     // La génération est asynchrone depuis l'ajout du logo (chargement de l'image) : l'échec
     // doit être capté sur la promesse, un try/catch synchrone le laisserait passer.
-    this.receiptPdfService.generateAndPrint({
+    withPrintLanguage(context.language, () => this.receiptPdfService.generateAndPrint({
         reference: encashment.receiptNumber,
         issuedAt: new Date(encashment.receivedAt),
         studentName: this.studentName,
@@ -945,7 +953,7 @@ export class PaymentDialogComponent implements OnInit {
         carryOvers: allocation.carryOvers,
         // Le compte qui a encaissé CE versement, tel qu'enregistré par le serveur.
         adminUsername: encashment.receivedBy
-    }).catch((err: unknown) => {
+    })).catch((err: unknown) => {
       console.error('Erreur lors de la génération du reçu:', err);
       this.snackBar.open(
         this.translate.instant('payment.receipt.error'),

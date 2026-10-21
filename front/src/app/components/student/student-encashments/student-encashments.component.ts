@@ -19,7 +19,8 @@ import {
 import { CorrectionStep, EncashmentService } from '../../../services/encashment.service';
 import { PaymentReceiptPdfService } from '../../../services/payment-receipt-pdf.service';
 import { receiptFromEncashment } from '../../../utils/encashment-receipt';
-import { pdfInstant } from '../../../shared/pdf-i18n';
+import { PrintLanguage, pdfInstant, printLanguageOf, runInPrintLanguage } from '../../../shared/pdf-i18n';
+import { PrintLanguageMenuComponent } from '../../shared/print-language-menu/print-language-menu.component';
 import { currencySuffix } from '../../../shared/currency';
 import { PAYMENT_METHOD_OPTIONS } from '../../../utils/form-options';
 import {
@@ -60,7 +61,8 @@ import {
     MatExpansionModule,
     MatIconModule,
     MatProgressSpinnerModule,
-    TranslateModule
+    TranslateModule,
+    PrintLanguageMenuComponent
   ],
   providers: [DecimalPipe],
   templateUrl: './student-encashments.component.html',
@@ -154,8 +156,11 @@ export class StudentEncashmentsComponent implements OnChanges {
    *
    * <p>Si le versement a été annulé depuis le chargement, la liste est rechargée pour afficher son
    * nouvel état.</p>
+   *
+   * @param lang langue du reçu choisie au moment d'imprimer ; sans choix, la règle des documents
+   *             (voir pdfLanguage)
    */
-  reprint(encashment: Encashment): void {
+  reprint(encashment: Encashment, lang?: PrintLanguage): void {
     if (this.reprintingId !== null) {
       return;
     }
@@ -165,7 +170,9 @@ export class StudentEncashmentsComponent implements OnChanges {
         if (current.status !== encashment.status) {
           this.reload();
         }
-        this.print(current).finally(() => this.reprintingId = null);
+        runInPrintLanguage(this.translate, lang, () => this.print(current))
+          .catch(() => this.notify(this.translate.instant('payment.encashments.reprintError')))
+          .finally(() => this.reprintingId = null);
       },
       error: (err: Error) => {
         this.reprintingId = null;
@@ -267,7 +274,10 @@ export class StudentEncashmentsComponent implements OnChanges {
       }),
       this.translate.instant('correction.correct.print'),
       { duration: 15000 })
-      .onAction().subscribe(() => this.print(replacement));
+      // Suite d'un geste en un clic : le reçu sort dans la langue de l'écran.
+      .onAction().subscribe(() => runInPrintLanguage(this.translate, printLanguageOf(this.translate),
+        () => this.print(replacement))
+        .catch(() => this.notify(this.translate.instant('payment.encashments.reprintError'))));
   }
 
   // ------------------------------------------------------------------
@@ -291,7 +301,7 @@ export class StudentEncashmentsComponent implements OnChanges {
   /** La génération est asynchrone (chargement du logo) : l'échec est capté sur la promesse. */
   private print(encashment: Encashment): Promise<void> {
     return this.receiptPdfService.generateAndPrint(receiptFromEncashment(encashment,
-      // Mode de règlement imprimé dans la langue du reçu (français sous l'arabe), pas de l'écran.
+      // Mode de règlement imprimé dans la langue du reçu (voir pdfLanguage), pas de l'écran.
       this.methodLabel(encashment, key => pdfInstant(this.translate, key))))
       .catch((err: unknown) => {
         console.error('Erreur lors de l\'impression du reçu :', err);

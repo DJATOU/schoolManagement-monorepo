@@ -16,6 +16,8 @@ import { RefundService } from '../../../../services/refund.service';
 import { RefundReceiptPdfService } from '../../../../services/refund-receipt-pdf.service';
 import { LocalizedDatePipe } from '../../../../pipes/localized-date.pipe';
 import { CurrencySuffixPipe } from '../../../../pipes/currency-suffix.pipe';
+import { PrintLanguage, runInPrintLanguage } from '../../../../shared/pdf-i18n';
+import { PrintLanguageMenuComponent } from '../../../shared/print-language-menu/print-language-menu.component';
 
 interface PaymentDetailAudit {
   id: number;
@@ -83,12 +85,14 @@ export interface PaymentDetailHistoryData {
               {{ refund.reason?.trim() || ('payment.admin.audit.refunds.noReason' | translate) }}
             </div>
             <button mat-stroked-button type="button" class="refund-reprint"
-                    (click)="reprint(refund)" [disabled]="reprintingId !== null"
+                    (click)="reprint(refund, refundLanguage.screenLanguage)" [disabled]="reprintingId !== null"
                     [attr.aria-label]="'payment.admin.audit.refunds.reprintAria' | translate:
                       { number: refund.refundNumber }">
               <mat-icon aria-hidden="true">print</mat-icon>
               {{ 'payment.admin.audit.refunds.reprint' | translate }}
             </button>
+            <app-print-language-menu #refundLanguage="printLanguageMenu" class="refund-reprint-language"
+              [disabled]="reprintingId !== null" (selected)="reprint(refund, $event)"></app-print-language-menu>
           </li>
         </ul>
       </section>
@@ -155,7 +159,7 @@ export interface PaymentDetailHistoryData {
   `],
   imports: [CommonModule, MatDialogModule, MatListModule, MatIconModule,
     MatProgressSpinnerModule, MatButtonModule, TranslateModule, AmountPipe,
-    LocalizedDatePipe, CurrencySuffixPipe]
+    LocalizedDatePipe, CurrencySuffixPipe, PrintLanguageMenuComponent]
 })
 export class PaymentDetailHistoryDialogComponent implements OnInit {
   history: PaymentDetailAudit[] = [];
@@ -214,8 +218,13 @@ export class PaymentDetailHistoryDialogComponent implements OnInit {
       });
   }
 
-  /** Réimprime le reçu d'un remboursement ; le serveur compte l'émission (mention « DUPLICATA »). */
-  reprint(refund: StudentRefund): void {
+  /**
+   * Réimprime le reçu d'un remboursement ; le serveur compte l'émission (mention « DUPLICATA »).
+   *
+   * @param lang langue du reçu choisie au moment d'imprimer ; sans choix, la règle des documents
+   *             (voir pdfLanguage)
+   */
+  reprint(refund: StudentRefund, lang?: PrintLanguage): void {
     if (this.reprintingId !== null) {
       return;
     }
@@ -223,10 +232,11 @@ export class PaymentDetailHistoryDialogComponent implements OnInit {
     this.refundService.issueReceipt(refund.refundId)
       .pipe(finalize(() => this.reprintingId = null))
       .subscribe({
-        next: receipt => this.refundReceiptPdf.generateAndPrint(receipt).catch((err: unknown) => {
-          console.error('Erreur lors de l\'impression du reçu de remboursement :', err);
-          this.notify(this.translate.instant('payment.admin.audit.refunds.reprintError'));
-        }),
+        next: receipt => runInPrintLanguage(this.translate, lang, () => this.refundReceiptPdf.generateAndPrint(receipt))
+          .catch((err: unknown) => {
+            console.error('Erreur lors de l\'impression du reçu de remboursement :', err);
+            this.notify(this.translate.instant('payment.admin.audit.refunds.reprintError'));
+          }),
         error: (err: Error) =>
           this.notify(err.message || this.translate.instant('payment.admin.audit.refunds.reprintError'))
       });

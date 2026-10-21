@@ -24,6 +24,8 @@ import { Pricing } from '../../../models/pricing/pricing';
 import { Teacher } from '../../../models/teacher/teacher';
 import { AdminOnlyDirective } from '../../../shared/admin-only.directive';
 import { SecureImageDirective } from '../../../shared/secure-image.directive';
+import { AmountPipe } from '../../../pipes/amount.pipe';
+import { CurrencySuffixPipe } from '../../../pipes/currency-suffix.pipe';
 
 @Component({
   selector: 'app-edit-group-dialog',
@@ -42,7 +44,9 @@ import { SecureImageDirective } from '../../../shared/secure-image.directive';
     TranslateModule,
     AdminOnlyDirective
   ,
-    SecureImageDirective
+    SecureImageDirective,
+    AmountPipe,
+    CurrencySuffixPipe
   ],
   templateUrl: './edit-group-dialog.component.html',
   styleUrls: ['./edit-group-dialog.component.scss']

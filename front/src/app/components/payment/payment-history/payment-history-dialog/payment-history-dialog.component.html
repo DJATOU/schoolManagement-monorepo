@@ -158,8 +158,10 @@
 </mat-dialog-content>
 
 <mat-dialog-actions align="end">
-  <button mat-button (click)="generatePdf()" [disabled]="!selectedSeries">
+  <button mat-button (click)="generatePdf(historyLanguage.screenLanguage)" [disabled]="!selectedSeries">
     {{ 'payment.history.actions.print' | translate }}
   </button>
+  <app-print-language-menu #historyLanguage="printLanguageMenu" [disabled]="!selectedSeries"
+    (selected)="generatePdf($event)"></app-print-language-menu>
   <button mat-button (click)="dialogRef.close()">{{ 'common.cancel' | translate }}</button>
 </mat-dialog-actions>

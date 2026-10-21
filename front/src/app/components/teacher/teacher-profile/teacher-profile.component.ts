@@ -28,7 +28,8 @@ import { formatDayFirst } from '../../../shared/iso-day';
 import { HasRoleDirective } from '../../../shared/has-role.directive';
 import { TeacherPayoutsComponent } from '../teacher-payouts/teacher-payouts.component';
 import { genderLabelKey } from '../../../utils/form-options';
-import { pdfInstant } from '../../../shared/pdf-i18n';
+import { PrintLanguage, pdfInstant, runInPrintLanguage } from '../../../shared/pdf-i18n';
+import { PrintLanguageMenuComponent } from '../../shared/print-language-menu/print-language-menu.component';
 @Component({
   selector: 'app-teacher-profile',
   standalone: true,
@@ -50,7 +51,8 @@ import { pdfInstant } from '../../../shared/pdf-i18n';
     SecureImageDirective,
     HasRoleDirective,
     TeacherPayoutsComponent,
-    TranslateModule
+    TranslateModule,
+    PrintLanguageMenuComponent
   ],
   templateUrl: './teacher-profile.component.html',
   styleUrls: ['./teacher-profile.component.scss']
@@ -112,10 +114,17 @@ export class TeacherProfileComponent implements OnInit {
     return key ? this.translate.instant(key) : code ?? '';
   }
 
-  /** Génère la fiche PDF de l'enseignant (infos + groupes). */
-  printProfilePdf(): void {
+  /**
+   * Génère la fiche PDF de l'enseignant (infos + groupes), dans la langue choisie au moment
+   * d'imprimer ; sans choix, selon la règle des documents (voir pdfLanguage).
+   */
+  printProfilePdf(lang?: PrintLanguage): void {
     if (!this.teacher) return;
-    const t = this.teacher;
+    runInPrintLanguage(this.translate, lang, () => this.composeProfilePdf(this.teacher!))
+      .catch((err: unknown) => console.error('Impression de la fiche impossible :', err));
+  }
+
+  private composeProfilePdf(t: Teacher): void {
     const tr = (key: string, params?: object) => pdfInstant(this.translate, key, params);
     const genderKey = genderLabelKey(t.gender);
     this.profilePdfService.generateProfilePdf({

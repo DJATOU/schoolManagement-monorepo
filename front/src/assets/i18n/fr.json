@@ -2559,5 +2559,12 @@
     "NAME": "Nom",
     "CAPACITY": "Capacité",
     "SIZE": "Effectif"
+  },
+  "PRINT_LANGUAGE": {
+    "CHOOSE": "Choisir la langue du document",
+    "TITLE": "Langue du document",
+    "SCREEN": "langue de l'écran",
+    "ITEM_ARIA": "Imprimer en {{language}}",
+    "ARABIC_HINT": "En arabe, la boîte d'impression s'ouvre : choisissez « Enregistrer au format PDF » pour obtenir le fichier."
   }
 }

@@ -75,6 +75,17 @@ Choose the period: **Year**, **Month** or **Range**. **Print** produces a PDF.
 
 <!-- page -->
 
+## Printing a document
+
+Every print button prints in the screen language. The language icon right next to it offers the three document languages: **Français**, **English** or **العربية**. The choice only applies to that document: the screen keeps its language.
+
+In Arabic, profiles, receipts, attendance sheets and lists open in the browser's print dialog: choose "Save as PDF" to keep the file. The dashboard downloads as a PDF in all three languages.
+
+> [!NOTE]
+> The receipt printed when a payment is recorded comes out in the screen language, without asking.
+
+<!-- page -->
+
 ## Setting up the school
 
 To get going quickly, load your lists with **Registration › CSV Import**, in this order:

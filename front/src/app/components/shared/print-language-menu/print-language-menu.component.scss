@@ -1,0 +1,39 @@
+:host {
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+}
+
+// Le menu est rendu dans un overlay, hors de l'hôte : ses styles passent par ::ng-deep.
+::ng-deep .plm-menu {
+  .plm-title {
+    padding: 8px 16px 4px;
+    font-size: 12px;
+    font-weight: 500;
+    color: rgba(0, 0, 0, 0.6);
+  }
+
+  .plm-option.mat-mdc-menu-item {
+    block-size: auto;
+    min-block-size: 48px;
+    padding-block: 6px;
+  }
+
+  .plm-label {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.35;
+  }
+
+  .plm-marker {
+    font-size: 12px;
+    color: rgba(0, 0, 0, 0.6);
+  }
+
+  .plm-hint {
+    max-inline-size: 260px;
+    font-size: 12px;
+    white-space: normal;
+    color: rgba(0, 0, 0, 0.6);
+  }
+}

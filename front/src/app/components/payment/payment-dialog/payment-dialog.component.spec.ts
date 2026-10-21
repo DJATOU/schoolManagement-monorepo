@@ -10,6 +10,7 @@ import { PaymentReceiptPdfService } from '../../../services/payment-receipt-pdf.
 import { Payment } from '../../../models/payment/payment';
 import { PaymentAllocationResult } from '../../../models/payment/payment-allocation';
 import { Encashment } from '../../../models/payment/encashment';
+import { pdfLanguage } from '../../../shared/pdf-i18n';
 
 /**
  * Formulaire de saisie d'un versement.
@@ -147,16 +148,44 @@ describe('PaymentDialogComponent', () => {
       expect(generateAndPrint.calls.mostRecent().args[0].amountPaid).toBe(1500);
     });
 
-    it('interface en arabe : le mode de règlement est imprimé en français', () => {
+    /**
+     * Règle changée à la demande de l'utilisateur : le reçu imprimé à l'encaissement suit la langue
+     * de l'écran, arabe compris (imprimé par le navigateur), sans menu ni clic supplémentaire.
+     */
+    it('interface en arabe : le reçu sort en arabe, sans choix à faire', () => {
       const translate = TestBed.inject(TranslateService);
       translate.setTranslation('fr', { payment: { dialog: { methods: { cash: 'Espèces' } } } }, true);
       translate.setTranslation('ar', { payment: { dialog: { methods: { cash: 'نقدًا' } } } }, true);
       translate.use('ar');
+      let printedIn = '';
+      generateAndPrint.and.callFake(() => {
+        printedIn = pdfLanguage(translate);
+        return Promise.resolve();
+      });
+      spyOn(paymentService, 'processPayment').and.returnValue(of(anAllocation()));
+
+      component.submitPayment(paymentData());
+
+      expect(generateAndPrint.calls.mostRecent().args[0].paymentMethodLabel).toBe('نقدًا');
+      expect(printedIn).toBe('ar');
+      expect(document.querySelector('.plm-menu')).toBeNull();
+    });
+
+    it('interface en français : le reçu sort en français', () => {
+      const translate = TestBed.inject(TranslateService);
+      translate.setTranslation('fr', { payment: { dialog: { methods: { cash: 'Espèces' } } } }, true);
+      translate.use('fr');
+      let printedIn = '';
+      generateAndPrint.and.callFake(() => {
+        printedIn = pdfLanguage(translate);
+        return Promise.resolve();
+      });
       spyOn(paymentService, 'processPayment').and.returnValue(of(anAllocation()));
 
       component.submitPayment(paymentData());
 
       expect(generateAndPrint.calls.mostRecent().args[0].paymentMethodLabel).toBe('Espèces');
+      expect(printedIn).toBe('fr');
     });
 
     it('le rattrapage imprime lui aussi le reçu enregistré', () => {

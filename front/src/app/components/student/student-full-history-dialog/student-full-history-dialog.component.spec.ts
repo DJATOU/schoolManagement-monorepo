@@ -17,6 +17,8 @@ import { RefundService } from '../../../services/refund.service';
 import { RefundReceiptPdfService } from '../../../services/refund-receipt-pdf.service';
 import { AuthService } from '../../../services/auth.service';
 import { RefundReceipt, StudentRefund } from '../../../models/refund/refund';
+import { pdfLanguage } from '../../../shared/pdf-i18n';
+import { choosePrintLanguage } from '../../../../testing/print-language';
 
 /** Espaces de groupement des montants (U+202F en français) ramenées à une espace ordinaire. */
 const plain = (text: string | null | undefined): string => (text ?? '').replace(/\s+/g, ' ');
@@ -207,6 +209,20 @@ describe('StudentFullHistoryDialogComponent', () => {
       component.generatePdf();
       expect(pdfService.generateFullHistoryPdf)
         .toHaveBeenCalledWith(fullHistory, 'assets/succes_assistance.png', []);
+    });
+
+    it('menu de langue : l\'historique sort dans la langue choisie', async () => {
+      const translate = TestBed.inject(TranslateService);
+      let printedIn = '';
+      pdfService.generateFullHistoryPdf.and.callFake(() => {
+        printedIn = pdfLanguage(translate);
+        return Promise.resolve();
+      });
+      choosePrintLanguage(fixture, 'mat-dialog-actions', 'ar');
+      await fixture.whenStable();
+      expect(pdfService.generateFullHistoryPdf).toHaveBeenCalledWith(fullHistory, 'assets/succes_assistance.png', []);
+      expect(printedIn).toBe('ar');
+      expect(translate.currentLang).toBe('fr');
     });
   });
 
@@ -532,6 +548,21 @@ describe('StudentFullHistoryDialogComponent', () => {
       expect(refundService.issueReceipt).toHaveBeenCalledWith(7);
       expect(refundReceiptPdf.generateAndPrint).toHaveBeenCalledWith(receipt);
       expect(component.reprintingRefundId).toBeNull();
+    });
+
+    it('menu de langue : le reçu de remboursement sort dans la langue choisie', async () => {
+      await open([refund()]);
+      const translate = TestBed.inject(TranslateService);
+      refundService.issueReceipt.and.returnValue(of(receipt));
+      let printedIn = '';
+      refundReceiptPdf.generateAndPrint.and.callFake(() => {
+        printedIn = pdfLanguage(translate);
+        return Promise.resolve();
+      });
+      choosePrintLanguage(fixture, seriesCards()[0].querySelector('.fh-refund-item')!, 'en');
+      await fixture.whenStable();
+      expect(refundReceiptPdf.generateAndPrint).toHaveBeenCalledWith(receipt);
+      expect(printedIn).toBe('en');
     });
 
     it('ignores a second click while a reprint is in progress', async () => {

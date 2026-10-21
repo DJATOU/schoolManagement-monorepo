@@ -9,6 +9,8 @@ import { setupComponentTestBed } from '../../../testing/setup';
 import frTranslations from '../../../assets/i18n/fr.json';
 import enTranslations from '../../../assets/i18n/en.json';
 import arTranslations from '../../../assets/i18n/ar.json';
+import { By } from '@angular/platform-browser';
+import { PrintLanguageMenuComponent } from '../shared/print-language-menu/print-language-menu.component';
 
 describe('DashboardComponent', () => {
   let component: DashboardComponent;
@@ -125,6 +127,45 @@ describe('DashboardComponent', () => {
       await expectAsync(component.printPdf()).toBeRejectedWithError('capture checked');
       return seen;
     }
+
+    /** Ce que voit la capture déclenchée par `run`, interface en `screen`. */
+    async function captureBy(screen: string, run: () => Promise<void>): Promise<{ lang: string; kpi: string; clone: Document }> {
+      translate.use(screen);
+      flushStats();
+      let seen = { lang: '', kpi: '', clone: document.implementation.createHTMLDocument('clone') };
+      spyOn(component as never, 'renderCanvas').and.callFake(((_el: HTMLElement, options: { onclone: (doc: Document) => void }) => {
+        options.onclone(seen.clone);
+        seen = { ...seen, lang: translate.currentLang, kpi: component.kpis[2].label };
+        return Promise.reject(new Error('capture checked'));
+      }) as never);
+      await expectAsync(run()).toBeRejectedWithError('capture checked');
+      return seen;
+    }
+
+    it('« العربية » choisi sous le français : capture en arabe et de droite à gauche, écran rétabli', async () => {
+      const seen = await captureBy('fr', () => component.printPdf('ar'));
+      expect(seen.lang).toBe('ar');
+      expect(seen.kpi).toBe(arTranslations.dashboard.kpi.activeGroups);
+      expect(seen.clone.documentElement.lang).toBe('ar');
+      expect(seen.clone.documentElement.dir).toBe('rtl');
+      expect(translate.currentLang).toBe('fr');
+      expect(component.kpis[2].label).toBe(frTranslations.dashboard.kpi.activeGroups);
+    });
+
+    it('bouton sous l\'arabe : langue de l\'écran, capture en arabe sans changement de langue', async () => {
+      const changes: string[] = [];
+      const seen = await captureBy('ar', () => {
+        translate.onLangChange.subscribe(event => changes.push(event.lang));
+        const menu = fixture.debugElement.query(By.directive(PrintLanguageMenuComponent)).componentInstance as PrintLanguageMenuComponent;
+        expect(menu.screenLanguage).toBe('ar');
+        expect(menu.arabicOpensPrintDialog).toBeFalse();
+        return component.printPdf(menu.screenLanguage);
+      });
+      expect(seen.lang).toBe('ar');
+      expect(seen.kpi).toBe(arTranslations.dashboard.kpi.activeGroups);
+      expect(seen.clone.documentElement.dir).toBe('rtl');
+      expect(changes).toEqual([]);
+    });
 
     it('interface en arabe : capture en français et en LTR, écran rétabli en arabe', async () => {
       const seen = await capture('ar');

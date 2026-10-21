@@ -1,9 +1,10 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import pdfMake from 'pdfmake/build/pdfmake';
 import pdfFonts from 'pdfmake/build/vfs_fonts';
 import { Content, TDocumentDefinitions } from 'pdfmake/interfaces';
 import { TranslateService } from '@ngx-translate/core';
-import { pdfInstant, pdfLocale } from '../shared/pdf-i18n';
+import { bindPrintLanguage, pdfInstant, pdfLanguage, pdfLocale, withPrintLanguage } from '../shared/pdf-i18n';
+import { PdfOutputService } from './pdf-output.service';
 
 export interface PdfInfoRow {
   label: string;
@@ -34,8 +35,24 @@ export interface PdfExtraPage {
   emptyMessage?: string;
 }
 
+/** Contenu d'une fiche : titre, sous-titre, sections, liste, tableau et volets annexes. */
+export interface ProfilePdfOptions {
+  title: string;
+  subtitle?: string;
+  sections: { heading: string; rows: PdfInfoRow[] }[];
+  listTitle?: string;
+  listItems?: string[];
+  tableTitle?: string;
+  tableColumns?: string[];
+  tableRows?: (string | number | null | undefined)[][];
+  /** Volets annexes, chacun sur sa propre page. */
+  extraPages?: PdfExtraPage[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class ProfilePdfService {
+
+  private readonly output = inject(PdfOutputService);
 
   constructor(private translate: TranslateService) {
     (pdfMake as any).vfs = pdfFonts.pdfMake.vfs;
@@ -44,20 +61,26 @@ export class ProfilePdfService {
   /**
    * Génère une fiche PDF générique : titre, sous-titre, sections d'infos
    * (label/valeur), une liste optionnelle et/ou un tableau optionnel.
+   *
+   * <p>En arabe, la même fiche est imprimée par le navigateur (boîte d'impression, « Enregistrer en
+   * PDF ») au lieu de s'ouvrir dans un onglet.</p>
    */
-  generateProfilePdf(options: {
-    title: string;
-    subtitle?: string;
-    sections: { heading: string; rows: PdfInfoRow[] }[];
-    listTitle?: string;
-    listItems?: string[];
-    tableTitle?: string;
-    tableColumns?: string[];
-    tableRows?: (string | number | null | undefined)[][];
-    /** Volets annexes, chacun sur sa propre page. */
-    extraPages?: PdfExtraPage[];
-  }): void {
-    // Libellés et date dans la langue du PDF : français pour toute langue autre que fr / en.
+  generateProfilePdf(options: ProfilePdfOptions): void {
+    const lang = pdfLanguage(this.translate);
+    const doc = withPrintLanguage(lang, () => this.buildDocument(options));
+    if (lang === 'ar') {
+      this.output.printHtml(doc, options.title).catch((err: unknown) => console.error('Impression de la fiche impossible :', err));
+      return;
+    }
+
+    pdfMake.createPdf(bindPrintLanguage(this.translate, doc, lang)).getBlob((blob) => {
+      window.open(URL.createObjectURL(blob), '_blank');
+    });
+  }
+
+  /** Définition de la fiche, publique pour être vérifiée sans passer par l'impression. */
+  buildDocument(options: ProfilePdfOptions): TDocumentDefinitions {
+    // Libellés et date dans la langue du document (voir pdfLanguage).
     const t = (key: string, params?: object) => pdfInstant(this.translate, key, params);
     const content: Content[] = [
       {
@@ -128,10 +151,7 @@ export class ProfilePdfService {
         margin: [0, 8, 0, 0]
       })
     };
-
-    pdfMake.createPdf(doc).getBlob((blob) => {
-      window.open(URL.createObjectURL(blob), '_blank');
-    });
+    return doc;
   }
 
   /** Section label/valeur, rendue en tableau à deux colonnes. */

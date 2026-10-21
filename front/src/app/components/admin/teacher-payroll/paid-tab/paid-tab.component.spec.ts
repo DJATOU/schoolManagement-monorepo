@@ -13,6 +13,8 @@ import { payout, rate, slip } from '../../../../../testing/payroll-fixtures';
 import { setupComponentTestBed } from '../../../../../testing/setup';
 import { ReplaceRateDialogComponent } from '../replace-rate-dialog/replace-rate-dialog.component';
 import { isoDay, PaidTabComponent } from './paid-tab.component';
+import { pdfLanguage } from '../../../../shared/pdf-i18n';
+import { choosePrintLanguage } from '../../../../../testing/print-language';
 
 describe('PaidTabComponent', () => {
   let fixture: ComponentFixture<PaidTabComponent>;
@@ -116,5 +118,20 @@ describe('PaidTabComponent', () => {
     // Retour : le choix du taux est rouvert avec le choix précédent.
     expect(calls[2].args[0]).toBe(ReplaceRateDialogComponent);
     expect((calls[2].args[1]?.data as { previous: unknown }).previous).toEqual(choice);
+  });
+
+  it('menu de langue : le bordereau sort dans la langue choisie', async () => {
+    const translate = TestBed.inject(TranslateService);
+    payouts.issueSlip.and.returnValue(of(slip({ issuanceRank: 2 })));
+    let printedIn = '';
+    slipPdf.print.and.callFake(() => {
+      printedIn = pdfLanguage(translate);
+      return Promise.resolve();
+    });
+    choosePrintLanguage(fixture, row(0), 'en');
+    await fixture.whenStable();
+    expect(slipPdf.print).toHaveBeenCalledWith(slip({ issuanceRank: 2 }));
+    expect(printedIn).toBe('en');
+    expect(translate.currentLang).toBe('fr');
   });
 });

@@ -67,7 +67,7 @@ If the amount exceeds what the chosen series owes, the surplus moves **by itself
 
 Every payment has its receipt: amount received, student, group, series, payment method, **series situation** (cost, billed sessions, total paid, remaining) and how the payment was split.
 
-To reprint it: student profile, **Payments received** block, **Reprint receipt** button.
+To reprint it: student profile, **Payments received** block, **Reprint receipt** button. The receipt printed when the payment is recorded is in the screen language; the language icon next to the button reprints it in another language.
 
 A cancelled receipt is stamped **CANCELLED** and, if it was replaced, shows the number of the new receipt.
 

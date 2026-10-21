@@ -10,6 +10,9 @@ import { ProfilePdfService } from '../../../services/profile-pdf.service';
 import { TranslateService } from '@ngx-translate/core';
 import frTranslations from '../../../../assets/i18n/fr.json';
 import enTranslations from '../../../../assets/i18n/en.json';
+import arTranslations from '../../../../assets/i18n/ar.json';
+import { pdfLanguage } from '../../../shared/pdf-i18n';
+import { choosePrintLanguage } from '../../../../testing/print-language';
 
 describe('TeacherProfileComponent', () => {
   let component: TeacherProfileComponent;
@@ -160,6 +163,25 @@ describe('TeacherProfileComponent', () => {
       expect(labels).toContain('Personal information');
       expect(labels).toContain('Gender=Male');
       expect(labels).toContain('Groups taught (0)');
+    });
+
+    it('impression : le bouton suit l\'écran (anglais), le menu imprime en arabe sur demande', () => {
+      flushTeacher();
+      translate.setTranslation('ar', arTranslations);
+      translate.use('en');
+      fixture.detectChanges();
+      const seen: string[] = [];
+      const pdf = spyOn(TestBed.inject(ProfilePdfService), 'generateProfilePdf')
+        .and.callFake(() => { seen.push(pdfLanguage(translate)); });
+
+      (fixture.nativeElement.querySelector('button.pf-hb-print:not(.plm-trigger)') as HTMLButtonElement).click();
+      expect(seen).toEqual(['en']);
+      expect(pdf.calls.mostRecent().args[0].sections[0].heading).toBe(enTranslations.TEACHER_PROFILE.PERSONAL_INFO);
+
+      choosePrintLanguage(fixture, '.pf-header-buttons', 'ar');
+      expect(seen).toEqual(['en', 'ar']);
+      expect(pdf.calls.mostRecent().args[0].sections[0].heading).toBe(arTranslations.TEACHER_PROFILE.PERSONAL_INFO);
+      expect(translate.currentLang).toBe('en');
     });
   });
 });

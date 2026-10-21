@@ -46,7 +46,8 @@ import { StudentEnrolmentsComponent } from '../student-enrolments/student-enrolm
 import { StudentJournalComponent } from '../student-journal/student-journal.component';
 import { enrolmentRefusalMessage } from '../../../utils/enrolment-refusal';
 import { genderLabelKey, nationalityLabelKey } from '../../../utils/form-options';
-import { pdfInstant } from '../../../shared/pdf-i18n';
+import { PrintLanguage, pdfInstant, runInPrintLanguage } from '../../../shared/pdf-i18n';
+import { PrintLanguageMenuComponent } from '../../shared/print-language-menu/print-language-menu.component';
 
 /** Code d'erreur → clé de traduction du message, traduit au moment de l'affichage. */
 const errorMessages = {
@@ -73,7 +74,8 @@ const errorMessages = {
     HasRoleDirective,
     StudentEncashmentsComponent,
     StudentEnrolmentsComponent,
-    StudentJournalComponent
+    StudentJournalComponent,
+    PrintLanguageMenuComponent
   ],
   templateUrl: './student-profile.component.html',
   styleUrls: ['./student-profile.component.scss'],
@@ -156,10 +158,17 @@ export class StudentProfileComponent implements OnInit {
     });
   }
 
-  /** Génère la fiche profil PDF de l'étudiant (infos, hors historique). */
-  printProfilePdf(): void {
+  /**
+   * Génère la fiche profil PDF de l'étudiant (infos, hors historique), dans la langue choisie au
+   * moment d'imprimer ; sans choix, selon la règle des documents (voir pdfLanguage).
+   */
+  printProfilePdf(lang?: PrintLanguage): void {
     if (!this.student) return;
-    const s = this.student;
+    runInPrintLanguage(this.translate, lang, () => this.composeProfilePdf(this.student!))
+      .catch((err: unknown) => console.error('Impression de la fiche impossible :', err));
+  }
+
+  private composeProfilePdf(s: Student): void {
     const t = (key: string, params?: object) => pdfInstant(this.translate, key, params);
     const genderKey = genderLabelKey(s.gender);
 

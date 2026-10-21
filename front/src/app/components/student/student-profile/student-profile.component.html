@@ -47,10 +47,12 @@
           [matTooltip]="'STUDENT_PROFILE.FULL_HISTORY_TOOLTIP' | translate">
           <mat-icon>history</mat-icon>
         </button>
-        <button mat-icon-button class="pf-hb pf-hb-edit" (click)="printProfilePdf()"
+        <button mat-icon-button class="pf-hb pf-hb-edit" (click)="printProfilePdf(profileLanguage.screenLanguage)"
           [matTooltip]="'STUDENT_PROFILE.PRINT_TOOLTIP' | translate">
           <mat-icon>badge</mat-icon>
         </button>
+        <app-print-language-menu #profileLanguage="printLanguageMenu" triggerClass="pf-hb pf-hb-edit"
+          (selected)="printProfilePdf($event)"></app-print-language-menu>
         <button mat-icon-button class="pf-hb pf-hb-danger" (click)="onDisable()" [matTooltip]="'STUDENT_PROFILE.DISABLE_TOOLTIP' | translate" appAdminOnly>
           <mat-icon>block</mat-icon>
         </button>

@@ -75,6 +75,17 @@ Choisissez la période : **Année**, **Mois** ou **Période**. **Imprimer** prod
 
 <!-- page -->
 
+## Imprimer un document
+
+Chaque bouton d'impression imprime dans la langue de l'écran. L'icône de langue juste à côté propose les trois langues du document : **Français**, **English** ou **العربية**. Le choix ne vaut que pour ce document : l'écran garde sa langue.
+
+En arabe, fiches, reçus, feuilles de présence et listes s'ouvrent dans la boîte d'impression du navigateur : choisissez « Enregistrer au format PDF » pour garder le fichier. Le tableau de bord, lui, se télécharge en PDF dans les trois langues.
+
+> [!NOTE]
+> Le reçu imprimé à l'encaissement sort dans la langue de l'écran, sans question.
+
+<!-- page -->
+
 ## Préparer l'école
 
 Pour démarrer vite, chargez vos listes avec **Inscription › Import CSV**, dans cet ordre :

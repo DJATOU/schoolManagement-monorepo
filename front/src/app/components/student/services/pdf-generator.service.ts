@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import pdfMake from 'pdfmake/build/pdfmake';
 import pdfFonts from 'pdfmake/build/vfs_fonts';
 import { Content, TDocumentDefinitions } from 'pdfmake/interfaces';
@@ -6,7 +6,8 @@ import { TranslateService } from '@ngx-translate/core';
 import { StudentFullHistoryDTO } from '../domain/StudentFullHistoryDTO';
 import { SessionHistoryDTO } from '../../../models/session/SessionHistoryDTO';
 import { StudentRefund } from '../../../models/refund/refund';
-import { pdfInstant, pdfLocale } from '../../../shared/pdf-i18n';
+import { bindPrintLanguage, pdfInstant, pdfLanguage, pdfLocale, withPrintLanguage } from '../../../shared/pdf-i18n';
+import { PdfOutputService } from '../../../services/pdf-output.service';
 import {
   countBillableSessions,
   countExcludedSessions,
@@ -34,6 +35,8 @@ export class PdfGeneratorService {
    */
   private static readonly ABSENT_PAID_COLOR = '#dfe3e8';
 
+  private readonly output = inject(PdfOutputService);
+
   constructor(private translate: TranslateService) {
     (pdfMake as any).vfs = pdfFonts.pdfMake.vfs;
   }
@@ -43,7 +46,7 @@ export class PdfGeneratorService {
     return pdfInstant(this.translate, `studentHistory.${key}`, params);
   }
 
-  /** Locale du document (français sous une interface en arabe), pour ses dates et montants. */
+  /** Locale du document (voir pdfLanguage), pour ses dates et montants. */
   private get locale(): string {
     return pdfLocale(this.translate);
   }
@@ -87,9 +90,14 @@ export class PdfGeneratorService {
    * @param refunds remboursements de l'étudiant, listés sous leur série (pièce, date, montant,
    *                motif). Vide pour un rôle qui n'y a pas accès : seul le total par série, qui vient
    *                de l'historique, est alors imprimé.
+   *
+   * <p>En arabe, le navigateur imprime le même document (boîte d'impression, « Enregistrer en
+   * PDF »).</p>
    */
   async generateFullHistoryPdf(fullHistory: StudentFullHistoryDTO, logoUrl: string,
                                refunds: StudentRefund[] = []): Promise<void> {
+    // Langue lue avant toute attente : le choix de l'appelant ne survit pas au chargement du logo.
+    const lang = pdfLanguage(this.translate);
 
     let logoBase64 = '';
     try {
@@ -98,6 +106,22 @@ export class PdfGeneratorService {
       console.error('Erreur lors du chargement du logo :', error);
     }
 
+    const built = withPrintLanguage(lang, () => this.buildDocument(fullHistory, logoBase64, refunds));
+    if (lang === 'ar') {
+      const title = withPrintLanguage(lang, () => `${this.t('pdf.title')} — ${fullHistory.studentName}`);
+      return this.output.printHtml(built, title);
+    }
+
+    const pdfDocGenerator = pdfMake.createPdf(bindPrintLanguage(this.translate, built, lang));
+    pdfDocGenerator.getBlob((blob) => {
+      const blobUrl = URL.createObjectURL(blob);
+      window.open(blobUrl, '_blank');
+    });
+  }
+
+  /** Définition du document, publique pour être vérifiée sans passer par l'impression. */
+  buildDocument(fullHistory: StudentFullHistoryDTO, logoBase64: string,
+                refunds: StudentRefund[] = []): TDocumentDefinitions {
     const content: Content[] = [
       {
         columns: [
@@ -247,12 +271,7 @@ export class PdfGeneratorService {
         } as Content;
       }
     };
-
-    const pdfDocGenerator = pdfMake.createPdf(documentDefinition);
-    pdfDocGenerator.getBlob((blob) => {
-      const blobUrl = URL.createObjectURL(blob);
-      window.open(blobUrl, '_blank');
-    });
+    return documentDefinition;
   }
 
   private async convertImageToBase64(url: string): Promise<string> {

@@ -266,9 +266,10 @@
   <button mat-button (click)="onUnvalidateSession()" color="accent" *ngIf="isFinished" [disabled]="(writeDisabled$ | async) ?? false">
     {{ 'SESSION_MODAL.UNVALIDATE' | translate }}
   </button>
-  <button mat-button (click)="onPrintAttendanceSheet()" color="primary">
+  <button mat-button (click)="onPrintAttendanceSheet(sheetLanguage.screenLanguage)" color="primary">
     <mat-icon>print</mat-icon> {{ 'SESSION_MODAL.PRINT' | translate }}
   </button>
+  <app-print-language-menu #sheetLanguage="printLanguageMenu" (selected)="onPrintAttendanceSheet($event)"></app-print-language-menu>
   <button mat-button class="delete-session-btn" (click)="onDeleteSession()"
           [disabled]="isFinished || ((writeDisabled$ | async) ?? false)"
           [matTooltip]="isFinished ? ('SESSION_MODAL.DELETE_FINISHED_HINT' | translate) : ''">

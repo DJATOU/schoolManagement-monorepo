@@ -1,4 +1,6 @@
-import { downloadPdfBlob, imageDataUrl, pdfSafeText, PRINT_FRAME_LIFETIME_MS, printPdfBlob } from './pdf-print';
+import {
+  downloadPdfBlob, imageDataUrl, pdfSafeText, PRINT_FRAME_LIFETIME_MS, PRINT_READY_TIMEOUT_MS, printHtmlDocument, printPdfBlob
+} from './pdf-print';
 
 /** PNG 1 × 1 transparent. */
 const PIXEL = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
@@ -74,6 +76,73 @@ describe('pdf-print', () => {
       const link = click.calls.mostRecent().object as HTMLAnchorElement;
       expect(link.download).toBe('journal_Amine.pdf');
       expect(link.href).toBe('blob:journal');
+    });
+  });
+
+  /** Document en arabe : page HTML imprimée par le navigateur, dans la même iframe invisible. */
+  describe('printHtmlDocument', () => {
+    let frames: HTMLIFrameElement[];
+
+    beforeEach(() => {
+      jasmine.clock().install();
+      frames = [];
+      const append = document.body.appendChild.bind(document.body);
+      spyOn(document.body, 'appendChild').and.callFake(<T extends Node>(node: T): T => {
+        if (node instanceof HTMLIFrameElement) {
+          frames.push(node);
+          return node;
+        }
+        return append(node);
+      });
+    });
+
+    afterEach(() => jasmine.clock().uninstall());
+
+    /** L'iframe chargée, avec ses polices et ses images ; son impression est remplacée par `print`. */
+    function load(frame: HTMLIFrameElement, print: () => void, fontsReady: Promise<unknown> = Promise.resolve()): jasmine.Spy {
+      const focus = jasmine.createSpy('focus');
+      Object.defineProperty(frame, 'contentWindow', { value: { focus, print } });
+      Object.defineProperty(frame, 'contentDocument', { value: { fonts: { ready: fontsReady }, images: [] } });
+      frame.onload!(new Event('load'));
+      return focus;
+    }
+
+    it('charge la page par srcdoc, attend polices et images, imprime, retire l\'iframe ensuite', async () => {
+      const printed = printHtmlDocument('<!DOCTYPE html><html lang="ar" dir="rtl"></html>', 'وصل_RECU-2030-0001');
+
+      expect(frames.length).toBe(1);
+      const frame = frames[0];
+      expect(frame.srcdoc).toContain('dir="rtl"');
+      expect(frame.title).toBe('وصل_RECU-2030-0001');
+      expect(frame.style.width).toBe('0px');
+      expect(frame.getAttribute('aria-hidden')).toBe('true');
+      const print = jasmine.createSpy('print');
+      const focus = load(frame, print);
+      await printed;
+      expect(focus).toHaveBeenCalled();
+      expect(print).toHaveBeenCalled();
+
+      const remove = spyOn(frame, 'remove');
+      jasmine.clock().tick(PRINT_FRAME_LIFETIME_MS);
+      expect(remove).toHaveBeenCalled();
+    });
+
+    it('une police injoignable (poste hors ligne) ne bloque pas l\'impression', async () => {
+      const printed = printHtmlDocument('<html></html>', 'x');
+      const print = jasmine.createSpy('print');
+      load(frames[0], print, new Promise(() => undefined));
+      await Promise.resolve();
+      expect(print).not.toHaveBeenCalled();
+
+      jasmine.clock().tick(PRINT_READY_TIMEOUT_MS);
+      await printed;
+      expect(print).toHaveBeenCalled();
+    });
+
+    it('boîte d\'impression impossible : la promesse échoue', async () => {
+      const printed = printHtmlDocument('<html></html>', 'x');
+      load(frames[0], () => { throw new Error('pas d\'impression'); });
+      await expectAsync(printed).toBeRejectedWithError('pas d\'impression');
     });
   });
 

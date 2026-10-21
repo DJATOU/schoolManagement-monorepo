@@ -54,6 +54,8 @@ import {
   CorrectionDialogResult
 } from '../../shared/correction-dialog/correction-dialog.component';
 import { LocalizedDatePipe } from '../../../pipes/localized-date.pipe';
+import { PrintLanguage, printLanguageOf, runInPrintLanguage } from '../../../shared/pdf-i18n';
+import { PrintLanguageMenuComponent } from '../../shared/print-language-menu/print-language-menu.component';
 
 @Component({
   selector: 'app-session-modal',
@@ -73,7 +75,8 @@ import { LocalizedDatePipe } from '../../../pipes/localized-date.pipe';
     MatMenuModule,
     MatTooltipModule,
     TranslateModule,
-    LocalizedDatePipe
+    LocalizedDatePipe,
+    PrintLanguageMenuComponent
   ]
 })
 export class SessionModalComponent implements OnInit {
@@ -368,8 +371,9 @@ onValidateSession(): void {
             }
           }).afterClosed().subscribe((printConfirmed: boolean) => {
             // Génération de la feuille de présence PDF (rendu « rempli »).
+            // Suite de la validation, en un clic : la feuille sort dans la langue de l'écran.
             if (printConfirmed) {
-              this.printAttendanceSheet(true);
+              this.printAttendanceSheet(true, printLanguageOf(this.translate));
             }
             this.markSessionAsFinished();
           });
@@ -828,16 +832,20 @@ openAddStudentDialog(): void {
    * Déclenché par le bouton « Imprimer la présence ».
    * Fonctionne avant validation (feuille vierge à cocher à la main) et après
    * validation (présence/justification remplies automatiquement).
+   *
+   * @param lang langue choisie au moment d'imprimer ; sans choix, la règle des documents
+   *             (voir pdfLanguage)
    */
-  onPrintAttendanceSheet(): void {
-    this.printAttendanceSheet(this.isFinished);
+  onPrintAttendanceSheet(lang?: PrintLanguage): void {
+    this.printAttendanceSheet(this.isFinished, lang);
   }
 
   /**
    * Génère la feuille de présence PDF.
    * @param validated état de validation à refléter dans le rendu (rempli vs vierge)
+   * @param lang langue du document ; sans choix, la règle des documents (voir pdfLanguage)
    */
-  private printAttendanceSheet(validated: boolean): void {
+  private printAttendanceSheet(validated: boolean, lang?: PrintLanguage): void {
     const students: SessionAttendanceStudentRow[] = ((this.sessionData.students ?? []) as Student[]).map((student: Student) => ({
       fullName: `${student.firstName ?? ''} ${student.lastName ?? ''}`.trim(),
       isPresent: student.isPresent,
@@ -846,7 +854,7 @@ openAddStudentDialog(): void {
       note: student.description
     }));
 
-    this.sessionAttendancePdfService.generateAttendanceSheet(
+    runInPrintLanguage(this.translate, lang, () => this.sessionAttendancePdfService.generateAttendanceSheet(
       {
         title: this.sessionData.title,
         sessionType: this.sessionData.sessionType,
@@ -858,7 +866,7 @@ openAddStudentDialog(): void {
         isFinished: validated
       },
       students
-    );
+    )).catch((err: unknown) => console.error('Impression de la feuille de présence impossible :', err));
   }
 
 }

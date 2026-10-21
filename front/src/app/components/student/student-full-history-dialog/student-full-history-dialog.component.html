@@ -183,13 +183,15 @@
                   {{ refund.reason || ('studentHistory.refunds.noReason' | translate) }}
                 </span>
                 <button mat-stroked-button type="button" class="fh-refund-reprint"
-                        (click)="reprintRefund(refund)"
+                        (click)="reprintRefund(refund, refundLanguage.screenLanguage)"
                         [disabled]="reprintingRefundId !== null"
                         [attr.aria-label]="'studentHistory.refunds.reprintAria' | translate:
                           { number: refund.refundNumber }">
                   <mat-icon aria-hidden="true">print</mat-icon>
                   {{ 'studentHistory.refunds.reprint' | translate }}
                 </button>
+                <app-print-language-menu #refundLanguage="printLanguageMenu" class="fh-refund-language"
+                  [disabled]="reprintingRefundId !== null" (selected)="reprintRefund(refund, $event)"></app-print-language-menu>
               </li>
             </ul>
             <p class="fh-refund-unavailable" *ngIf="refundsUnavailable && hasRefund(series)">
@@ -297,8 +299,10 @@
 </mat-dialog-content>
 
 <mat-dialog-actions align="end">
-  <button mat-button (click)="generatePdf()" [disabled]="loading || !!errorMessage || !fullHistory">
+  <button mat-button (click)="generatePdf(historyLanguage.screenLanguage)" [disabled]="loading || !!errorMessage || !fullHistory">
     <mat-icon>print</mat-icon> {{ 'studentHistory.dialog.print' | translate }}
   </button>
+  <app-print-language-menu #historyLanguage="printLanguageMenu" [disabled]="loading || !!errorMessage || !fullHistory"
+    (selected)="generatePdf($event)"></app-print-language-menu>
   <button mat-button (click)="dialogRef.close()">{{ 'common.close' | translate }}</button>
 </mat-dialog-actions>

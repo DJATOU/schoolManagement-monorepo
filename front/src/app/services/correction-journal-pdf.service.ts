@@ -5,7 +5,7 @@ import { Content, TableCell, TDocumentDefinitions } from 'pdfmake/interfaces';
 import { CorrectionJournal, JournalEntry } from '../models/correction/journal';
 import { formatCalendarDay } from '../utils/calendar-day';
 import { formatJournalInstant } from '../utils/journal-format';
-import { pdfInstant } from '../shared/pdf-i18n';
+import { bindPrintLanguage, pdfInstant, pdfLanguage, withPrintLanguage } from '../shared/pdf-i18n';
 import { pdfSafeText } from '../utils/pdf-print';
 import { PdfOutputService } from './pdf-output.service';
 
@@ -32,10 +32,22 @@ export class CorrectionJournalPdfService {
 
   constructor(private translate: TranslateService, private output: PdfOutputService) {}
 
-  /** Compose le Journal et ouvre la boîte d'impression ; sans logo s'il ne se charge pas. */
+  /**
+   * Compose le Journal et ouvre la boîte d'impression ; sans logo s'il ne se charge pas. En arabe,
+   * le navigateur imprime le même Journal (page de droite à gauche).
+   */
   async print(journal: CorrectionJournal, printedAt: Date = new Date()): Promise<void> {
+    // Langue lue avant toute attente : le choix de l'appelant ne survit pas au chargement du logo.
+    const lang = pdfLanguage(this.translate);
     const logo = await this.output.imageDataUrl(CorrectionJournalPdfService.LOGO_URL);
-    this.output.print(this.buildDocument(journal, logo, printedAt), this.fileName(journal));
+    const { doc, fileName } = withPrintLanguage(lang, () => ({
+      doc: this.buildDocument(journal, logo, printedAt),
+      fileName: this.fileName(journal)
+    }));
+    if (lang === 'ar') {
+      return this.output.printHtml(doc, fileName.replace(/\.pdf$/i, ''));
+    }
+    this.output.print(bindPrintLanguage(this.translate, doc, lang), fileName);
   }
 
   /**

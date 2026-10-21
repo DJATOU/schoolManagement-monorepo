@@ -36,11 +36,14 @@
         </button>
         <!-- Désactivé pendant les chargements : le document contient les encaissements et les
              séries, imprimer trop tôt produirait des pages vides. -->
-        <button mat-icon-button class="pf-hb pf-hb-print" (click)="printGroupPdf()"
+        <button mat-icon-button class="pf-hb pf-hb-print" (click)="printGroupPdf(groupLanguage.screenLanguage)"
           [disabled]="loadingStudents || loadingSeries || loadingRevenue"
           [matTooltip]="'GROUP_PROFILE.PRINT_TOOLTIP' | translate">
           <mat-icon>print</mat-icon>
         </button>
+        <app-print-language-menu #groupLanguage="printLanguageMenu" triggerClass="pf-hb pf-hb-print"
+          [disabled]="loadingStudents || loadingSeries || loadingRevenue"
+          (selected)="printGroupPdf($event)"></app-print-language-menu>
         <button mat-icon-button class="pf-hb pf-hb-danger" (click)="onDisable()"
           [matTooltip]="'GROUP_PROFILE.DISABLE_TOOLTIP' | translate"
           [disabled]="(writeDisabled$ | async) ?? false">

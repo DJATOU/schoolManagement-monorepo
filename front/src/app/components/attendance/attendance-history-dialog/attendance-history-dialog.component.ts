@@ -1,4 +1,4 @@
-import { Component, Inject, OnInit } from '@angular/core';
+import { Component, Inject, OnInit, inject } from '@angular/core';
 import { Attendance } from '../../../models/Attendance/attendance';
 import { Group } from '../../../models/group/group';
 import { SessionSeries } from '../../../models/sessionSerie/sessionSerie';
@@ -20,7 +20,11 @@ import { JustificationUpdateResult } from '../../../models/Attendance/justificat
 import { AdminOnlyDirective } from '../../../shared/admin-only.directive';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { LocalizedDatePipe } from '../../../pipes/localized-date.pipe';
-import { pdfInstant, pdfLocale } from '../../../shared/pdf-i18n';
+import {
+  PrintLanguage, bindPrintLanguage, pdfInstant, pdfLanguage, pdfLocale, runInPrintLanguage, withPrintLanguage
+} from '../../../shared/pdf-i18n';
+import { PrintLanguageMenuComponent } from '../../shared/print-language-menu/print-language-menu.component';
+import { PdfOutputService } from '../../../services/pdf-output.service';
 import {
   JustificationEditDialogComponent
 } from '../justification-edit-dialog/justification-edit-dialog.component';
@@ -50,6 +54,7 @@ import { Content, TDocumentDefinitions } from 'pdfmake/interfaces';
     MatTooltipModule,
     AdminOnlyDirective,
     TranslateModule,
+    PrintLanguageMenuComponent,
     LocalizedDatePipe
   ]
 })
@@ -65,6 +70,8 @@ export class AttendanceHistoryDialogComponent implements OnInit {
     'description', 'actions'];
 
   studentName: string = '';
+
+  private readonly pdfOutput = inject(PdfOutputService);
 
   constructor(
     private attendanceService: AttendanceService,
@@ -238,7 +245,7 @@ export class AttendanceHistoryDialogComponent implements OnInit {
     });
   }
 
-  /** Libellé du PDF : langue de l'interface en français / anglais, français sinon (arabe). */
+  /** Libellé du document, dans sa langue (voir pdfLanguage). */
   private pdf(key: string, params?: object): string {
     return pdfInstant(this.translate, key, params);
   }
@@ -249,7 +256,19 @@ export class AttendanceHistoryDialogComponent implements OnInit {
   }
 
   // Méthode pour générer le PDF
-  async generatePdf(): Promise<void> {
+  /**
+   * Imprime l'historique de la série choisie.
+   *
+   * @param lang langue choisie au moment d'imprimer ; sans choix, la règle des documents
+   *             (voir pdfLanguage)
+   */
+  generatePdf(lang?: PrintLanguage): Promise<void> {
+    return runInPrintLanguage(this.translate, lang, () => this.printPdf());
+  }
+
+  private async printPdf(): Promise<void> {
+    // Langue lue avant toute attente : le choix de l'appelant ne survit pas au chargement du logo.
+    const lang = pdfLanguage(this.translate);
     let logoBase64 = '';
     try {
       logoBase64 = await this.convertImageToBase64('assets/succes_assistance.png');
@@ -257,6 +276,23 @@ export class AttendanceHistoryDialogComponent implements OnInit {
       console.error('Erreur lors du chargement du logo :', error);
     }
 
+    const built = withPrintLanguage(lang, () => this.buildPdfDocument(logoBase64));
+    // En arabe, le navigateur imprime le même document (boîte d'impression, « Enregistrer en PDF »).
+    if (lang === 'ar') {
+      const title = withPrintLanguage(lang, () => `${this.pdf('ATTENDANCE_HISTORY.PDF.TITLE')} — ${this.studentName}`);
+      return this.pdfOutput.printHtml(built, title);
+    }
+
+    const pdfDocGenerator = pdfMake.createPdf(bindPrintLanguage(this.translate, built, lang));
+
+    pdfDocGenerator.getBlob((blob) => {
+      const blobUrl = URL.createObjectURL(blob);
+      window.open(blobUrl, '_blank');
+    });
+  }
+
+  /** Définition du PDF, publique pour être vérifiée sans passer par l'impression. */
+  buildPdfDocument(logoBase64: string): TDocumentDefinitions {
     const documentDefinition: TDocumentDefinitions = {
       content: [
         {
@@ -342,13 +378,7 @@ export class AttendanceHistoryDialogComponent implements OnInit {
         } as Content;
       }
     };
-
-    const pdfDocGenerator = pdfMake.createPdf(documentDefinition);
-
-    pdfDocGenerator.getBlob((blob) => {
-      const blobUrl = URL.createObjectURL(blob);
-      window.open(blobUrl, '_blank');
-    });
+    return documentDefinition;
   }
 
   private getAttendanceTable(): any {

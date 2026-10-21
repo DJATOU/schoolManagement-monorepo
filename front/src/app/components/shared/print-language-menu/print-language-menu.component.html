@@ -1,0 +1,19 @@
+<button mat-icon-button type="button" class="plm-trigger" [ngClass]="triggerClass" [matMenuTriggerFor]="languageMenu" [disabled]="disabled"
+  [matTooltip]="'PRINT_LANGUAGE.CHOOSE' | translate" [attr.aria-label]="'PRINT_LANGUAGE.CHOOSE' | translate">
+  <mat-icon aria-hidden="true">translate</mat-icon>
+</button>
+<mat-menu #languageMenu="matMenu" class="plm-menu">
+  <div class="plm-title" role="presentation">{{ 'PRINT_LANGUAGE.TITLE' | translate }}</div>
+  <!-- Chaque langue est nommée dans sa propre langue (autonyme), celle de l'écran en premier. -->
+  <button mat-menu-item *ngFor="let option of options; trackBy: trackByCode" type="button" class="plm-option"
+    [class.plm-screen]="option.screen" [attr.data-lang]="option.code"
+    [attr.aria-label]="'PRINT_LANGUAGE.ITEM_ARIA' | translate: { language: option.name }"
+    [attr.aria-describedby]="option.code === 'ar' && arabicOpensPrintDialog ? hintId : null"
+    (click)="choose(option.code)">
+    <span class="plm-label">
+      <span class="plm-name" [attr.lang]="option.code" [attr.dir]="option.dir">{{ option.name }}</span>
+      <span class="plm-marker" *ngIf="option.screen">({{ 'PRINT_LANGUAGE.SCREEN' | translate }})</span>
+      <span class="plm-hint" [id]="hintId" *ngIf="option.code === 'ar' && arabicOpensPrintDialog">{{ 'PRINT_LANGUAGE.ARABIC_HINT' | translate }}</span>
+    </span>
+  </button>
+</mat-menu>

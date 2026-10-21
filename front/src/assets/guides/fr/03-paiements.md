@@ -67,7 +67,7 @@ Si le montant dépasse ce que doit la série choisie, le surplus passe **tout se
 
 Chaque versement a son reçu : montant reçu, élève, groupe, série, mode de règlement, **situation de la série** (coût, séances facturées, total versé, reste à payer) et répartition du versement.
 
-Pour le réimprimer : fiche de l'élève, bloc **Versements**, bouton **Réimprimer le reçu**.
+Pour le réimprimer : fiche de l'élève, bloc **Versements**, bouton **Réimprimer le reçu**. Le reçu imprimé à l'encaissement est dans la langue de l'écran ; l'icône de langue à côté du bouton le réimprime dans une autre langue.
 
 Un reçu annulé porte la mention **ANNULÉ** et, s'il a été remplacé, le numéro du nouveau reçu.
 
