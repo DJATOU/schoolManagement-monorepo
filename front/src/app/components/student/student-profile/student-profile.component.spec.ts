@@ -17,6 +17,9 @@ import { ProfilePdfService } from '../../../services/profile-pdf.service';
 import { TranslateService } from '@ngx-translate/core';
 import frTranslations from '../../../../assets/i18n/fr.json';
 import enTranslations from '../../../../assets/i18n/en.json';
+import arTranslations from '../../../../assets/i18n/ar.json';
+import { pdfLanguage } from '../../../shared/pdf-i18n';
+import { choosePrintLanguage } from '../../../../testing/print-language';
 
 /**
  * Fiche d'un étudiant, ouverte sur l'identifiant porté par l'URL.
@@ -275,6 +278,25 @@ describe('StudentProfileComponent', () => {
       expect(labels).toContain('Gender');
       expect(labels).toContain('Groups (0)');
       expect(labels).not.toContain('Informations personnelles');
+    });
+
+    it('impression : le bouton suit l\'écran (arabe), le menu imprime dans la langue choisie', () => {
+      translate.setTranslation('ar', arTranslations);
+      translate.use('ar');
+      fixture.detectChanges();
+      const seen: string[] = [];
+      const pdf = spyOn(TestBed.inject(ProfilePdfService), 'generateProfilePdf')
+        .and.callFake(() => { seen.push(pdfLanguage(translate)); });
+
+      const buttons = (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>('button.pf-hb:not(.plm-trigger)');
+      Array.from(buttons).find(button => button.textContent?.trim() === 'badge')!.click();
+      expect(seen).toEqual(['ar']);
+      expect(pdf.calls.mostRecent().args[0].sections[0].heading).toBe(arTranslations.STUDENT_PROFILE.PERSONAL_INFO);
+
+      choosePrintLanguage(fixture, '.pf-header-buttons', 'fr');
+      expect(seen).toEqual(['ar', 'fr']);
+      expect(pdf.calls.mostRecent().args[0].sections[0].heading).toBe(frTranslations.STUDENT_PROFILE.PERSONAL_INFO);
+      expect(translate.currentLang).toBe('ar');
     });
   });
 });

@@ -9,6 +9,8 @@ import arTranslations from '../../../../../assets/i18n/ar.json';
 import { PaymentHistoryDialogComponent } from './payment-history-dialog.component';
 import { SeriesHistoryDTO } from '../../../../models/sessionSerie/SeriesHistoryDTO';
 import { createDialogRefSpy, DialogRefSpy, matDialogProviders, setupComponentTestBed } from '../../../../../testing/setup';
+import { PdfOutputService } from '../../../../services/pdf-output.service';
+import { choosePrintLanguage } from '../../../../../testing/print-language';
 
 /**
  * Historique de paiement d'un étudiant, série par série.
@@ -146,6 +148,32 @@ describe('PaymentHistoryDialogComponent', () => {
       const text = (fixture.nativeElement.textContent as string).replace(/\s+/g, ' ');
       expect(text).toContain('2 400,00 DA');
       expect(text).not.toContain('2,400.00');
+    });
+
+    it('menu « العربية » : page HTML arabe imprimée, montants en « دج », jamais pdfmake', async () => {
+      const translate = TestBed.inject(TranslateService);
+      translate.setTranslation('fr', frTranslations);
+      translate.setTranslation('ar', arTranslations);
+      translate.use('fr');
+      select(series());
+      spyOn(component as never, 'convertImageToBase64').and.returnValue(Promise.resolve('') as never);
+      const createPdf = spyOn(pdfMake, 'createPdf');
+      const printed: string[] = [];
+      const original = PdfOutputService.printHtmlDocument;
+      PdfOutputService.printHtmlDocument = html => { printed.push(html); return Promise.resolve(); };
+      try {
+        choosePrintLanguage(fixture, 'mat-dialog-actions', 'ar');
+        await fixture.whenStable();
+      } finally {
+        PdfOutputService.printHtmlDocument = original;
+      }
+      expect(createPdf).not.toHaveBeenCalled();
+      expect(printed.length).toBe(1);
+      expect(printed[0]).toContain('dir="rtl"');
+      expect(printed[0]).toContain(arTranslations.payment.history.pdf.title);
+      expect(printed[0]).toContain(' دج');
+      expect(printed[0]).not.toContain(' DA');
+      expect(translate.currentLang).toBe('fr');
     });
 
     it('imprime le remboursé dans le PDF, à côté d\'un versé désormais net', async () => {

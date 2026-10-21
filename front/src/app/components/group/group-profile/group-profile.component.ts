@@ -46,7 +46,8 @@ import { HasRoleDirective } from '../../../shared/has-role.directive';
 import { RevenueService } from '../../../services/revenue.service';
 import { GroupRevenue, SeriesRevenue } from '../../../models/revenue/group-revenue';
 import { resolveLocale } from '../../../shared/locale';
-import { pdfInstant, pdfLocale } from '../../../shared/pdf-i18n';
+import { PrintLanguage, pdfInstant, pdfLocale, runInPrintLanguage } from '../../../shared/pdf-i18n';
+import { PrintLanguageMenuComponent } from '../../shared/print-language-menu/print-language-menu.component';
 import { pdfWithCurrency } from '../../../shared/currency';
 import { LocalizedDatePipe } from '../../../pipes/localized-date.pipe';
 import { CurrencySuffixPipe } from '../../../pipes/currency-suffix.pipe';
@@ -77,7 +78,8 @@ import { CurrencySuffixPipe } from '../../../pipes/currency-suffix.pipe';
     SecureImageDirective,
     HasRoleDirective,
     LocalizedDatePipe,
-    CurrencySuffixPipe
+    CurrencySuffixPipe,
+    PrintLanguageMenuComponent
   ]
 })
 export class GroupProfileComponent implements OnInit {
@@ -188,9 +190,13 @@ export class GroupProfileComponent implements OnInit {
    * masquées à l'écran par la même règle et refusées par le serveur à un VIEWER. Le volet est
    * simplement absent du document, il n'est pas grisé.</p>
    */
-  printGroupPdf(): void {
+  printGroupPdf(lang?: PrintLanguage): void {
     if (!this.group) return;
-    const g = this.group;
+    runInPrintLanguage(this.translate, lang, () => this.composeGroupPdf(this.group!))
+      .catch((err: unknown) => console.error('Impression de la fiche impossible :', err));
+  }
+
+  private composeGroupPdf(g: Group): void {
 
     const extraPages: PdfExtraPage[] = [];
     if (this.authService.hasRole('ADMIN')) {

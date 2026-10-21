@@ -17,6 +17,8 @@ import { StudentRefund } from '../../../models/refund/refund';
 import { AmountPipe } from '../../../pipes/amount.pipe';
 import { CurrencySuffixPipe } from '../../../pipes/currency-suffix.pipe';
 import { currencySuffix } from '../../../shared/currency';
+import { PrintLanguage, runInPrintLanguage } from '../../../shared/pdf-i18n';
+import { PrintLanguageMenuComponent } from '../../shared/print-language-menu/print-language-menu.component';
 import { StudentFullHistoryDTO } from '../domain/StudentFullHistoryDTO';
 import { SeriesHistoryDTO } from '../../../models/sessionSerie/SeriesHistoryDTO';
 import { SessionHistoryDTO } from '../../../models/session/SessionHistoryDTO';
@@ -51,7 +53,8 @@ import {
     MatProgressSpinnerModule,
     TranslateModule,
     AmountPipe,
-    CurrencySuffixPipe
+    CurrencySuffixPipe,
+    PrintLanguageMenuComponent
   ]
 })
 export class StudentFullHistoryDialogComponent implements OnInit {
@@ -124,8 +127,11 @@ export class StudentFullHistoryDialogComponent implements OnInit {
   /**
    * Réimprime le reçu d'un remboursement. Chaque émission est enregistrée par le serveur, qui
    * renvoie un rang : à partir du deuxième, le reçu porte la mention « DUPLICATA ».
+   *
+   * @param lang langue du reçu choisie au moment d'imprimer ; sans choix, la règle des documents
+   *             (voir pdfLanguage)
    */
-  reprintRefund(refund: StudentRefund): void {
+  reprintRefund(refund: StudentRefund, lang?: PrintLanguage): void {
     if (this.reprintingRefundId !== null) {
       return;
     }
@@ -133,10 +139,11 @@ export class StudentFullHistoryDialogComponent implements OnInit {
     this.refundService.issueReceipt(refund.refundId)
       .pipe(finalize(() => this.reprintingRefundId = null))
       .subscribe({
-        next: receipt => this.refundReceiptPdf.generateAndPrint(receipt).catch((err: unknown) => {
-          console.error('Erreur lors de l\'impression du reçu de remboursement :', err);
-          this.notify(this.translate.instant('studentHistory.refunds.reprintError'));
-        }),
+        next: receipt => runInPrintLanguage(this.translate, lang, () => this.refundReceiptPdf.generateAndPrint(receipt))
+          .catch((err: unknown) => {
+            console.error('Erreur lors de l\'impression du reçu de remboursement :', err);
+            this.notify(this.translate.instant('studentHistory.refunds.reprintError'));
+          }),
         error: (err: Error) =>
           this.notify(err.message || this.translate.instant('studentHistory.refunds.reprintError'))
       });
@@ -436,13 +443,20 @@ export class StudentFullHistoryDialogComponent implements OnInit {
     return translated === key ? code : translated;
   }
 
-  /** Génère le PDF de l'historique complet (réutilise le service PDF existant). */
-  generatePdf(): void {
-    if (this.fullHistory) {
+  /**
+   * Génère le PDF de l'historique complet (réutilise le service PDF existant).
+   *
+   * @param lang langue choisie au moment d'imprimer ; sans choix, la règle des documents
+   *             (voir pdfLanguage)
+   */
+  generatePdf(lang?: PrintLanguage): void {
+    const fullHistory = this.fullHistory;
+    if (fullHistory) {
       // Les remboursements déjà chargés passent au PDF : un administrateur imprime le même détail
       // que celui qu'il lit à l'écran.
-      this.pdfGeneratorService.generateFullHistoryPdf(
-        this.fullHistory, 'assets/succes_assistance.png', this.refunds);
+      runInPrintLanguage(this.translate, lang, () => this.pdfGeneratorService.generateFullHistoryPdf(
+        fullHistory, 'assets/succes_assistance.png', this.refunds))
+        .catch((err: unknown) => console.error('Impression de l\'historique impossible :', err));
     }
   }
 }

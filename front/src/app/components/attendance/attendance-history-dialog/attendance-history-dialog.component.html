@@ -92,6 +92,8 @@
 </mat-dialog-content>
 
 <mat-dialog-actions>
-  <button mat-button (click)="generatePdf()" [disabled]="!selectedSeries">{{ 'ATTENDANCE_HISTORY.PRINT' | translate }}</button>
+  <button mat-button (click)="generatePdf(historyLanguage.screenLanguage)" [disabled]="!selectedSeries">{{ 'ATTENDANCE_HISTORY.PRINT' | translate }}</button>
+  <app-print-language-menu #historyLanguage="printLanguageMenu" [disabled]="!selectedSeries"
+    (selected)="generatePdf($event)"></app-print-language-menu>
   <button mat-button (click)="dialogRef.close()">{{ 'common.close' | translate }}</button>
 </mat-dialog-actions>

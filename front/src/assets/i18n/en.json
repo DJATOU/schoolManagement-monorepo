@@ -2559,5 +2559,12 @@
     "NAME": "Name",
     "CAPACITY": "Capacity",
     "SIZE": "Size"
+  },
+  "PRINT_LANGUAGE": {
+    "CHOOSE": "Choose the document language",
+    "TITLE": "Document language",
+    "SCREEN": "screen language",
+    "ITEM_ARIA": "Print in {{language}}",
+    "ARABIC_HINT": "In Arabic, the print dialog opens: choose “Save as PDF” to get the file."
   }
 }

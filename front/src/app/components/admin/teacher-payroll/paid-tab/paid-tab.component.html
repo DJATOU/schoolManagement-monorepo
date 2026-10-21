@@ -133,11 +133,14 @@
       <ng-container matColumnDef="actions">
         <th mat-header-cell *matHeaderCellDef></th>
         <td mat-cell *matCellDef="let payout" class="tp-actions">
-          <button mat-icon-button type="button" class="tp-reprint" (click)="reprint(payout)" [disabled]="printingId !== null"
+          <button mat-icon-button type="button" class="tp-reprint" (click)="reprint(payout, slipLanguage.screenLanguage)"
+            [disabled]="printingId !== null"
             [matTooltip]="'teacherPayroll.slip.reprint' | translate"
             [attr.aria-label]="'teacherPayroll.slip.reprintAria' | translate: { number: payout.payoutNumber }">
             <mat-icon>print</mat-icon>
           </button>
+          <app-print-language-menu #slipLanguage="printLanguageMenu" class="tp-reprint-language"
+            [disabled]="printingId !== null" (selected)="reprint(payout, $event)"></app-print-language-menu>
           <ng-container *ngIf="payout.status === 'ACTIVE'">
             <button *ngIf="payout.kind === 'INITIAL'" mat-icon-button type="button" class="tp-replace" (click)="replace(payout)"
               [matTooltip]="'teacherPayroll.correction.replaceAction' | translate"

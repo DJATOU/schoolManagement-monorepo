@@ -13,6 +13,9 @@ import { TranslateService } from '@ngx-translate/core';
 import { ProfilePdfService } from '../../../services/profile-pdf.service';
 import frTranslations from '../../../../assets/i18n/fr.json';
 import enTranslations from '../../../../assets/i18n/en.json';
+import arTranslations from '../../../../assets/i18n/ar.json';
+import { pdfLanguage } from '../../../shared/pdf-i18n';
+import { choosePrintLanguage } from '../../../../testing/print-language';
 
 /**
  * Fiche d'un groupe, ouverte sur l'identifiant porté par l'URL.
@@ -197,6 +200,25 @@ describe('GroupProfileComponent', () => {
       expect(doc.tableTitle).toBe('Students (1)');
       expect(doc.tableColumns).toEqual(['#', 'Last name', 'First name', 'Remarks']);
       expect(doc.extraPages?.map(page => page.heading)).toContain('Series');
+    });
+
+    it('impression : le bouton suit l\'écran (arabe), le menu imprime dans la langue choisie', () => {
+      translate.setTranslation('ar', arTranslations);
+      translate.use('ar');
+      component.loadingRevenue = false;
+      fixture.detectChanges();
+      const seen: string[] = [];
+      const pdf = spyOn(TestBed.inject(ProfilePdfService), 'generateProfilePdf')
+        .and.callFake(() => { seen.push(pdfLanguage(translate)); });
+
+      (fixture.nativeElement.querySelector('button.pf-hb-print:not(.plm-trigger)') as HTMLButtonElement).click();
+      expect(seen).toEqual(['ar']);
+      expect(pdf.calls.mostRecent().args[0].sections[0].heading).toBe(arTranslations.GROUP_PROFILE.INFO_TITLE);
+
+      choosePrintLanguage(fixture, '.pf-header-buttons', 'en');
+      expect(seen).toEqual(['ar', 'en']);
+      expect(pdf.calls.mostRecent().args[0].sections[0].heading).toBe(enTranslations.GROUP_PROFILE.INFO_TITLE);
+      expect(translate.currentLang).toBe('ar');
     });
   });
 });

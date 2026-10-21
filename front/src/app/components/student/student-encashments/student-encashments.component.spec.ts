@@ -12,6 +12,8 @@ import { anEncashment } from '../../../../testing/fixtures';
 import { CorrectionDialogComponent, CorrectionDialogData } from '../../shared/correction-dialog/correction-dialog.component';
 import { EncashmentEditDialogComponent } from './encashment-edit-dialog/encashment-edit-dialog.component';
 import { EncashmentChanges } from '../../../models/correction/correction';
+import { pdfLanguage } from '../../../shared/pdf-i18n';
+import { choosePrintLanguage } from '../../../../testing/print-language';
 
 /**
  * Historique des versements d'un élève (A.9, B.7) : un reçu par ligne, annulés compris ;
@@ -184,18 +186,54 @@ describe('StudentEncashmentsComponent', () => {
     expect(encashments.getStudentEncashments).toHaveBeenCalledTimes(1);
   });
 
-  it('interface en arabe : le mode de règlement est imprimé en français, l\'écran le garde en arabe', () => {
+  /**
+   * Règle changée à la demande de l'utilisateur : le reçu suit désormais la langue de l'écran
+   * (arabe compris, imprimé par le navigateur) ; une autre langue se choisit dans le menu voisin.
+   */
+  it('interface en arabe : le reçu sort en arabe, et en français si le menu le demande', async () => {
     const translate = TestBed.inject(TranslateService);
     translate.setTranslation('fr', { payment: { dialog: { methods: { cash: 'Espèces' } } } }, true);
     translate.setTranslation('ar', { payment: { dialog: { methods: { cash: 'نقدًا' } } } }, true);
     translate.use('ar');
+    const printedIn: string[] = [];
+    receiptPdf.generateAndPrint.and.callFake(() => {
+      printedIn.push(pdfLanguage(translate));
+      return Promise.resolve();
+    });
     showFor();
     encashments.getEncashment.and.returnValue(of(anEncashment()));
 
     buttons('.enc-reprint')[0].click();
+    expect(receiptPdf.generateAndPrint.calls.mostRecent().args[0].paymentMethodLabel).toBe('نقدًا');
+    await fixture.whenStable();
+    fixture.detectChanges();
 
+    choosePrintLanguage(fixture, '.enc-reprint-language', 'fr');
     expect(receiptPdf.generateAndPrint.calls.mostRecent().args[0].paymentMethodLabel).toBe('Espèces');
+    expect(printedIn).toEqual(['ar', 'fr']);
     expect(component.methodLabel(anEncashment())).toBe('نقدًا');
+    expect(translate.currentLang).toBe('ar');
+  });
+
+  it('menu de langue : English sous une interface en français', async () => {
+    const translate = TestBed.inject(TranslateService);
+    translate.setTranslation('fr', { payment: { dialog: { methods: { cash: 'Espèces' } } } }, true);
+    translate.setTranslation('en', { payment: { dialog: { methods: { cash: 'Cash' } } } }, true);
+    translate.use('fr');
+    let printedIn = '';
+    receiptPdf.generateAndPrint.and.callFake(() => {
+      printedIn = pdfLanguage(translate);
+      return Promise.resolve();
+    });
+    showFor();
+    encashments.getEncashment.and.returnValue(of(anEncashment()));
+
+    choosePrintLanguage(fixture, '.enc-reprint-language', 'en');
+    await fixture.whenStable();
+
+    expect(printedIn).toBe('en');
+    expect(receiptPdf.generateAndPrint.calls.mostRecent().args[0].paymentMethodLabel).toBe('Cash');
+    expect(translate.currentLang).toBe('fr');
   });
 
   it('un versement annulé depuis le chargement ressort avec le tampon « ANNULÉ », et la liste se recharge', () => {

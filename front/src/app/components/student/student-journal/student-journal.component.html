@@ -23,10 +23,12 @@
         <button mat-button type="button" class="jr-reset" (click)="resetPeriod()" [disabled]="loading">
           {{ 'journal.reset' | translate }}
         </button>
-        <button mat-flat-button color="primary" type="button" class="jr-print" (click)="print()"
+        <button mat-flat-button color="primary" type="button" class="jr-print" (click)="print(journalLanguage.screenLanguage)"
           [disabled]="loading || printing || periodInvalid" [attr.aria-label]="'journal.printAria' | translate">
           <mat-icon>print</mat-icon>{{ 'journal.print' | translate }}
         </button>
+        <app-print-language-menu #journalLanguage="printLanguageMenu" class="jr-print-language"
+          [disabled]="loading || printing || periodInvalid" (selected)="print($event)"></app-print-language-menu>
       </div>
     </form>
     <p class="jr-invalid" role="alert" *ngIf="periodInvalid">{{ 'journal.periodInvalid' | translate }}</p>

@@ -2,6 +2,10 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { GroupFormComponent } from './group-form.component';
 import { setupComponentTestBed } from '../../../../testing/setup';
+import { By } from '@angular/platform-browser';
+import { MatTabGroup } from '@angular/material/tabs';
+import { TranslateService } from '@ngx-translate/core';
+import { Pricing } from '../../../models/pricing/pricing';
 
 describe('GroupFormComponent', () => {
   let component: GroupFormComponent;
@@ -46,5 +50,40 @@ describe('GroupFormComponent', () => {
     });
 
     expect(component.groupForm.valid).toBeTrue();
+  });
+
+  /**
+   * Tarif affiché comme dans le reste de l'application : montant au format de la langue, suffixe
+   * « DA » / « دج ». Le pipe `currency` d'Angular affichait « $1,200.00 ». La valeur choisie reste
+   * l'identifiant du tarif : rien ne change dans le formulaire.
+   */
+  describe('tarifs proposés', () => {
+    async function options(lang: string): Promise<string[]> {
+      const translate = TestBed.inject(TranslateService);
+      translate.setTranslation('fr', { COMMON: { CURRENCY_SUFFIX: 'DA' } }, true);
+      translate.setTranslation('ar', { COMMON: { CURRENCY_SUFFIX: 'دج' } }, true);
+      translate.use(lang);
+      component.prices = [{ id: 4, price: 1200 } as Pricing, { id: 5, price: 12500 } as Pricing];
+      fixture.debugElement.query(By.directive(MatTabGroup)).componentInstance.selectedIndex = 1;
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+      const select = (fixture.nativeElement as HTMLElement).querySelector('mat-select[formControlName="priceId"] .mat-mdc-select-trigger') as HTMLElement;
+      select.click();
+      fixture.detectChanges();
+      return Array.from(document.querySelectorAll('mat-option')).map(o => (o.textContent ?? '').replace(/\s+/g, ' ').trim());
+    }
+
+    it('français : « 1 200,00 DA », jamais « $ »', async () => {
+      expect(await options('fr')).toEqual(['1 200,00 DA', '12 500,00 DA']);
+    });
+
+    it('arabe : « 1.200,00 دج », et la valeur choisie reste l\'identifiant du tarif', async () => {
+      const texts = await options('ar');
+      expect(texts).toEqual(['1.200,00 دج', '12.500,00 دج']);
+      expect(texts.join(' ')).not.toMatch(/\$|DZD/);
+      (document.querySelectorAll('mat-option')[0] as HTMLElement).click();
+      expect(component.groupForm.get('additionalDetails.priceId')?.value).toBe(4);
+    });
   });
 });

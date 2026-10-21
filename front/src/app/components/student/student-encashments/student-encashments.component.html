@@ -83,11 +83,14 @@
                 <mat-icon>block</mat-icon>{{ 'correction.cancel.action' | translate }}
               </button>
             </ng-container>
-            <button mat-stroked-button type="button" class="enc-action enc-reprint" (click)="reprint(encashment)"
+            <button mat-stroked-button type="button" class="enc-action enc-reprint"
+              (click)="reprint(encashment, receiptLanguage.screenLanguage)"
               [disabled]="reprintingId !== null"
               [attr.aria-label]="'payment.encashments.reprintAria' | translate: { number: encashment.receiptNumber }">
               <mat-icon>print</mat-icon>{{ 'payment.encashments.reprint' | translate }}
             </button>
+            <app-print-language-menu #receiptLanguage="printLanguageMenu" class="enc-reprint-language"
+              [disabled]="reprintingId !== null" (selected)="reprint(encashment, $event)"></app-print-language-menu>
           </div>
         </li>
       </ul>

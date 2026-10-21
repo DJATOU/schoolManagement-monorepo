@@ -15,6 +15,8 @@ import { CorrectionJournal, JournalEntry } from '../../../models/correction/jour
 import { CorrectionJournalPdfService } from '../../../services/correction-journal-pdf.service';
 import { CorrectionJournalService } from '../../../services/correction-journal.service';
 import { formatJournalInstant } from '../../../utils/journal-format';
+import { PrintLanguage, runInPrintLanguage } from '../../../shared/pdf-i18n';
+import { PrintLanguageMenuComponent } from '../../shared/print-language-menu/print-language-menu.component';
 
 /**
  * Journal des corrections d'un élève, sur une période choisie, et son impression (spec
@@ -46,7 +48,8 @@ import { formatJournalInstant } from '../../../utils/journal-format';
     MatIconModule,
     MatInputModule,
     MatProgressSpinnerModule,
-    TranslateModule
+    TranslateModule,
+    PrintLanguageMenuComponent
   ],
   templateUrl: './student-journal.component.html',
   styleUrls: ['./student-journal.component.scss']
@@ -107,8 +110,13 @@ export class StudentJournalComponent implements OnChanges {
     this.reload();
   }
 
-  /** Relit le Journal sur la période saisie, puis l'imprime tel qu'affiché. */
-  print(): void {
+  /**
+   * Relit le Journal sur la période saisie, puis l'imprime tel qu'affiché.
+   *
+   * @param lang langue choisie au moment d'imprimer ; sans choix, la règle des documents
+   *             (voir pdfLanguage)
+   */
+  print(lang?: PrintLanguage): void {
     if (this.printing) {
       return;
     }
@@ -118,7 +126,7 @@ export class StudentJournalComponent implements OnChanges {
         this.printing = false;
         return;
       }
-      this.pdfService.print(journal)
+      runInPrintLanguage(this.translate, lang, () => this.pdfService.print(journal))
         .catch((err: unknown) => {
           console.error('Erreur lors de l\'impression du journal :', err);
           this.notify(this.translate.instant('journal.printError'));

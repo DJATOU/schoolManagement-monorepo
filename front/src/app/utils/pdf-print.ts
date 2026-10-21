@@ -37,6 +37,59 @@ export function printPdfBlob(blob: Blob, fileName: string): void {
   }, PRINT_FRAME_LIFETIME_MS);
 }
 
+/** Attente maximale des polices et des images avant d'imprimer : une police distante injoignable (poste hors ligne) ne bloque pas l'impression. */
+export const PRINT_READY_TIMEOUT_MS = 3_000;
+
+/**
+ * Imprime un document HTML (document en arabe, voir `pdfDefinitionToHtml`) par une iframe masquée.
+ *
+ * <p>Même iframe que {@link printPdfBlob}, chargée par `srcdoc` : l'impression attend que les
+ * polices et le logo soient prêts (au plus {@link PRINT_READY_TIMEOUT_MS}), puis ouvre la boîte
+ * d'impression, où « Enregistrer en PDF » produit le fichier. La promesse échoue si la boîte ne
+ * peut pas s'ouvrir : il n'y a pas de fichier à télécharger en repli.</p>
+ */
+export function printHtmlDocument(html: string, title: string): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    iframe.title = title;
+    iframe.setAttribute('aria-hidden', 'true');
+    iframe.onload = () => {
+      const frameWindow = iframe.contentWindow;
+      const frameDocument = iframe.contentDocument;
+      if (!frameWindow || !frameDocument) {
+        reject(new Error('Impression indisponible'));
+        return;
+      }
+      documentReady(frameDocument).then(() => {
+        try {
+          frameWindow.focus();
+          frameWindow.print();
+          resolve();
+        } catch (error) {
+          reject(error);
+        }
+      });
+    };
+    iframe.srcdoc = html;
+    document.body.appendChild(iframe);
+    window.setTimeout(() => iframe.remove(), PRINT_FRAME_LIFETIME_MS);
+  });
+}
+
+/** Polices et images du document prêtes, ou délai écoulé. */
+function documentReady(doc: Document): Promise<void> {
+  const fonts = doc.fonts ? doc.fonts.ready.then(() => undefined) : Promise.resolve();
+  const images = Array.from(doc.images).map(image => image.decode().catch(() => undefined));
+  const timeout = new Promise<void>(resolve => window.setTimeout(resolve, PRINT_READY_TIMEOUT_MS));
+  return Promise.race([Promise.all([fonts, ...images]).then(() => undefined), timeout]);
+}
+
 /** Télécharge un PDF sous le nom donné. */
 export function downloadPdfBlob(blob: Blob, fileName: string): void {
   const url = URL.createObjectURL(blob);

@@ -24,6 +24,7 @@ import { TeacherPayRateService } from '../../../../services/teacher-pay-rate.ser
 import { TeacherPayoutService } from '../../../../services/teacher-payout.service';
 import { TeacherService } from '../../../../services/teacher.service';
 import { PayoutDialogComponent, PayoutDialogData } from '../payout-dialog/payout-dialog.component';
+import { printLanguageOf, runInPrintLanguage } from '../../../../shared/pdf-i18n';
 
 /**
  * Onglet « À payer » : les séries terminées à payer, celles en cours, et les séries payées dont
@@ -166,9 +167,11 @@ export class PayableTabComponent implements OnInit {
       .onAction().subscribe(() => this.printSlip(payout));
   }
 
+  /** Suite d'un geste en un clic : le bordereau sort dans la langue de l'écran, sans autre choix. */
   private printSlip(payout: Payout): void {
     this.payoutService.issueSlip(payout.id).subscribe({
-      next: slip => this.slipPdf.print(slip).catch(() => this.notify(this.translate.instant('teacherPayroll.slip.printError'))),
+      next: slip => runInPrintLanguage(this.translate, printLanguageOf(this.translate), () => this.slipPdf.print(slip))
+        .catch(() => this.notify(this.translate.instant('teacherPayroll.slip.printError'))),
       error: () => this.notify(this.translate.instant('teacherPayroll.slip.printError'))
     });
   }

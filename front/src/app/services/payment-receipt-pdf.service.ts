@@ -1,9 +1,10 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
 import pdfMake from 'pdfmake/build/pdfmake';
 import pdfFonts from 'pdfmake/build/vfs_fonts';
 import { Content, TDocumentDefinitions } from 'pdfmake/interfaces';
-import { pdfInstant, pdfLanguage } from '../shared/pdf-i18n';
+import { bindPrintLanguage, pdfInstant, pdfLanguage, withPrintLanguage } from '../shared/pdf-i18n';
+import { PdfOutputService } from './pdf-output.service';
 
 /**
  * Une part de versement reportée sur une autre série, telle qu'imprimée sur le reçu.
@@ -114,6 +115,8 @@ export class PaymentReceiptPdfService {
   private static readonly PRIMARY_SOFT = '#6366f1';
   private static readonly GREY = '#64748b';
 
+  private readonly output = inject(PdfOutputService);
+
   constructor(private translate: TranslateService) {
     (pdfMake as any).vfs = pdfFonts.pdfMake.vfs;
   }
@@ -125,8 +128,13 @@ export class PaymentReceiptPdfService {
    * dernière ouvre un onglet via {@code window.open}, que le navigateur bloque lorsqu'aucun
    * clic direct n'est en cours — c'est le cas ici, l'appel suivant la réponse HTTP du
    * paiement. En cas d'échec, le reçu est téléchargé afin qu'il ne soit jamais perdu.</p>
+   *
+   * <p>En arabe, le même reçu est imprimé par le navigateur (page de droite à gauche) : la boîte
+   * d'impression s'ouvre de la même façon, sans clic supplémentaire.</p>
    */
   async generateAndPrint(data: PaymentReceiptData): Promise<void> {
+    // Langue lue avant toute attente : le choix de l'appelant ne survit pas au chargement du logo.
+    const lang = pdfLanguage(this.translate);
     // Garde-fou : un reçu atteste d'une somme reçue. À 0 (ou moins), il n'y a rien à
     // attester et le document laisserait croire à un paiement. L'appelant décide du
     // message affiché ; ici on refuse simplement d'imprimer.
@@ -137,8 +145,14 @@ export class PaymentReceiptPdfService {
     // Un logo indisponible ne doit pas empêcher la remise du justificatif : le reçu est
     // alors composé sans lui.
     const logo = await this.loadLogo();
-    const doc = this.buildDocument(data, logo);
-    const fileName = this.fileName(data);
+    const { built, fileName } = withPrintLanguage(lang, () => ({
+      built: this.buildDocument(data, logo),
+      fileName: this.fileName(data)
+    }));
+    if (lang === 'ar') {
+      return this.output.printHtml(built, fileName.replace(/\.pdf$/i, ''));
+    }
+    const doc = bindPrintLanguage(this.translate, built, lang);
 
     pdfMake.createPdf(doc).getBlob((blob: Blob) => {
       try {
@@ -613,8 +627,12 @@ export class PaymentReceiptPdfService {
     }).format(date));
   }
 
-  /** Locale du document : 'en-GB' en anglais, 'fr-FR' sinon (arabe compris, voir pdf-i18n). */
+  /**
+   * Locale du document : 'en-GB' en anglais, 'ar-DZ' en arabe (chiffres latins, comme à l'écran),
+   * 'fr-FR' sinon.
+   */
   private locale(): string {
-    return pdfLanguage(this.translate) === 'en' ? 'en-GB' : 'fr-FR';
+    const lang = pdfLanguage(this.translate);
+    return lang === 'en' ? 'en-GB' : lang === 'ar' ? 'ar-DZ' : 'fr-FR';
   }
 }

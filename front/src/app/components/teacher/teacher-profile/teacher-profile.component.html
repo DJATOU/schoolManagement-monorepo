@@ -22,9 +22,12 @@
         <button mat-icon-button class="pf-hb pf-hb-edit" (click)="onEdit()" [matTooltip]="'TEACHER_PROFILE.EDIT_TOOLTIP' | translate" appAdminOnly>
           <mat-icon>edit</mat-icon>
         </button>
-        <button mat-icon-button class="pf-hb pf-hb-print" (click)="printProfilePdf()" [matTooltip]="'TEACHER_PROFILE.PRINT_TOOLTIP' | translate">
+        <button mat-icon-button class="pf-hb pf-hb-print" (click)="printProfilePdf(profileLanguage.screenLanguage)"
+          [matTooltip]="'TEACHER_PROFILE.PRINT_TOOLTIP' | translate">
           <mat-icon>print</mat-icon>
         </button>
+        <app-print-language-menu #profileLanguage="printLanguageMenu" triggerClass="pf-hb pf-hb-print"
+          (selected)="printProfilePdf($event)"></app-print-language-menu>
         <button mat-icon-button class="pf-hb pf-hb-danger" (click)="onDisable()"
           [matTooltip]="'TEACHER_PROFILE.DISABLE_TOOLTIP' | translate" appAdminOnly>
           <mat-icon>block</mat-icon>

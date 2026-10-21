@@ -18,9 +18,13 @@
     </div>
 
     <div class="sd-actions">
-      <button mat-flat-button color="primary" (click)="downloadPdf()" [disabled]="loadingSessions">
+      <!-- En arabe, le navigateur produit le document : l'infobulle annonce la boîte d'impression. -->
+      <button mat-flat-button color="primary" (click)="downloadPdf(seriesLanguage.screenLanguage)" [disabled]="loadingSessions"
+        [matTooltip]="seriesLanguage.screenLanguage === 'ar' ? ('PRINT_LANGUAGE.ARABIC_HINT' | translate) : ''">
         <mat-icon>download</mat-icon> {{ 'series.detail.downloadPdf' | translate }}
       </button>
+      <app-print-language-menu #seriesLanguage="printLanguageMenu" [disabled]="loadingSessions"
+        (selected)="downloadPdf($event)"></app-print-language-menu>
     </div>
   </div>
 

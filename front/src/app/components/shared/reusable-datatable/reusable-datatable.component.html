@@ -36,11 +36,12 @@
     </div>
 
     <div class="toolbar-actions">
-      <button mat-stroked-button class="dt-btn" (click)="onPrint()"
+      <button mat-stroked-button class="dt-btn" (click)="onPrint(printLanguage.screenLanguage)"
               [matTooltip]="printTooltip">
         <mat-icon>print</mat-icon>
         {{ 'DATATABLE.PRINT' | translate }}
       </button>
+      <app-print-language-menu #printLanguage="printLanguageMenu" (selected)="onPrint($event)"></app-print-language-menu>
       <button mat-stroked-button class="dt-btn" (click)="onView()"
               [disabled]="!isOneItemSelected()"
               [matTooltip]="isOneItemSelected() ? '' : ('DATATABLE.VIEW_DISABLED_HINT' | translate)">

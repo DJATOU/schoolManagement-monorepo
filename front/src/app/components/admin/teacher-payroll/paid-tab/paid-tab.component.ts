@@ -38,6 +38,8 @@ import {
   ReplaceRateDialogData,
   ReplacementChoice
 } from '../replace-rate-dialog/replace-rate-dialog.component';
+import { PrintLanguage, printLanguageOf, runInPrintLanguage } from '../../../../shared/pdf-i18n';
+import { PrintLanguageMenuComponent } from '../../../shared/print-language-menu/print-language-menu.component';
 
 /**
  * Onglet « Paies versées » : filtrer, totaliser, réimprimer, corriger (spec teacher-payroll,
@@ -66,7 +68,8 @@ import {
     MatTableModule,
     MatTooltipModule,
     TranslateModule,
-    AmountPipe
+    AmountPipe,
+    PrintLanguageMenuComponent
   ],
   providers: [provideTranslatedDatepickerIntl()],
   templateUrl: './paid-tab.component.html',
@@ -142,13 +145,20 @@ export class PaidTabComponent implements OnInit {
   // Bordereau
   // ------------------------------------------------------------------
 
-  reprint(payout: Payout): void {
+  /**
+   * Réimprime le bordereau d'une paie.
+   *
+   * @param lang langue choisie au moment d'imprimer ; sans choix, la règle des documents
+   *             (voir pdfLanguage)
+   */
+  reprint(payout: Payout, lang?: PrintLanguage): void {
     if (this.printingId !== null) {
       return;
     }
     this.printingId = payout.id;
     this.payoutService.issueSlip(payout.id).pipe(finalize(() => this.printingId = null)).subscribe({
-      next: slip => this.slipPdf.print(slip).catch(() => this.notify(this.translate.instant('teacherPayroll.slip.printError'))),
+      next: slip => runInPrintLanguage(this.translate, lang, () => this.slipPdf.print(slip))
+        .catch(() => this.notify(this.translate.instant('teacherPayroll.slip.printError'))),
       error: () => this.notify(this.translate.instant('teacherPayroll.slip.printError'))
     });
   }
@@ -218,7 +228,8 @@ export class PaidTabComponent implements OnInit {
               this.snackBar.open(this.translate.instant('teacherPayroll.correction.replaced', {
                 number: payout.payoutNumber, replacement: replacement.payoutNumber
               }), this.translate.instant('teacherPayroll.slip.print'), { duration: 12000 })
-                .onAction().subscribe(() => this.reprint(replacement));
+                // Suite d'un geste en un clic : le bordereau sort dans la langue de l'écran.
+                .onAction().subscribe(() => this.reprint(replacement, printLanguageOf(this.translate)));
               this.load();
             }
           });

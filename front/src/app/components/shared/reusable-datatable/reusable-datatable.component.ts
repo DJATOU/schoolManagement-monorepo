@@ -21,7 +21,8 @@ import { ProfilePdfService } from '../../../services/profile-pdf.service';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { AdminOnlyDirective } from '../../../shared/admin-only.directive';
 import { resolveLocale } from '../../../shared/locale';
-import { inPdfLanguage, pdfInstant } from '../../../shared/pdf-i18n';
+import { PrintLanguage, inPdfLanguage, inPrintLanguage, pdfInstant, runInPrintLanguage } from '../../../shared/pdf-i18n';
+import { PrintLanguageMenuComponent } from '../print-language-menu/print-language-menu.component';
 import { parseJavaDate } from '../../../shared/java-date';
 
 interface ColumnDefenition {
@@ -35,7 +36,7 @@ interface ColumnDefenition {
   standalone: true,
   imports: [NgIf, MatIcon, MatButton, MatTableModule, MatPaginatorModule, MatSortModule,
     MatFormFieldModule, MatInputModule, MatCheckboxModule, MatRecycleRows, MatTooltipModule,
-    TranslateModule, AdminOnlyDirective],
+    TranslateModule, AdminOnlyDirective, PrintLanguageMenuComponent],
   templateUrl: './reusable-datatable.component.html',
   styleUrl: './reusable-datatable.component.scss'
 })
@@ -203,19 +204,29 @@ export class ReusableDatatableComponent  implements OnInit{
    * <p>Respecte le contexte de l'écran : si des lignes sont sélectionnées, seule la
    * sélection est imprimée ; sinon on imprime les lignes <strong>filtrées</strong>
    * (résultat de la recherche) et non l'intégralité des données.</p>
+   *
+   * @param lang langue choisie au moment d'imprimer ; sans choix, la règle des documents
+   *             (voir pdfLanguage)
    */
-  onPrint() {
+  onPrint(lang?: PrintLanguage) {
     const rows = this.rowsToPrint();
     if (rows.length === 0) {
       this.showErrorMessage(this.translate.instant('DATATABLE.PRINT_EMPTY'));
       return;
     }
+    runInPrintLanguage(this.translate, lang, () => this.printRows(rows, lang))
+      .catch((err: unknown) => console.error('Impression de la liste impossible :', err));
+  }
 
-    // Le PDF suit l'interface en français / anglais et sort en français sinon (arabe). Les
-    // cellules sont calculées par l'écran appelant (dates de tarif avec ses noms de mois) : elles
-    // sont donc produites l'interface momentanément dans la langue du PDF. Un en-tête de colonne
-    // qui n'est pas une clé est rendu tel quel, comme à l'écran.
-    const printed = inPdfLanguage(this.translate, () => {
+  private printRows(rows: unknown[], lang: PrintLanguage | undefined): void {
+    // Le document suit la langue choisie (sans choix : l'interface en français / anglais, le
+    // français sinon). Les cellules sont calculées par l'écran appelant (dates de tarif avec ses
+    // noms de mois) : elles sont donc produites l'interface momentanément dans la langue du
+    // document. Un en-tête de colonne qui n'est pas une clé est rendu tel quel, comme à l'écran.
+    const render = <T>(compose: () => T): T => (lang
+      ? inPrintLanguage(this.translate, lang, compose)
+      : inPdfLanguage(this.translate, compose));
+    const printed = render(() => {
       const t = (key: string, params?: object) => pdfInstant(this.translate, key, params);
       const title = this.entityLabel('title', t) || this.dataType;
       return {

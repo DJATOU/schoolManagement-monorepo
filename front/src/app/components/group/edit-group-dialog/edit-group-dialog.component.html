@@ -95,7 +95,7 @@
               <mat-label>{{ 'EDIT_GROUP.PRICE' | translate }}</mat-label>
               <mat-select formControlName="priceId">
                 <mat-option *ngFor="let price of prices" [value]="price.id">
-                  {{ price.price | currency:'DZD':'symbol':'1.0-0' }}
+                  {{ price.price | amount | appCurrency }}
                 </mat-option>
               </mat-select>
             </mat-form-field>

@@ -64,7 +64,7 @@
           <mat-label>{{ 'groupForm.fields.price' | translate }}</mat-label>
           <mat-select formControlName="priceId" required>
             <mat-option *ngFor="let price of prices" [value]="price.id">
-              {{ price.price | currency }}
+              {{ price.price | amount | appCurrency }}
             </mat-option>
           </mat-select>
         </mat-form-field>

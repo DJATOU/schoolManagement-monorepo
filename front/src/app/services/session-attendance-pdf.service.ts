@@ -1,9 +1,10 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
 import pdfMake from 'pdfmake/build/pdfmake';
 import pdfFonts from 'pdfmake/build/vfs_fonts';
 import { Content, TableCell, TDocumentDefinitions } from 'pdfmake/interfaces';
-import { pdfInstant, pdfLocale } from '../shared/pdf-i18n';
+import { bindPrintLanguage, pdfInstant, pdfLanguage, pdfLocale, withPrintLanguage } from '../shared/pdf-i18n';
+import { PdfOutputService } from './pdf-output.service';
 
 /** Ligne étudiant utilisée pour la feuille de présence. */
 export interface SessionAttendanceStudentRow {
@@ -44,21 +45,39 @@ export class SessionAttendancePdfService {
   private static readonly RED = '#e60000';
   private static readonly GREY = '#64748b';
 
+  private readonly output = inject(PdfOutputService);
+
   constructor(private translate: TranslateService) {
     (pdfMake as any).vfs = pdfFonts.pdfMake.vfs;
   }
 
-  /** Libellé du document : langue de l'interface en français / anglais, français sinon. */
+  /** Libellé du document, dans sa langue (voir pdfLanguage). */
   private t(key: string, params?: object): string {
     return pdfInstant(this.translate, key, params);
   }
 
   /**
-   * Génère et ouvre le PDF de la feuille de présence.
+   * Génère et ouvre le PDF de la feuille de présence. En arabe, le navigateur imprime la même
+   * feuille (boîte d'impression, « Enregistrer en PDF »).
    * @param info métadonnées de la session
    * @param students liste des étudiants (avec présence si déjà validée)
    */
   generateAttendanceSheet(info: SessionAttendanceInfo, students: SessionAttendanceStudentRow[]): void {
+    const lang = pdfLanguage(this.translate);
+    const doc = withPrintLanguage(lang, () => this.buildDocument(info, students));
+    if (lang === 'ar') {
+      const title = withPrintLanguage(lang, () => info.title || this.t('SESSION_ATTENDANCE_PDF.TITLE_FALLBACK'));
+      this.output.printHtml(doc, title).catch((err: unknown) => console.error('Impression de la feuille impossible :', err));
+      return;
+    }
+
+    pdfMake.createPdf(bindPrintLanguage(this.translate, doc, lang)).getBlob((blob) => {
+      window.open(URL.createObjectURL(blob), '_blank');
+    });
+  }
+
+  /** Définition de la feuille de présence, publique pour être vérifiée sans passer par l'impression. */
+  buildDocument(info: SessionAttendanceInfo, students: SessionAttendanceStudentRow[]): TDocumentDefinitions {
     const validated = !!info.isFinished;
 
     const content: Content[] = [
@@ -99,10 +118,7 @@ export class SessionAttendancePdfService {
         ]
       })
     };
-
-    pdfMake.createPdf(doc).getBlob((blob) => {
-      window.open(URL.createObjectURL(blob), '_blank');
-    });
+    return doc;
   }
 
   /** Bandeau de titre avec l'état (validée / non validée). */

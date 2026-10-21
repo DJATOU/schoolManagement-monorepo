@@ -30,6 +30,8 @@ import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatCardModule } from '@angular/material/card';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { AdminOnlyDirective } from '../../../shared/admin-only.directive';
+import { AmountPipe } from '../../../pipes/amount.pipe';
+import { CurrencySuffixPipe } from '../../../pipes/currency-suffix.pipe';
 
 @Component({
   selector: 'app-group-form',
@@ -49,7 +51,9 @@ import { AdminOnlyDirective } from '../../../shared/admin-only.directive';
     CommonModule,
     MatCardModule,
     TranslateModule,
-    AdminOnlyDirective
+    AdminOnlyDirective,
+    AmountPipe,
+    CurrencySuffixPipe
   ],
   templateUrl: './group-form.component.html',
   styleUrls: ['./group-form.component.scss'],

@@ -25,6 +25,9 @@ import { JustificationEditDialogComponent } from '../../attendance/justification
 import { AddStudentDialogComponent } from '../add-student-dialog/add-student-dialog.component';
 import { AttendanceStateDialogComponent } from '../attendance-state-dialog/attendance-state-dialog.component';
 import frTranslations from '../../../../assets/i18n/fr.json';
+import { SessionAttendancePdfService } from '../../../services/session-attendance-pdf.service';
+import { pdfLanguage } from '../../../shared/pdf-i18n';
+import { choosePrintLanguage } from '../../../../testing/print-language';
 
 /**
  * Fiche détaillée d'une séance, ouverte depuis le calendrier.
@@ -75,6 +78,21 @@ describe('SessionModalComponent', () => {
     component.openGroup();
 
     expect(open).not.toHaveBeenCalled();
+  });
+
+  it('feuille de présence : le bouton suit l\'écran, le menu imprime dans la langue choisie', async () => {
+    const translate = TestBed.inject(TranslateService);
+    translate.setTranslation('fr', frTranslations);
+    translate.use('fr');
+    fixture.detectChanges();
+    const seen: string[] = [];
+    spyOn(TestBed.inject(SessionAttendancePdfService), 'generateAttendanceSheet')
+      .and.callFake(() => { seen.push(pdfLanguage(translate)); });
+    component.onPrintAttendanceSheet('fr');
+    choosePrintLanguage(fixture, fixture.nativeElement as HTMLElement, 'ar');
+    await fixture.whenStable();
+    expect(seen).toEqual(['fr', 'ar']);
+    expect(translate.currentLang).toBe('fr');
   });
 });
 

@@ -18,7 +18,9 @@ import { SchoolYear } from '../../models/schoolYear/school-year';
 import { Subject, takeUntil } from 'rxjs';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
-import { inPdfLanguage, pdfInstant, pdfLanguage } from '../../shared/pdf-i18n';
+import { PrintLanguage, inPrintLanguage, pdfInstant, pdfLanguage, runInPrintLanguage } from '../../shared/pdf-i18n';
+import { directionOf } from '../../shared/app-languages';
+import { PrintLanguageMenuComponent } from '../shared/print-language-menu/print-language-menu.component';
 
 interface Kpi {
   label: string;
@@ -40,7 +42,7 @@ type RangePreset = 'year' | 'month' | 'custom';
   imports: [
     CommonModule, FormsModule, MatIconModule, MatButtonModule,
     MatFormFieldModule, MatInputModule, MatDatepickerModule, MatNativeDateModule,
-    MatProgressSpinnerModule, MatTooltipModule, TranslateModule
+    MatProgressSpinnerModule, MatTooltipModule, TranslateModule, PrintLanguageMenuComponent
   ]
 })
 export class DashboardComponent implements OnInit, OnDestroy {
@@ -192,17 +194,27 @@ export class DashboardComponent implements OnInit, OnDestroy {
   /**
    * Exporte le tableau de bord affiché en PDF (capture visuelle fidèle).
    *
-   * <p>Comme les autres documents, le PDF suit l'interface en français / anglais et sort en
-   * français sous l'arabe : l'écran est rendu dans la langue du PDF le temps de cloner la page
-   * (synchrone, rien n'est peint entre-temps), puis la langue est rétablie. Le clone est mis en
-   * `lang` / `dir` de cette langue pour que sa mise en page soit celle d'un écran français.</p>
+   * <p>La capture est faite dans la langue choisie au moment d'imprimer (Français, English,
+   * العربية) : l'écran est rendu dans cette langue le temps de cloner la page (synchrone, rien n'est
+   * peint entre-temps), puis la langue est rétablie. Le clone est mis en `lang` / `dir` de cette
+   * langue pour que sa mise en page soit celle de l'écran dans cette langue — de droite à gauche en
+   * arabe, que html2canvas dessine lettres liées et mots dans l'ordre. Le PDF reste un vrai
+   * téléchargement dans les trois langues.</p>
+   *
+   * <p>Sans choix, la règle des documents s'applique : le PDF suit l'interface en français /
+   * anglais et sort en français sous l'arabe (voir pdfLanguage).</p>
    */
-  async printPdf(): Promise<void> {
+  async printPdf(lang?: PrintLanguage): Promise<void> {
     const el = this.dashboardContent?.nativeElement;
     if (!el) return;
+    await runInPrintLanguage(this.translate, lang, () => this.exportPdf(el));
+  }
 
+  private async exportPdf(el: HTMLElement): Promise<void> {
     const language = pdfLanguage(this.translate);
-    const capture = inPdfLanguage(this.translate, () => {
+    // Titre lu dans la langue du document, avant la première attente (le choix ne la traverse pas).
+    const title = pdfInstant(this.translate, 'dashboard.title');
+    const capture = inPrintLanguage(this.translate, language, () => {
       this.refreshForCapture();
       // html2canvas clone le document dès l'appel, avant sa première attente : la langue peut être
       // rétablie dès qu'il rend la main.
@@ -213,7 +225,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         useCORS: true,
         onclone: (doc) => {
           doc.documentElement.lang = language;
-          doc.documentElement.dir = 'ltr';
+          doc.documentElement.dir = directionOf(language);
           // Neutralise l'animation fade-in (sinon le clone est capturé à opacity 0 → délavé)
           doc.querySelectorAll('.fade-in').forEach((node) => {
             const elem = node as HTMLElement;
@@ -252,7 +264,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
       heightLeft -= (pageHeight - margin * 2);
     }
 
-    const title = pdfInstant(this.translate, 'dashboard.title');
     pdf.save(`${title}_${this.stats?.from || ''}_${this.stats?.to || ''}.pdf`);
   }
 

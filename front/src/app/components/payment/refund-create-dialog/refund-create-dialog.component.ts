@@ -12,6 +12,7 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { Refund, RefundCap } from '../../../models/refund/refund';
 import { RefundReceiptPdfService } from '../../../services/refund-receipt-pdf.service';
 import { RefundService } from '../../../services/refund.service';
+import { printLanguageOf, withPrintLanguage } from '../../../shared/pdf-i18n';
 
 /** Données d'ouverture du dialogue de remboursement. */
 export interface RefundCreateDialogData {
@@ -204,8 +205,10 @@ export class RefundCreateDialogComponent implements OnInit {
    * que le reçu allait s'imprimer, alors que l'argent était déjà sorti de la caisse.</p>
    */
   private offerReceipt(refund: Refund): void {
+    // Imprimé sans autre geste : le reçu sort dans la langue de l'écran.
+    const lang = printLanguageOf(this.translate);
     this.refundService.issueReceipt(refund.id).subscribe({
-      next: (receipt) => this.receiptPdf.generateAndPrint(receipt).catch((err: unknown) => {
+      next: (receipt) => withPrintLanguage(lang, () => this.receiptPdf.generateAndPrint(receipt)).catch((err: unknown) => {
         console.error('Reçu de remboursement non imprimé :', err);
         this.warnReceiptFailed();
       }),

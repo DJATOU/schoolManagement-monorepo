@@ -4,7 +4,7 @@ import { Content, TDocumentDefinitions } from 'pdfmake/interfaces';
 import { Payout, PayoutSlip, payoutNature } from '../models/payroll/payroll';
 import { formatAmount } from '../pipes/amount.pipe';
 import { resolveLocale } from '../shared/locale';
-import { pdfInstant, pdfLanguage } from '../shared/pdf-i18n';
+import { bindPrintLanguage, pdfInstant, pdfLanguage, withPrintLanguage } from '../shared/pdf-i18n';
 import { pdfSafeText } from '../utils/pdf-print';
 import { PdfOutputService } from './pdf-output.service';
 
@@ -32,10 +32,19 @@ export class PayoutSlipPdfService {
 
   constructor(private translate: TranslateService, private output: PdfOutputService) {}
 
-  /** Compose le bordereau et ouvre la boîte d'impression ; sans logo s'il ne se charge pas. */
+  /**
+   * Compose le bordereau et ouvre la boîte d'impression ; sans logo s'il ne se charge pas. En arabe,
+   * le navigateur imprime le même bordereau (page de droite à gauche).
+   */
   async print(slip: PayoutSlip): Promise<void> {
+    // Langue lue avant toute attente : le choix de l'appelant ne survit pas au chargement du logo.
+    const lang = pdfLanguage(this.translate);
     const logo = await this.output.imageDataUrl(PayoutSlipPdfService.LOGO_URL);
-    this.output.print(this.buildDocument(slip, logo), slip.fileName);
+    const doc = withPrintLanguage(lang, () => this.buildDocument(slip, logo));
+    if (lang === 'ar') {
+      return this.output.printHtml(doc, slip.fileName.replace(/\.pdf$/i, ''));
+    }
+    this.output.print(bindPrintLanguage(this.translate, doc, lang), slip.fileName);
   }
 
   /** Définition du document, publique pour être vérifiée sans passer par l'impression. */
@@ -235,7 +244,7 @@ export class PayoutSlipPdfService {
     return pdfSafeText(pdfInstant(this.translate, key, params));
   }
 
-  /** Langue du document : celle de l'interface en français / anglais, français sinon (arabe). */
+  /** Langue du document (voir pdfLanguage). */
   private lang(): string {
     return pdfLanguage(this.translate);
   }

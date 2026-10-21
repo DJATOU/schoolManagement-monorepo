@@ -8,6 +8,8 @@ import { setupComponentTestBed } from '../../../../testing/setup';
 import { CorrectionJournal, JournalEntry } from '../../../models/correction/journal';
 import { CorrectionJournalPdfService } from '../../../services/correction-journal-pdf.service';
 import { CorrectionJournalService } from '../../../services/correction-journal.service';
+import { pdfLanguage } from '../../../shared/pdf-i18n';
+import { choosePrintLanguage } from '../../../../testing/print-language';
 
 /**
  * Journal des corrections sur la fiche élève, et son impression (D.5 ; exigence 12).
@@ -258,5 +260,20 @@ describe('StudentJournalComponent', () => {
 
     expect(journals.getJournal).not.toHaveBeenCalled();
     expect(component.journal).toBeNull();
+  });
+
+  it('menu de langue : le Journal s\'imprime dans la langue choisie, l\'écran reste en français', async () => {
+    open();
+    const translate = TestBed.inject(TranslateService);
+    let printedIn = '';
+    pdf.print.and.callFake(() => {
+      printedIn = pdfLanguage(translate);
+      return Promise.resolve();
+    });
+    choosePrintLanguage(fixture, '.jr-actions', 'ar');
+    await new Promise(resolve => setTimeout(resolve));
+    expect(pdf.print).toHaveBeenCalledTimes(1);
+    expect(printedIn).toBe('ar');
+    expect(translate.currentLang).toBe('fr');
   });
 });

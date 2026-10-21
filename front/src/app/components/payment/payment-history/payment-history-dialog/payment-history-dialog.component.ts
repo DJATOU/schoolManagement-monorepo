@@ -1,4 +1,4 @@
-import { Component, Inject, OnInit } from '@angular/core';
+import { Component, Inject, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
@@ -15,7 +15,11 @@ import { StudentService } from '../../../student/services/student.service';
 import { StudentFullHistoryDTO } from '../../../student/domain/StudentFullHistoryDTO';
 import { GroupHistoryDTO } from '../../../../models/group/GroupHistoryDTO';
 import { SeriesHistoryDTO } from '../../../../models/sessionSerie/SeriesHistoryDTO';
-import { pdfInstant, pdfLocale } from '../../../../shared/pdf-i18n';
+import {
+  PrintLanguage, bindPrintLanguage, pdfInstant, pdfLanguage, pdfLocale, runInPrintLanguage, withPrintLanguage
+} from '../../../../shared/pdf-i18n';
+import { PrintLanguageMenuComponent } from '../../../shared/print-language-menu/print-language-menu.component';
+import { PdfOutputService } from '../../../../services/pdf-output.service';
 import { currencySuffix, pdfWithCurrency } from '../../../../shared/currency';
 import { AmountPipe } from '../../../../pipes/amount.pipe';
 import {
@@ -93,6 +97,7 @@ interface SessionPaymentRow {
     MatTableModule,
     MatIconModule,
     TranslateModule,
+    PrintLanguageMenuComponent,
     AmountPipe,
     LocalizedDatePipe
   ]
@@ -133,6 +138,8 @@ export class PaymentHistoryDialogComponent implements OnInit {
   errorMessage = '';
 
   private fullHistory: StudentFullHistoryDTO | null = null;
+
+  private readonly pdfOutput = inject(PdfOutputService);
 
   constructor(
     private studentService: StudentService,
@@ -278,19 +285,19 @@ export class PaymentHistoryDialogComponent implements OnInit {
     const formatted = amount.toLocaleString(pdfLocale(this.translate), {
       maximumFractionDigits: 2
     });
-    // Suffixe du document (« DA » sous une interface en arabe), pas celui de l'écran.
+    // Suffixe du document (voir pdfLanguage), pas celui de l'écran.
     return pdfWithCurrency(formatted.replace(/[\u202F\u00A0]/g, ' '), this.translate);
   }
 
   /**
-   * Date du PDF, selon la langue du document et non selon celle du navigateur : français sous une
-   * interface en arabe, comme tout le document.
+   * Date du PDF, selon la langue du document et non selon celle du navigateur, comme tout le
+   * document.
    */
   private formatDate(value: string | Date | null | undefined): string {
     return value ? new Date(value).toLocaleDateString(pdfLocale(this.translate)) : '—';
   }
 
-  /** Libellé du PDF : langue de l'interface en français / anglais, français sinon (arabe). */
+  /** Libellé du document, dans sa langue (voir pdfLanguage). */
   private pdf(key: string, params?: object): string {
     return pdfInstant(this.translate, key, params);
   }
@@ -395,7 +402,19 @@ export class PaymentHistoryDialogComponent implements OnInit {
     });
   }
 
-  async generatePdf(): Promise<void> {
+  /**
+   * Imprime l'historique de la série choisie.
+   *
+   * @param lang langue choisie au moment d'imprimer ; sans choix, la règle des documents
+   *             (voir pdfLanguage)
+   */
+  generatePdf(lang?: PrintLanguage): Promise<void> {
+    return runInPrintLanguage(this.translate, lang, () => this.printPdf());
+  }
+
+  private async printPdf(): Promise<void> {
+    // Langue lue avant toute attente : le choix de l'appelant ne survit pas au chargement du logo.
+    const lang = pdfLanguage(this.translate);
     let logoBase64 = '';
     try {
       logoBase64 = await this.convertImageToBase64('assets/succes_assistance.png');
@@ -403,6 +422,23 @@ export class PaymentHistoryDialogComponent implements OnInit {
       console.error('Erreur lors du chargement du logo :', error);
     }
 
+    const built = withPrintLanguage(lang, () => this.buildPdfDocument(logoBase64));
+    // En arabe, le navigateur imprime le même document (boîte d'impression, « Enregistrer en PDF »).
+    if (lang === 'ar') {
+      const title = withPrintLanguage(lang, () => `${this.pdf('payment.history.pdf.title')} — ${this.studentName}`);
+      return this.pdfOutput.printHtml(built, title);
+    }
+
+    const pdfDocGenerator = pdfMake.createPdf(bindPrintLanguage(this.translate, built, lang));
+
+    pdfDocGenerator.getBlob((blob) => {
+      const blobUrl = URL.createObjectURL(blob);
+      window.open(blobUrl, '_blank');
+    });
+  }
+
+  /** Définition du PDF, publique pour être vérifiée sans passer par l'impression. */
+  buildPdfDocument(logoBase64: string): TDocumentDefinitions {
     // Le total d'une série ordinaire ne porte que les séances facturables à cet étudiant : le
     // nommer « Total » laissait croire à un coût nominal, et donc à un reste à payer manquant
     // (exigence 11.6). Le détail du calcul est imprimé juste en dessous, en clair.
@@ -566,13 +602,7 @@ export class PaymentHistoryDialogComponent implements OnInit {
         } as Content;
       }
     };
-
-    const pdfDocGenerator = pdfMake.createPdf(documentDefinition);
-
-    pdfDocGenerator.getBlob((blob) => {
-      const blobUrl = URL.createObjectURL(blob);
-      window.open(blobUrl, '_blank');
-    });
+    return documentDefinition;
   }
 
   private getPaymentHistoryTable(): any {
